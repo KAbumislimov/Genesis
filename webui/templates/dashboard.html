@@ -3614,6 +3614,10 @@ function vaSend() {
     .then(function(d) {
       if (!d) return;
       if (d.reload) { vaSetStatus('⚠️ Сессия истекла — обновите страницу (F5)', 'err'); return; }
+      if (d.open_url) {
+        // Голосовая команда "открой сайт/YouTube/карту" — открываем в браузере пользователя
+        window.open(d.open_url, '_blank');
+      }
       if (d.audio_b64) {
         // Server returned TTS audio as base64
         try {

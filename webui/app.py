@@ -1927,6 +1927,38 @@ def api_play():
     ).start()
     return jsonify({'ok': True})
 
+# Курируемый список интернет-радио — НЕ произвольный URL с голоса,
+# чтобы голосовой ассистент не мог быть использован для проигрывания
+# чего угодно на реальных колонках кампуса.
+RADIO_STATIONS = {
+    'europa_plus':  'https://ep128.hostingradio.ru:8030/ep128',
+    'relax_fm':     'https://relax.hostingradio.ru:8000/relax128.mp3',
+    'radio_jazz':   'https://jazz.hostingradio.ru:8000/jazz-64',
+    'classic':      'https://prclassic.hostingradio.ru/prclassic128.mp3',
+}
+
+@app.route('/api/play-radio', methods=['POST'])
+@login_required
+def api_play_radio():
+    if not has_perm('play'):
+        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
+    data    = request.get_json() or {}
+    station = (data.get('station') or 'europa_plus').strip()
+    campus  = data.get('campus', 'both')
+    url = RADIO_STATIONS.get(station)
+    if not url:
+        return jsonify({'ok': False, 'error': f'Неизвестная станция: {station}'})
+
+    cmd = {'command': ['loadfile', url, 'replace']}
+    if campus in ('client1', 'both'):
+        mpv_cmd(cmd)
+    if campus in ('client2', 'both'):
+        for m in MACHINES:
+            if m['host'] != CLIENT1_HOST:
+                mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+    log_action(current_user.username, 'play_radio', campus, station)
+    return jsonify({'ok': True, 'station': station})
+
 @app.route('/api/tracks')
 @login_required
 def api_tracks():
