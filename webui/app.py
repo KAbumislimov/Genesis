@@ -35,8 +35,8 @@ def _no_cache_html(response):
     return response
 
 # ── Config ────────────────────────────────────────
-NCTK_HOST = os.environ.get('NCTK_HOST', '10.20.0.41')
-NCTK_USER = os.environ.get('NCTK_USER', 'nctk')
+CLIENT1_HOST = os.environ.get('CLIENT1_HOST', '10.20.0.41')
+CLIENT1_USER = os.environ.get('CLIENT1_USER', 'client1')
 SSH_KEY   = os.environ.get('SSH_KEY',   '/secrets/campus_bot')
 MUSIC_DIR  = os.environ.get('MUSIC_DIR', '/music')
 DB_PATH    = os.environ.get('DB_PATH',  '/data/webui.db')
@@ -65,18 +65,18 @@ def reload_machines():
         _h = os.environ.get(f'MACHINE{_i}_HOST', '')
         _n = os.environ.get(f'MACHINE{_i}_NAME', '')
         _m = os.environ.get(f'MACHINE{_i}_MAC', '')
-        _u = os.environ.get(f'MACHINE{_i}_USER', NCTK_USER)
+        _u = os.environ.get(f'MACHINE{_i}_USER', CLIENT1_USER)
         _c = os.environ.get(f'MACHINE{_i}_COCKPIT', '')
         if _h and _n:
             machines.append({'id': f'm{_i}', 'host': _h, 'name': _n, 'mac': _m,
                               'user': _u, 'cockpit_url': _c, 'from_db': False})
-    if not any(m['host'] == NCTK_HOST for m in machines):
+    if not any(m['host'] == CLIENT1_HOST for m in machines):
         machines.insert(0, {
-            'id': 'nctk', 'host': NCTK_HOST,
-            'name': 'Narimanov Campus',
-            'mac': os.environ.get('NCTK_MAC', ''),
-            'user': NCTK_USER,
-            'cockpit_url': f'http://{NCTK_HOST}:1991',
+            'id': 'client1', 'host': CLIENT1_HOST,
+            'name': 'Client1 Campus',
+            'mac': os.environ.get('CLIENT1_MAC', ''),
+            'user': CLIENT1_USER,
+            'cockpit_url': f'http://{CLIENT1_HOST}:1991',
             'from_db': False,
         })
     try:
@@ -101,18 +101,18 @@ def reload_machines():
 CENTOS_HOST    = os.environ.get('CENTOS_HOST', '10.10.4.120')
 CENTOS_USER    = os.environ.get('CENTOS_USER', 'kamran')
 CENTOS_SSH_KEY = os.environ.get('CENTOS_SSH_KEY', SSH_KEY)
-VM1_HOST = os.environ.get('VM1_HOST', os.environ.get('MACHINE2_HOST', '10.70.0.41'))
-VM1_USER = os.environ.get('MACHINE2_USER', 'vm1')
+CLIENT2_HOST = os.environ.get('CLIENT2_HOST', os.environ.get('MACHINE2_HOST', '10.70.0.41'))
+CLIENT2_USER = os.environ.get('MACHINE2_USER', 'client2')
 # Base URL for streaming audio to campus machines (HTTP so no TLS issues with internal cert)
 WEBUI_STREAM_BASE = os.environ.get('WEBUI_STREAM_BASE', f'https://{CENTOS_HOST}:8090')
 
-def _get_vm1():
-    m = next((x for x in MACHINES if x['host'] != NCTK_HOST), None)
-    return (m['host'], m.get('user', NCTK_USER)) if m else (None, None)
+def _get_client2():
+    m = next((x for x in MACHINES if x['host'] != CLIENT1_HOST), None)
+    return (m['host'], m.get('user', CLIENT1_USER)) if m else (None, None)
 
 TERMINAL_MACHINES = {
-    'nctk':   {'host': NCTK_HOST,    'user': NCTK_USER,   'label': 'Narimanov', 'key': SSH_KEY},
-    'vm1':    {'host': None,          'user': None,         'label': 'Gənclik',  'key': SSH_KEY},
+    'client1':   {'host': CLIENT1_HOST,    'user': CLIENT1_USER,   'label': 'Client1', 'key': SSH_KEY},
+    'client2':    {'host': None,          'user': None,         'label': 'Client2',  'key': SSH_KEY},
     'centos': {'host': CENTOS_HOST,   'user': CENTOS_USER,  'label': 'CentOS',   'key': CENTOS_SSH_KEY},
 }
 
@@ -282,7 +282,7 @@ def init_db():
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             username   TEXT NOT NULL,
             action     TEXT NOT NULL,
-            machine    TEXT NOT NULL DEFAULT "nctk",
+            machine    TEXT NOT NULL DEFAULT "client1",
             detail     TEXT,
             happened_at TEXT NOT NULL
         )''')
@@ -339,7 +339,7 @@ def init_db():
             host        TEXT NOT NULL,
             name        TEXT NOT NULL,
             mac         TEXT NOT NULL DEFAULT "",
-            user        TEXT NOT NULL DEFAULT "nctk",
+            user        TEXT NOT NULL DEFAULT "client1",
             cockpit_url TEXT NOT NULL DEFAULT "",
             created_at  TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
@@ -355,7 +355,7 @@ def init_db():
     reload_machines()
     _start_audio_poll_thread()
 
-def log_action(username, action, machine='nctk', detail=None):
+def log_action(username, action, machine='client1', detail=None):
     try:
         with get_db() as c:
             c.execute(
@@ -475,7 +475,7 @@ def ssh_run_on(host, user, cmd, key=None):
             except Exception: pass
 
 def ssh_run(cmd):
-    return ssh_run_on(NCTK_HOST, NCTK_USER, cmd)
+    return ssh_run_on(CLIENT1_HOST, CLIENT1_USER, cmd)
 
 def _last_cron_track(host, user, log_path, machine_key):
     """Last cron-played track + its timestamp from action.log; cached _CRON_TTL s."""
@@ -484,7 +484,7 @@ def _last_cron_track(host, user, log_path, machine_key):
     if cached and now - cached[2] < _CRON_TTL:
         return cached[0], cached[1]          # (track, datetime)
     r = ssh_run_on(host, user,
-        f"awk '/Cron Landau/{{line=$0}} END{{print line}}' {log_path} 2>/dev/null || true")
+        f"awk '/Cron Media/{{line=$0}} END{{print line}}' {log_path} 2>/dev/null || true")
     track, dt = None, None
     if r.get('ok') and r.get('data', '').strip():
         line = r['data'].strip()
@@ -527,12 +527,12 @@ def mpv_set(prop, val):
     return mpv_cmd({'command': ['set_property', prop, val]})
 
 def mpv_set_all(prop, val):
-    """Set mpv property on nctk and all additional machines."""
+    """Set mpv property on client1 and all additional machines."""
     cmd = {'command': ['set_property', prop, val]}
     r = mpv_cmd(cmd)
     for m in MACHINES:
-        if m['host'] != NCTK_HOST:
-            mpv_cmd_on(m['host'], m.get('user', NCTK_USER), cmd)
+        if m['host'] != CLIENT1_HOST:
+            mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
     return r
 
 # ── Wake-on-LAN / host ping ──────────────────────
@@ -580,7 +580,7 @@ def api_wol(mid):
     if not m:
         return jsonify({'ok': False, 'error': 'Машина не найдена'})
     if not m['mac']:
-        return jsonify({'ok': False, 'error': 'MAC-адрес не настроен. Добавьте NCTK_MAC в .env'})
+        return jsonify({'ok': False, 'error': 'MAC-адрес не настроен. Добавьте CLIENT1_MAC в .env'})
     ok, msg = send_wol(m['mac'], m['host'])
     return jsonify({'ok': ok, 'error': msg if not ok else None})
 
@@ -601,7 +601,7 @@ def api_machines_add():
     host = data.get('host', '').strip()
     name = data.get('name', '').strip()
     mac  = data.get('mac',  '').strip()
-    user = data.get('user', NCTK_USER).strip() or NCTK_USER
+    user = data.get('user', CLIENT1_USER).strip() or CLIENT1_USER
     cockpit = data.get('cockpit_url', f'http://{host}:1991').strip()
     if not host or not name:
         return jsonify({'ok': False, 'error': 'IP-адрес и имя обязательны'})
@@ -620,7 +620,7 @@ def api_machines_edit(db_id):
     host = data.get('host', '').strip()
     name = data.get('name', '').strip()
     mac  = data.get('mac',  '').strip()
-    user = data.get('user', NCTK_USER).strip() or NCTK_USER
+    user = data.get('user', CLIENT1_USER).strip() or CLIENT1_USER
     cockpit = data.get('cockpit_url', '').strip()
     if not host or not name:
         return jsonify({'ok': False, 'error': 'IP-адрес и имя обязательны'})
@@ -1429,12 +1429,12 @@ def admin_activity():
 # ── Cron pause API ────────────────────────────────
 _CRON_PAUSE_FILE = '.cron_paused'
 
-def _vm1_conn():
-    m = next((x for x in MACHINES if x['host'] and x['host'] != NCTK_HOST), None)
+def _client2_conn():
+    m = next((x for x in MACHINES if x['host'] and x['host'] != CLIENT1_HOST), None)
     if m:
         return m
-    if VM1_HOST:
-        return {'host': VM1_HOST, 'user': VM1_USER}
+    if CLIENT2_HOST:
+        return {'host': CLIENT2_HOST, 'user': CLIENT2_USER}
     return None
 
 def _cron_is_paused(host, user):
@@ -1446,10 +1446,10 @@ def _cron_is_paused(host, user):
 def api_cron_pause_get():
     if not has_perm('admin'):
         return jsonify({'ok': False, 'error': 'forbidden'}), 403
-    vm1 = _vm1_conn()
-    result = {'nctk': _cron_is_paused(NCTK_HOST, NCTK_USER)}
-    if vm1:
-        result['vm1'] = _cron_is_paused(vm1['host'], vm1.get('user', 'vm1'))
+    client2 = _client2_conn()
+    result = {'client1': _cron_is_paused(CLIENT1_HOST, CLIENT1_USER)}
+    if client2:
+        result['client2'] = _cron_is_paused(client2['host'], client2.get('user', 'client2'))
     return jsonify({'ok': True, **result})
 
 @app.route('/api/cron/pause', methods=['POST'])
@@ -1461,24 +1461,24 @@ def api_cron_pause_set():
     machine = data.get('machine', 'both')
     paused  = bool(data.get('paused', True))
     cmd     = f'touch ~/{_CRON_PAUSE_FILE}' if paused else f'rm -f ~/{_CRON_PAUSE_FILE}'
-    vm1     = _vm1_conn()
-    if machine in ('nctk', 'both'):
-        ssh_run_on(NCTK_HOST, NCTK_USER, cmd)
-    if machine in ('vm1', 'both') and vm1:
-        ssh_run_on(vm1['host'], vm1.get('user', 'vm1'), cmd)
+    client2     = _client2_conn()
+    if machine in ('client1', 'both'):
+        ssh_run_on(CLIENT1_HOST, CLIENT1_USER, cmd)
+    if machine in ('client2', 'both') and client2:
+        ssh_run_on(client2['host'], client2.get('user', 'client2'), cmd)
     return jsonify({'ok': True, 'paused': paused, 'machine': machine})
 
 # ── API ───────────────────────────────────────────
 @app.route('/api/status')
 @login_required
 def api_status():
-    machine = request.args.get('machine', 'nctk')
-    if machine != 'nctk':
+    machine = request.args.get('machine', 'client1')
+    if machine != 'client1':
         m = next((x for x in MACHINES
-                  if x.get('host') and x['host'] != NCTK_HOST and
+                  if x.get('host') and x['host'] != CLIENT1_HOST and
                      (x.get('user','') == machine or x['host'].endswith(machine))), None)
         if m:
-            host, user = m['host'], m.get('user', NCTK_USER)
+            host, user = m['host'], m.get('user', CLIENT1_USER)
             path   = mpv_get_on(host, user, 'path')
             paused = mpv_get_on(host, user, 'pause')
             vol    = mpv_get_on(host, user, 'volume')
@@ -1516,9 +1516,9 @@ def api_status():
     display_by   = last['username']   if last else None
     display_at   = last['played_at']  if last else None
     if raw_name and raw_name.lower() in ('in.mp3', 'in.wav', 'in.ogg'):
-        # nctk cron copies any track to in.mp3; determine actual track by comparing
+        # client1 cron copies any track to in.mp3; determine actual track by comparing
         # the most recent action.log cron entry vs the most recent webui play_log entry.
-        cron_t, cron_dt = _last_cron_track(NCTK_HOST, NCTK_USER, '/home/nctk/action.log', 'nctk')
+        cron_t, cron_dt = _last_cron_track(CLIENT1_HOST, CLIENT1_USER, '/home/client1/action.log', 'client1')
         pl_dt = None
         if last:
             try:
@@ -1573,7 +1573,7 @@ def api_pause():
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     data   = request.get_json() or {}
-    machine = data.get('machine', 'nctk')
+    machine = data.get('machine', 'client1')
     action  = data.get('action', 'toggle')  # 'play'→unpause, 'pause'→pause, 'toggle'→cycle
     if action == 'play':
         cmd = {'command': ['set_property', 'pause', False]}
@@ -1581,14 +1581,14 @@ def api_pause():
         cmd = {'command': ['set_property', 'pause', True]}
     else:
         cmd = {'command': ['cycle', 'pause']}
-    if machine == 'nctk':
+    if machine == 'client1':
         r = mpv_cmd(cmd)
     else:
-        vm1 = next((m for m in MACHINES if m['host'] != NCTK_HOST), None)
-        host = vm1['host'] if vm1 else VM1_HOST
-        user = vm1.get('user', VM1_USER) if vm1 else VM1_USER
+        client2 = next((m for m in MACHINES if m['host'] != CLIENT1_HOST), None)
+        host = client2['host'] if client2 else CLIENT2_HOST
+        user = client2.get('user', CLIENT2_USER) if client2 else CLIENT2_USER
         if not host:
-            return jsonify({'ok': False, 'error': 'vm1 не настроен'})
+            return jsonify({'ok': False, 'error': 'client2 не настроен'})
         r = mpv_cmd_on(host, user, cmd)
     log_action(current_user.username, 'pause', machine)
     return jsonify(r if isinstance(r, dict) else {'ok': True})
@@ -1598,33 +1598,33 @@ def api_pause():
 def api_stop():
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    _mpv_stop_on(NCTK_HOST, NCTK_USER)
+    _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
     for m in MACHINES:
-        if m['host'] != NCTK_HOST:
-            _mpv_stop_on(m['host'], m.get('user', NCTK_USER))
+        if m['host'] != CLIENT1_HOST:
+            _mpv_stop_on(m['host'], m.get('user', CLIENT1_USER))
     log_action(current_user.username, 'stop', 'all')
     return jsonify({'ok': True})
 
-@app.route('/api/stop/nctk', methods=['POST'])
+@app.route('/api/stop/client1', methods=['POST'])
 @login_required
-def api_stop_nctk():
+def api_stop_client1():
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    _mpv_stop_on(NCTK_HOST, NCTK_USER)
-    log_action(current_user.username, 'stop', 'nctk')
+    _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
+    log_action(current_user.username, 'stop', 'client1')
     return jsonify({'ok': True})
 
-@app.route('/api/stop/vm1', methods=['POST'])
+@app.route('/api/stop/client2', methods=['POST'])
 @login_required
-def api_stop_vm1():
+def api_stop_client2():
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    vm1 = next((m for m in MACHINES if m['host'] != NCTK_HOST), None)
-    host = vm1['host'] if vm1 else VM1_HOST
-    user = vm1.get('user', VM1_USER) if vm1 else VM1_USER
+    client2 = next((m for m in MACHINES if m['host'] != CLIENT1_HOST), None)
+    host = client2['host'] if client2 else CLIENT2_HOST
+    user = client2.get('user', CLIENT2_USER) if client2 else CLIENT2_USER
     if host:
         _mpv_stop_on(host, user)
-    log_action(current_user.username, 'stop', 'vm1')
+    log_action(current_user.username, 'stop', 'client2')
     return jsonify({'ok': True})
 
 @app.route('/api/seek', methods=['POST'])
@@ -1633,20 +1633,20 @@ def api_seek():
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     data    = request.get_json(silent=True) or {}
-    machine = data.get('machine', 'nctk')
+    machine = data.get('machine', 'client1')
     pos     = float(data.get('pos', 0))
-    if machine == 'nctk':
+    if machine == 'client1':
         mpv_set('time-pos', pos)
     else:
         m = next((x for x in MACHINES if x.get('user', '') == machine or
                   x['host'].endswith(machine)), None)
         if m:
-            mpv_cmd_on(m['host'], m.get('user', NCTK_USER),
+            mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER),
                        {'command': ['set_property', 'time-pos', pos]})
     return jsonify({'ok': True})
 
-HIMN_NCTK = '/mnt/music/Landau/1/HIMN.mp3'
-HIMN_VM1  = '/home/vm1/Landau/1/himn.mp3'
+HIMN_CLIENT1 = '/mnt/music/Media/1/HIMN.mp3'
+HIMN_CLIENT2  = '/home/client2/Media/1/himn.mp3'
 
 def _play_himn(host, user, filepath, vol):
     r = ssh_run_on(host, user,
@@ -1661,37 +1661,37 @@ def _log_himn_play(username, machine, filename):
         c.execute('INSERT INTO play_log (username, track_name, played_at) VALUES (?,?,?)',
                   (username, f'[гимн] {filename}', ts))
 
-@app.route('/api/himn/nctk', methods=['POST'])
+@app.route('/api/himn/client1', methods=['POST'])
 @login_required
-def api_himn_nctk():
+def api_himn_client1():
     if not has_himn_perm():
         return jsonify({'ok': False, 'error': 'Нет прав на гимн'})
-    r = _play_himn(NCTK_HOST, NCTK_USER, HIMN_NCTK, 160)
+    r = _play_himn(CLIENT1_HOST, CLIENT1_USER, HIMN_CLIENT1, 160)
     if r['ok']:
-        _log_himn_play(current_user.username, 'nctk', os.path.basename(HIMN_NCTK))
+        _log_himn_play(current_user.username, 'client1', os.path.basename(HIMN_CLIENT1))
         tg_notify(
             f'🎼 <b>Государственный гимн</b>\n'
-            f'🏫 Кампус: <b>Narimanov</b>\n'
+            f'🏫 Кампус: <b>Client1</b>\n'
             f'👤 Запустил: <b>{current_user.username}</b>\n'
             f'🕐 {_tg_fmt_time()}',
             event_type='himn'
         )
     return jsonify({'ok': r['ok'], 'error': r.get('error')})
 
-@app.route('/api/himn/vm1', methods=['POST'])
+@app.route('/api/himn/client2', methods=['POST'])
 @login_required
-def api_himn_vm1():
+def api_himn_client2():
     if not has_himn_perm():
         return jsonify({'ok': False, 'error': 'Нет прав на гимн'})
-    vm1 = _vm1_conn()
-    host = vm1['host'] if vm1 else VM1_HOST
-    user = vm1.get('user', VM1_USER) if vm1 else VM1_USER
-    r = _play_himn(host, user, HIMN_VM1, 150)
+    client2 = _client2_conn()
+    host = client2['host'] if client2 else CLIENT2_HOST
+    user = client2.get('user', CLIENT2_USER) if client2 else CLIENT2_USER
+    r = _play_himn(host, user, HIMN_CLIENT2, 150)
     if r['ok']:
-        _log_himn_play(current_user.username, 'vm1', os.path.basename(HIMN_VM1))
+        _log_himn_play(current_user.username, 'client2', os.path.basename(HIMN_CLIENT2))
         tg_notify(
             f'🎼 <b>Государственный гимн</b>\n'
-            f'🏫 Кампус: <b>Gənclik</b>\n'
+            f'🏫 Кампус: <b>Client2</b>\n'
             f'👤 Запустил: <b>{current_user.username}</b>\n'
             f'🕐 {_tg_fmt_time()}',
             event_type='himn'
@@ -1731,12 +1731,12 @@ def api_eq():
     while len(bands) < 10:
         bands.append(0.0)
     cmd = _eq_af_cmd(bands)
-    if campus in ('nctk', 'both'):
+    if campus in ('client1', 'both'):
         mpv_cmd(cmd)
-    if campus in ('vm1', 'both'):
-        vm1m = _vm1_conn()
-        if vm1m:
-            mpv_cmd_on(vm1m['host'], vm1m.get('user', NCTK_USER), cmd)
+    if campus in ('client2', 'both'):
+        client2m = _client2_conn()
+        if client2m:
+            mpv_cmd_on(client2m['host'], client2m.get('user', CLIENT1_USER), cmd)
     _eq_state['bands'] = bands
     log_action(current_user.username, 'eq', campus, str(bands))
     return jsonify({'ok': True, 'bands': bands})
@@ -1748,10 +1748,10 @@ def api_eq_reset():
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     campus = (request.get_json() or {}).get('campus', 'both')
     cmd = {'command': ['af', 'set', '']}
-    if campus in ('nctk', 'both'): mpv_cmd(cmd)
-    if campus in ('vm1', 'both'):
-        vm1m = _vm1_conn()
-        if vm1m: mpv_cmd_on(vm1m['host'], vm1m.get('user', NCTK_USER), cmd)
+    if campus in ('client1', 'both'): mpv_cmd(cmd)
+    if campus in ('client2', 'both'):
+        client2m = _client2_conn()
+        if client2m: mpv_cmd_on(client2m['host'], client2m.get('user', CLIENT1_USER), cmd)
     _eq_state['bands'] = [0.0] * 10
     return jsonify({'ok': True})
 
@@ -1761,7 +1761,7 @@ def api_eq_state():
     return jsonify(_eq_state)
 
 # ── Audio FFT polling (background thread → SSE) ──────────────────────────────
-_audio_cache = {'nctk': None, 'vm1': None}
+_audio_cache = {'client1': None, 'client2': None}
 _audio_lock  = threading.Lock()
 _audio_thread_started = False
 
@@ -1770,8 +1770,8 @@ def _audio_poll_loop():
     conns = {}
     while True:
         targets = [
-            ('nctk', NCTK_HOST, NCTK_USER),
-            ('vm1',  VM1_HOST,  VM1_USER),
+            ('client1', CLIENT1_HOST, CLIENT1_USER),
+            ('client2',  CLIENT2_HOST,  CLIENT2_USER),
         ]
         for cid, host, user in targets:
             if not host:
@@ -1824,15 +1824,15 @@ def api_audio_fft():
     return Response(stream_with_context(generate()), mimetype='text/event-stream',
                     headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
-PLAYER_INBOX = os.environ.get('NCTK_INBOX', '/var/lib/campus-player/inbox')
+PLAYER_INBOX = os.environ.get('CLIENT1_INBOX', '/var/lib/campus-player/inbox')
 
 def _play_track_on(host, user, local_path, name, machine_id, username):
     """Background worker: SSH/SFTP to campus machine then start mpv playback."""
     s = None
     try:
-        landau_base = _LANDAU_PATHS.get(machine_id, '/mnt/music/Landau')
+        media_base = _MEDIA_PATHS.get(machine_id, '/mnt/music/Media')
         relative    = os.path.relpath(local_path, MUSIC_DIR)
-        remote_path = os.path.join(landau_base, relative)
+        remote_path = os.path.join(media_base, relative)
 
         s = paramiko.SSHClient()
         s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -1871,7 +1871,7 @@ def _play_track_on(host, user, local_path, name, machine_id, username):
                     (username, name, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 )
             log_action(username, 'play', machine_id, name)
-            campus_lbl = 'Narimanov' if machine_id == 'nctk' else 'Gənclik'
+            campus_lbl = 'Client1' if machine_id == 'client1' else 'Client2'
             tg_notify(
                 f'▶️ <b>Музыка включена</b>\n'
                 f'🎵 {name}\n'
@@ -1896,7 +1896,7 @@ def api_play():
     raw     = (data.get('name') or '').strip().replace('\x00','')
     name    = os.path.basename(raw)
     folder  = os.path.basename((data.get('folder') or '').strip())
-    machine = data.get('machine', 'nctk')
+    machine = data.get('machine', 'client1')
     if not name or '..' in name:
         return jsonify({'ok': False, 'error': 'недопустимое имя файла'})
     if folder == KAMRAN_FOLDER and not _kamran_unlocked():
@@ -1907,17 +1907,17 @@ def api_play():
 
     username = current_user.username  # capture before background thread
 
-    if machine == 'nctk':
-        host, user, mid = NCTK_HOST, NCTK_USER, 'nctk'
+    if machine == 'client1':
+        host, user, mid = CLIENT1_HOST, CLIENT1_USER, 'client1'
     else:
         m = next((x for x in MACHINES
-                   if x['host'] != NCTK_HOST and
+                   if x['host'] != CLIENT1_HOST and
                       (x.get('user','') == machine or x['host'].endswith(machine))), None)
         if not m:
-            m = _vm1_conn()
+            m = _client2_conn()
         if not m:
             return jsonify({'ok': False, 'error': f'машина {machine} не настроена'})
-        host, user, mid = m['host'], m.get('user', NCTK_USER), m.get('user', machine)
+        host, user, mid = m['host'], m.get('user', CLIENT1_USER), m.get('user', machine)
 
     # Start SFTP/SSH in background — respond immediately so UI doesn't freeze
     threading.Thread(
@@ -1943,23 +1943,23 @@ def api_play_all():
     if not has_perm('play'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     data    = request.get_json() or {}
-    machine = data.get('machine', 'nctk')
+    machine = data.get('machine', 'client1')
     do_shuf = data.get('shuffle', True)
 
     # Scan the campus machine's local music library over SSH.
     # Network streaming is not possible (campus machine can't reach this server).
-    music_root = _LANDAU_PATHS.get(machine, '/mnt/music/Landau')
+    music_root = _MEDIA_PATHS.get(machine, '/mnt/music/Media')
     find_cmd = (f"find {music_root} -type f \\("
                 f" -name '*.mp3' -o -name '*.flac'"
                 f" -o -name '*.ogg' -o -name '*.m4a' \\) 2>/dev/null | sort")
 
-    if machine == 'nctk':
+    if machine == 'client1':
         raw = ssh_run(find_cmd)
     else:
-        vm = next((x for x in MACHINES if x['host'] != NCTK_HOST), None)
+        vm = next((x for x in MACHINES if x['host'] != CLIENT1_HOST), None)
         if not vm:
-            return jsonify({'ok': False, 'error': 'vm1 не настроен'})
-        h, u = vm['host'], vm.get('user', VM1_USER)
+            return jsonify({'ok': False, 'error': 'client2 не настроен'})
+        h, u = vm['host'], vm.get('user', CLIENT2_USER)
         raw = ssh_run_on(h, u, find_cmd)
 
     files = [l.strip() for l in raw.splitlines() if l.strip()]
@@ -1978,7 +1978,7 @@ def api_play_all():
     load_cmd = (f"echo '{{\"command\":[\"loadlist\",\"{playlist_path}\",\"replace\"]}}'"
                 f" | socat - {MPV_SOCK} 2>/dev/null; true")
 
-    if machine == 'nctk':
+    if machine == 'client1':
         ssh_run(write_cmd)
         ssh_run(load_cmd)
     else:
@@ -1997,7 +1997,7 @@ def _change_track(direction):
     dirname  = os.path.dirname(path)
     basename = os.path.basename(path)
 
-    # inbox temp file → use Landau day folder fallback
+    # inbox temp file → use Media day folder fallback
     if basename.lower() in ('in.mp3', 'in.wav', 'in.ogg') or not dirname:
         return jsonify({'ok': False, 'error': 'Текущий трек не из папки'})
 
@@ -2021,7 +2021,7 @@ def _change_track(direction):
     r2 = ssh_run(f'/usr/local/bin/campus-playerctl play "{new_file}" {int(round(float(vol)))}')
     if r2['ok']:
         action = 'next' if direction > 0 else 'prev'
-        log_action(current_user.username, action, 'nctk', files[new_idx])
+        log_action(current_user.username, action, 'client1', files[new_idx])
         return jsonify({'ok': True, 'track': files[new_idx]})
     return jsonify({'ok': False, 'error': r2.get('error', '—')})
 
@@ -2050,8 +2050,8 @@ def api_mute():
         cycle_cmd = {'command': ['cycle', 'mute']}
         r = mpv_cmd(cycle_cmd)
         for m in MACHINES:
-            if m['host'] != NCTK_HOST:
-                mpv_cmd_on(m['host'], m.get('user', NCTK_USER), cycle_cmd)
+            if m['host'] != CLIENT1_HOST:
+                mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cycle_cmd)
         return jsonify(r)
     return jsonify(mpv_set_all('mute', bool(state)))
 
@@ -2062,7 +2062,7 @@ def api_terminal():
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     data    = request.get_json() or {}
     cmd     = (data.get('cmd') or '').strip()
-    machine = (data.get('machine') or 'nctk').strip()
+    machine = (data.get('machine') or 'client1').strip()
     if not cmd:
         return jsonify({'ok': False, 'error': 'Пустая команда'})
     tm = TERMINAL_MACHINES.get(machine)
@@ -2071,11 +2071,11 @@ def api_terminal():
     host = tm['host']
     user = tm['user']
     key  = tm['key']
-    # vm1 host is resolved at runtime from MACHINES
-    if machine == 'vm1' and not host:
-        host, user = _get_vm1()
+    # client2 host is resolved at runtime from MACHINES
+    if machine == 'client2' and not host:
+        host, user = _get_client2()
         if not host:
-            return jsonify({'ok': False, 'error': 'Gənclik не настроен'})
+            return jsonify({'ok': False, 'error': 'Client2 не настроен'})
     s = None
     try:
         s = paramiko.SSHClient()
@@ -2199,7 +2199,7 @@ def _stream_allowed():
         return True
     # Trust campus machine IPs directly
     ip = request.remote_addr
-    trusted = {NCTK_HOST, '127.0.0.1', '::1'}
+    trusted = {CLIENT1_HOST, '127.0.0.1', '::1'}
     for m in MACHINES:
         if m.get('host'):
             trusted.add(m['host'])
@@ -2310,27 +2310,27 @@ import re as _re
 
 _file_meta_cache = {}   # (machine, folder, filename) -> {size, duration, format}
 
-# Пути к Landau на каждой машине
-_LANDAU_PATHS = {
-    'nctk': '/mnt/music/Landau',
-    'vm1':  '/home/vm1/Landau',
+# Пути к Media на каждой машине
+_MEDIA_PATHS = {
+    'client1': '/mnt/music/Media',
+    'client2':  '/home/client2/Media',
 }
 
 def _machine_ssh(machine):
     """Вернуть (host, user) для машины."""
-    if machine == 'vm1':
-        m = next((x for x in MACHINES if x['host'] != NCTK_HOST), None)
+    if machine == 'client2':
+        m = next((x for x in MACHINES if x['host'] != CLIENT1_HOST), None)
         if m:
-            return m['host'], m.get('user', 'vm1')
-        return '10.70.0.41', 'vm1'
-    return NCTK_HOST, NCTK_USER
+            return m['host'], m.get('user', 'client2')
+        return '10.70.0.41', 'client2'
+    return CLIENT1_HOST, CLIENT1_USER
 
-def _load_folder_meta(folder, machine='nctk'):
+def _load_folder_meta(folder, machine='client1'):
     folder = str(folder)
-    landau = _LANDAU_PATHS.get(machine, '/home/nctk/Landau')
+    media = _MEDIA_PATHS.get(machine, '/home/client1/Media')
     host, user = _machine_ssh(machine)
     cmd = (
-        f'for f in {landau}/{folder}/*.mp3 {landau}/{folder}/*.wav; do '
+        f'for f in {media}/{folder}/*.mp3 {media}/{folder}/*.wav; do '
         '[ -f "$f" ] || continue; '
         'fname=$(basename "$f"); '
         'size=$(stat -c "%s" "$f" 2>/dev/null || echo 0); '
@@ -2355,7 +2355,7 @@ def _load_folder_meta(folder, machine='nctk'):
         except ValueError:
             pass
 
-def _get_remote_meta(folder, fname, machine='nctk'):
+def _get_remote_meta(folder, fname, machine='client1'):
     key = (machine, str(folder), fname)
     if key not in _file_meta_cache:
         _load_folder_meta(folder, machine)
@@ -2436,14 +2436,14 @@ def _mpv_get_on(host, user, prop):
 @login_required
 @admin_only
 def api_cron_status():
-    machine = request.args.get('machine', 'nctk')
-    if machine == 'vm1':
-        m = _vm1_conn()
+    machine = request.args.get('machine', 'client1')
+    if machine == 'client2':
+        m = _client2_conn()
         if not m:
-            return jsonify({'ok': False, 'error': 'vm1 не настроен'})
-        host, user = m['host'], m.get('user', 'vm1')
+            return jsonify({'ok': False, 'error': 'client2 не настроен'})
+        host, user = m['host'], m.get('user', 'client2')
     else:
-        host, user = NCTK_HOST, NCTK_USER
+        host, user = CLIENT1_HOST, CLIENT1_USER
     path  = _mpv_get_on(host, user, 'path')
     pause = _mpv_get_on(host, user, 'pause')
     if path and pause is False:
@@ -2455,14 +2455,14 @@ def api_cron_status():
 @admin_only
 def api_cron_log():
     lines   = request.args.get('lines', 100, type=int)
-    machine = request.args.get('machine', 'nctk')
-    if machine == 'vm1':
-        m = _vm1_conn()
-        host  = m['host'] if m else VM1_HOST
-        user  = m.get('user', 'vm1') if m else VM1_USER
-        log   = '/home/vm1/action.log'
+    machine = request.args.get('machine', 'client1')
+    if machine == 'client2':
+        m = _client2_conn()
+        host  = m['host'] if m else CLIENT2_HOST
+        user  = m.get('user', 'client2') if m else CLIENT2_USER
+        log   = '/home/client2/action.log'
     else:
-        host, user, log = NCTK_HOST, NCTK_USER, '/home/nctk/action.log'
+        host, user, log = CLIENT1_HOST, CLIENT1_USER, '/home/client1/action.log'
     r = ssh_run_on(host, user, f'tail -n {min(lines, 300)} {log} 2>/dev/null')
     if not r['ok']:
         return jsonify({'ok': False, 'error': r.get('error', 'SSH error')})
@@ -2475,7 +2475,7 @@ def api_cron_log():
 @admin_only
 def api_cron_files():
     folder  = request.args.get('folder', '1')
-    machine = request.args.get('machine', 'nctk')
+    machine = request.args.get('machine', 'client1')
     if not folder.isdigit():
         return jsonify({'ok': False, 'error': 'bad folder'})
     if not any(k[0] == machine and k[1] == folder for k in _file_meta_cache):
@@ -2498,7 +2498,7 @@ def api_cron_files():
 @admin_only
 def api_cron_meta_refresh():
     folder  = request.args.get('folder', '1')
-    machine = request.args.get('machine', 'nctk')
+    machine = request.args.get('machine', 'client1')
     keys = [k for k in _file_meta_cache if k[0] == machine and k[1] == folder]
     for k in keys:
         del _file_meta_cache[k]
@@ -2506,12 +2506,12 @@ def api_cron_meta_refresh():
     return jsonify({'ok': True, 'cached': len(_file_meta_cache)})
 
 _MACHINE_MAP = {
-    'nctk': {'host': NCTK_HOST, 'user': NCTK_USER, 'label': 'Narimanov Campus',
+    'client1': {'host': CLIENT1_HOST, 'user': CLIENT1_USER, 'label': 'Client1 Campus',
               'color': 'blue', 'icon': 'building',
-              'log': '/home/nctk/action.log', 'cron_user': 'nctk'},
-    'vm1':  {'host': '10.70.0.41', 'user': 'vm1', 'label': 'Gənclik Campus',
+              'log': '/home/client1/action.log', 'cron_user': 'client1'},
+    'client2':  {'host': '10.70.0.41', 'user': 'client2', 'label': 'Client2 Campus',
               'color': 'purple', 'icon': 'pc-display',
-              'log': '/home/vm1/action.log', 'cron_user': 'vm1'},
+              'log': '/home/client2/action.log', 'cron_user': 'client2'},
 }
 
 _SLOT_LABELS = {
@@ -2609,10 +2609,10 @@ def campus_detail(machine):
             (machine,)
         ).fetchall()
         play_rows = c.execute(
-            '''SELECT username, "play" as action, "nctk" as machine,
+            '''SELECT username, "play" as action, "client1" as machine,
                       track_name as detail, played_at as happened_at
                FROM play_log ORDER BY id DESC LIMIT 80'''
-        ).fetchall() if machine == 'nctk' else []
+        ).fetchall() if machine == 'client1' else []
 
     # Combine and sort by time desc
     activity = []
@@ -2820,10 +2820,10 @@ def api_sysinfo():
     def collect(label, host, user, key=SSH_KEY):
         out[label] = get_info(host, user, key)
 
-    targets = [('nctk', NCTK_HOST, NCTK_USER, SSH_KEY)]
+    targets = [('client1', CLIENT1_HOST, CLIENT1_USER, SSH_KEY)]
     for m in MACHINES:
-        if m['host'] != NCTK_HOST:
-            targets.append((m['id'], m['host'], m.get('user', NCTK_USER), SSH_KEY))
+        if m['host'] != CLIENT1_HOST:
+            targets.append((m['id'], m['host'], m.get('user', CLIENT1_USER), SSH_KEY))
     targets.append(('centos', CENTOS_HOST, CENTOS_USER, CENTOS_SSH_KEY))
 
     for label, host, user, key in targets:
@@ -2848,12 +2848,12 @@ def api_service_restart():
     service = data.get('service', '').strip()
     if service not in _ALLOWED_SERVICES:
         return jsonify({'ok': False, 'error': 'service not allowed'})
-    if machine == 'nctk':
-        host, user, key = NCTK_HOST, NCTK_USER, SSH_KEY
-    elif machine == 'vm1':
-        h, u = _get_vm1()
+    if machine == 'client1':
+        host, user, key = CLIENT1_HOST, CLIENT1_USER, SSH_KEY
+    elif machine == 'client2':
+        h, u = _get_client2()
         if not h:
-            return jsonify({'ok': False, 'error': 'vm1 not configured'})
+            return jsonify({'ok': False, 'error': 'client2 not configured'})
         host, user, key = h, u, SSH_KEY
     elif machine == 'centos':
         host, user, key = CENTOS_HOST, CENTOS_USER, CENTOS_SSH_KEY
@@ -2922,8 +2922,8 @@ def pwa_manifest():
         "background_color": "#0d1117",
         "theme_color": "#0d1117",
         "icons": [
-            {"src": "/static/landau.logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-            {"src": "/static/landau.logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+            {"src": "/static/media.logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/static/media.logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
         ]
     }
     return Response(json.dumps(manifest), mimetype='application/manifest+json')
@@ -3024,9 +3024,9 @@ def api_schedule_reset():
     return jsonify({'ok': True, 'schedule': SCHEDULE})
 
 # ══════════════════════════════════════════════════
-# TRACKS SYNC  (nctk ↔ vm1)
+# TRACKS SYNC  (client1 ↔ client2)
 # ══════════════════════════════════════════════════
-VM1_MUSIC_DIR = os.environ.get('VM1_MUSIC_DIR', '/var/lib/campus-player/inbox/music')
+CLIENT2_MUSIC_DIR = os.environ.get('CLIENT2_MUSIC_DIR', '/var/lib/campus-player/inbox/music')
 
 def _list_remote_tracks(host, user, remote_dir):
     s = None
@@ -3051,19 +3051,19 @@ def api_tracks_sync_status():
         return jsonify({'ok': False, 'error': 'Нет прав'})
     local = set(f for f in os.listdir(MUSIC_DIR)
                 if os.path.splitext(f)[1].lower() in ALLOWED_AUDIO)
-    vm1 = _vm1_conn()
-    if not vm1:
-        return jsonify({'ok': False, 'error': 'vm1 не настроен'})
-    remote = _list_remote_tracks(vm1['host'], vm1.get('user', NCTK_USER), VM1_MUSIC_DIR)
+    client2 = _client2_conn()
+    if not client2:
+        return jsonify({'ok': False, 'error': 'client2 не настроен'})
+    remote = _list_remote_tracks(client2['host'], client2.get('user', CLIENT1_USER), CLIENT2_MUSIC_DIR)
     if isinstance(remote, tuple):
         return jsonify({'ok': False, 'error': remote[1]})
     return jsonify({
         'ok': True,
-        'only_nctk': sorted(local - remote),
-        'only_vm1':  sorted(remote - local),
+        'only_client1': sorted(local - remote),
+        'only_client2':  sorted(remote - local),
         'both':      sorted(local & remote),
-        'nctk_count': len(local),
-        'vm1_count':  len(remote),
+        'client1_count': len(local),
+        'client2_count':  len(remote),
     })
 
 @app.route('/api/tracks/sync', methods=['POST'])
@@ -3072,38 +3072,38 @@ def api_tracks_sync():
     if current_user.role not in ('admin', 'staff'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data      = request.get_json() or {}
-    direction = data.get('direction', 'nctk_to_vm1')
+    direction = data.get('direction', 'client1_to_client2')
     files     = data.get('files', [])
     if not files:
         return jsonify({'ok': False, 'error': 'Список файлов пуст'})
-    vm1 = _vm1_conn()
-    if not vm1:
-        return jsonify({'ok': False, 'error': 'vm1 не настроен'})
-    vm1_host = vm1['host']
-    vm1_user = vm1.get('user', NCTK_USER)
+    client2 = _client2_conn()
+    if not client2:
+        return jsonify({'ok': False, 'error': 'client2 не настроен'})
+    client2_host = client2['host']
+    client2_user = client2.get('user', CLIENT1_USER)
     copied, errors = [], []
     s = None
     try:
         s = paramiko.SSHClient()
         s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        s.connect(vm1_host, username=vm1_user, key_filename=SSH_KEY, timeout=10, banner_timeout=20)
+        s.connect(client2_host, username=client2_user, key_filename=SSH_KEY, timeout=10, banner_timeout=20)
         sftp = s.open_sftp()
-        s.exec_command(f'mkdir -p "{VM1_MUSIC_DIR}"')
+        s.exec_command(f'mkdir -p "{CLIENT2_MUSIC_DIR}"')
         import time; time.sleep(0.3)
         for fname in files:
             fname = os.path.basename(fname)
             if not fname or '..' in fname:
                 continue
-            if direction == 'nctk_to_vm1':
+            if direction == 'client1_to_client2':
                 local_path  = os.path.join(MUSIC_DIR, fname)
-                remote_path = f'{VM1_MUSIC_DIR}/{fname}'
+                remote_path = f'{CLIENT2_MUSIC_DIR}/{fname}'
                 if os.path.isfile(local_path):
                     sftp.put(local_path, remote_path)
                     copied.append(fname)
                 else:
                     errors.append(f'{fname}: не найден локально')
             else:
-                remote_path = f'{VM1_MUSIC_DIR}/{fname}'
+                remote_path = f'{CLIENT2_MUSIC_DIR}/{fname}'
                 local_path  = os.path.join(MUSIC_DIR, fname)
                 sftp.get(remote_path, local_path)
                 copied.append(fname)
@@ -3114,11 +3114,11 @@ def api_tracks_sync():
         if s:
             try: s.close()
             except Exception: pass
-    log_action(current_user.username, f'sync_{direction}', 'vm1', f'{len(copied)} файлов')
+    log_action(current_user.username, f'sync_{direction}', 'client2', f'{len(copied)} файлов')
     if copied:
         tg_notify(
             f'🔄 <b>Синхронизация треков</b>\n'
-            f'{"nctk → Gənclik" if direction=="nctk_to_vm1" else "Gənclik → nctk"}\n'
+            f'{"client1 → Client2" if direction=="client1_to_client2" else "Client2 → client1"}\n'
             f'📁 {len(copied)} файлов\n'
             f'👤 {current_user.username}\n'
             f'🕐 {_tg_fmt_time()}',
@@ -3324,12 +3324,12 @@ def api_timesync_status():
         out[label] = get_time(host, user, key)
 
     targets = [
-        ('nctk',   NCTK_HOST,   NCTK_USER,   SSH_KEY),
+        ('client1',   CLIENT1_HOST,   CLIENT1_USER,   SSH_KEY),
         ('centos', CENTOS_HOST, CENTOS_USER, CENTOS_SSH_KEY),
     ]
-    vm1 = _vm1_conn()
-    if vm1:
-        targets.append(('vm1', vm1['host'], vm1.get('user', NCTK_USER), SSH_KEY))
+    client2 = _client2_conn()
+    if client2:
+        targets.append(('client2', client2['host'], client2.get('user', CLIENT1_USER), SSH_KEY))
 
     for label, host, user, key in targets:
         t = threading.Thread(target=collect, args=(label, host, user, key))
@@ -3374,12 +3374,12 @@ def api_timesync_sync():
 
     results = {'centos': {'ok': True, 'time': ref_time, 'note': 'эталон'}}
     targets = []
-    if machine in ('all', 'nctk'):
-        targets.append(('nctk', NCTK_HOST, NCTK_USER, SSH_KEY))
-    if machine in ('all', 'vm1'):
-        vm1 = _vm1_conn()
-        if vm1:
-            targets.append(('vm1', vm1['host'], vm1.get('user', NCTK_USER), SSH_KEY))
+    if machine in ('all', 'client1'):
+        targets.append(('client1', CLIENT1_HOST, CLIENT1_USER, SSH_KEY))
+    if machine in ('all', 'client2'):
+        client2 = _client2_conn()
+        if client2:
+            targets.append(('client2', client2['host'], client2.get('user', CLIENT1_USER), SSH_KEY))
 
     def do_sync(label, host, user, key):
         s = None
@@ -3434,7 +3434,7 @@ def _backup_scan():
                             'total': total, 'total_h': _fmt_sz(total), 'report': report})
     # Размеры музыки (rsync)
     music = {}
-    for mname in ('music-nctk', 'music-vm1'):
+    for mname in ('music-client1', 'music-client2'):
         mp = os.path.join(BACKUP_DIR, mname)
         if os.path.isdir(mp):
             sz = _dir_size(mp)
@@ -3443,8 +3443,8 @@ def _backup_scan():
     machines = {}
     if entries:
         latest_path = entries[0]['path']
-        for key, fname in [('nctk', 'nctk-config.tar.gz'),
-                            ('vm1',  'vm1-config.tar.gz'),
+        for key, fname in [('client1', 'client1-config.tar.gz'),
+                            ('client2',  'client2-config.tar.gz'),
                             ('centos', 'centos.tar.gz')]:
             fp = os.path.join(latest_path, fname)
             if os.path.isfile(fp):
@@ -3653,15 +3653,15 @@ def api_announce():
                 except Exception: pass
 
     results = {}
-    if campuses in ('nctk', 'all'):
-        results['nctk'] = _play_on(NCTK_HOST, NCTK_USER, 'nctk')
-    if campuses in ('vm1', 'all'):
-        vm1m = next((m for m in MACHINES if m['host'] != NCTK_HOST), None)
-        vm1_host = vm1m['host'] if vm1m else '10.70.0.41'
-        vm1_user = vm1m.get('user', 'vm1') if vm1m else 'vm1'
-        results['vm1'] = _play_on(vm1_host, vm1_user, 'vm1')
+    if campuses in ('client1', 'all'):
+        results['client1'] = _play_on(CLIENT1_HOST, CLIENT1_USER, 'client1')
+    if campuses in ('client2', 'all'):
+        client2m = next((m for m in MACHINES if m['host'] != CLIENT1_HOST), None)
+        client2_host = client2m['host'] if client2m else '10.70.0.41'
+        client2_user = client2m.get('user', 'client2') if client2m else 'client2'
+        results['client2'] = _play_on(client2_host, client2_user, 'client2')
 
-    campus_label = {'nctk': 'Narimanov', 'vm1': 'Gənclik', 'all': 'Все кампусы'}.get(campuses, campuses)
+    campus_label = {'client1': 'Client1', 'client2': 'Client2', 'all': 'Все кампусы'}.get(campuses, campuses)
     tg_notify(
         f'📢 <b>Объявление по радио</b>\n'
         f'🏫 {campus_label}\n'

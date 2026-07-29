@@ -1,6 +1,6 @@
 #!/bin/bash
 # Установка node_exporter + promtail БЕЗ Docker (systemd + бинарники)
-# Для nctk и vm1, где Docker не установлен
+# Для client1 и client2, где Docker не установлен
 # Запуск: bash deploy-monitoring-clients-no-docker.sh
 
 set -e
@@ -25,7 +25,7 @@ deploy_host() {
     
     # promtail — скачать .deb или zip
     $SSH "$user@$host" "mkdir -p /home/$user/promtail"
-    [[ "$instance" == "vm1" ]] && pcfg="promtail-vm1.yaml" || pcfg="promtail-nctk.yaml"
+    [[ "$instance" == "client2" ]] && pcfg="promtail-client2.yaml" || pcfg="promtail-client1.yaml"
     $SCP "$DIR/promtail-clients/$pcfg" "$user@$host:/home/$user/promtail/config.yaml"
     
     # Установка promtail (бинарник)
@@ -55,7 +55,7 @@ WantedBy=multi-user.target' | sudo tee /etc/systemd/system/promtail.service"
     echo ""
 }
 
-deploy_host "10.20.0.41" "nctk" "nctk"
-deploy_host "10.70.0.41" "vm1" "vm1"
+deploy_host "10.20.0.41" "client1" "client1"
+deploy_host "10.70.0.41" "client2" "client2"
 
 echo "Готово. Перезапустите Prometheus: docker compose --profile logs restart prometheus"

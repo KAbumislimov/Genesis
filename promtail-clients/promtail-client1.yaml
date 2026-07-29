@@ -1,0 +1,77 @@
+# Promtail для client1 — шлёт логи на Loki через SSH tunnel (localhost:3101 → centos:3100)
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+positions:
+  filename: /tmp/positions-client1.yaml
+clients:
+  - url: http://localhost:3101/loki/api/v1/push
+scrape_configs:
+  - job_name: system
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: varlogs
+          host: client1
+          __path__: /var/log/*.log
+  - job_name: syslog
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: syslog
+          host: client1
+          __path__: /var/log/syslog
+  - job_name: auth
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: varlogs
+          host: client1
+          __path__: /var/log/auth.log
+  - job_name: kern
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: varlogs
+          host: client1
+          __path__: /var/log/kern.log
+  - job_name: apt
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: varlogs
+          host: client1
+          __path__: /var/log/apt/*.log
+  - job_name: unattended
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: varlogs
+          host: client1
+          __path__: /var/log/unattended-upgrades/*.log
+  - job_name: campus_media
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: campus_media
+          host: client1
+          __path__: /home/client1/action.log
+      - targets: [localhost]
+        labels:
+          job: campus_media
+          host: client1
+          __path__: /tmp/media-cron.log
+  - job_name: cron
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: cron
+          host: client1
+          __path__: /var/log/cron*
+  - job_name: campus_bot
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: campus_bot
+          host: client1
+          __path__: /var/log/campus-bot*.log

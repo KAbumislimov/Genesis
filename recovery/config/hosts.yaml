@@ -17,14 +17,14 @@ hosts:
     critical_dirs:
       - /home/kamran/campus-infra
 
-  nctk:
-    name: nctk
+  client1:
+    name: client1
     host: 10.20.0.41
-    user: nctk
+    user: client1
     role: client
     backup_paths:
       - /etc
-      - /home/nctk
+      - /home/client1
       - /root
       - /var/spool/cron
     services:
@@ -32,14 +32,14 @@ hosts:
       - promtail
       - cron
 
-  vm1:
-    name: vm1
+  client2:
+    name: client2
     host: 10.70.0.41
-    user: vm1
+    user: client2
     role: client
     backup_paths:
       - /etc
-      - /home/vm1
+      - /home/client2
       - /root
       - /var/spool/cron
     services:

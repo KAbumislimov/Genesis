@@ -1,12 +1,12 @@
-# Loki и Prometheus на SSD nctk (примонтирован в /mnt/nctk-ssd)
+# Loki и Prometheus на SSD client1 (примонтирован в /mnt/client1-ssd)
 # Запуск: bash scripts/start-with-ssd.sh up -d
 
 services:
   loki:
     volumes:
       - ./config/loki-config.yaml:/etc/loki/config.yaml:ro
-      - ${DOCKER_DATA_PATH:-/mnt/nctk-ssd}/loki:/loki
+      - ${DOCKER_DATA_PATH:-/mnt/client1-ssd}/loki:/loki
   prometheus:
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ${DOCKER_DATA_PATH:-/mnt/nctk-ssd}/prometheus:/prometheus
+      - ${DOCKER_DATA_PATH:-/mnt/client1-ssd}/prometheus:/prometheus

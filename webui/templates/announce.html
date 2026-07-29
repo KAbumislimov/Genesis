@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Объявление — LANDAU{% endblock %}
+{% block title %}Объявление — MEDIA{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -303,20 +303,20 @@ input[type=range].vol-range::-moz-range-thumb {
 
   <!-- Campus selector -->
   <div class="campus-grid">
-    <button class="campus-btn" data-campus="nctk" onclick="selectCampus('nctk',this)">
+    <button class="campus-btn" data-campus="client1" onclick="selectCampus('client1',this)">
       <i class="bi bi-building"></i>
-      <div class="cb-name">Narimanov</div>
-      <div class="cb-sub">Нариманов кампус</div>
+      <div class="cb-name">Client1</div>
+      <div class="cb-sub">Клиент 1 кампус</div>
     </button>
     <button class="campus-btn active" data-campus="all" onclick="selectCampus('all',this)">
       <i class="bi bi-broadcast" style="color:var(--blue)"></i>
       <div class="cb-name">Все кампусы</div>
-      <div class="cb-sub">Narimanov + Gənclik</div>
+      <div class="cb-sub">Client1 + Client2</div>
     </button>
-    <button class="campus-btn" data-campus="vm1" onclick="selectCampus('vm1',this)">
+    <button class="campus-btn" data-campus="client2" onclick="selectCampus('client2',this)">
       <i class="bi bi-building"></i>
-      <div class="cb-name">Gənclik</div>
-      <div class="cb-sub">Гянджлик кампус</div>
+      <div class="cb-name">Client2</div>
+      <div class="cb-sub">Клиент 2 кампус</div>
     </button>
   </div>
 
@@ -512,7 +512,7 @@ function annStop() {
         document.getElementById('ann-timer').classList.add('hidden');
         document.getElementById('ann-timer').textContent = '0:00';
         if(d.ok){
-          var campus = {'nctk':'Narimanov','vm1':'Gənclik','all':'Narimanov + Gənclik'}[annCampus] || annCampus;
+          var campus = {'client1':'Client1','client2':'Client2','all':'Client1 + Client2'}[annCampus] || annCampus;
           annSetStatus('✓ Объявление отправлено на ' + campus, 'ok');
         } else {
           var errMsg = d.results ? Object.values(d.results).filter(function(v){return v!==true;}).join(', ') : 'Ошибка';

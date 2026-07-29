@@ -43,31 +43,31 @@ docker logs grafana --tail 30
 
 В Grafana: **Campus → Campus — матрица хостов (CPU, RAM, диск, температура)** (`campus-hosts-matrix`).
 
-Показывает **10.10.4.120** (campus-server), **10.20.0.41** (nctk), **10.70.0.41** (vm1), **10.20.1.106** (цель Prometheus `host-10.20.1.106`). Для последней машины на ней должен быть запущен **node_exporter** на порту 9100 и доступ с хоста, где крутится Prometheus.
+Показывает **10.10.4.120** (campus-server), **10.20.0.41** (client1), **10.70.0.41** (client2), **10.20.1.106** (цель Prometheus `host-10.20.1.106`). Для последней машины на ней должен быть запущен **node_exporter** на порту 9100 и доступ с хоста, где крутится Prometheus.
 
 Температура берётся из `node_hwmon_temp_celsius` (максимум по датчикам). На ВМ без hwmon панель будет пустой.
 
-## Структурированные логи (Landau, cron, боты)
+## Структурированные логи (Media, cron, боты)
 
-На **vm1** и **nctk** в `promtail-clients/promtail-*.yaml` добавлены job-ы:
+На **client2** и **client1** в `promtail-clients/promtail-*.yaml` добавлены job-ы:
 
-- `campus_landau` — `/home/vm1/action.log` или `/home/nctk/action.log`, плюс `/tmp/landau-cron.log`
+- `campus_media` — `/home/client2/action.log` или `/home/client1/action.log`, плюс `/tmp/media-cron.log`
 - `cron` — `/var/log/cron*` (если файлов нет, promtail просто не хватает строк)
 - `campus_bot` — опционально `/var/log/campus-bot*.log`
 
-На **campus-server** promtail читает **stdout Docker** контейнеров `tg-campus-bot` и `tg-campus-genclik` с меткой `job=campus_telegram_bot` (нужен перезапуск compose для promtail с `docker.sock`).
+На **campus-server** promtail читает **stdout Docker** контейнеров `tg-campus-bot` и `tg-campus-client2` с меткой `job=campus_telegram_bot` (нужен перезапуск compose для promtail с `docker.sock`).
 
 После обновления конфигов:
 
 ```bash
-# vm1: путь как в `systemctl status promtail` (часто /home/vm1/..., не /tmp/...)
-scp promtail-clients/promtail-vm1.yaml vm1@10.70.0.41:/home/vm1/campus-monitoring/promtail/config.yaml
-ssh vm1@10.70.0.41 'sudo systemctl restart promtail'
-# то же для nctk с promtail-nctk.yaml
+# client2: путь как в `systemctl status promtail` (часто /home/client2/..., не /tmp/...)
+scp promtail-clients/promtail-client2.yaml client2@10.70.0.41:/home/client2/campus-monitoring/promtail/config.yaml
+ssh client2@10.70.0.41 'sudo systemctl restart promtail'
+# то же для client1 с promtail-client1.yaml
 cd /home/kamran/campus-infra && docker compose --profile logs up -d promtail
 ```
 
-Если promtail на клиенте в **Docker** и смонтирован только `/var/log`, добавьте том для чтения `action.log`, например `-v /home/vm1/action.log:/home/vm1/action.log:ro` (или каталог `/home/vm1`).
+Если promtail на клиенте в **Docker** и смонтирован только `/var/log`, добавьте том для чтения `action.log`, например `-v /home/client2/action.log:/home/client2/action.log:ro` (или каталог `/home/client2`).
 
 ## Настроенные алерты (provisioning)
 
@@ -101,16 +101,16 @@ cd /home/kamran/campus-infra && docker compose --profile logs up -d promtail
 
 Explore → Loki → ввести запрос, например:
 - `{host="campus-server"}` — все логи сервера
-- `{host="nctk"}` — логи nctk
+- `{host="client1"}` — логи client1
 - `{job="varlogs"} |~ "error"` — логи с "error"
 
-## Метрики и логи nctk, vm1
+## Метрики и логи client1, client2
 
-Дашборд показывает **отдельно** campus-server, nctk, vm1. Чтобы данные nctk и vm1 появились:
+Дашборд показывает **отдельно** campus-server, client1, client2. Чтобы данные client1 и client2 появились:
 
 ### 1. node_exporter (метрики CPU, RAM, диск)
 
-На **nctk** (10.20.0.41):
+На **client1** (10.20.0.41):
 ```bash
 docker run -d --name node-exporter --restart unless-stopped -p 9100:9100 \
   -v /proc:/host/proc:ro -v /sys:/host/sys:ro -v /:/rootfs:ro \
@@ -118,11 +118,11 @@ docker run -d --name node-exporter --restart unless-stopped -p 9100:9100 \
   --path.procfs=/host/proc --path.sysfs=/host/sys --path.rootfs=/rootfs
 ```
 
-На **vm1** (10.70.0.41) — та же команда.
+На **client2** (10.70.0.41) — та же команда.
 
 ### 2. Promtail (логи)
 
-**Если Docker не установлен** на nctk/vm1 — используйте:
+**Если Docker не установлен** на client1/client2 — используйте:
 ```bash
 bash deploy-monitoring-clients-no-docker.sh
 ```

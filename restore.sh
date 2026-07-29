@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════
-#  LANDAU Campus — полное восстановление инфраструктуры
+#  MEDIA Campus — полное восстановление инфраструктуры
 #  Запускать на CentOS сервере (10.10.4.120) от имени kamran
 #
 #  Использование:
@@ -14,8 +14,8 @@ set -euo pipefail
 REPO_DIR="$HOME/projects/campus-infra"
 SECRETS_DIR="$HOME/projects/campus-secrets"
 BACKUP_DIR="$HOME/campus-backups"
-SECRETS_REPO="https://github.com/LandauAudioserver/campus-secrets.git"
-INFRA_REPO="https://github.com/LandauAudioserver/campus-infra.git"
+SECRETS_REPO="https://github.com/MediaAudioserver/campus-secrets.git"
+INFRA_REPO="https://github.com/MediaAudioserver/campus-infra.git"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 log()  { echo -e "${GREEN}[✓]${NC} $*"; }
@@ -51,7 +51,7 @@ if [[ $ONLY_UP -eq 0 && $ONLY_DATA -eq 0 ]] || [[ $ONLY_SECRETS -eq 1 ]]; then
     warn "Нужен GitHub токен для campus-secrets (приватный репо)"
     warn "Токен хранится у Камрана или в записях"
     read -rp "GitHub Token (ghp_...): " GH_TOKEN
-    git clone "https://${GH_TOKEN}@github.com/LandauAudioserver/campus-secrets.git" "$SECRETS_DIR"
+    git clone "https://${GH_TOKEN}@github.com/MediaAudioserver/campus-secrets.git" "$SECRETS_DIR"
   else
     log "campus-secrets уже есть — обновляю..."
     git -C "$SECRETS_DIR" pull --ff-only 2>/dev/null || warn "Не удалось обновить campus-secrets"

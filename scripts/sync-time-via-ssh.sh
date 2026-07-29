@@ -14,7 +14,7 @@ SSH_OPTS="-F /dev/null -i $KEY -o StrictHostKeyChecking=no -o ConnectTimeout=5"
 REF_TS=$(date +%s)
 REF_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 
-for client in "nctk@10.20.0.41" "vm1@10.70.0.41"; do
+for client in "client1@10.20.0.41" "client2@10.70.0.41"; do
     REMOTE_TS=$(ssh $SSH_OPTS "$client" "date +%s" 2>/dev/null) || continue
     DIFF=$((REF_TS - REMOTE_TS))
     DIFF=${DIFF#-}  # abs

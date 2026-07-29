@@ -1,6 +1,6 @@
 # Promtail на клиентах и алерты в Telegram
 
-## 1. Promtail на nctk и vm1
+## 1. Promtail на client1 и client2
 
 Клиенты сами отправляют логи в Loki на сервере (http://10.10.4.120:3100). Rsync и sync-remote-logs больше не нужны.
 
@@ -15,7 +15,7 @@ bash deploy-monitoring-offline.sh
 
 Скрипт:
 - Скачивает node_exporter и promtail (если ещё нет в кэше)
-- Копирует на nctk (10.20.0.41) и vm1 (10.70.0.41)
+- Копирует на client1 (10.20.0.41) и client2 (10.70.0.41)
 - Устанавливает systemd и запускает сервисы (нужен passwordless sudo)
 
 SSH-ключ: `campus_bot` или `id_rsa` (переменная `SSH_KEY`).
@@ -27,7 +27,7 @@ curl -s http://10.20.0.41:9100/metrics | head -3
 curl -s http://10.70.0.41:9100/metrics | head -3
 ```
 
-В Grafana → Explore (Loki): `{host="nctk"}` или `{host="vm1"}`.
+В Grafana → Explore (Loki): `{host="client1"}` или `{host="client2"}`.
 
 ---
 
@@ -68,7 +68,7 @@ docker compose --profile logs restart grafana
 
 После успешного перехода на Promtail отключите cron:
 
-На **nctk** (где настроен cron):
+На **client1** (где настроен cron):
 ```bash
 crontab -e
 # Удалите строку с sync-remote-logs.sh
@@ -83,5 +83,5 @@ bash scripts/disable-sync-remote-logs.sh
 
 ## 4. Изменения в конфигах
 
-- `config/promtail-config.yaml` — удалены jobs remote-nctk и remote-vm1
-- `promtail-clients/promtail-nctk.yaml`, `promtail-vm1.yaml` — расширены пути логов
+- `config/promtail-config.yaml` — удалены jobs remote-client1 и remote-client2
+- `promtail-clients/promtail-client1.yaml`, `promtail-client2.yaml` — расширены пути логов

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Тест гимна 07:28 — 10 сек на nctk и vm1
+# Тест гимна 07:28 — 10 сек на client1 и client2
 set -e
 INBOX="/var/lib/campus-player/inbox"
 VOL="${CRON_VOL:-70}"
@@ -19,10 +19,10 @@ run_host() {
   " 2>/dev/null || true
 }
 
-NCTK_ENV="${NCTK_ENV:-/home/kamran/narimanov.env}"
-[[ -r "$NCTK_ENV" ]] && . "$NCTK_ENV" 2>/dev/null
-run_host "${CLIENT_USER:-nctk}" "${CLIENT_HOST:-10.20.0.41}"
+CLIENT1_ENV="${CLIENT1_ENV:-/home/kamran/client1.env}"
+[[ -r "$CLIENT1_ENV" ]] && . "$CLIENT1_ENV" 2>/dev/null
+run_host "${CLIENT_USER:-client1}" "${CLIENT_HOST:-10.20.0.41}"
 
-VM1_ENV="${VM1_ENV:-/home/kamran/vm1.env}"
-[[ -r "$VM1_ENV" ]] && . "$VM1_ENV" 2>/dev/null
-run_host "${CLIENT_USER:-vm1}" "${CLIENT_HOST:-10.70.0.41}"
+CLIENT2_ENV="${CLIENT2_ENV:-/home/kamran/client2.env}"
+[[ -r "$CLIENT2_ENV" ]] && . "$CLIENT2_ENV" 2>/dev/null
+run_host "${CLIENT_USER:-client2}" "${CLIENT_HOST:-10.70.0.41}"

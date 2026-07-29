@@ -1,5 +1,5 @@
 #!/bin/bash
-# Recovery Watchdog: мониторит server, nctk, vm1. При сбое определяет машину и восстанавливает.
+# Recovery Watchdog: мониторит server, client1, client2. При сбое определяет машину и восстанавливает.
 # Server (CentOS) управляет всеми. Запускается в Docker на 10.10.4.120.
 
 set -e
@@ -12,8 +12,8 @@ SSH_OPTS="$SSH_BASE_OPTS -o ConnectTimeout=5"
 ISSUES=()
 
 # Пароли для SSH (если ключи не настроены) — из env
-RECOVERY_VM1_PASS="${RECOVERY_VM1_PASS:-}"
-RECOVERY_NCTK_PASS="${RECOVERY_NCTK_PASS:-}"
+RECOVERY_CLIENT2_PASS="${RECOVERY_CLIENT2_PASS:-}"
+RECOVERY_CLIENT1_PASS="${RECOVERY_CLIENT1_PASS:-}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 add_issue() { ISSUES+=("$1"); }
@@ -67,7 +67,7 @@ BACKUP_INTERVAL=86400  # раз в сутки
 while true; do
   NOW=$(date +%s)
   if [[ $((NOW - LAST_BACKUP)) -ge $BACKUP_INTERVAL ]]; then
-    for h in server nctk vm1; do
+    for h in server client1 client2; do
       "$SCRIPT_DIR/backup.sh" "$h" 2>/dev/null || true
     done
     LAST_BACKUP=$NOW
@@ -83,39 +83,39 @@ while true; do
     FAILED_HOST="server"
   fi
 
-  # 2. Проверка nctk
+  # 2. Проверка client1
   if [[ -z "$FAILED_HOST" ]]; then
     if ! check_ping 10.20.0.41; then
-      log "nctk: недоступен (ping)"
-      add_issue "nctk (10.20.0.41): машина не отвечает"
-      FAILED_HOST="nctk"
-    elif ! check_host nctk 10.20.0.41; then
-      log "nctk: SSH недоступен"
-      add_issue "nctk: SSH недоступен — требуется полное восстановление"
-      FAILED_HOST="nctk"
+      log "client1: недоступен (ping)"
+      add_issue "client1 (10.20.0.41): машина не отвечает"
+      FAILED_HOST="client1"
+    elif ! check_host client1 10.20.0.41; then
+      log "client1: SSH недоступен"
+      add_issue "client1: SSH недоступен — требуется полное восстановление"
+      FAILED_HOST="client1"
     else
-      restart_remote_services 10.20.0.41 nctk node_exporter promtail cron
+      restart_remote_services 10.20.0.41 client1 node_exporter promtail cron
     fi
   fi
 
-  # 3. Проверка vm1
+  # 3. Проверка client2
   if [[ -z "$FAILED_HOST" ]]; then
     if ! check_ping 10.70.0.41; then
-      log "vm1: недоступен (ping)"
-      add_issue "vm1 (10.70.0.41): машина не отвечает"
-      FAILED_HOST="vm1"
-    elif ! check_host vm1 10.70.0.41; then
-      log "vm1: SSH недоступен"
-      add_issue "vm1: SSH недоступен — требуется полное восстановление"
-      FAILED_HOST="vm1"
+      log "client2: недоступен (ping)"
+      add_issue "client2 (10.70.0.41): машина не отвечает"
+      FAILED_HOST="client2"
+    elif ! check_host client2 10.70.0.41; then
+      log "client2: SSH недоступен"
+      add_issue "client2: SSH недоступен — требуется полное восстановление"
+      FAILED_HOST="client2"
     else
-      restart_remote_services 10.70.0.41 vm1 node_exporter promtail cron
+      restart_remote_services 10.70.0.41 client2 node_exporter promtail cron
     fi
   fi
 
   # 4. При сбое — попытка восстановления (если SSH снова доступен)
   if [[ -n "$FAILED_HOST" ]] && [[ "$FAILED_HOST" != "server" ]]; then
-    RHOST=$([[ "$FAILED_HOST" == "nctk" ]] && echo "10.20.0.41" || echo "10.70.0.41")
+    RHOST=$([[ "$FAILED_HOST" == "client1" ]] && echo "10.20.0.41" || echo "10.70.0.41")
     if check_host "$FAILED_HOST" "$RHOST"; then
       log "Попытка восстановления $FAILED_HOST из бэкапа..."
       if "$SCRIPT_DIR/restore.sh" "$FAILED_HOST" 2>/dev/null; then

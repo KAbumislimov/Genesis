@@ -1,5 +1,5 @@
 #!/bin/bash
-# Установка node_exporter + promtail на nctk и vm1 для метрик и логов в Grafana
+# Установка node_exporter + promtail на client1 и client2 для метрик и логов в Grafana
 # Запуск: bash deploy-monitoring-clients.sh
 
 set -e
@@ -23,7 +23,7 @@ deploy_host() {
     
     # promtail
     local promtail_cfg
-    [[ "$instance" == "vm1" ]] && promtail_cfg="promtail-vm1.yaml" || promtail_cfg="promtail-nctk.yaml"
+    [[ "$instance" == "client2" ]] && promtail_cfg="promtail-client2.yaml" || promtail_cfg="promtail-client1.yaml"
     $SSH "$user@$host" "mkdir -p /home/$user/promtail"
     scp -i ${SSH_KEY:-$HOME/.ssh/campus_bot} -o StrictHostKeyChecking=no "$DIR/promtail-clients/$promtail_cfg" "$user@$host:/home/$user/promtail/config.yaml"
     echo "  Запуск promtail..."
@@ -32,8 +32,8 @@ deploy_host() {
     echo ""
 }
 
-deploy_host "10.20.0.41" "nctk" "nctk"
-deploy_host "10.70.0.41" "vm1" "vm1"
+deploy_host "10.20.0.41" "client1" "client1"
+deploy_host "10.70.0.41" "client2" "client2"
 
 echo "Готово. Перезапустите Prometheus для применения scrape config:"
 echo "  docker compose --profile logs restart prometheus"

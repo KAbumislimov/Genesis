@@ -17,7 +17,7 @@
       },
       "id": 1,
       "options": {
-        "content": "## Логи Campus — группы и поиск\n**Основной поток** — только осмысленные `job` (без полного слива всего подряд). Полный поток: Explore → Loki → запрос `{}`.\n**Landau / cron** — `job=campus_landau`, `job=cron` | **Боты** — `job=campus_telegram_bot` (Docker на campus-server).",
+        "content": "## Логи Campus — группы и поиск\n**Основной поток** — только осмысленные `job` (без полного слива всего подряд). Полный поток: Explore → Loki → запрос `{}`.\n**Media / cron** — `job=campus_media`, `job=cron` | **Боты** — `job=campus_telegram_bot` (Docker на campus-server).",
         "mode": "markdown"
       },
       "title": "",
@@ -44,7 +44,7 @@
       },
       "targets": [
         {
-          "expr": "{job=~\"varlogs|messages|secure|syslog|kern|campus_landau|campus_player|campus_bot|cron|campus_bot|campus_telegram_bot\"}",
+          "expr": "{job=~\"varlogs|messages|secure|syslog|kern|campus_media|campus_player|campus_bot|cron|campus_bot|campus_telegram_bot\"}",
           "refId": "A"
         }
       ],
@@ -186,11 +186,11 @@
       },
       "targets": [
         {
-          "expr": "{host=\"nctk\"}",
+          "expr": "{host=\"client1\"}",
           "refId": "A"
         }
       ],
-      "title": "nctk",
+      "title": "client1",
       "type": "logs"
     },
     {
@@ -214,11 +214,11 @@
       },
       "targets": [
         {
-          "expr": "{host=\"vm1\"}",
+          "expr": "{host=\"client2\"}",
           "refId": "A"
         }
       ],
-      "title": "vm1",
+      "title": "client2",
       "type": "logs"
     },
     {
@@ -230,7 +230,7 @@
       },
       "id": 10,
       "options": {
-        "content": "### Landau (звонки), демон cron, Telegram-боты",
+        "content": "### Media (звонки), демон cron, Telegram-боты",
         "mode": "markdown"
       },
       "title": "",
@@ -257,11 +257,11 @@
       },
       "targets": [
         {
-          "expr": "{host=\"nctk\", job=\"campus_landau|campus_player|campus_bot\"}",
+          "expr": "{host=\"client1\", job=\"campus_media|campus_player|campus_bot\"}",
           "refId": "A"
         }
       ],
-      "title": "Landau — nctk (action.log / landau-cron)",
+      "title": "Media — client1 (action.log / media-cron)",
       "type": "logs"
     },
     {
@@ -285,11 +285,11 @@
       },
       "targets": [
         {
-          "expr": "{host=\"vm1\", job=\"campus_landau|campus_player|campus_bot\"}",
+          "expr": "{host=\"client2\", job=\"campus_media|campus_player|campus_bot\"}",
           "refId": "A"
         }
       ],
-      "title": "Landau — vm1 (action.log / landau-cron)",
+      "title": "Media — client2 (action.log / media-cron)",
       "type": "logs"
     },
     {
@@ -313,11 +313,11 @@
       },
       "targets": [
         {
-          "expr": "{host=~\"nctk|vm1\", job=\"syslog\"} |~ \"CRON\"",
+          "expr": "{host=~\"client1|client2\", job=\"syslog\"} |~ \"CRON\"",
           "refId": "A"
         }
       ],
-      "title": "Cron (файл /var/log/cron*), nctk + vm1",
+      "title": "Cron (файл /var/log/cron*), client1 + client2",
       "type": "logs"
     },
     {
@@ -345,7 +345,7 @@
           "refId": "A"
         }
       ],
-      "title": "Telegram — tg-campus-bot, tg-campus-genclik (Docker, campus-server)",
+      "title": "Telegram — tg-campus-bot, tg-campus-client2 (Docker, campus-server)",
       "type": "logs"
     }
   ],

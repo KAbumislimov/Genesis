@@ -1,5 +1,5 @@
 #!/bin/bash
-# Запуск node_exporter и promtail на nctk и vm1 через SSH
+# Запуск node_exporter и promtail на client1 и client2 через SSH
 # Требует: ssh-ключ (campus_bot или пароль)
 # Запуск: bash scripts/start-monitoring-on-clients.sh
 
@@ -22,8 +22,8 @@ run_on_host() {
     echo ""
 }
 
-run_on_host "nctk" "10.20.0.41" "nctk"
-run_on_host "vm1"  "10.70.0.41" "vm1"
+run_on_host "client1" "10.20.0.41" "client1"
+run_on_host "client2"  "10.70.0.41" "client2"
 
 echo "Готово. Подождите 1–2 мин — метрики появятся в Grafana."
 echo "Если нет — проверьте сеть: с campus-server до 10.20.0.41:9100 и 10.70.0.41:9100"

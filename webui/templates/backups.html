@@ -80,26 +80,26 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
     </div>
     <div class="bk-body">
 
-      <!-- Narimanov Campus -->
+      <!-- Client1 Campus -->
       <div class="bk-row">
         <span class="bk-lbl">
-          <i class="bi bi-pc-display" style="margin-right:4px"></i>Narimanov Campus
+          <i class="bi bi-pc-display" style="margin-right:4px"></i>Client1 Campus
         </span>
-        <span class="bk-val {% if machines.get('nctk',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
-          {% if machines.get('nctk') %}
-            {% if machines.nctk.ok %}✅ {{ machines.nctk.size_h }}{% else %}—{% endif %}
+        <span class="bk-val {% if machines.get('client1',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
+          {% if machines.get('client1') %}
+            {% if machines.client1.ok %}✅ {{ machines.client1.size_h }}{% else %}—{% endif %}
           {% else %}—{% endif %}
         </span>
       </div>
 
-      <!-- Gənclik Campus -->
+      <!-- Client2 Campus -->
       <div class="bk-row">
         <span class="bk-lbl">
-          <i class="bi bi-pc-display" style="margin-right:4px"></i>Gənclik Campus
+          <i class="bi bi-pc-display" style="margin-right:4px"></i>Client2 Campus
         </span>
-        <span class="bk-val {% if machines.get('vm1',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
-          {% if machines.get('vm1') %}
-            {% if machines.vm1.ok %}✅ {{ machines.vm1.size_h }}{% else %}—{% endif %}
+        <span class="bk-val {% if machines.get('client2',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
+          {% if machines.get('client2') %}
+            {% if machines.client2.ok %}✅ {{ machines.client2.size_h }}{% else %}—{% endif %}
           {% else %}—{% endif %}
         </span>
       </div>
@@ -119,18 +119,18 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
       <!-- Музыка -->
       <div class="bk-row">
         <span class="bk-lbl">
-          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Narimanov
+          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Client1
         </span>
         <span class="bk-val bk-ok">
-          {{ music.get('music-nctk', {}).get('size_h', '—') }}
+          {{ music.get('music-client1', {}).get('size_h', '—') }}
         </span>
       </div>
       <div class="bk-row">
         <span class="bk-lbl">
-          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Gənclik
+          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Client2
         </span>
         <span class="bk-val bk-ok">
-          {{ music.get('music-vm1', {}).get('size_h', '—') }}
+          {{ music.get('music-client2', {}).get('size_h', '—') }}
         </span>
       </div>
 
@@ -231,7 +231,7 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
       <i class="bi bi-arrow-repeat" style="color:var(--blue)"></i> Восстановление из GitHub
     </div>
     <div class="bk-body">
-      <pre class="bk-code">git clone https://github.com/LandauAudioserver/campus-infra.git
+      <pre class="bk-code">git clone https://github.com/MediaAudioserver/campus-infra.git
 cd campus-infra && GH_TOKEN=ghp_xxx bash bootstrap.sh all</pre>
     </div>
   </div>

@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram бот Client2 (client2)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+# Защита от дубликатов — wrapper убивает старые и держит lock
+ExecStart=/home/kamran/campus-infra/scripts/start-bot-once.sh client2 /opt/tg-campus-bot/bot_client2.py
+Restart=on-failure
+RestartSec=10
+WorkingDirectory=/opt/tg-campus-bot
+
+[Install]
+WantedBy=multi-user.target

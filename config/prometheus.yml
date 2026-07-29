@@ -10,7 +10,7 @@ scrape_configs:
       - targets: ['127.0.0.1:9091']
 
   # nodename + relabel → instance: иначе Prometheus подставляет instance=HOST:9100,
-  # а дашборды ждут campus-server / nctk / vm1 / host-10.20.1.106 — графики пустые.
+  # а дашборды ждут campus-server / client1 / client2 / host-10.20.1.106 — графики пустые.
   - job_name: node
     static_configs:
       - targets: ['127.0.0.1:9100']
@@ -19,11 +19,11 @@ scrape_configs:
           host_ip: 10.10.4.120
       - targets: ['10.20.0.41:9100']
         labels:
-          nodename: nctk
+          nodename: client1
           host_ip: 10.20.0.41
       - targets: ['10.70.0.41:9100']
         labels:
-          nodename: vm1
+          nodename: client2
           host_ip: 10.70.0.41
       - targets: ['10.20.1.106:9100']
         labels:

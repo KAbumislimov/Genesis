@@ -1,14 +1,14 @@
 # Grafana: логи, фильтры и полезные возможности
 
-## 1. Почему нет логов с vm1?
+## 1. Почему нет логов с client2?
 
-**Проверьте на vm1:**
+**Проверьте на client2:**
 ```bash
 # Promtail запущен?
 sudo systemctl status promtail
 
 # Туннель активен? (на centos)
-systemctl status loki-tunnel-vm1
+systemctl status loki-tunnel-client2
 
 # Логи Promtail — есть ли ошибки?
 journalctl -u promtail -n 20 --no-pager
@@ -18,8 +18,8 @@ journalctl -u promtail -n 20 --no-pager
 ```bash
 # На centos — обновить конфиг и перезапустить
 cd /home/kamran/campus-infra
-scp -i ~/.ssh/campus_bot promtail-clients/promtail-vm1.yaml vm1@10.70.0.41:/home/vm1/campus-monitoring/promtail/config.yaml
-ssh vm1@10.70.0.41 "sudo systemctl restart promtail"
+scp -i ~/.ssh/campus_bot promtail-clients/promtail-client2.yaml client2@10.70.0.41:/home/client2/campus-monitoring/promtail/config.yaml
+ssh client2@10.70.0.41 "sudo systemctl restart promtail"
 ```
 
 **В Grafana:** проверьте временной диапазон (правый верхний угол) — выберите "Last 15 minutes" или "Last 1 hour".
@@ -58,11 +58,11 @@ ssh vm1@10.70.0.41 "sudo systemctl restart promtail"
 ### Базовый синтаксис
 
 ```
-{host="vm1"}                    # Все логи с vm1
-{host="vm1", job="syslog"}       # Только syslog с vm1
-{host=~"vm1|nctk"}              # vm1 или nctk
-{job="campus_landau"}           # Звонки Landau / campus-cron (action.log, /tmp/landau-cron.log)
-{host="vm1", job="campus_landau"}
+{host="client2"}                    # Все логи с client2
+{host="client2", job="syslog"}       # Только syslog с client2
+{host=~"client2|client1"}              # client2 или client1
+{job="campus_media"}           # Звонки Media / campus-cron (action.log, /tmp/media-cron.log)
+{host="client2", job="campus_media"}
 {job="cron"}                    # Файл демона cron (/var/log/cron*), если есть на ОС
 {job="campus_telegram_bot"}     # Stdout контейнеров tg-campus-* на campus-server
 {job="campus_bot"}              # Опционально /var/log/campus-bot*.log на клиентах
@@ -71,25 +71,25 @@ ssh vm1@10.70.0.41 "sudo systemctl restart promtail"
 ### Только ошибки и предупреждения
 
 ```
-{host="vm1"} |~ "(?i)(error|failed|denied|exception|timeout|fatal)"
+{host="client2"} |~ "(?i)(error|failed|denied|exception|timeout|fatal)"
 ```
 
 ### Исключить шум (например, AppArmor Rocket.Chat)
 
 ```
-{host="vm1"} !~ "snap.rocketchat-server"
+{host="client2"} !~ "snap.rocketchat-server"
 ```
 
 ### Комбинация: ошибки, но без AppArmor
 
 ```
-{host="vm1"} |~ "(?i)(error|failed|denied)" !~ "snap.rocketchat-server"
+{host="client2"} |~ "(?i)(error|failed|denied)" !~ "snap.rocketchat-server"
 ```
 
 ### По конкретному файлу
 
 ```
-{host="vm1", filename=~"/var/log/syslog"}
+{host="client2", filename=~"/var/log/syslog"}
 ```
 
 ---
@@ -132,16 +132,16 @@ ssh vm1@10.70.0.41 "sudo systemctl restart promtail"
 | Цель | Запрос |
 |------|--------|
 | Все ошибки | `{job=~"varlogs|syslog"} \|~ "(?i)error"` |
-| Только vm1, ошибки | `{host="vm1"} \|~ "(?i)(error|failed)"` |
+| Только client2, ошибки | `{host="client2"} \|~ "(?i)(error|failed)"` |
 | Auth-логи (входы) | `{job="auth"}` или `{filename=~"/var/log/auth.log"}` |
 | Kernel | `{job="kern"}` или `{filename=~"/var/log/kern.log"}` |
-| Без AppArmor | `{host="vm1"} !~ "rocketchat"` |
+| Без AppArmor | `{host="client2"} !~ "rocketchat"` |
 
 ---
 
 ## 6. Рекомендуемый порядок действий
 
-1. **Убедиться, что логи приходят** — vm1, nctk, campus-server в панелях.
+1. **Убедиться, что логи приходят** — client2, client1, campus-server в панелях.
 2. **Сделать панель «Только ошибки»** — фильтр по error/failed/denied.
 3. **Исключить шум** — AppArmor Rocket.Chat и т.п.
 4. **Настроить алерты** — CPU, RAM, критические ошибки в Telegram.

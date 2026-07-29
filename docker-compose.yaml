@@ -76,7 +76,7 @@ services:
       - campus
 
   # === МЕТРИКИ (Prometheus + node_exporter) ===
-  # Prometheus в host network — чтобы достучаться до nctk/vm1
+  # Prometheus в host network — чтобы достучаться до client1/client2
   prometheus:
     image: prom/prometheus:v2.47.0
     container_name: prometheus
@@ -112,52 +112,52 @@ services:
       - campus
 
   # === TELEGRAM БОТЫ ===
-  # ВНИМАНИЕ: боты управляются через systemd (tg-campus-narimanov.service / tg-campus-genclik.service)
-  # и нативно на vm1 (campus-telegram-bot.service). Docker-версии НЕ запускать — конфликт токенов.
+  # ВНИМАНИЕ: боты управляются через systemd (tg-campus-client1.service / tg-campus-client2.service)
+  # и нативно на client2 (campus-telegram-bot.service). Docker-версии НЕ запускать — конфликт токенов.
   # Для запуска вручную (тест): docker compose --profile bot up tg-campus-bot
   tg-campus-bot:
     build:
-      context: ./bots/narimanov
+      context: ./bots/client1
       dockerfile: Dockerfile
     container_name: tg-campus-bot
     restart: "no"
     profiles: ["bot"]
     environment:
       - CLIENT_HOST=${CLIENT_HOST:-10.20.0.41}
-      - CLIENT_USER=${CLIENT_USER:-nctk}
-      - NCTK_HOST=10.20.0.41
-      - VM1_HOST=10.70.0.41
+      - CLIENT_USER=${CLIENT_USER:-client1}
+      - CLIENT1_HOST=10.20.0.41
+      - CLIENT2_HOST=10.70.0.41
     volumes:
       - ${MUSIC_ROOT_PATH:-/home/kamran/Kamran Music}:/music:ro
-      - ${LANDAU_ROOT_PATH:-/home/kamran/Landau}:/landau:ro
+      - ${MEDIA_ROOT_PATH:-/home/kamran/Media}:/media:ro
       - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/root/.ssh:ro
     env_file:
-      - ./bots/narimanov/config.env
+      - ./bots/client1/config.env
     networks:
       - campus
 
-  tg-campus-genclik:
+  tg-campus-client2:
     build:
-      context: ./bots/narimanov
+      context: ./bots/client1
       dockerfile: Dockerfile
-    container_name: tg-campus-genclik
+    container_name: tg-campus-client2
     restart: "no"
     profiles: ["bot"]
     environment:
       - CLIENT_HOST=10.70.0.41
-      - CLIENT_USER=vm1
-      - NCTK_HOST=10.20.0.41
-      - VM1_HOST=10.70.0.41
+      - CLIENT_USER=client2
+      - CLIENT1_HOST=10.20.0.41
+      - CLIENT2_HOST=10.70.0.41
     volumes:
       - ${MUSIC_ROOT_PATH:-/home/kamran/Kamran Music}:/music:ro
-      - ${LANDAU_ROOT_PATH:-/home/kamran/Landau}:/landau:ro
+      - ${MEDIA_ROOT_PATH:-/home/kamran/Media}:/media:ro
       - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/root/.ssh:ro
     env_file:
-      - ./bots/genclik/config.env
+      - ./bots/client2/config.env
     networks:
       - campus
 
-  # === RECOVERY: бэкапы + восстановление server/nctk/vm1 ===
+  # === RECOVERY: бэкапы + восстановление server/client1/client2 ===
   campus-recovery:
     build:
       context: ./recovery
@@ -178,9 +178,9 @@ services:
       - RECOVERY_CHECK_INTERVAL=${RECOVERY_CHECK_INTERVAL:-300}
       - NOTIFICATION_BOT_TOKEN=${NOTIFICATION_BOT_TOKEN:-}
       - NOTIFICATION_CHAT_ID=${NOTIFICATION_CHAT_ID:-}
-      - RECOVERY_VM1_PASS=${RECOVERY_VM1_PASS:-}
-      - RECOVERY_NCTK_PASS=${RECOVERY_NCTK_PASS:-}
-      - SYNC_BACKUPS_TO_NCTK=${SYNC_BACKUPS_TO_NCTK:-1}
+      - RECOVERY_CLIENT2_PASS=${RECOVERY_CLIENT2_PASS:-}
+      - RECOVERY_CLIENT1_PASS=${RECOVERY_CLIENT1_PASS:-}
+      - SYNC_BACKUPS_TO_CLIENT1=${SYNC_BACKUPS_TO_CLIENT1:-1}
 
   # === CAMPUS WEB UI: управление воспроизведением + расписание ===
   campus-webui:
@@ -196,22 +196,22 @@ services:
       - ./data/webui:/data
       - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/secrets:ro
       - ${MUSIC_ROOT_PATH:-/home/kamran/Kamran Music}:/music:rw
-      - ./bots/narimanov/config.env:/bot_config.env:ro
+      - ./bots/client1/config.env:/bot_config.env:ro
       - ${CAMPUS_BACKUP_DIR:-/home/kamran/campus-backups}:/campus-backups:ro
     environment:
-      - NCTK_HOST=${NCTK_HOST:-10.20.0.41}
-      - NCTK_USER=${NCTK_USER:-nctk}
-      - NCTK_MAC=${NCTK_MAC:-}
+      - CLIENT1_HOST=${CLIENT1_HOST:-10.20.0.41}
+      - CLIENT1_USER=${CLIENT1_USER:-client1}
+      - CLIENT1_MAC=${CLIENT1_MAC:-}
       - SSH_KEY=/secrets/campus_bot
       - MUSIC_DIR=/music
       - SECRET_KEY=${WEBUI_SECRET_KEY:-campus-change-me-in-prod}
       - DB_PATH=/data/webui.db
       - DEFAULT_VOL=${DEFAULT_VOL:-100}
-      - NCTK_INBOX=/var/lib/campus-player/inbox
+      - CLIENT1_INBOX=/var/lib/campus-player/inbox
       # Дополнительные машины:
       - MACHINE2_HOST=10.70.0.41
-      - MACHINE2_NAME=vm1 Campus
-      - MACHINE2_USER=vm1
+      - MACHINE2_NAME=client2 Campus
+      - MACHINE2_USER=client2
       - MACHINE2_MAC=98:ee:cb:28:c1:9f
       # Сервер CentOS (терминал)
       - CENTOS_HOST=${CENTOS_HOST:-10.10.4.120}
@@ -264,12 +264,12 @@ services:
     networks:
       - campus
 
-  # === LANDAU HELPDESK: публичная форма заявок на ремонт ===
-  landau-helpdesk:
+  # === MEDIA HELPDESK: публичная форма заявок на ремонт ===
+  media-helpdesk:
     build:
       context: ./helpdesk
       dockerfile: Dockerfile
-    container_name: landau-helpdesk
+    container_name: media-helpdesk
     restart: unless-stopped
     profiles: ["helpdesk"]
     ports:
@@ -277,9 +277,9 @@ services:
     volumes:
       - ./data/helpdesk:/data
     environment:
-      - SECRET_KEY=${HELPDESK_SECRET_KEY:-landau-helpdesk-2026}
+      - SECRET_KEY=${HELPDESK_SECRET_KEY:-media-helpdesk-2026}
       - ADMIN_USER=${HELPDESK_ADMIN_USER:-admin}
-      - ADMIN_PASS=${HELPDESK_ADMIN_PASS:-landau2026}
+      - ADMIN_PASS=${HELPDESK_ADMIN_PASS:-media2026}
       - DB_PATH=/data/helpdesk.db
       - UPLOAD_DIR=/data/uploads
       - TG_TOKEN=${NOTIFICATION_BOT_TOKEN:-}
@@ -292,7 +292,7 @@ services:
     networks:
       - campus
 
-  # === COCKPIT PROXY: доступ к vm1 Cockpit через CentOS ===
+  # === COCKPIT PROXY: доступ к client2 Cockpit через CentOS ===
   cockpit-proxy:
     image: nginx:alpine
     container_name: cockpit-proxy

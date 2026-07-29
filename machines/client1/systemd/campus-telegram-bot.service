@@ -1,0 +1,17 @@
+[Unit]
+Description=Telegram campus bot — client1
+After=network-online.target campus-mpv.service
+Wants=network-online.target campus-mpv.service
+
+[Service]
+User=client1
+Group=client1
+WorkingDirectory=/home/client1/telegram-campus-bot
+ExecStart=/usr/bin/python3 -u /home/client1/telegram-campus-bot/bot.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

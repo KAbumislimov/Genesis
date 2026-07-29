@@ -28,8 +28,8 @@ scrape_configs:
           job: secure
           host: campus-server
           __path__: /var/log/secure
-  # nctk и vm1 шлют логи сами через Promtail (push в Loki)
-  # Контейнеры tg-campus-bot / tg-campus-genclik (Telegram) — отдельный job
+  # client1 и client2 шлют логи сами через Promtail (push в Loki)
+  # Контейнеры tg-campus-bot / tg-campus-client2 (Telegram) — отдельный job
   - job_name: docker_campus_bots
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
@@ -37,7 +37,7 @@ scrape_configs:
     relabel_configs:
       - action: keep
         source_labels: [__meta_docker_container_name]
-        regex: .*tg-campus-(bot|genclik).*
+        regex: .*tg-campus-(bot|client2).*
       - action: replace
         source_labels: [__meta_docker_container_name]
         regex: .*
@@ -63,13 +63,13 @@ scrape_configs:
           host: campus-server
           __path__: /opt/tg-campus-bot/action.log
   
-  - job_name: campus_landau_server
+  - job_name: campus_media_server
     static_configs:
       - targets: [localhost]
         labels:
-          job: campus_landau
+          job: campus_media
           host: campus-server
-          __path__: /home/kamran/projects/campus-infra/cron-landau.log
+          __path__: /home/kamran/projects/campus-infra/cron-media.log
 
   - job_name: campus_backup
     static_configs:

@@ -69,7 +69,7 @@ def parse_last_run(log_path):
         if "ОШИБКА" in stripped or ("❌" in stripped and "ОШИБКА" in stripped):
             clean = re.sub(r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]\s*", "", stripped)
             errors.append(clean)
-        # Строки du -sh: [timestamp]  1.2G /mnt/campus-backup/2026-07-13_nctk
+        # Строки du -sh: [timestamp]  1.2G /mnt/campus-backup/2026-07-13_client1
         m = re.search(r"\]\s+(\S+)\s+/mnt/campus-backup/(\S+)/?$", stripped)
         if m:
             sizes.append((m.group(2), m.group(1)))

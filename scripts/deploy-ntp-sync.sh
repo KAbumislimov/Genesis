@@ -1,5 +1,5 @@
 #!/bin/bash
-# Деплой синхронизации времени: CentOS = NTP-сервер, nctk и vm1 = клиенты.
+# Деплой синхронизации времени: CentOS = NTP-сервер, client1 и client2 = клиенты.
 # Запуск на сервере 10.10.4.120: bash campus-infra/scripts/deploy-ntp-sync.sh
 #
 # Клиенты без интернета — синхронизируются с CentOS.
@@ -25,9 +25,9 @@ else
 fi
 
 # 2. Настройка клиентов
-echo "--- 2. Настройка NTP-клиентов (nctk, vm1) ---"
+echo "--- 2. Настройка NTP-клиентов (client1, client2) ---"
 
-for client in "nctk@10.20.0.41" "vm1@10.70.0.41"; do
+for client in "client1@10.20.0.41" "client2@10.70.0.41"; do
     echo "  $client..."
     scp $SSH_OPTS "$SCRIPT_DIR/setup-ntp-client.sh" "$client:/tmp/"
     ssh $SSH_OPTS "$client" "NTP_SERVER=$NTP_SERVER sudo bash /tmp/setup-ntp-client.sh" || echo "    Ошибка для $client"
@@ -35,8 +35,8 @@ done
 
 echo ""
 echo "--- 3. Проверка времени ---"
-ssh $SSH_OPTS nctk@10.20.0.41 "date '+nctk:  %H:%M:%S %d.%m.%Y'" 2>/dev/null || echo "nctk: недоступен"
-ssh $SSH_OPTS vm1@10.70.0.41 "date '+vm1:   %H:%M:%S %d.%m.%Y'" 2>/dev/null || echo "vm1: недоступен"
+ssh $SSH_OPTS client1@10.20.0.41 "date '+client1:  %H:%M:%S %d.%m.%Y'" 2>/dev/null || echo "client1: недоступен"
+ssh $SSH_OPTS client2@10.70.0.41 "date '+client2:   %H:%M:%S %d.%m.%Y'" 2>/dev/null || echo "client2: недоступен"
 echo "Server: $(date '+%H:%M:%S %d.%m.%Y')"
 echo ""
 echo "Если расхождение — подождите 2–5 минут, chrony синхронизируется."

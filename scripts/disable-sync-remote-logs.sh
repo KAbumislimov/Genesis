@@ -1,6 +1,6 @@
 #!/bin/bash
 # Отключить sync-remote-logs из cron (логи теперь идут через Promtail на клиентах)
-# Запуск: на машине, где настроен cron (nctk или campus-server)
+# Запуск: на машине, где настроен cron (client1 или campus-server)
 
 echo "Текущий crontab:"
 crontab -l 2>/dev/null || echo "(пусто)"

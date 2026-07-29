@@ -1,9 +1,9 @@
 #!/bin/bash
 # Создание бэкапа машины (конфиги, сервисы, скрипты, кроны, боты)
-# Запуск: backup.sh <server|nctk|vm1>
+# Запуск: backup.sh <server|client1|client2>
 
 set -e
-HOST_ID="${1:?Укажите: server|nctk|vm1}"
+HOST_ID="${1:?Укажите: server|client1|client2}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUPS_ROOT="${BACKUPS_ROOT:-/backups}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -30,10 +30,10 @@ case "$HOST_ID" in
         --exclude='campus-infra/remote-logs' --exclude='campus-infra/.git' 2>/dev/null || true
     fi
     ;;
-  nctk|vm1)
+  client1|client2)
     USER="$HOST_ID"
     HOST=$(grep -A5 "^  $HOST_ID:" "$SCRIPT_DIR/config/hosts.yaml" 2>/dev/null | grep "host:" | head -1 | awk '{print $2}')
-    [[ -z "$HOST" ]] && HOST=$([[ "$HOST_ID" == "nctk" ]] && echo "10.20.0.41" || echo "10.70.0.41")
+    [[ -z "$HOST" ]] && HOST=$([[ "$HOST_ID" == "client1" ]] && echo "10.20.0.41" || echo "10.70.0.41")
     echo "=== Бэкап $HOST_ID ($USER@$HOST) ==="
     [[ -f "$SSH_KEY" ]] && SSH_OPTS="-i $SSH_KEY $SSH_OPTS"
     ssh $SSH_OPTS "${USER}@${HOST}" "sudo tar -czf - -C / etc home/$USER root var/spool/cron 2>/dev/null" > "$DEST/full_config.tar.gz" 2>/dev/null || \
@@ -55,11 +55,11 @@ if [[ -n "$OLD" ]]; then
   echo "Ротация: удалено $(echo "$OLD" | wc -l) старых бэкапов $HOST_ID"
 fi
 
-# Копирование на nctk (SSD) — если доступен
-NCTK_BACKUPS="/mnt/campus-data/backups"
+# Копирование на client1 (SSD) — если доступен
+CLIENT1_BACKUPS="/mnt/campus-data/backups"
 [[ -f "$SSH_KEY" ]] && SSH_OPTS="-F /dev/null -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=30"
-if [[ -n "$SYNC_BACKUPS_TO_NCTK" ]] && [[ "$SYNC_BACKUPS_TO_NCTK" != "0" ]]; then
-    if ssh $SSH_OPTS nctk@10.20.0.41 "mkdir -p $NCTK_BACKUPS/$HOST_ID 2>/dev/null; test -w $NCTK_BACKUPS" 2>/dev/null; then
-        rsync -az -e "ssh $SSH_OPTS" "$DEST/" "nctk@10.20.0.41:$NCTK_BACKUPS/$HOST_ID/$TIMESTAMP/" 2>/dev/null && echo "Синхронизировано на nctk:$NCTK_BACKUPS" || true
+if [[ -n "$SYNC_BACKUPS_TO_CLIENT1" ]] && [[ "$SYNC_BACKUPS_TO_CLIENT1" != "0" ]]; then
+    if ssh $SSH_OPTS client1@10.20.0.41 "mkdir -p $CLIENT1_BACKUPS/$HOST_ID 2>/dev/null; test -w $CLIENT1_BACKUPS" 2>/dev/null; then
+        rsync -az -e "ssh $SSH_OPTS" "$DEST/" "client1@10.20.0.41:$CLIENT1_BACKUPS/$HOST_ID/$TIMESTAMP/" 2>/dev/null && echo "Синхронизировано на client1:$CLIENT1_BACKUPS" || true
     fi
 fi

@@ -34,7 +34,7 @@ const I18N = {
     'np.by':          'Включил',
     'np.waiting':     'Ожидание...',
     /* Connection */
-    'conn.online':    'Narimanov Campus онлайн',
+    'conn.online':    'Client1 Campus онлайн',
     'conn.offline':   'нет связи',
     'conn.status_ok': 'онлайн',
     'conn.status_err':'офлайн',
@@ -196,8 +196,8 @@ const I18N = {
     'eq.clarity':     'Clarity',
     'eq.reset':       'Сброс',
     'eq.campus_both': 'Оба',
-    'eq.campus_nar':  'Narimanov',
-    'eq.campus_genc': 'Gənclik',
+    'eq.campus_nar':  'Client1',
+    'eq.campus_genc': 'Client2',
     /* Design button */
     'nav.design':     'Дизайн',
   },
@@ -235,7 +235,7 @@ const I18N = {
     'np.by':          'Started by',
     'np.waiting':     'Waiting...',
     /* Connection */
-    'conn.online':    'Narimanov Campus online',
+    'conn.online':    'Client1 Campus online',
     'conn.offline':   'no connection',
     'conn.status_ok': 'online',
     'conn.status_err':'offline',
@@ -394,8 +394,8 @@ const I18N = {
     'eq.clarity':     'Clarity',
     'eq.reset':       'Reset',
     'eq.campus_both': 'Both',
-    'eq.campus_nar':  'Narimanov',
-    'eq.campus_genc': 'Gənclik',
+    'eq.campus_nar':  'Client1',
+    'eq.campus_genc': 'Client2',
     'nav.design':     'Design',
   },
 
@@ -432,7 +432,7 @@ const I18N = {
     'np.by':          'Başladıb',
     'np.waiting':     'Gözlənilir...',
     /* Connection */
-    'conn.online':    'Narimanov Kampusu onlayn',
+    'conn.online':    'Client1 Kampusu onlayn',
     'conn.offline':   'əlaqə yoxdur',
     'conn.status_ok': 'onlayn',
     'conn.status_err':'oflayn',
@@ -592,7 +592,7 @@ const I18N = {
     'eq.reset':       'Sıfırla',
     'eq.campus_both': 'Hər ikisi',
     'eq.campus_nar':  'Nərimanov',
-    'eq.campus_genc': 'Gənclik',
+    'eq.campus_genc': 'Client2',
     'nav.design':     'Dizayn',
   }
 };

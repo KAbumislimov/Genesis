@@ -1,10 +1,10 @@
 #!/bin/bash
-# Локальная остановка воспроизведения (для nctk/vm1 при локальном кроне).
+# Локальная остановка воспроизведения (для client1/client2 при локальном кроне).
 # Вызов из cron без аргументов.
 # ВАЖНО: campus-playerctl stop отправлял SIGKILL — используем IPC quit для корректной остановки.
 SOCK="${CAMPUS_PLAYER_SOCKET:-/run/campus-player/mpv.sock}"
 LOG="${LOG_FILE:-$HOME/action.log}"
-[ -w "$LOG" ] 2>/dev/null || LOG="/tmp/landau-cron.log"
+[ -w "$LOG" ] 2>/dev/null || LOG="/tmp/media-cron.log"
 
 if [ -S "$SOCK" ]; then
   echo '{"command":["quit"]}' | socat - UNIX-CONNECT:"$SOCK" 2>/dev/null || true

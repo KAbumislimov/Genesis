@@ -27,7 +27,7 @@ docker compose version >/dev/null 2>&1 || error "Docker Compose v2 не уста
 info "Проверка секретов (campus-secrets)..."
 if [ ! -d "$SECRETS_DIR" ]; then
     warn "campus-secrets не найден — клонирую..."
-    git clone git@github.com:LandauAudioserver/campus-secrets.git "$SECRETS_DIR" \
+    git clone git@github.com:MediaAudioserver/campus-secrets.git "$SECRETS_DIR" \
         || error "Не удалось клонировать campus-secrets. Добавь SSH-ключ на GitHub."
 fi
 

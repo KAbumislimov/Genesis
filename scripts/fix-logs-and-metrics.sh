@@ -1,5 +1,5 @@
 #!/bin/bash
-# Восстановление логов и метрик: Grafana, Loki, Promtail, Prometheus, туннели nctk/vm1
+# Восстановление логов и метрик: Grafana, Loki, Promtail, Prometheus, туннели client1/client2
 # Запуск: cd /home/kamran/campus-infra && bash scripts/fix-logs-and-metrics.sh
 
 set -e
@@ -44,8 +44,8 @@ echo "=== 7. Проверка Prometheus (targets) ==="
 curl -s -m 5 "http://127.0.0.1:9091/api/v1/targets" 2>/dev/null | grep -o '"health":"[^"]*"' | head -5 || echo "Prometheus не отвечает"
 
 echo ""
-echo "=== 8. Туннели для nctk/vm1 (логи с удалённых машин) ==="
-for svc in loki-tunnel-nctk loki-tunnel-vm1; do
+echo "=== 8. Туннели для client1/client2 (логи с удалённых машин) ==="
+for svc in loki-tunnel-client1 loki-tunnel-client2; do
     if systemctl is-active --quiet $svc 2>/dev/null; then
         echo "  $svc: active"
     else
@@ -59,5 +59,5 @@ echo "Grafana:  http://10.10.4.120:3000  (admin / из .env GRAFANA_PASSWORD)"
 echo "Loki:     http://10.10.4.120:3100/ready"
 echo "Prometheus: http://10.10.4.120:9091"
 echo ""
-echo "Если туннели не запущены: sudo systemctl start loki-tunnel-nctk loki-tunnel-vm1"
-echo "Если нет логов nctk/vm1: bash scripts/setup-loki-tunnels.sh"
+echo "Если туннели не запущены: sudo systemctl start loki-tunnel-client1 loki-tunnel-client2"
+echo "Если нет логов client1/client2: bash scripts/setup-loki-tunnels.sh"

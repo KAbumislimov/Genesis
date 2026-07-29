@@ -4,7 +4,7 @@ import os
 import sys
 import pexpect
 
-CRED = "/home/vm1/credentials.env"
+CRED = "/home/client2/credentials.env"
 if os.path.isfile(CRED):
     with open(CRED, encoding="utf-8") as f:
         for line in f:
@@ -13,8 +13,8 @@ if os.path.isfile(CRED):
                 k, v = line.split("=", 1)
                 os.environ[k.strip()] = v.strip().strip("'\"")
 
-CENTOS = ("kamran", "10.10.4.120", os.environ["NARIMANOV_PASSWORD"])
-NCTK = ("nctk", "10.20.0.41", os.environ["CLIENT_PASSWORD"])
+CENTOS = ("kamran", "10.10.4.120", os.environ["CLIENT1_PASSWORD"])
+CLIENT1 = ("client1", "10.20.0.41", os.environ["CLIENT_PASSWORD"])
 DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -53,33 +53,33 @@ def main():
         u, h, pw,
     )
 
-    u, h, pw = NCTK
+    u, h, pw = CLIENT1
     print("\n" + "=" * 50)
-    print("2. nctk: Promtail...")
+    print("2. client1: Promtail...")
     print("=" * 50)
-    run("mkdir -p /home/nctk/log-promtail", u, h, pw)
-    scp(f"{DIR}/promtail-clients/promtail-nctk.yaml", "/home/nctk/log-promtail/promtail-config.yaml", u, h, pw)
+    run("mkdir -p /home/client1/log-promtail", u, h, pw)
+    scp(f"{DIR}/promtail-clients/promtail-client1.yaml", "/home/client1/log-promtail/promtail-config.yaml", u, h, pw)
     run(
-        "docker rm -f promtail 2>/dev/null; cd /home/nctk/log-promtail && docker run -d --name promtail --restart unless-stopped "
-        "-v /home/nctk/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro "
+        "docker rm -f promtail 2>/dev/null; cd /home/client1/log-promtail && docker run -d --name promtail --restart unless-stopped "
+        "-v /home/client1/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro "
         "-v /var/log:/var/log:ro grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml",
         u, h, pw,
     )
 
     print("\n" + "=" * 50)
-    print("3. vm1: Promtail...")
+    print("3. client2: Promtail...")
     print("=" * 50)
-    os.makedirs("/home/vm1/log-promtail", exist_ok=True)
+    os.makedirs("/home/client2/log-promtail", exist_ok=True)
     import shutil
     shutil.copy(
-        f"{DIR}/promtail-clients/promtail-vm1.yaml",
-        "/home/vm1/log-promtail/promtail-config.yaml",
+        f"{DIR}/promtail-clients/promtail-client2.yaml",
+        "/home/client2/log-promtail/promtail-config.yaml",
     )
     r = os.system("docker rm -f promtail 2>/dev/null; docker run -d --name promtail --restart unless-stopped "
-        "-v /home/vm1/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro "
+        "-v /home/client2/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro "
         "-v /var/log:/var/log:ro grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml")
     if r != 0:
-        print("vm1: docker run promtail — ошибка (Docker может быть не установлен)")
+        print("client2: docker run promtail — ошибка (Docker может быть не установлен)")
         sys.exit(1)
 
     print("\n" + "=" * 50)

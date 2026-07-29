@@ -1,8 +1,8 @@
 #!/bin/bash
-# Настройка SSH reverse tunnel для Promtail: nctk/vm1 не могут достучаться до Loki на centos,
-# поэтому centos поднимает туннели — на nctk и vm1 localhost:3100 пробрасывается на Loki.
+# Настройка SSH reverse tunnel для Promtail: client1/client2 не могут достучаться до Loki на centos,
+# поэтому centos поднимает туннели — на client1 и client2 localhost:3100 пробрасывается на Loki.
 #
-# 1. Обновляет promtail config на nctk и vm1 (url: localhost:3100)
+# 1. Обновляет promtail config на client1 и client2 (url: localhost:3100)
 # 2. Устанавливает и запускает systemd-сервисы туннелей на centos
 #
 # Запуск с centos: bash scripts/setup-loki-tunnels.sh
@@ -18,29 +18,29 @@ SCP="scp -i $SSH_KEY -o StrictHostKeyChecking=no"
 
 echo "=== 1. Установка и запуск systemd-сервисов туннелей на centos ==="
 # Подставляем путь к ключу в unit-файлы
-for svc in loki-tunnel-nctk loki-tunnel-vm1; do
+for svc in loki-tunnel-client1 loki-tunnel-client2; do
   sed "s|-i /home/kamran/.ssh/campus_bot|-i $SSH_KEY|g" "$DIR/scripts/systemd/$svc.service" | sudo tee "/etc/systemd/system/$svc.service" > /dev/null
 done
 sudo systemctl daemon-reload
-sudo systemctl enable loki-tunnel-nctk loki-tunnel-vm1
-sudo systemctl restart loki-tunnel-nctk loki-tunnel-vm1
+sudo systemctl enable loki-tunnel-client1 loki-tunnel-client2
+sudo systemctl restart loki-tunnel-client1 loki-tunnel-client2
 
 echo ""
-echo "=== 2. Обновление конфигов Promtail на nctk и vm1 ==="
-$SCP "$DIR/promtail-clients/promtail-nctk.yaml" nctk@10.20.0.41:/tmp/campus-monitoring/promtail/config.yaml
-# vm1: при установке через deploy-monitoring-offline — /tmp/...; у вас может быть /home/vm1/...
-$SCP "$DIR/promtail-clients/promtail-vm1.yaml" vm1@10.70.0.41:/home/vm1/campus-monitoring/promtail/config.yaml
+echo "=== 2. Обновление конфигов Promtail на client1 и client2 ==="
+$SCP "$DIR/promtail-clients/promtail-client1.yaml" client1@10.20.0.41:/tmp/campus-monitoring/promtail/config.yaml
+# client2: при установке через deploy-monitoring-offline — /tmp/...; у вас может быть /home/client2/...
+$SCP "$DIR/promtail-clients/promtail-client2.yaml" client2@10.70.0.41:/home/client2/campus-monitoring/promtail/config.yaml
 echo "  OK: конфиги скопированы"
 
 echo ""
-echo "=== 3. Перезапуск Promtail на nctk и vm1 ==="
-$SSH nctk@10.20.0.41 "sudo systemctl restart promtail" 2>/dev/null && echo "  nctk: promtail перезапущен" || echo "  nctk: promtail не перезапущен (проверьте вручную)"
-$SSH vm1@10.70.0.41 "sudo systemctl restart promtail" 2>/dev/null && echo "  vm1: promtail перезапущен" || echo "  vm1: promtail не перезапущен (проверьте вручную)"
+echo "=== 3. Перезапуск Promtail на client1 и client2 ==="
+$SSH client1@10.20.0.41 "sudo systemctl restart promtail" 2>/dev/null && echo "  client1: promtail перезапущен" || echo "  client1: promtail не перезапущен (проверьте вручную)"
+$SSH client2@10.70.0.41 "sudo systemctl restart promtail" 2>/dev/null && echo "  client2: promtail перезапущен" || echo "  client2: promtail не перезапущен (проверьте вручную)"
 
 echo ""
 echo "=== 4. Проверка туннелей ==="
 sleep 2
-for n in loki-tunnel-nctk loki-tunnel-vm1; do
+for n in loki-tunnel-client1 loki-tunnel-client2; do
   if systemctl is-active --quiet $n; then
     echo "  $n: active"
   else
@@ -49,5 +49,5 @@ for n in loki-tunnel-nctk loki-tunnel-vm1; do
 done
 
 echo ""
-echo "Готово. Promtail на nctk и vm1 теперь шлёт логи на localhost:3100 → туннель → Loki на centos."
-echo "Проверка через несколько минут: journalctl -u promtail -n 5 (на nctk/vm1) — не должно быть 'context deadline exceeded'"
+echo "Готово. Promtail на client1 и client2 теперь шлёт логи на localhost:3100 → туннель → Loki на centos."
+echo "Проверка через несколько минут: journalctl -u promtail -n 5 (на client1/client2) — не должно быть 'context deadline exceeded'"

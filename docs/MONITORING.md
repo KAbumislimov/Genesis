@@ -7,9 +7,9 @@ cd /home/kamran/campus-infra
 bash scripts/fix-logs-and-metrics.sh
 ```
 
-Скрипт: запускает Grafana, Loki, Promtail, Prometheus; проверяет туннели nctk/vm1; при цикле перезапуска Grafana — сбрасывает volume.
+Скрипт: запускает Grafana, Loki, Promtail, Prometheus; проверяет туннели client1/client2; при цикле перезапуска Grafana — сбрасывает volume.
 
-**Туннели** (логи с nctk и vm1): `sudo systemctl start loki-tunnel-nctk loki-tunnel-vm1`  
+**Туннели** (логи с client1 и client2): `sudo systemctl start loki-tunnel-client1 loki-tunnel-client2`  
 **Полная настройка туннелей:** `bash scripts/setup-loki-tunnels.sh`
 
 ---
@@ -28,15 +28,15 @@ rsync -avz --exclude '.git' --exclude 'remote-logs' /home/kamran/campus-infra/ k
 - **Cron** — `sync-remote-logs.sh` каждую минуту (установить: `bash scripts/install-sync-logs-cron.sh`)
 - **Полная настройка:** `bash scripts/install-auto-start.sh`
 
-### nctk и vm1 (node_exporter + promtail)
+### client1 и client2 (node_exporter + promtail)
 Для автозапуска после перезагрузки — установить systemd (один раз, с sudo):
 ```bash
-# На nctk:
-sudo cp /home/nctk/promtail/node_exporter.service /etc/systemd/system/
-sudo cp /home/nctk/promtail/promtail.service /etc/systemd/system/
+# На client1:
+sudo cp /home/client1/promtail/node_exporter.service /etc/systemd/system/
+sudo cp /home/client1/promtail/promtail.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now node_exporter promtail
 
-# Аналогично на vm1
+# Аналогично на client2
 ```
 
 ---
@@ -52,7 +52,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now node_exporter promta
 - **Универсальный** — всё что происходит на всех серверах (`{}`)
 - **Системные** — syslog, messages, kern, auth
 - **Ошибки** — только строки с error, exception, failed
-- **По хостам** — campus-server, nctk, vm1 отдельно
+- **По хостам** — campus-server, client1, client2 отдельно
 
 ---
 

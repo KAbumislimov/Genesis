@@ -1,5 +1,5 @@
 #!/bin/bash
-# Копирование SSH-ключей на nctk и vm1 для работы Telegram-ботов
+# Копирование SSH-ключей на client1 и client2 для работы Telegram-ботов
 # Боты в Docker используют ~/.ssh с хоста — ключ должен быть в authorized_keys на клиентах
 # Запуск: bash scripts/setup-ssh-keys-for-bots.sh
 
@@ -40,10 +40,10 @@ copy_key() {
     }
 }
 
-copy_key "nctk" "10.20.0.41" "nctk"
-copy_key "vm1" "10.70.0.41" "vm1"
+copy_key "client1" "10.20.0.41" "client1"
+copy_key "client2" "10.70.0.41" "client2"
 
 echo ""
 echo "Проверка:"
-ssh -i "$KEY" -o BatchMode=yes -o ConnectTimeout=10 nctk@10.20.0.41 "echo OK nctk" 2>/dev/null && echo "  nctk: OK" || echo "  nctk: требуется пароль или ключ не добавлен"
-ssh -i "$KEY" -o BatchMode=yes -o ConnectTimeout=10 vm1@10.70.0.41 "echo OK vm1" 2>/dev/null && echo "  vm1: OK" || echo "  vm1: требуется пароль или ключ не добавлен"
+ssh -i "$KEY" -o BatchMode=yes -o ConnectTimeout=10 client1@10.20.0.41 "echo OK client1" 2>/dev/null && echo "  client1: OK" || echo "  client1: требуется пароль или ключ не добавлен"
+ssh -i "$KEY" -o BatchMode=yes -o ConnectTimeout=10 client2@10.70.0.41 "echo OK client2" 2>/dev/null && echo "  client2: OK" || echo "  client2: требуется пароль или ключ не добавлен"

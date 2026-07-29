@@ -8,13 +8,13 @@ from flask import (Flask, render_template, request, jsonify,
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'landau-helpdesk-secret-2026')
+app.secret_key = os.environ.get('SECRET_KEY', 'media-helpdesk-secret-2026')
 
 DB        = os.environ.get('DB_PATH', '/data/helpdesk.db')
 UPLOAD    = os.environ.get('UPLOAD_DIR', '/data/uploads')
 MAX_MB    = int(os.environ.get('MAX_UPLOAD_MB', '50'))
 ADMIN_USER = os.environ.get('ADMIN_USER', 'admin')
-ADMIN_PASS = os.environ.get('ADMIN_PASS', 'landau2026')
+ADMIN_PASS = os.environ.get('ADMIN_PASS', 'media2026')
 
 TG_TOKEN  = os.environ.get('TG_TOKEN', '')
 TG_CHAT   = os.environ.get('TG_CHAT', '')
@@ -27,8 +27,8 @@ NOTIFY_TO = os.environ.get('NOTIFY_TO', '')
 ALLOWED   = {'png','jpg','jpeg','gif','webp','mp4','mov','avi','mkv','pdf'}
 
 CAMPUSES = [
-    'Narimanov','Bayıl','Ağ-Şəhər','Xatai BCR','Seabreeze',
-    'Simurq Gənclik','West Town','Simurq Xaqlar','Simurq Xırdalan',
+    'Client1','Bayıl','Ağ-Şəhər','Xatai BCR','Seabreeze',
+    'Simurq Client2','West Town','Simurq Xaqlar','Simurq Xırdalan',
     'Simurq Zəbrat','Gəncə Bani','City Garden'
 ]
 
@@ -205,7 +205,7 @@ def notify(report):
     if SMTP_HOST and NOTIFY_TO:
         try:
             msg = MIMEMultipart()
-            msg['Subject'] = f"[LANDAU Helpdesk] Заявка #{report['id']} — {report['campus']}"
+            msg['Subject'] = f"[MEDIA Helpdesk] Заявка #{report['id']} — {report['campus']}"
             msg['From']    = SMTP_USER
             msg['To']      = NOTIFY_TO
             msg.attach(MIMEText(text.replace('*','').replace('_',''), 'plain', 'utf-8'))

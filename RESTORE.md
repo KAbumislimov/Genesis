@@ -14,8 +14,8 @@
 | **Web UI** | http://10.10.4.120:8090 | см. campus-secrets |
 | **HelpDesk** | http://10.10.4.120:8091 | см. campus-secrets |
 | **Cockpit — CentOS** | http://10.10.4.120:1991 | kamran / (системный) |
-| **Cockpit — Нариманов** | http://10.20.0.41:1991 | nctk / см. campus-secrets |
-| **Cockpit — Гянджлик** | http://10.10.4.120:19912 | vm1 / см. campus-secrets |
+| **Cockpit — Клиент 1** | http://10.20.0.41:1991 | client1 / см. campus-secrets |
+| **Cockpit — Клиент 2** | http://10.10.4.120:19912 | client2 / см. campus-secrets |
 | **Grafana** | http://10.10.4.120:3000 | admin / см. .env |
 
 ---
@@ -25,8 +25,8 @@
 | Машина | IP | ОС | Роль |
 |--------|----|----|------|
 | **CentOS** | 10.10.4.120 | CentOS 9 | Главный сервер, Docker, Web UI |
-| **nctk** | 10.20.0.41 | Ubuntu 22.04 | Нариманов Campus |
-| **vm1** | 10.70.0.41 | Ubuntu 22.04 | Гянджлик Campus |
+| **client1** | 10.20.0.41 | Ubuntu 22.04 | Клиент 1 Campus |
+| **client2** | 10.70.0.41 | Ubuntu 22.04 | Клиент 2 Campus |
 
 SSH ключ для всех: `~/.ssh/campus_bot`
 
@@ -38,7 +38,7 @@ SSH ключ для всех: `~/.ssh/campus_bot`
 
 ```bash
 # Клонировать репо
-git clone https://github.com/LandauAudioserver/campus-infra.git ~/projects/campus-infra
+git clone https://github.com/MediaAudioserver/campus-infra.git ~/projects/campus-infra
 
 # Запустить полное восстановление
 bash ~/projects/campus-infra/restore.sh
@@ -98,14 +98,14 @@ docker compose --profile webui --profile logs --profile bot --profile cockpit --
 
 ---
 
-## Восстановление nctk / vm1
+## Восстановление client1 / client2
 
 ```bash
-# nctk (Нариманов) — если машина переустановлена:
-bash ~/projects/campus-infra/scripts/restore-nctk.sh
+# client1 (Клиент 1) — если машина переустановлена:
+bash ~/projects/campus-infra/scripts/restore-client1.sh
 
-# vm1 (Гянджлик) — если машина переустановлена:
-bash ~/projects/campus-infra/scripts/restore-vm1.sh
+# client2 (Клиент 2) — если машина переустановлена:
+bash ~/projects/campus-infra/scripts/restore-client2.sh
 ```
 
 ---
@@ -149,7 +149,7 @@ python3 -c "import sqlite3; c=sqlite3.connect('data/webui/webui.db'); print(c.ex
 ```bash
 # Смотреть ошибки контейнера
 docker logs campus-webui --tail 100
-docker logs landau-helpdesk --tail 100
+docker logs media-helpdesk --tail 100
 
 # Проверить .env
 cat ~/projects/campus-infra/.env | grep -v "TOKEN\|PASS\|SECRET"

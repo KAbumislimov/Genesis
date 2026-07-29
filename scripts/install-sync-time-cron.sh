@@ -11,6 +11,6 @@ CRON_ENTRY="2 6,16,22 * * * $SCRIPT"
 if crontab -l 2>/dev/null | grep -q "sync-time-via-ssh"; then
     echo "Запись уже есть в crontab"
 else
-    (crontab -l 2>/dev/null; echo "# Синхронизация времени nctk/vm1 с CentOS (вне учебного времени)"; echo "$CRON_ENTRY") | crontab -
+    (crontab -l 2>/dev/null; echo "# Синхронизация времени client1/client2 с CentOS (вне учебного времени)"; echo "$CRON_ENTRY") | crontab -
     echo "Добавлено: $CRON_ENTRY"
 fi

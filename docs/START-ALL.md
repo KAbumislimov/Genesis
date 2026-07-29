@@ -1,23 +1,23 @@
 # Запуск всего: 4 главных компонента
 
 ## 1. Бэкапы (campus-recovery)
-- Бэкапы server, nctk, vm1 раз в сутки
-- Копирование на nctk в `/mnt/campus-data/backups` (если SYNC_BACKUPS_TO_NCTK=1)
+- Бэкапы server, client1, client2 раз в сутки
+- Копирование на client1 в `/mnt/campus-data/backups` (если SYNC_BACKUPS_TO_CLIENT1=1)
 - Уведомления в Telegram
 
 ## 2. Telegram-боты
-- tg-campus-bot (narimanov), tg-campus-genclik
+- tg-campus-bot (client1), tg-campus-client2
 - Если используете systemd — не включайте профиль `bot`, watchdog не перезапускает ботов
 
 ## 3. Мониторинг (Loki, Prometheus, Grafana)
-- Логи: campus-server, nctk, vm1
+- Логи: campus-server, client1, client2
 - Метрики: CPU, RAM, диск
 - Алерты в Telegram
-- При монтировании SSD nctk — данные Loki/Prometheus на SSD
+- При монтировании SSD client1 — данные Loki/Prometheus на SSD
 
 ## 4. Автовосстановление
-- **campus-watchdog**: перезапуск контейнеров (loki, grafana, prometheus, promtail, node-exporter, campus-recovery) и systemd на nctk/vm1 (node_exporter, promtail)
-- **campus-recovery**: бэкапы, проверка nctk/vm1, восстановление при сбое
+- **campus-watchdog**: перезапуск контейнеров (loki, grafana, prometheus, promtail, node-exporter, campus-recovery) и systemd на client1/client2 (node_exporter, promtail)
+- **campus-recovery**: бэкапы, проверка client1/client2, восстановление при сбое
 
 ---
 
@@ -26,11 +26,11 @@
 ```bash
 cd /home/kamran/campus-infra
 
-# На nctk (один раз): подготовить каталоги
-ssh nctk@10.20.0.41 'sudo mkdir -p /mnt/campus-data/{loki,prometheus,backups} && sudo chown -R nctk:nctk /mnt/campus-data'
+# На client1 (один раз): подготовить каталоги
+ssh client1@10.20.0.41 'sudo mkdir -p /mnt/campus-data/{loki,prometheus,backups} && sudo chown -R client1:client1 /mnt/campus-data'
 
 # На CentOS: примонтировать SSD (опционально, для экономии места)
-sudo bash scripts/mount-nctk-ssd-on-centos.sh
+sudo bash scripts/mount-client1-ssd-on-centos.sh
 
 # Запуск всего
 bash scripts/start-all.sh up

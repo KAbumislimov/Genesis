@@ -1,5 +1,5 @@
 #!/bin/bash
-# Проверяет и запускает node_exporter на nctk и vm1 (метрики CPU, RAM, диск в Grafana)
+# Проверяет и запускает node_exporter на client1 и client2 (метрики CPU, RAM, диск в Grafana)
 # Запуск на campus-server: bash scripts/ensure-node-exporter-on-clients.sh
 
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/campus_bot}"
@@ -29,12 +29,12 @@ ensure_host() {
     echo ""
 }
 
-ensure_host "nctk" "10.20.0.41" "nctk"
-ensure_host "vm1"  "10.70.0.41" "vm1"
+ensure_host "client1" "10.20.0.41" "client1"
+ensure_host "client2"  "10.70.0.41" "client2"
 
 echo "Проверка доступности с campus-server:"
-(timeout 2 nc -z 10.20.0.41 9100 2>/dev/null || timeout 2 bash -c "echo >/dev/tcp/10.20.0.41/9100" 2>/dev/null) && echo "  nctk:9100 OK" || echo "  nctk:9100 недоступен"
-(timeout 2 nc -z 10.70.0.41 9100 2>/dev/null || timeout 2 bash -c "echo >/dev/tcp/10.70.0.41/9100" 2>/dev/null) && echo "  vm1:9100 OK" || echo "  vm1:9100 недоступен"
+(timeout 2 nc -z 10.20.0.41 9100 2>/dev/null || timeout 2 bash -c "echo >/dev/tcp/10.20.0.41/9100" 2>/dev/null) && echo "  client1:9100 OK" || echo "  client1:9100 недоступен"
+(timeout 2 nc -z 10.70.0.41 9100 2>/dev/null || timeout 2 bash -c "echo >/dev/tcp/10.70.0.41/9100" 2>/dev/null) && echo "  client2:9100 OK" || echo "  client2:9100 недоступен"
 echo ""
 echo "Если недоступен — установите node_exporter: bash deploy-monitoring-offline.sh"
-echo "Затем на nctk и vm1: sudo cp /home/USER/promtail/node_exporter.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now node_exporter"
+echo "Затем на client1 и client2: sudo cp /home/USER/promtail/node_exporter.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now node_exporter"

@@ -142,7 +142,7 @@
   <div class="card-hd">
     <i class="bi bi-arrow-left-right" style="color:var(--purple)"></i>
     <span class="card-hd-title">Синхронизация треков</span>
-    <span class="text-muted" style="margin-left:auto;font-size:12px">Narimanov ↔ Gənclik</span>
+    <span class="text-muted" style="margin-left:auto;font-size:12px">Client1 ↔ Client2</span>
   </div>
   <div class="card-body" style="padding:16px 20px">
     <div id="sync-status-text" class="text-muted" style="font-size:13px;margin-bottom:12px">
@@ -152,15 +152,15 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
         <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:12px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);margin-bottom:8px">
-            <i class="bi bi-building"></i> Только на Narimanov
+            <i class="bi bi-building"></i> Только на Client1
           </div>
-          <div id="only-nctk-list" style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto"></div>
+          <div id="only-client1-list" style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto"></div>
         </div>
         <div style="background:rgba(188,130,255,.06);border:1px solid rgba(188,130,255,.2);border-radius:10px;padding:12px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--purple);margin-bottom:8px">
-            <i class="bi bi-pc-display"></i> Только на Gənclik
+            <i class="bi bi-pc-display"></i> Только на Client2
           </div>
-          <div id="only-vm1-list" style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto"></div>
+          <div id="only-client2-list" style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto"></div>
         </div>
       </div>
       <div id="sync-summary" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
@@ -169,12 +169,12 @@
       <button class="btn btn-ghost" id="btn-sync-check" onclick="checkSync()">
         <i class="bi bi-search"></i> Проверить
       </button>
-      <button class="btn btn-primary" id="btn-sync-push" onclick="doSync('nctk_to_vm1')" style="display:none">
-        <i class="bi bi-arrow-right-circle"></i> Narimanov → Gənclik
+      <button class="btn btn-primary" id="btn-sync-push" onclick="doSync('client1_to_client2')" style="display:none">
+        <i class="bi bi-arrow-right-circle"></i> Client1 → Client2
       </button>
-      <button class="btn btn-ghost" id="btn-sync-pull" onclick="doSync('vm1_to_nctk')" style="display:none"
+      <button class="btn btn-ghost" id="btn-sync-pull" onclick="doSync('client2_to_client1')" style="display:none"
               style="border-color:rgba(188,130,255,.4);color:var(--purple)">
-        <i class="bi bi-arrow-left-circle"></i> Gənclik → Narimanov
+        <i class="bi bi-arrow-left-circle"></i> Client2 → Client1
       </button>
     </div>
     <div id="sync-progress" style="display:none;margin-top:10px;font-size:12px;color:var(--muted)"></div>
@@ -433,25 +433,25 @@ function checkSync() {
     if (!d.ok) { txt.textContent = 'Ошибка: ' + (d.error||'?'); return; }
     _syncData = d;
     document.getElementById('sync-diff').style.display = '';
-    const nctk = d.only_nctk || [];
-    const vm1  = d.only_vm1  || [];
-    document.getElementById('only-nctk-list').innerHTML =
-      nctk.length ? nctk.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') :
+    const client1 = d.only_client1 || [];
+    const client2  = d.only_client2  || [];
+    document.getElementById('only-client1-list').innerHTML =
+      client1.length ? client1.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') :
       '<span style="color:var(--muted)">—</span>';
-    document.getElementById('only-vm1-list').innerHTML =
-      vm1.length ? vm1.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') :
+    document.getElementById('only-client2-list').innerHTML =
+      client2.length ? client2.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') :
       '<span style="color:var(--muted)">—</span>';
     document.getElementById('sync-summary').textContent =
-      `Narimanov: ${d.nctk_count} · Gənclik: ${d.vm1_count} · Общих: ${(d.both||[]).length} · Только Narimanov: ${nctk.length} · Только Gənclik: ${vm1.length}`;
-    txt.textContent = nctk.length === 0 && vm1.length === 0 ? '✅ Библиотеки синхронизированы' : '⚠️ Есть различия';
-    document.getElementById('btn-sync-push').style.display = nctk.length ? '' : 'none';
-    document.getElementById('btn-sync-pull').style.display = vm1.length  ? '' : 'none';
+      `Client1: ${d.client1_count} · Client2: ${d.client2_count} · Общих: ${(d.both||[]).length} · Только Client1: ${client1.length} · Только Client2: ${client2.length}`;
+    txt.textContent = client1.length === 0 && client2.length === 0 ? '✅ Библиотеки синхронизированы' : '⚠️ Есть различия';
+    document.getElementById('btn-sync-push').style.display = client1.length ? '' : 'none';
+    document.getElementById('btn-sync-pull').style.display = client2.length  ? '' : 'none';
   }).catch(e=>{ btn.disabled=false; btn.innerHTML='<i class="bi bi-search"></i> Проверить'; txt.textContent='Нет связи: '+e; });
 }
 
 function doSync(direction) {
   if (!_syncData) return;
-  const files = direction === 'nctk_to_vm1' ? (_syncData.only_nctk||[]) : (_syncData.only_vm1||[]);
+  const files = direction === 'client1_to_client2' ? (_syncData.only_client1||[]) : (_syncData.only_client2||[]);
   if (!files.length) return;
   const prog = document.getElementById('sync-progress');
   prog.style.display = '';

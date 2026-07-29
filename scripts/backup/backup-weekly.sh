@@ -9,10 +9,10 @@
 #  Что делает:
 #    1. Создаёт папку /home/kamran/campus-backups/YYYY-MM-DD/
 #    2. Удаляет прошлые папки с бэкапами
-#    3. Делает бэкап конфигов nctk (10.20.0.41) → nctk-config.tar.gz
-#    4. Делает бэкап конфигов vm1 (10.70.0.41) → vm1-config.tar.gz
-#    5. rsync музыки nctk → campus-backups/music-nctk/ (только изменения)
-#    6. rsync музыки vm1  → campus-backups/music-vm1/  (только изменения)
+#    3. Делает бэкап конфигов client1 (10.20.0.41) → client1-config.tar.gz
+#    4. Делает бэкап конфигов client2 (10.70.0.41) → client2-config.tar.gz
+#    5. rsync музыки client1 → campus-backups/music-client1/ (только изменения)
+#    6. rsync музыки client2  → campus-backups/music-client2/  (только изменения)
 #    7. Делает бэкап CentOS (Docker volumes, configs) → centos.tar.gz
 #    8. Пишет отчёт report.txt
 #    9. Отправляет уведомления в Telegram + email
@@ -30,12 +30,12 @@ LOG_FILE="$LOG_DIR/backup-$DATE.log"
 SSH_KEY="/home/kamran/.ssh/campus_bot"
 SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=30 -o BatchMode=yes -i $SSH_KEY"
 
-NCTK_HOST="10.20.0.41"
-NCTK_USER="nctk"
-NCTK_MUSIC_PATH="/mnt/music/Landau/"
-VM1_HOST="10.70.0.41"
-VM1_USER="vm1"
-VM1_MUSIC_PATH="/home/vm1/Landau/"
+CLIENT1_HOST="10.20.0.41"
+CLIENT1_USER="client1"
+CLIENT1_MUSIC_PATH="/mnt/music/Media/"
+CLIENT2_HOST="10.70.0.41"
+CLIENT2_USER="client2"
+CLIENT2_MUSIC_PATH="/home/client2/Media/"
 
 # Telegram (читаем из секретов или используем значения по умолчанию)
 SECRETS_FILE="/home/kamran/projects/campus-secrets/backup.env"
@@ -44,7 +44,7 @@ SECRETS_FILE="/home/kamran/projects/campus-secrets/backup.env"
 BOT_TOKEN="${BACKUP_BOT_TOKEN:-8280240854:AAGqh4CkyGp0a_-rDumfZmjH_1k8M7Jeljo}"
 TG_CHATS=("${BACKUP_TG_CHAT1:--1002883515031}" "${BACKUP_TG_CHAT2:--1003491812335}")
 
-EMAIL_WORK="${BACKUP_EMAIL_WORK:-k.abumislimov@leg.edu.az}"
+EMAIL_WORK="${BACKUP_EMAIL_WORK:-admin@example.edu}"
 EMAIL_PERSONAL="${BACKUP_EMAIL_PERSONAL:-kamran19910101@gmail.com}"
 
 # ─── Логирование ───────────────────────────────────────────────────────
@@ -77,19 +77,19 @@ done
 mkdir -p "$BACKUP_DIR"
 ok "Папка бэкапа: $BACKUP_DIR"
 
-# ─── 2. Бэкап конфигов NCTK ───────────────────────────────────────────
-log "[2/7] Бэкап NCTK (10.20.0.41)..."
-backup_nctk() {
-    if ! ssh $SSH_OPTS "$NCTK_USER@$NCTK_HOST" "true" 2>/dev/null; then
-        warn "NCTK недоступен, пропускаю"
-        STATUS[nctk]="❌ недоступен"
-        ERRORS+=("nctk: SSH недоступен")
+# ─── 2. Бэкап конфигов CLIENT1 ───────────────────────────────────────────
+log "[2/7] Бэкап CLIENT1 (10.20.0.41)..."
+backup_client1() {
+    if ! ssh $SSH_OPTS "$CLIENT1_USER@$CLIENT1_HOST" "true" 2>/dev/null; then
+        warn "CLIENT1 недоступен, пропускаю"
+        STATUS[client1]="❌ недоступен"
+        ERRORS+=("client1: SSH недоступен")
         return 1
     fi
 
-    ssh $SSH_OPTS "$NCTK_USER@$NCTK_HOST" bash << 'NCTK_PACK'
+    ssh $SSH_OPTS "$CLIENT1_USER@$CLIENT1_HOST" bash << 'CLIENT1_PACK'
 set -e
-TMP_DIR="/tmp/campus-backup-nctk-$$"
+TMP_DIR="/tmp/campus-backup-client1-$$"
 mkdir -p "$TMP_DIR/systemd" "$TMP_DIR/home/bin" "$TMP_DIR/netplan" "$TMP_DIR/promtail"
 
 # systemd units
@@ -103,11 +103,11 @@ done
 crontab -l > "$TMP_DIR/crontab.txt" 2>/dev/null || echo "(empty)" > "$TMP_DIR/crontab.txt"
 
 # scripts
-for f in campus-cron-landau-local.sh campus-cron-stop-local.sh campus-playerctl \
+for f in campus-cron-media-local.sh campus-cron-stop-local.sh campus-playerctl \
           bell-play-with-notify.sh cron_notify.sh; do
-    cp /home/nctk/$f "$TMP_DIR/home/" 2>/dev/null || true
+    cp /home/client1/$f "$TMP_DIR/home/" 2>/dev/null || true
 done
-cp -r /home/nctk/bin/. "$TMP_DIR/home/bin/" 2>/dev/null || true
+cp -r /home/client1/bin/. "$TMP_DIR/home/bin/" 2>/dev/null || true
 cp /usr/local/bin/campus-playerctl "$TMP_DIR/home/" 2>/dev/null || true
 
 # samba + network
@@ -115,7 +115,7 @@ cp /etc/samba/smb.conf "$TMP_DIR/" 2>/dev/null || true
 cp /etc/netplan/*.yaml "$TMP_DIR/netplan/" 2>/dev/null || true
 
 # promtail config
-cp /home/nctk/campus-monitoring/promtail/config.yaml "$TMP_DIR/promtail/" 2>/dev/null || true
+cp /home/client1/campus-monitoring/promtail/config.yaml "$TMP_DIR/promtail/" 2>/dev/null || true
 
 # package list
 dpkg --get-selections > "$TMP_DIR/packages.txt" 2>/dev/null || true
@@ -127,39 +127,39 @@ cat /etc/os-release >> "$TMP_DIR/system-info.txt"
 # music file list (not the files themselves - those are rsync'd separately)
 find /mnt/music/ -type f | sort > "$TMP_DIR/music-files.txt" 2>/dev/null || true
 
-tar -czf /tmp/nctk-config.tar.gz -C /tmp "campus-backup-nctk-$$"
+tar -czf /tmp/client1-config.tar.gz -C /tmp "campus-backup-client1-$$"
 rm -rf "$TMP_DIR"
 echo "OK"
-NCTK_PACK
+CLIENT1_PACK
 
-    if scp $SSH_OPTS "$NCTK_USER@$NCTK_HOST:/tmp/nctk-config.tar.gz" "$BACKUP_DIR/nctk-config.tar.gz" 2>/dev/null; then
-        ssh $SSH_OPTS "$NCTK_USER@$NCTK_HOST" "rm -f /tmp/nctk-config.tar.gz" 2>/dev/null || true
-        SIZE=$(du -sh "$BACKUP_DIR/nctk-config.tar.gz" 2>/dev/null | cut -f1)
-        ok "nctk-config.tar.gz ($SIZE)"
-        STATUS[nctk]="✅ конфиг ($SIZE)"
-        SIZES[nctk_config]="$SIZE"
+    if scp $SSH_OPTS "$CLIENT1_USER@$CLIENT1_HOST:/tmp/client1-config.tar.gz" "$BACKUP_DIR/client1-config.tar.gz" 2>/dev/null; then
+        ssh $SSH_OPTS "$CLIENT1_USER@$CLIENT1_HOST" "rm -f /tmp/client1-config.tar.gz" 2>/dev/null || true
+        SIZE=$(du -sh "$BACKUP_DIR/client1-config.tar.gz" 2>/dev/null | cut -f1)
+        ok "client1-config.tar.gz ($SIZE)"
+        STATUS[client1]="✅ конфиг ($SIZE)"
+        SIZES[client1_config]="$SIZE"
     else
-        fail "Не удалось скачать бэкап nctk"
-        STATUS[nctk]="❌ ошибка scp"
-        ERRORS+=("nctk: ошибка scp config")
+        fail "Не удалось скачать бэкап client1"
+        STATUS[client1]="❌ ошибка scp"
+        ERRORS+=("client1: ошибка scp config")
         return 1
     fi
 }
-backup_nctk || true
+backup_client1 || true
 
-# ─── 3. Бэкап конфигов VM1 ────────────────────────────────────────────
-log "[3/7] Бэкап VM1 (10.70.0.41)..."
-backup_vm1() {
-    if ! ssh $SSH_OPTS "$VM1_USER@$VM1_HOST" "true" 2>/dev/null; then
-        warn "VM1 недоступен, пропускаю"
-        STATUS[vm1]="❌ недоступен"
-        ERRORS+=("vm1: SSH недоступен")
+# ─── 3. Бэкап конфигов CLIENT2 ────────────────────────────────────────────
+log "[3/7] Бэкап CLIENT2 (10.70.0.41)..."
+backup_client2() {
+    if ! ssh $SSH_OPTS "$CLIENT2_USER@$CLIENT2_HOST" "true" 2>/dev/null; then
+        warn "CLIENT2 недоступен, пропускаю"
+        STATUS[client2]="❌ недоступен"
+        ERRORS+=("client2: SSH недоступен")
         return 1
     fi
 
-    ssh $SSH_OPTS "$VM1_USER@$VM1_HOST" bash << 'VM1_PACK'
+    ssh $SSH_OPTS "$CLIENT2_USER@$CLIENT2_HOST" bash << 'CLIENT2_PACK'
 set -e
-TMP_DIR="/tmp/campus-backup-vm1-$$"
+TMP_DIR="/tmp/campus-backup-client2-$$"
 mkdir -p "$TMP_DIR/systemd" "$TMP_DIR/home/bin" "$TMP_DIR/netplan" "$TMP_DIR/promtail"
 
 for f in campus-mpv campus-telegram-bot campus-player-watchdog campus-player-watchdog \
@@ -170,80 +170,80 @@ done
 
 crontab -l > "$TMP_DIR/crontab.txt" 2>/dev/null || echo "(empty)" > "$TMP_DIR/crontab.txt"
 
-for f in campus-cron-landau-local.sh campus-cron-landau-vm1.sh campus-cron-stop-local.sh \
+for f in campus-cron-media-local.sh campus-cron-media-client2.sh campus-cron-stop-local.sh \
           campus-playerctl; do
-    cp /home/vm1/$f "$TMP_DIR/home/" 2>/dev/null || true
+    cp /home/client2/$f "$TMP_DIR/home/" 2>/dev/null || true
 done
-cp -r /home/vm1/bin/. "$TMP_DIR/home/bin/" 2>/dev/null || true
+cp -r /home/client2/bin/. "$TMP_DIR/home/bin/" 2>/dev/null || true
 
 cp /etc/netplan/*.yaml "$TMP_DIR/netplan/" 2>/dev/null || true
-cp /home/vm1/campus-monitoring/promtail/config.yaml "$TMP_DIR/promtail/" 2>/dev/null || true
+cp /home/client2/campus-monitoring/promtail/config.yaml "$TMP_DIR/promtail/" 2>/dev/null || true
 
 dpkg --get-selections > "$TMP_DIR/packages.txt" 2>/dev/null || true
 uname -a > "$TMP_DIR/system-info.txt"
 cat /etc/os-release >> "$TMP_DIR/system-info.txt"
 
-find /home/vm1/Landau/ -type f | sort > "$TMP_DIR/music-files.txt" 2>/dev/null || true
+find /home/client2/Media/ -type f | sort > "$TMP_DIR/music-files.txt" 2>/dev/null || true
 
-tar -czf /tmp/vm1-config.tar.gz -C /tmp "campus-backup-vm1-$$"
+tar -czf /tmp/client2-config.tar.gz -C /tmp "campus-backup-client2-$$"
 rm -rf "$TMP_DIR"
 echo "OK"
-VM1_PACK
+CLIENT2_PACK
 
-    if scp $SSH_OPTS "$VM1_USER@$VM1_HOST:/tmp/vm1-config.tar.gz" "$BACKUP_DIR/vm1-config.tar.gz" 2>/dev/null; then
-        ssh $SSH_OPTS "$VM1_USER@$VM1_HOST" "rm -f /tmp/vm1-config.tar.gz" 2>/dev/null || true
-        SIZE=$(du -sh "$BACKUP_DIR/vm1-config.tar.gz" 2>/dev/null | cut -f1)
-        ok "vm1-config.tar.gz ($SIZE)"
-        STATUS[vm1]="✅ конфиг ($SIZE)"
-        SIZES[vm1_config]="$SIZE"
+    if scp $SSH_OPTS "$CLIENT2_USER@$CLIENT2_HOST:/tmp/client2-config.tar.gz" "$BACKUP_DIR/client2-config.tar.gz" 2>/dev/null; then
+        ssh $SSH_OPTS "$CLIENT2_USER@$CLIENT2_HOST" "rm -f /tmp/client2-config.tar.gz" 2>/dev/null || true
+        SIZE=$(du -sh "$BACKUP_DIR/client2-config.tar.gz" 2>/dev/null | cut -f1)
+        ok "client2-config.tar.gz ($SIZE)"
+        STATUS[client2]="✅ конфиг ($SIZE)"
+        SIZES[client2_config]="$SIZE"
     else
-        fail "Не удалось скачать бэкап vm1"
-        STATUS[vm1]="❌ ошибка scp"
-        ERRORS+=("vm1: ошибка scp config")
+        fail "Не удалось скачать бэкап client2"
+        STATUS[client2]="❌ ошибка scp"
+        ERRORS+=("client2: ошибка scp config")
         return 1
     fi
 }
-backup_vm1 || true
+backup_client2 || true
 
-# ─── 4. rsync музыки NCTK ─────────────────────────────────────────────
-log "[4/7] rsync музыки NCTK..."
-backup_music_nctk() {
-    MUSIC_DST="$BACKUP_BASE/music-nctk"
+# ─── 4. rsync музыки CLIENT1 ─────────────────────────────────────────────
+log "[4/7] rsync музыки CLIENT1..."
+backup_music_client1() {
+    MUSIC_DST="$BACKUP_BASE/music-client1"
     mkdir -p "$MUSIC_DST"
     if rsync -az --no-perms --no-owner --no-group --delete --stats \
         -e "ssh $SSH_OPTS" \
-        "$NCTK_USER@$NCTK_HOST:$NCTK_MUSIC_PATH" "$MUSIC_DST/" 2>&1 | tail -5; then
+        "$CLIENT1_USER@$CLIENT1_HOST:$CLIENT1_MUSIC_PATH" "$MUSIC_DST/" 2>&1 | tail -5; then
         SIZE=$(du -sh "$MUSIC_DST" 2>/dev/null | cut -f1)
-        ok "Музыка nctk: $SIZE → $MUSIC_DST"
-        STATUS[nctk_music]="✅ $SIZE"
-        SIZES[nctk_music]="$SIZE"
+        ok "Музыка client1: $SIZE → $MUSIC_DST"
+        STATUS[client1_music]="✅ $SIZE"
+        SIZES[client1_music]="$SIZE"
     else
-        fail "rsync музыки nctk"
-        STATUS[nctk_music]="❌ ошибка rsync"
-        ERRORS+=("nctk: ошибка rsync музыки")
+        fail "rsync музыки client1"
+        STATUS[client1_music]="❌ ошибка rsync"
+        ERRORS+=("client1: ошибка rsync музыки")
     fi
 }
-backup_music_nctk || true
+backup_music_client1 || true
 
-# ─── 5. rsync музыки VM1 ──────────────────────────────────────────────
-log "[5/7] rsync музыки VM1..."
-backup_music_vm1() {
-    MUSIC_DST="$BACKUP_BASE/music-vm1"
+# ─── 5. rsync музыки CLIENT2 ──────────────────────────────────────────────
+log "[5/7] rsync музыки CLIENT2..."
+backup_music_client2() {
+    MUSIC_DST="$BACKUP_BASE/music-client2"
     mkdir -p "$MUSIC_DST"
     if rsync -az --no-perms --no-owner --no-group --delete --stats \
         -e "ssh $SSH_OPTS" \
-        "$VM1_USER@$VM1_HOST:$VM1_MUSIC_PATH" "$MUSIC_DST/" 2>&1 | tail -5; then
+        "$CLIENT2_USER@$CLIENT2_HOST:$CLIENT2_MUSIC_PATH" "$MUSIC_DST/" 2>&1 | tail -5; then
         SIZE=$(du -sh "$MUSIC_DST" 2>/dev/null | cut -f1)
-        ok "Музыка vm1: $SIZE → $MUSIC_DST"
-        STATUS[vm1_music]="✅ $SIZE"
-        SIZES[vm1_music]="$SIZE"
+        ok "Музыка client2: $SIZE → $MUSIC_DST"
+        STATUS[client2_music]="✅ $SIZE"
+        SIZES[client2_music]="$SIZE"
     else
-        fail "rsync музыки vm1"
-        STATUS[vm1_music]="❌ ошибка rsync"
-        ERRORS+=("vm1: ошибка rsync музыки")
+        fail "rsync музыки client2"
+        STATUS[client2_music]="❌ ошибка rsync"
+        ERRORS+=("client2: ошибка rsync музыки")
     fi
 }
-backup_music_vm1 || true
+backup_music_client2 || true
 
 # ─── 6. Бэкап CentOS ──────────────────────────────────────────────────
 log "[6/7] Бэкап CentOS..."
@@ -309,8 +309,8 @@ log "[7/7] Составляю отчёт..."
 
 TOTAL_SIZE=$(du -sh "$BACKUP_BASE" 2>/dev/null | cut -f1)
 DATED_SIZE=$(du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1)
-MUSIC_NCTK_SIZE=$(du -sh "$BACKUP_BASE/music-nctk" 2>/dev/null | cut -f1 || echo "—")
-MUSIC_VM1_SIZE=$(du -sh "$BACKUP_BASE/music-vm1" 2>/dev/null | cut -f1 || echo "—")
+MUSIC_CLIENT1_SIZE=$(du -sh "$BACKUP_BASE/music-client1" 2>/dev/null | cut -f1 || echo "—")
+MUSIC_CLIENT2_SIZE=$(du -sh "$BACKUP_BASE/music-client2" 2>/dev/null | cut -f1 || echo "—")
 DISK_FREE=$(df -h /home/kamran | tail -1 | awk '{print $4}')
 BACKUP_DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -326,13 +326,13 @@ REPORT="
 Папка:         $BACKUP_DIR
 
 ─── Конфиги + Docker volumes ($DATED_SIZE) ──────────
-  nctk:        ${STATUS[nctk]:-—}
-  vm1:         ${STATUS[vm1]:-—}
+  client1:        ${STATUS[client1]:-—}
+  client2:         ${STATUS[client2]:-—}
   centos:      ${STATUS[centos]:-—}
 
 ─── Музыка (rsync, только изменения) ────────────────
-  nctk:        ${STATUS[nctk_music]:-—}   ($MUSIC_NCTK_SIZE)
-  vm1:         ${STATUS[vm1_music]:-—}   ($MUSIC_VM1_SIZE)
+  client1:        ${STATUS[client1_music]:-—}   ($MUSIC_CLIENT1_SIZE)
+  client2:         ${STATUS[client2_music]:-—}   ($MUSIC_CLIENT2_SIZE)
 
 ─── Файлы в архиве ───────────────────────────────────
 $FILES_LIST
@@ -363,13 +363,13 @@ TG_STATUS_ICON="✅"
 TG_MSG="$TG_STATUS_ICON *CAMPUS BACKUP* — $DATE
 
 *Конфиги:*
-• nctk: ${STATUS[nctk]:-—}
-• vm1: ${STATUS[vm1]:-—}
+• client1: ${STATUS[client1]:-—}
+• client2: ${STATUS[client2]:-—}
 • CentOS: ${STATUS[centos]:-—}
 
 *Музыка (rsync):*
-• nctk: ${STATUS[nctk_music]:-—}
-• vm1: ${STATUS[vm1_music]:-—}
+• client1: ${STATUS[client1_music]:-—}
+• client2: ${STATUS[client2_music]:-—}
 
 *Итого:* $TOTAL_SIZE | Диск свободно: $DISK_FREE
 *Папка:* \`$BACKUP_DIR\`"

@@ -92,7 +92,7 @@ send_to_telegram() {
 }
 
 # === MAIN ===
-SERVER_CONTAINERS="${SERVER_CONTAINERS:-tg-campus-bot tg-campus-genclik promtail campus-watchdog}"
+SERVER_CONTAINERS="${SERVER_CONTAINERS:-tg-campus-bot tg-campus-client2 promtail campus-watchdog}"
 load_notification_config
 log "Watchdog запущен (интервал ${INTERVAL}s, уведомления: $(mask_token "$NOTIFICATION_BOT_TOKEN"))"
 
@@ -103,8 +103,8 @@ while true; do
         restart_docker_container "$c"
     done
 
-    restart_remote_systemd "10.20.0.41" "nctk" "node_exporter" "promtail" "cron" "crond"
-    restart_remote_systemd "10.70.0.41" "vm1" "node_exporter" "promtail" "cron" "crond"
+    restart_remote_systemd "10.20.0.41" "client1" "node_exporter" "promtail" "cron" "crond"
+    restart_remote_systemd "10.70.0.41" "client2" "node_exporter" "promtail" "cron" "crond"
 
     report=""
     if [[ ${#ISSUES[@]} -eq 0 ]]; then

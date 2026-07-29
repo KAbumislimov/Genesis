@@ -57,7 +57,7 @@
 
 <div class="env-notice">
   <i class="bi bi-info-circle"></i>
-  Клиенты из <code>.env</code> (Narimanov, Gənclik) отображаются только для просмотра. Через эту страницу можно добавлять дополнительные устройства.
+  Клиенты из <code>.env</code> (Client1, Client2) отображаются только для просмотра. Через эту страницу можно добавлять дополнительные устройства.
 </div>
 
 <!-- Env machines (read-only) -->
@@ -104,7 +104,7 @@
     </div>
     <div class="mb-3">
       <label class="form-label">SSH-пользователь</label>
-      <input type="text" id="f-user" class="form-control" placeholder="nctk" value="nctk" autocomplete="off">
+      <input type="text" id="f-user" class="form-control" placeholder="client1" value="client1" autocomplete="off">
     </div>
     <div class="mb-4">
       <label class="form-label">Cockpit URL <span class="text-muted">(авто: http://IP:1991)</span></label>
@@ -141,7 +141,7 @@ function load(){
       envEl.innerHTML = envMs.map(m=>`
         <div class="machine-row">
           <span class="status-dot ${m.online?'dot-on':'dot-off'}"></span>
-          <i class="bi ${m.id==='nctk'?'bi-building':'bi-pc-display'}" style="color:var(--blue);font-size:16px;flex-shrink:0"></i>
+          <i class="bi ${m.id==='client1'?'bi-building':'bi-pc-display'}" style="color:var(--blue);font-size:16px;flex-shrink:0"></i>
           <div style="flex:1;min-width:0">
             <div class="machine-name">${escHtml(m.name)}</div>
             <div class="machine-sub">${escHtml(m.host)}</div>
@@ -189,7 +189,7 @@ function openModal(data){
   document.getElementById('f-host').value   = data ? data.host : '';
   document.getElementById('f-name').value   = data ? data.name : '';
   document.getElementById('f-mac').value    = data ? (data.mac||'') : '';
-  document.getElementById('f-user').value   = data ? (data.user||'nctk') : 'nctk';
+  document.getElementById('f-user').value   = data ? (data.user||'client1') : 'client1';
   document.getElementById('f-cockpit').value= data ? (data.cockpit_url||'') : '';
   document.getElementById('save-msg').textContent = '';
   document.getElementById('m-modal').classList.add('open');
@@ -209,7 +209,7 @@ function save(){
   const host   = document.getElementById('f-host').value.trim();
   const name   = document.getElementById('f-name').value.trim();
   const mac    = document.getElementById('f-mac').value.trim();
-  const user   = document.getElementById('f-user').value.trim() || 'nctk';
+  const user   = document.getElementById('f-user').value.trim() || 'client1';
   const cockpit= document.getElementById('f-cockpit').value.trim() || `http://${host}:1991`;
   const msg    = document.getElementById('save-msg');
   if(!host||!name){msg.textContent='IP и имя обязательны';msg.style.color='var(--red)';return;}

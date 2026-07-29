@@ -92,7 +92,7 @@ check_machine() {
 
 # CentOS — check docker
 check_machine "CentOS"    "10.10.4.120" "kamran" "docker"
-# Narimanov — check campus-player
-check_machine "Narimanov" "10.20.0.41"  "nctk"   "campus-player"
-# Genclik — check campus-player (uses password auth, skip if no key)
-check_machine "Genclik"   "10.70.0.41"  "vm1"    "campus-player"
+# Client1 — check campus-player
+check_machine "Client1" "10.20.0.41"  "client1"   "campus-player"
+# Client2 — check campus-player (uses password auth, skip if no key)
+check_machine "Client2"   "10.70.0.41"  "client2"    "campus-player"

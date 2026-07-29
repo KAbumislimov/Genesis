@@ -1,7 +1,7 @@
 #!/bin/bash
-# Настройка NTP-клиента (nctk или vm1) — синхронизация с CentOS.
+# Настройка NTP-клиента (client1 или client2) — синхронизация с CentOS.
 # Запуск НА клиенте: sudo bash setup-ntp-client.sh
-# Или с сервера: ssh nctk@10.20.0.41 'sudo bash -s' < setup-ntp-client.sh
+# Или с сервера: ssh client1@10.20.0.41 'sudo bash -s' < setup-ntp-client.sh
 #
 # NTP_SERVER — IP CentOS (по умолчанию 10.10.4.120)
 set -e

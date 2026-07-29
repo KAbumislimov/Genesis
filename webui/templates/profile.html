@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Профиль — LANDAU{% endblock %}
+{% block title %}Профиль — MEDIA{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -227,7 +227,7 @@ select.field-input option{background:var(--bg2)}
             <label class="field-label">Кампус</label>
             <select class="field-input" id="ef-campus">
               <option value="">— выбрать —</option>
-              {% set campuses = ['Narimanov','Bayıl','Ağ-Şəhər','Xatai BCR','Seabreeze','Simurq Gənclik','West Town','Simurq Xaqlar','Simurq Xırdalan','Simurq Zabrat','Gəncə Bani','City Garden'] %}
+              {% set campuses = ['Client1','Bayıl','Ağ-Şəhər','Xatai BCR','Seabreeze','Simurq Client2','West Town','Simurq Xaqlar','Simurq Xırdalan','Simurq Zabrat','Gəncə Bani','City Garden'] %}
               {% for c in campuses %}
               <option value="{{ c }}" {% if current_user.campus==c %}selected{% endif %}>{{ c }}</option>
               {% endfor %}
@@ -241,7 +241,7 @@ select.field-input option{background:var(--bg2)}
           <div class="field-group">
             <label class="field-label">Email</label>
             <input type="email" class="field-input" id="ef-email" maxlength="120"
-                   placeholder="name@leg.edu.az" value="{{ current_user.email }}">
+                   placeholder="name@example.edu" value="{{ current_user.email }}">
           </div>
           <div class="field-group">
             <label class="field-label">Год рождения</label>

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Установка cron для копирования логов с nctk и vm1
+# Установка cron для копирования логов с client1 и client2
 # Запускать на 10.10.4.120: bash scripts/install-sync-logs-cron.sh
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"

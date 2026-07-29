@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/promtail -config.file=/home/nctk/promtail/config.yaml
+ExecStart=/usr/local/bin/promtail -config.file=/home/client1/promtail/config.yaml
 Restart=always
 
 [Install]

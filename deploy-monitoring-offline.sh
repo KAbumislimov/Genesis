@@ -1,5 +1,5 @@
 #!/bin/bash
-# Установка node_exporter + promtail БЕЗ интернета на nctk/vm1
+# Установка node_exporter + promtail БЕЗ интернета на client1/client2
 # Скачивает на CentOS, копирует на удалённые машины
 # Запуск: bash deploy-monitoring-offline.sh
 
@@ -49,7 +49,7 @@ deploy_host() {
     $SCP "$CACHE/promtail" "$user@$host:$INSTALL_DIR/bin/"
     $SSH "$user@$host" "chmod +x $INSTALL_DIR/bin/node_exporter $INSTALL_DIR/bin/promtail"
     
-    [[ "$instance" == "vm1" ]] && pcfg="promtail-vm1.yaml" || pcfg="promtail-nctk.yaml"
+    [[ "$instance" == "client2" ]] && pcfg="promtail-client2.yaml" || pcfg="promtail-client1.yaml"
     $SCP "$DIR/promtail-clients/$pcfg" "$user@$host:$INSTALL_DIR/promtail/config.yaml"
     
     # systemd unit-файлы (для автозапуска)
@@ -93,11 +93,11 @@ EOF
     }
 }
 
-deploy_host "10.20.0.41" "nctk" "nctk"
-deploy_host "10.70.0.41" "vm1" "vm1"
+deploy_host "10.20.0.41" "client1" "client1"
+deploy_host "10.70.0.41" "client2" "client2"
 
 echo ""
-echo "Готово. node_exporter и promtail должны работать на nctk и vm1."
+echo "Готово. node_exporter и promtail должны работать на client1 и client2."
 echo "Проверка: curl -s http://10.20.0.41:9100/metrics | head -3"
 echo "          curl -s http://10.70.0.41:9100/metrics | head -3"
 echo ""

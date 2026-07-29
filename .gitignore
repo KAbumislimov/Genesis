@@ -1,7 +1,7 @@
 # Секреты — никогда не коммитить
 .env
 bots/*/config.env
-machines/nctk/bot/config.env
+machines/client1/bot/config.env
 **/cron_notify.env
 
 # Логи и данные

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Треки — LANDAUSCHOOL{% endblock %}
+{% block title %}Треки — MEDIASCHOOL{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -76,12 +76,12 @@
   display:flex;align-items:center;gap:4px;flex-shrink:0;transition:.15s;
   white-space:nowrap;padding:5px 11px;
 }
-.btn-play.nctk{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
-.btn-play.nctk:hover{background:rgba(88,166,255,.2)}
-.btn-play.nctk.is-playing{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green)}
-.btn-play.vm1{background:rgba(188,130,255,.1);border:1px solid rgba(188,130,255,.3);color:#bc82ff}
-.btn-play.vm1:hover{background:rgba(188,130,255,.2)}
-.btn-play.vm1.is-playing{background:rgba(188,130,255,.2);border-color:#bc82ff;color:#bc82ff}
+.btn-play.client1{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
+.btn-play.client1:hover{background:rgba(88,166,255,.2)}
+.btn-play.client1.is-playing{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green)}
+.btn-play.client2{background:rgba(188,130,255,.1);border:1px solid rgba(188,130,255,.3);color:#bc82ff}
+.btn-play.client2:hover{background:rgba(188,130,255,.2)}
+.btn-play.client2.is-playing{background:rgba(188,130,255,.2);border-color:#bc82ff;color:#bc82ff}
 .btn-stop-inline{
   background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.3);color:var(--red);
   padding:5px 10px;border-radius:7px;font-size:13px;cursor:pointer;
@@ -298,13 +298,13 @@
       <span class="track-name">{{ t.name }}</span>
       <div class="btn-group-play">
         {% if perms.play %}
-        <button class="btn-play nctk"
-                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','nctk',this)">
-          <i class="bi bi-building"></i> <span class="btn-lbl">Narimanov</span>
+        <button class="btn-play client1"
+                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','client1',this)">
+          <i class="bi bi-building"></i> <span class="btn-lbl">Client1</span>
         </button>
-        <button class="btn-play vm1"
-                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','vm1',this)">
-          <i class="bi bi-pc-display"></i> <span class="btn-lbl">Gənclik</span>
+        <button class="btn-play client2"
+                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','client2',this)">
+          <i class="bi bi-pc-display"></i> <span class="btn-lbl">Client2</span>
         </button>
         {% else %}
         <span style="font-size:12px;color:var(--muted);padding:4px 8px">
@@ -409,8 +409,8 @@ const FOLDER = '{{ folder }}';
 const OPEN_FOR = '{{ open_pin_for }}';
 
 const ML = {
-  nctk:{icon:'bi-building',lbl:'Narimanov'},
-  vm1:{icon:'bi-pc-display',lbl:'Gənclik'},
+  client1:{icon:'bi-building',lbl:'Client1'},
+  client2:{icon:'bi-pc-display',lbl:'Client2'},
 };
 
 /* ── PIN modal ────────────────────────────────── */
@@ -509,7 +509,7 @@ function stopAll(btn) {
   fetch('/api/stop',{method:'POST'}).then(r=>r.json()).then(d=>{
     btn.innerHTML=d.ok?'<i class="bi bi-check-lg"></i>':orig;
     if(currentPlayBtn){
-      const m=currentPlayBtn.dataset.machine||'nctk';
+      const m=currentPlayBtn.dataset.machine||'client1';
       currentPlayBtn.classList.remove('is-playing');
       currentPlayBtn.innerHTML=`<i class="bi ${ML[m].icon}"></i> <span class="btn-lbl">${ML[m].lbl}</span>`;
       currentPlayBtn=null;
@@ -519,11 +519,11 @@ function stopAll(btn) {
 }
 
 function playTrack(name,folder,machine,btn){
-  machine=machine||'nctk';
+  machine=machine||'client1';
   btn.dataset.machine=machine;
-  const ml=ML[machine]||ML.nctk;
+  const ml=ML[machine]||ML.client1;
   if(currentPlayBtn&&currentPlayBtn!==btn){
-    const pm=currentPlayBtn.dataset.machine||'nctk';
+    const pm=currentPlayBtn.dataset.machine||'client1';
     currentPlayBtn.classList.remove('is-playing');
     currentPlayBtn.innerHTML=`<i class="bi ${ML[pm].icon}"></i> <span class="btn-lbl">${ML[pm].lbl}</span>`;
   }
@@ -592,10 +592,10 @@ function refreshTracks(){
         <i class="bi bi-music-note text-muted" style="font-size:14px;flex-shrink:0"></i>
         <span class="track-name">${dn}</span>
         <div class="btn-group-play">
-          <button class="btn-play nctk" data-machine="nctk" onclick="playTrack('${fn}','${fo}','nctk',this)">
-            <i class="bi bi-building"></i><span class="btn-lbl"> Narimanov</span></button>
-          <button class="btn-play vm1" data-machine="vm1" onclick="playTrack('${fn}','${fo}','vm1',this)">
-            <i class="bi bi-pc-display"></i><span class="btn-lbl"> Gənclik</span></button>
+          <button class="btn-play client1" data-machine="client1" onclick="playTrack('${fn}','${fo}','client1',this)">
+            <i class="bi bi-building"></i><span class="btn-lbl"> Client1</span></button>
+          <button class="btn-play client2" data-machine="client2" onclick="playTrack('${fn}','${fo}','client2',this)">
+            <i class="bi bi-pc-display"></i><span class="btn-lbl"> Client2</span></button>
           <button class="btn-stop-inline" onclick="stopAll(this)"><i class="bi bi-stop-fill"></i></button>
         </div></div>`;
     }).join('');

@@ -1,10 +1,10 @@
 #!/bin/bash
 # Восстановление машины из последнего бэкапа
-# Запуск: restore.sh <server|nctk|vm1>
-# Внимание: для server — частичное восстановление (конфиги). Для nctk/vm1 — через SSH.
+# Запуск: restore.sh <server|client1|client2>
+# Внимание: для server — частичное восстановление (конфиги). Для client1/client2 — через SSH.
 
 set -e
-HOST_ID="${1:?Укажите: server|nctk|vm1}"
+HOST_ID="${1:?Укажите: server|client1|client2}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUPS_ROOT="${BACKUPS_ROOT:-/backups}"
 SSH_KEY="${SSH_KEY:-/root/.ssh/campus_bot}"
@@ -26,9 +26,9 @@ case "$HOST_ID" in
     echo "Перезапуск Docker..."
     (cd "$HOST_ROOT/home/kamran/campus-infra" && (docker compose --profile logs --profile bot --profile watchdog --profile recovery up -d 2>/dev/null || docker-compose --profile logs --profile bot --profile watchdog --profile recovery up -d 2>/dev/null)) || true
     ;;
-  nctk|vm1)
+  client1|client2)
     USER="$HOST_ID"
-    HOST=$([[ "$HOST_ID" == "nctk" ]] && echo "10.20.0.41" || echo "10.70.0.41")
+    HOST=$([[ "$HOST_ID" == "client1" ]] && echo "10.20.0.41" || echo "10.70.0.41")
     [[ -f "$SSH_KEY" ]] && SSH_OPTS="-i $SSH_KEY $SSH_OPTS"
     echo "=== Восстановление $HOST_ID ($USER@$HOST) ==="
     if ! ssh $SSH_OPTS "${USER}@${HOST}" "true" 2>/dev/null; then

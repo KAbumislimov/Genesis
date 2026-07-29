@@ -74,7 +74,7 @@
   <div>
     <h2 style="font-size:22px;font-weight:800;margin:0">Мониторинг серверов</h2>
     <div class="text-muted" style="font-size:13px;margin-top:2px">
-      CPU · RAM · Диск · Сервисы — Narimanov · Gənclik · CentOS
+      CPU · RAM · Диск · Сервисы — Client1 · Client2 · CentOS
     </div>
   </div>
   <button class="btn btn-ghost btn-sm" id="btn-refresh" onclick="doRefresh()">
@@ -92,7 +92,7 @@
 
 <div class="mon-grid" id="mon-grid">
   {% for m in machines %}
-    {% if m.id == 'nctk' %}{% set icon='bi-building' %}{% set color='88,166,255' %}
+    {% if m.id == 'client1' %}{% set icon='bi-building' %}{% set color='88,166,255' %}
     {% elif m.from_db %}{% set icon='bi-pc-display' %}{% set color='63,185,80' %}
     {% else %}{% set icon='bi-pc-display' %}{% set color='188,130,255' %}
     {% endif %}
@@ -130,7 +130,7 @@ const MACHINE_META = {
   {% for m in machines %}
   '{{ m.id }}': {
     label:   {{ m.name | tojson }},
-    color:   {% if m.id == 'nctk' %}'rgb(88,166,255)'{% elif m.from_db %}'rgb(63,185,80)'{% else %}'rgb(188,130,255)'{% endif %},
+    color:   {% if m.id == 'client1' %}'rgb(88,166,255)'{% elif m.from_db %}'rgb(63,185,80)'{% else %}'rgb(188,130,255)'{% endif %},
     cockpit: {{ (m.cockpit_url or '') | tojson }},
     services: ['campus-player'],
   },

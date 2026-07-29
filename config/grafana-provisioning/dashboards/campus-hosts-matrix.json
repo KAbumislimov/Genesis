@@ -18,7 +18,7 @@
       "id": 1,
       "options": {
         "mode": "html",
-        "content": "<div style=\"background:linear-gradient(135deg,#1E1260,#2D1B9E 60%,#4c3fcc);border-radius:12px;padding:16px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(45,27,158,.4)\"><div style=\"font-size:36px\">🏫</div><div><div style=\"color:#fff;font-size:18px;font-weight:700;letter-spacing:.04em\">Landau Education Group — Мониторинг инфраструктуры</div><div style=\"color:rgba(255,255,255,.55);font-size:12px;margin-top:3px\">Метрики серверов и кампусов в реальном времени · Обновление каждые 30 сек</div></div><div style=\"margin-left:auto;text-align:right\"><div style=\"color:rgba(255,255,255,.4);font-size:10px;text-transform:uppercase;letter-spacing:.08em\">Хостов онлайн</div><div style=\"color:#73BF69;font-size:24px;font-weight:700\">4</div></div></div>"
+        "content": "<div style=\"background:linear-gradient(135deg,#1E1260,#2D1B9E 60%,#4c3fcc);border-radius:12px;padding:16px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(45,27,158,.4)\"><div style=\"font-size:36px\">🏫</div><div><div style=\"color:#fff;font-size:18px;font-weight:700;letter-spacing:.04em\">the school organization — Мониторинг инфраструктуры</div><div style=\"color:rgba(255,255,255,.55);font-size:12px;margin-top:3px\">Метрики серверов и кампусов в реальном времени · Обновление каждые 30 сек</div></div><div style=\"margin-left:auto;text-align:right\"><div style=\"color:rgba(255,255,255,.4);font-size:10px;text-transform:uppercase;letter-spacing:.08em\">Хостов онлайн</div><div style=\"color:#73BF69;font-size:24px;font-weight:700\">4</div></div></div>"
       },
       "title": "",
       "type": "text"
@@ -406,7 +406,7 @@
     {
       "id": 106,
       "type": "row",
-      "title": "🏫  10.20.0.41 — nctk",
+      "title": "🏫  10.20.0.41 — client1",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -432,7 +432,7 @@
       },
       "targets": [
         {
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"nctk\"}[5m])) * 100)",
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client1\"}[5m])) * 100)",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -502,7 +502,7 @@
       },
       "targets": [
         {
-          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"nctk\"} / node_memory_MemTotal_bytes{instance=\"nctk\"})) * 100",
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"client1\"} / node_memory_MemTotal_bytes{instance=\"client1\"})) * 100",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -572,7 +572,7 @@
       },
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"nctk\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"nctk\", mountpoint=\"/\"})",
+          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"client1\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"client1\", mountpoint=\"/\"})",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -638,7 +638,7 @@
       },
       "targets": [
         {
-          "expr": "max(node_hwmon_temp_celsius{instance=\"nctk\"})",
+          "expr": "max(node_hwmon_temp_celsius{instance=\"client1\"})",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -692,7 +692,7 @@
     {
       "id": 111,
       "type": "timeseries",
-      "title": "nctk — CPU / RAM / Disk (%)",
+      "title": "client1 — CPU / RAM / Disk (%)",
       "gridPos": {
         "h": 7,
         "w": 24,
@@ -705,17 +705,17 @@
       },
       "targets": [
         {
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"nctk\"}[5m])) * 100)",
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client1\"}[5m])) * 100)",
           "legendFormat": "CPU %",
           "refId": "A"
         },
         {
-          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"nctk\"} / node_memory_MemTotal_bytes{instance=\"nctk\"})) * 100",
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"client1\"} / node_memory_MemTotal_bytes{instance=\"client1\"})) * 100",
           "legendFormat": "RAM %",
           "refId": "B"
         },
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"nctk\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"nctk\", mountpoint=\"/\"})",
+          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"client1\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"client1\", mountpoint=\"/\"})",
           "legendFormat": "Disk %",
           "refId": "C"
         }
@@ -771,7 +771,7 @@
     {
       "id": 112,
       "type": "row",
-      "title": "🏢  10.70.0.41 — vm1",
+      "title": "🏢  10.70.0.41 — client2",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -797,7 +797,7 @@
       },
       "targets": [
         {
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"vm1\"}[5m])) * 100)",
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client2\"}[5m])) * 100)",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -867,7 +867,7 @@
       },
       "targets": [
         {
-          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"vm1\"} / node_memory_MemTotal_bytes{instance=\"vm1\"})) * 100",
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"client2\"} / node_memory_MemTotal_bytes{instance=\"client2\"})) * 100",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -937,7 +937,7 @@
       },
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"vm1\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"vm1\", mountpoint=\"/\"})",
+          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"client2\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"client2\", mountpoint=\"/\"})",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -1003,7 +1003,7 @@
       },
       "targets": [
         {
-          "expr": "max(node_hwmon_temp_celsius{instance=\"vm1\"})",
+          "expr": "max(node_hwmon_temp_celsius{instance=\"client2\"})",
           "instant": true,
           "refId": "A",
           "legendFormat": ""
@@ -1057,7 +1057,7 @@
     {
       "id": 117,
       "type": "timeseries",
-      "title": "vm1 — CPU / RAM / Disk (%)",
+      "title": "client2 — CPU / RAM / Disk (%)",
       "gridPos": {
         "h": 7,
         "w": 24,
@@ -1070,17 +1070,17 @@
       },
       "targets": [
         {
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"vm1\"}[5m])) * 100)",
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client2\"}[5m])) * 100)",
           "legendFormat": "CPU %",
           "refId": "A"
         },
         {
-          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"vm1\"} / node_memory_MemTotal_bytes{instance=\"vm1\"})) * 100",
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"client2\"} / node_memory_MemTotal_bytes{instance=\"client2\"})) * 100",
           "legendFormat": "RAM %",
           "refId": "B"
         },
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"vm1\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"vm1\", mountpoint=\"/\"})",
+          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"client2\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"client2\", mountpoint=\"/\"})",
           "legendFormat": "Disk %",
           "refId": "C"
         }
@@ -1532,13 +1532,13 @@
           "refId": "A"
         },
         {
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"nctk\"}[5m])) * 100)",
-          "legendFormat": "nctk",
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client1\"}[5m])) * 100)",
+          "legendFormat": "client1",
           "refId": "B"
         },
         {
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"vm1\"}[5m])) * 100)",
-          "legendFormat": "vm1",
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client2\"}[5m])) * 100)",
+          "legendFormat": "client2",
           "refId": "C"
         },
         {

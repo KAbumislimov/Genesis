@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════
-#  CAMPUS WEEKLY BACKUP — Landau Education Group
+#  CAMPUS WEEKLY BACKUP — the school organization
 #  Запуск: каждое воскресенье в 02:00 (cron на главном сервере)
 #  Хранилище: root@10.20.1.106:/mnt/campus-backup
 #  Логика: новый бэкап → удаляет предыдущий (хранится 1 поколение)
@@ -85,56 +85,56 @@ proxmox_rsync \
     && ok "campus-server → campus-secrets" \
     || fail "campus-server → campus-secrets"
 
-# ── 2. НАРИМАНОВ (nctk) ───────────────────────────────────────────────
-log "▶ Бэкап: nctk (10.20.0.41)"
-rotate "nctk"
-DEST=$(make_dir "nctk")
+# ── 2. НАРИМАНОВ (client1) ───────────────────────────────────────────────
+log "▶ Бэкап: client1 (10.20.0.41)"
+rotate "client1"
+DEST=$(make_dir "client1")
 
 proxmox_rsync \
     --exclude='.cache' --exclude='.local' --exclude='__pycache__' \
     -e "ssh -J ${PROXMOX_USER}@${PROXMOX_HOST} -o StrictHostKeyChecking=no" \
-    nctk:/home/nctk/ \
-    "${PROXMOX_USER}@${PROXMOX_HOST}:${DEST}/home-nctk/" \
+    client1:/home/client1/ \
+    "${PROXMOX_USER}@${PROXMOX_HOST}:${DEST}/home-client1/" \
     2>>"$LOG" \
-    && ok "nctk → home-nctk" \
+    && ok "client1 → home-client1" \
     || {
-        # fallback: через tar на nctk → передаём на Proxmox
-        log "  Fallback: tar через nctk..."
-        ssh -o ConnectTimeout=10 nctk \
-            "tar czf - --exclude='.cache' --exclude='.local' /home/nctk/ 2>/dev/null" \
+        # fallback: через tar на client1 → передаём на Proxmox
+        log "  Fallback: tar через client1..."
+        ssh -o ConnectTimeout=10 client1 \
+            "tar czf - --exclude='.cache' --exclude='.local' /home/client1/ 2>/dev/null" \
         | $SSHPASS ssh -o StrictHostKeyChecking=no "${PROXMOX_USER}@${PROXMOX_HOST}" \
-            "mkdir -p ${DEST} && cat > ${DEST}/home-nctk.tar.gz" \
-        && ok "nctk → home-nctk.tar.gz (fallback)" \
-        || fail "nctk → home-nctk FAILED"
+            "mkdir -p ${DEST} && cat > ${DEST}/home-client1.tar.gz" \
+        && ok "client1 → home-client1.tar.gz (fallback)" \
+        || fail "client1 → home-client1 FAILED"
     }
 
-# Systemd сервисы nctk
-ssh -o ConnectTimeout=10 nctk \
+# Systemd сервисы client1
+ssh -o ConnectTimeout=10 client1 \
     "tar czf - /etc/systemd/system/campus-*.service /etc/systemd/system/campus-*.timer 2>/dev/null" \
 | $SSHPASS ssh -o StrictHostKeyChecking=no "${PROXMOX_USER}@${PROXMOX_HOST}" \
     "cat > ${DEST}/systemd-services.tar.gz" \
-&& ok "nctk → systemd-services" \
-|| fail "nctk → systemd-services"
+&& ok "client1 → systemd-services" \
+|| fail "client1 → systemd-services"
 
-# ── 3. ГЯНДЖЛИК (vm1) ────────────────────────────────────────────────
-log "▶ Бэкап: vm1 (10.70.0.41)"
-rotate "vm1"
-DEST=$(make_dir "vm1")
+# ── 3. ГЯНДЖЛИК (client2) ────────────────────────────────────────────────
+log "▶ Бэкап: client2 (10.70.0.41)"
+rotate "client2"
+DEST=$(make_dir "client2")
 
-ssh -o ConnectTimeout=10 vm1 \
-    "tar czf - --exclude='.cache' --exclude='.local' --exclude='Landau' /home/vm1/ 2>/dev/null" \
+ssh -o ConnectTimeout=10 client2 \
+    "tar czf - --exclude='.cache' --exclude='.local' --exclude='Media' /home/client2/ 2>/dev/null" \
 | $SSHPASS ssh -o StrictHostKeyChecking=no "${PROXMOX_USER}@${PROXMOX_HOST}" \
-    "mkdir -p ${DEST} && cat > ${DEST}/home-vm1.tar.gz" \
-&& ok "vm1 → home-vm1.tar.gz" \
-|| fail "vm1 → home-vm1"
+    "mkdir -p ${DEST} && cat > ${DEST}/home-client2.tar.gz" \
+&& ok "client2 → home-client2.tar.gz" \
+|| fail "client2 → home-client2"
 
 # /opt/campus (kiosk скрипты)
-ssh -o ConnectTimeout=10 vm1 \
+ssh -o ConnectTimeout=10 client2 \
     "tar czf - /opt/campus/ /etc/systemd/system/campus-*.service 2>/dev/null" \
 | $SSHPASS ssh -o StrictHostKeyChecking=no "${PROXMOX_USER}@${PROXMOX_HOST}" \
     "cat > ${DEST}/opt-campus.tar.gz" \
-&& ok "vm1 → opt-campus.tar.gz" \
-|| fail "vm1 → opt-campus"
+&& ok "client2 → opt-campus.tar.gz" \
+|| fail "client2 → opt-campus"
 
 # ── 4. ИТОГ ──────────────────────────────────────────────────────────
 log "▶ Содержимое хранилища Proxmox:"

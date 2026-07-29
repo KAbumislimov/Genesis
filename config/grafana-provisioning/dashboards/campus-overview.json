@@ -72,7 +72,7 @@
     {
       "gridPos": {"h": 2, "w": 24, "x": 0, "y": 14},
       "id": 11,
-      "options": {"content": "## nctk", "mode": "markdown"},
+      "options": {"content": "## client1", "mode": "markdown"},
       "title": "",
       "type": "text"
     },
@@ -81,8 +81,8 @@
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 16},
       "id": 7,
       "options": {"dedupStrategy": "none", "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
-      "targets": [{"expr": "{host=\"nctk\"}", "refId": "A"}],
-      "title": "Логи: nctk",
+      "targets": [{"expr": "{host=\"client1\"}", "refId": "A"}],
+      "title": "Логи: client1",
       "type": "logs"
     },
     {
@@ -91,8 +91,8 @@
       "gridPos": {"h": 6, "w": 4, "x": 12, "y": 16},
       "id": 12,
       "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
-      "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"nctk\"}[5m])) * 100)", "refId": "A"}],
-      "title": "CPU % nctk",
+      "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client1\"}[5m])) * 100)", "refId": "A"}],
+      "title": "CPU % client1",
       "type": "gauge"
     },
     {
@@ -101,8 +101,8 @@
       "gridPos": {"h": 6, "w": 4, "x": 16, "y": 16},
       "id": 13,
       "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
-      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"nctk\"} / node_memory_MemTotal_bytes{instance=\"nctk\"})) * 100", "refId": "A"}],
-      "title": "RAM % nctk",
+      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"client1\"} / node_memory_MemTotal_bytes{instance=\"client1\"})) * 100", "refId": "A"}],
+      "title": "RAM % client1",
       "type": "gauge"
     },
     {
@@ -111,14 +111,14 @@
       "gridPos": {"h": 6, "w": 4, "x": 20, "y": 16},
       "id": 14,
       "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
-      "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{instance=\"nctk\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"nctk\", mountpoint=\"/\"})", "refId": "A"}],
-      "title": "Диск % nctk",
+      "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{instance=\"client1\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"client1\", mountpoint=\"/\"})", "refId": "A"}],
+      "title": "Диск % client1",
       "type": "gauge"
     },
     {
       "gridPos": {"h": 2, "w": 24, "x": 0, "y": 22},
       "id": 15,
-      "options": {"content": "## vm1", "mode": "markdown"},
+      "options": {"content": "## client2", "mode": "markdown"},
       "title": "",
       "type": "text"
     },
@@ -127,8 +127,8 @@
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 24},
       "id": 8,
       "options": {"dedupStrategy": "none", "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
-      "targets": [{"expr": "{host=\"vm1\"}", "refId": "A"}],
-      "title": "Логи: vm1",
+      "targets": [{"expr": "{host=\"client2\"}", "refId": "A"}],
+      "title": "Логи: client2",
       "type": "logs"
     },
     {
@@ -137,8 +137,8 @@
       "gridPos": {"h": 6, "w": 4, "x": 12, "y": 24},
       "id": 16,
       "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
-      "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"vm1\"}[5m])) * 100)", "refId": "A"}],
-      "title": "CPU % vm1",
+      "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"client2\"}[5m])) * 100)", "refId": "A"}],
+      "title": "CPU % client2",
       "type": "gauge"
     },
     {
@@ -147,8 +147,8 @@
       "gridPos": {"h": 6, "w": 4, "x": 16, "y": 24},
       "id": 17,
       "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
-      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"vm1\"} / node_memory_MemTotal_bytes{instance=\"vm1\"})) * 100", "refId": "A"}],
-      "title": "RAM % vm1",
+      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"client2\"} / node_memory_MemTotal_bytes{instance=\"client2\"})) * 100", "refId": "A"}],
+      "title": "RAM % client2",
       "type": "gauge"
     },
     {
@@ -157,8 +157,8 @@
       "gridPos": {"h": 6, "w": 4, "x": 20, "y": 24},
       "id": 18,
       "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
-      "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{instance=\"vm1\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"vm1\", mountpoint=\"/\"})", "refId": "A"}],
-      "title": "Диск % vm1",
+      "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{instance=\"client2\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"client2\", mountpoint=\"/\"})", "refId": "A"}],
+      "title": "Диск % client2",
       "type": "gauge"
     },
     {

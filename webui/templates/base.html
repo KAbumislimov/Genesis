@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}LANDAUSCHOOL{% endblock %}</title>
+<title>{% block title %}MEDIASCHOOL{% endblock %}</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0d1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -307,7 +307,7 @@ html[data-theme="dracula"]{
 }
 html[data-theme="dracula"] .top-nav{background:var(--bg2);border-bottom-color:#44475a}
 
-/* ── LANDAU Campus Black ── */
+/* ── MEDIA Campus Black ── */
 html[data-theme="campus"]{
   --bg:#000000;--bg2:rgba(7,7,7,var(--panel-opa));--bg3:rgba(14,14,14,var(--panel-opa));
   --border:#1a1a1a;
@@ -973,15 +973,15 @@ html.has-wallpaper.light-theme {
       <i class="bi bi-terminal-fill" style="color:#58a6ff"></i>
       <span style="font-size:13px;font-weight:700;color:#f0f6fc">SSH Терминал</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button onclick="setTermMachine('nctk')" id="tbtn-nctk"
+        <button onclick="setTermMachine('client1')" id="tbtn-client1"
                 style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;
                        background:rgba(88,166,255,.2);border:1px solid #58a6ff;color:#58a6ff">
-          <i class="bi bi-building"></i> Narimanov
+          <i class="bi bi-building"></i> Client1
         </button>
-        <button onclick="setTermMachine('vm1')" id="tbtn-vm1"
+        <button onclick="setTermMachine('client2')" id="tbtn-client2"
                 style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;
                        background:#21262d;border:1px solid #30363d;color:#8b949e">
-          <i class="bi bi-pc-display"></i> Gənclik
+          <i class="bi bi-pc-display"></i> Client2
         </button>
         <button onclick="setTermMachine('centos')" id="tbtn-centos"
                 style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;
@@ -1008,7 +1008,7 @@ html.has-wallpaper.light-theme {
 
         <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
-                      color:#ffa657;margin-bottom:7px"><i class="bi bi-music-note-beamed"></i> Плеер (Narimanov / Gənclik)</div>
+                      color:#ffa657;margin-bottom:7px"><i class="bi bi-music-note-beamed"></i> Плеер (Client1 / Client2)</div>
           <div style="display:flex;flex-direction:column;gap:3px">
             <button class="cheat-btn" onclick="termPaste('campus-playerctl status')">campus-playerctl status</button>
             <button class="cheat-btn" onclick="termPaste('campus-playerctl stop')">campus-playerctl stop</button>
@@ -1063,7 +1063,7 @@ html.has-wallpaper.light-theme {
                       color:#f85149;margin-bottom:7px"><i class="bi bi-file-earmark-music"></i> Файлы треков</div>
           <div style="display:flex;flex-direction:column;gap:3px">
             <button class="cheat-btn" onclick="termPaste('ls -lh /var/lib/campus-player/inbox/')">ls inbox</button>
-            <button class="cheat-btn" onclick="termPaste('ls -lh /home/nctk/music/ 2>/dev/null || ls -lh /music/')">ls music dir</button>
+            <button class="cheat-btn" onclick="termPaste('ls -lh /home/client1/music/ 2>/dev/null || ls -lh /music/')">ls music dir</button>
             <button class="cheat-btn" onclick="termPaste('du -sh /var/lib/campus-player/')">du campus-player</button>
             <button class="cheat-btn" onclick="termPaste('find /var/lib/campus-player -name \"*.mp3\" | wc -l')">счёт mp3</button>
           </div>
@@ -1094,7 +1094,7 @@ html.has-wallpaper.light-theme {
     <div style="border-top:1px solid #30363d;padding:10px 14px;
                 display:flex;align-items:center;gap:8px;background:#161b22">
       <span style="color:#58a6ff;font-family:'JetBrains Mono',monospace;font-size:13px;
-                   font-weight:700;white-space:nowrap" id="term-prompt">nctk $</span>
+                   font-weight:700;white-space:nowrap" id="term-prompt">client1 $</span>
       <input id="term-input" type="text" autocomplete="off" spellcheck="false"
              style="flex:1;background:transparent;border:none;outline:none;
                     color:#f0f6fc;font-family:'JetBrains Mono',monospace;font-size:13px"
@@ -1127,21 +1127,21 @@ html.has-wallpaper.light-theme {
 </style>
 
 <script>
-var _termMachine='nctk';
+var _termMachine='client1';
 var _termHistory=[], _termHistIdx=-1;
 var _termCheatVisible=false;
 
 var _TERM_COLORS={
-  nctk:'#58a6ff', vm1:'#bc8cff', centos:'#ffa657'
+  client1:'#58a6ff', client2:'#bc8cff', centos:'#ffa657'
 };
 var _TERM_PROMPTS={
-  nctk:'nctk', vm1:'vm1', centos:'kamran@centos'
+  client1:'client1', client2:'client2', centos:'kamran@centos'
 };
 
 function openTerminal(){
   document.getElementById('term-overlay').style.display='flex';
   document.getElementById('term-input').focus();
-  setTermMachine('nctk');
+  setTermMachine('client1');
 }
 function closeTerminal(){
   document.getElementById('term-overlay').style.display='none';
@@ -1167,7 +1167,7 @@ function setTermMachine(m){
   var pEl=document.getElementById('term-prompt');
   pEl.textContent=prompt+' $';
   pEl.style.color=color;
-  ['nctk','vm1','centos'].forEach(function(k){
+  ['client1','client2','centos'].forEach(function(k){
     var b=document.getElementById('tbtn-'+k);
     if(!b)return;
     var c=_TERM_COLORS[k]||'#58a6ff';
@@ -2298,9 +2298,9 @@ window.addEventListener('DOMContentLoaded', function() {
       <div><div class="cm-link-title">WhatsApp</div><div class="cm-link-sub">+994 55 253 1882</div></div>
       <i class="bi bi-arrow-right-circle-fill cm-arrow"></i>
     </a>
-    <a href="mailto:k.abumislimov@leg.edu.az" class="cm-link em">
+    <a href="mailto:admin@example.edu" class="cm-link em">
       <i class="bi bi-envelope-fill"></i>
-      <div><div class="cm-link-title">Email (работа)</div><div class="cm-link-sub">k.abumislimov@leg.edu.az</div></div>
+      <div><div class="cm-link-title">Email (работа)</div><div class="cm-link-sub">admin@example.edu</div></div>
       <i class="bi bi-arrow-right-circle-fill cm-arrow"></i>
     </a>
     <a href="mailto:kamran19910101@gmail.com" class="cm-link em">
@@ -2499,12 +2499,12 @@ window.addEventListener('DOMContentLoaded', function() {
     </a>
     <a class="sb-link" href="http://10.20.0.41:1991" target="_blank" rel="noopener" onclick="closeSidebar()">
       <i class="bi bi-building" style="color:var(--blue)"></i>
-      <span>Narimanov Campus</span>
+      <span>Client1 Campus</span>
       <i class="bi bi-box-arrow-up-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
     </a>
     <a class="sb-link" href="http://10.10.4.120:19912" target="_blank" rel="noopener" onclick="closeSidebar()">
       <i class="bi bi-pc-display" style="color:var(--purple)"></i>
-      <span>Gənclik Campus</span>
+      <span>Client2 Campus</span>
       <i class="bi bi-box-arrow-up-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
     </a>
     {% endif %}

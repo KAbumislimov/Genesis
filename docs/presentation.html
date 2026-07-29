@@ -421,8 +421,8 @@ code{font-family:'JetBrains Mono',monospace;background:var(--bg3);
           🐳 <b style="color:var(--text)">Promtail</b> :9080
         </div>
         <div style="font-size:13px;color:var(--muted);line-height:2">
-          🤖 <b style="color:var(--text)">Bot Narimanov</b><br>
-          🤖 <b style="color:var(--text)">Bot Genclik</b><br>
+          🤖 <b style="color:var(--text)">Bot Client1</b><br>
+          🤖 <b style="color:var(--text)">Bot Client2</b><br>
           🐕 <b style="color:var(--text)">Watchdog</b><br>
           🔄 <b style="color:var(--text)">Recovery</b><br>
           🌐 <b style="color:var(--blue)">Web UI</b> :8090
@@ -439,7 +439,7 @@ code{font-family:'JetBrains Mono',monospace;background:var(--bg3);
     </div>
     <div class="dnode ng" style="flex:1;align-self:stretch;display:flex;flex-direction:column">
       <div class="di">🔊</div>
-      <div class="dn g" style="font-size:16px">Audio Client (nctk)</div>
+      <div class="dn g" style="font-size:16px">Audio Client (client1)</div>
       <div style="text-align:left;margin-top:10px;font-size:13px;color:var(--muted);line-height:2">
         🎵 <b style="color:var(--text)">campus-mpv</b> — демон + IPC сокет<br>
         🤖 <b style="color:var(--text)">Telegram bot</b> — Python stdlib<br>
@@ -482,9 +482,9 @@ code{font-family:'JetBrains Mono',monospace;background:var(--bg3);
 [Unit] Description=<span class="str">Campus MP3 player</span><br>
 After=<span class="str">sound.target network.target</span><br><br>
 [Service]<br>
-Type=<span class="str">simple</span>&nbsp; User=<span class="str">nctk</span>&nbsp; Group=<span class="str">audio</span><br>
+Type=<span class="str">simple</span>&nbsp; User=<span class="str">client1</span>&nbsp; Group=<span class="str">audio</span><br>
 ExecStartPre=<span class="fn">mkdir -p</span> <span class="str">/run/campus-player</span> &amp;&amp;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">chown</span> nctk:audio /run/campus-player<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">chown</span> client1:audio /run/campus-player<br>
 ExecStart=<span class="fn">/usr/bin/mpv</span><br>
 &nbsp;&nbsp;<span class="vr">--no-video</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># только аудио</span><br>
 &nbsp;&nbsp;<span class="vr">--idle=yes</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># не выходить после трека</span><br>
@@ -531,7 +531,7 @@ StartLimitIntervalSec=<span class="str">0</span>&nbsp;<span class="cm"># пер�
 
 <!-- ══════════ 4. CRON ══════════ -->
 <div class="slide">
-  <div class="pill" data-az='<span class="live"></span> cron · 22 tapşırıq · campus-cron-landau-local.sh' data-ru='<span class="live"></span> cron · 22 задания · campus-cron-landau-local.sh' data-en='<span class="live"></span> cron · 22 jobs · campus-cron-landau-local.sh'><span class="live"></span> cron · 22 задания · campus-cron-landau-local.sh</div>
+  <div class="pill" data-az='<span class="live"></span> cron · 22 tapşırıq · campus-cron-media-local.sh' data-ru='<span class="live"></span> cron · 22 задания · campus-cron-media-local.sh' data-en='<span class="live"></span> cron · 22 jobs · campus-cron-media-local.sh'><span class="live"></span> cron · 22 задания · campus-cron-media-local.sh</div>
   <div class="H2" data-az='Cədvəl və <span class="GRAD">musiqi seçim alqoritmi</span>' data-ru='Расписание и <span class="GRAD">алгоритм выбора музыки</span>' data-en='Schedule and <span class="GRAD">music selection algorithm</span>'>Расписание и <span class="GRAD">алгоритм выбора музыки</span></div>
   <div style="display:flex;gap:16px;flex:1">
     <div style="flex:1;overflow:auto">
@@ -572,7 +572,7 @@ StartLimitIntervalSec=<span class="str">0</span>&nbsp;<span class="cm"># пер�
 <span class="cm"># 2. Сб/Вс → папка 1</span><br>
 [ $DAY -gt 5 ] && <span class="vr">DAY</span>=1<br><br>
 <span class="cm"># 3. Путь к файлу</span><br>
-<span class="vr">FILE</span>=<span class="str">"/mnt/music/Landau/</span><br>
+<span class="vr">FILE</span>=<span class="str">"/mnt/music/Media/</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">$DAY/$SLOT.mp3"</span><br><br>
 <span class="cm"># 4. flock — один запуск</span><br>
 <span class="fn">flock</span> -n /tmp/cron.lock<br>&nbsp;&nbsp;campus-playerctl play $FILE<br><br>
@@ -584,11 +584,11 @@ StartLimitIntervalSec=<span class="str">0</span>&nbsp;<span class="cm"># пер�
       </div>
       <div class="card cp"><div class="card-h" data-az="📂 Qovluqlar B.E.–C." data-ru="📂 Папки Пн–Пт" data-en="📂 Folders Mon–Fri">📂 Папки Пн–Пт</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2;color:var(--muted)">
-          <span class="ok">1</span> → Landau/<b class="b">1</b>/ (Пн)<br>
-          <span class="ok">2</span> → Landau/<b class="b">2</b>/ (Вт)<br>
-          <span class="ok">3</span> → Landau/<b class="b">3</b>/ (Ср)<br>
-          <span class="ok">4</span> → Landau/<b class="b">4</b>/ (Чт)<br>
-          <span class="ok">5</span> → Landau/<b class="b">5</b>/ (Пт)
+          <span class="ok">1</span> → Media/<b class="b">1</b>/ (Пн)<br>
+          <span class="ok">2</span> → Media/<b class="b">2</b>/ (Вт)<br>
+          <span class="ok">3</span> → Media/<b class="b">3</b>/ (Ср)<br>
+          <span class="ok">4</span> → Media/<b class="b">4</b>/ (Чт)<br>
+          <span class="ok">5</span> → Media/<b class="b">5</b>/ (Пт)
         </div>
       </div>
     </div>
@@ -737,11 +737,11 @@ scrape_configs:<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'127.0.0.1:9100'</span>]<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">campus-server</span>}<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># audio client</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'&lt;nctk-ip&gt;:9100'</span>]<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">nctk</span>}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'&lt;client1-ip&gt;:9100'</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">client1</span>}<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># secondary client</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'&lt;vm1-ip&gt;:9100'</span>]<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">vm1</span>}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'&lt;client2-ip&gt;:9100'</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">client2</span>}<br>
 &nbsp;&nbsp;&nbsp;&nbsp;relabel_configs:<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># instance = nodename (читаемо в Grafana)</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- source_labels: [nodename]<br>
@@ -749,7 +749,7 @@ scrape_configs:<br>
         </div>
       </div>
       <div class="card"><div class="card-h" data-az="Niyə relabel_configs vacibdir" data-ru="Почему relabel_configs важен" data-en="Why relabel_configs matters">Почему relabel_configs важен</div>
-        <div style="font-size:15px;line-height:1.8;color:var(--muted)">Без него instance = <code>192.168.x.x:9100</code> — непонятно.<br>С ним instance = <code>nctk</code> — Grafana переменная <code>$node</code> работает корректно и дашборды показывают читаемые имена.</div>
+        <div style="font-size:15px;line-height:1.8;color:var(--muted)">Без него instance = <code>192.168.x.x:9100</code> — непонятно.<br>С ним instance = <code>client1</code> — Grafana переменная <code>$node</code> работает корректно и дашборды показывают читаемые имена.</div>
       </div>
     </div>
     <div style="flex:1;display:flex;flex-direction:column;gap:12px">
@@ -792,17 +792,17 @@ scrape_configs:<br>
   <div style="display:flex;gap:18px;flex:1">
     <div style="flex:1.2;display:flex;flex-direction:column;gap:12px">
       <div class="codeblk">
-        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>promtail-nctk.yaml — конфиг агента</div>
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>promtail-client1.yaml — конфиг агента</div>
         <div class="codeblk-body">
 clients:<br>
-&nbsp;&nbsp;<span class="cm"># SSH tunnel: nctk:3101 → server:3100</span><br>
+&nbsp;&nbsp;<span class="cm"># SSH tunnel: client1:3101 → server:3100</span><br>
 &nbsp;&nbsp;- url: <span class="str">http://localhost:3101/loki/api/v1/push</span><br><br>
 scrape_configs:<br>
-&nbsp;&nbsp;- job_name: <span class="ok">campus_landau</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;labels: {job: campus_landau, host: nctk}<br>
+&nbsp;&nbsp;- job_name: <span class="ok">campus_media</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;labels: {job: campus_media, host: client1}<br>
 &nbsp;&nbsp;&nbsp;&nbsp;paths:<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="str">/home/nctk/action.log</span><span class="cm"> # cron события</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="str">/tmp/landau-cron.log</span><br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="str">/home/client1/action.log</span><span class="cm"> # cron события</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="str">/tmp/media-cron.log</span><br><br>
 &nbsp;&nbsp;- job_name: <span class="ok">campus_bot</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;path: <span class="str">/var/log/campus-bot*.log</span><br><br>
 &nbsp;&nbsp;- job_name: <span class="ok">system</span><br>
@@ -814,9 +814,9 @@ scrape_configs:<br>
         <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>LogQL запросы в Grafana Explore</div>
         <div class="codeblk-body">
 <span class="cm"># Все звонки:</span><br>
-{job=<span class="str">"campus_landau"</span>} |= <span class="str">"peremena"</span><br><br>
+{job=<span class="str">"campus_media"</span>} |= <span class="str">"peremena"</span><br><br>
 <span class="cm"># Только ошибки:</span><br>
-{host=<span class="str">"nctk"</span>} |= <span class="str">"❌"</span><br><br>
+{host=<span class="str">"client1"</span>} |= <span class="str">"❌"</span><br><br>
 <span class="cm"># Действия Telegram бота:</span><br>
 {job=<span class="str">"campus_bot"</span>} | <span class="fn">line_format</span> <span class="str">"{{.line}}"</span><br><br>
 <span class="cm"># SSH входы:</span><br>
@@ -845,7 +845,7 @@ scrape_configs:<br>
         </div>
       </div>
       <div class="card cr"><div class="card-h" data-az="SSH tunel — niyə localhost:3101" data-ru="SSH tunnel — почему localhost:3101" data-en="SSH tunnel — why localhost:3101">SSH tunnel — почему localhost:3101</div>
-        <div style="font-size:15px;line-height:1.8;color:var(--muted)">nctk и сервер в разных подсетях. Туннель пробрасывает порт Loki локально:<br><code style="font-size:12px">ssh -L 3101:localhost:3100 campus-server</code></div>
+        <div style="font-size:15px;line-height:1.8;color:var(--muted)">client1 и сервер в разных подсетях. Туннель пробрасывает порт Loki локально:<br><code style="font-size:12px">ssh -L 3101:localhost:3100 campus-server</code></div>
       </div>
     </div>
   </div>
@@ -932,11 +932,11 @@ config/grafana-provisioning/<br>
     <div class="card"><div class="card-h" style="color:var(--orange)">🔍 promtail (server)</div>
       <div style="font-size:15px;line-height:1.9;color:var(--muted)">Логи Docker контейнеров.<br><code style="font-size:12px">grafana/promtail:2.9.5</code><br>/var/lib/docker mounted<br>docker.sock → labels<br><span class="bdg bo">profile: logs</span></div>
     </div>
-    <div class="card co"><div class="card-h">🤖 tg-campus-narimanov</div>
-      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Telegram бот.<br>build: ./bots/narimanov<br>SSH ключи: /root/.ssh<br>музыка: /music volume<br><span class="bdg bo">profile: bot</span></div>
+    <div class="card co"><div class="card-h">🤖 tg-campus-client1</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Telegram бот.<br>build: ./bots/client1<br>SSH ключи: /root/.ssh<br>музыка: /music volume<br><span class="bdg bo">profile: bot</span></div>
     </div>
-    <div class="card co"><div class="card-h">🤖 tg-campus-genclik</div>
-      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Тот же Dockerfile.<br>Другой config.env<br>target: vm1 клиент<br>Landau volume<br><span class="bdg bo">profile: bot</span></div>
+    <div class="card co"><div class="card-h">🤖 tg-campus-client2</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Тот же Dockerfile.<br>Другой config.env<br>target: client2 клиент<br>Media volume<br><span class="bdg bo">profile: bot</span></div>
     </div>
     <div class="card cr"><div class="card-h">🐕 campus-watchdog</div>
       <div style="font-size:15px;line-height:1.9;color:var(--muted)">Проверяет контейнеры.<br>Каждые 5 минут.<br>Упал → рестарт →<br>Telegram уведомление<br><span class="bdg br">profile: watchdog</span></div>
@@ -945,7 +945,7 @@ config/grafana-provisioning/<br>
       <div style="font-size:15px;line-height:1.9;color:var(--muted)">Бэкапы конфигов.<br>network_mode: host<br>/etc /home /root маунт<br>каждые 5 мин проверка<br><span class="bdg br">profile: recovery</span></div>
     </div>
     <div class="card cb"><div class="card-h">🌐 campus-webui :8090</div>
-      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Веб-интерфейс.<br>Flask · SQLite · port 8090<br>SSH/SFTP → nctk<br>Роли: guest/user/admin<br><span class="bdg bb">profile: webui</span></div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Веб-интерфейс.<br>Flask · SQLite · port 8090<br>SSH/SFTP → client1<br>Роли: guest/user/admin<br><span class="bdg bb">profile: webui</span></div>
     </div>
     <div class="card"><div class="card-h" data-az="▶ Bütün steki işə salmaq" data-ru="▶ Запуск всего стека" data-en="▶ Launch full stack">▶ Запуск всего стека</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2;color:var(--muted)">
@@ -968,16 +968,16 @@ config/grafana-provisioning/<br>
   </div>
 </div>
 
-<!-- ══════════ 11. SYSTEMD нa nctk ══════════ -->
+<!-- ══════════ 11. SYSTEMD нa client1 ══════════ -->
 <div class="slide">
   <div class="pill" data-az='<span class="live"></span> systemd · 5 xidmət · Audio Client' data-ru='<span class="live"></span> systemd · 5 сервисов · Audio Client' data-en='<span class="live"></span> systemd · 5 services · Audio Client'><span class="live"></span> systemd · 5 сервисов · Audio Client</div>
-  <div class="H2" data-az='nctk klient — <span class="GRAD">bütün xidmətlər və necə işləyir</span>' data-ru='Клиент nctk — <span class="GRAD">все сервисы и как работают</span>' data-en='Client nctk — <span class="GRAD">all services and how they work</span>'>Клиент nctk — <span class="GRAD">все сервисы и как работают</span></div>
+  <div class="H2" data-az='client1 klient — <span class="GRAD">bütün xidmətlər və necə işləyir</span>' data-ru='Клиент client1 — <span class="GRAD">все сервисы и как работают</span>' data-en='Client client1 — <span class="GRAD">all services and how they work</span>'>Клиент client1 — <span class="GRAD">все сервисы и как работают</span></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1">
     <div class="card cg">
       <div class="card-h">🎵 campus-mpv.service</div>
       <div style="font-size:15px;line-height:1.9;color:var(--muted)">
         mpv демон — всегда запущен.<br>
-        User=nctk Group=audio<br>
+        User=client1 Group=audio<br>
         IPC: <code>/run/campus-player/mpv.sock</code><br>
         volume-max=160 · audio-device=alsa/default<br>
         <span class="bdg bg">Restart=always RestartSec=3</span>
@@ -1010,7 +1010,7 @@ config/grafana-provisioning/<br>
         Метрики для Prometheus.<br>
         Порт: <b class="g">:9100</b> · доступен снаружи<br>
         Prometheus scrape каждые 15 секунд<br>
-        Raw metrics: <code>curl nctk:9100/metrics</code><br>
+        Raw metrics: <code>curl client1:9100/metrics</code><br>
         <span class="bdg bg">Restart=always</span>
       </div>
     </div>
@@ -1021,11 +1021,11 @@ config/grafana-provisioning/<br>
           Логи → Loki через SSH туннель.<br>
           Push в: <code>localhost:3101</code><br>
           Туннель: <code>ssh -L 3101:localhost:3100 server</code><br>
-          Позиции хранит в: <code>/tmp/positions-nctk.yaml</code><br>
+          Позиции хранит в: <code>/tmp/positions-client1.yaml</code><br>
           (не теряет прочитанное при рестарте)
         </div>
         <div style="font-size:15px;line-height:1.9;color:var(--muted)">
-          Файлы на nctk:<br>
+          Файлы на client1:<br>
           📁 <code>~/action.log</code> — cron события<br>
           📁 <code>/var/log/campus-bot*.log</code><br>
           📁 <code>/var/log/*.log</code> — системные<br>
@@ -1035,11 +1035,11 @@ config/grafana-provisioning/<br>
     </div>
   </div>
   <div class="foot">
-    <span>🇦🇿 5 systemd xidməti nctk-da · Hamısı Restart=always · watchdog timer hər 5 dəqiqə</span>
+    <span>🇦🇿 5 systemd xidməti client1-da · Hamısı Restart=always · watchdog timer hər 5 dəqiqə</span>
     <span>·</span>
-    <span>🇷🇺 5 systemd сервисов на nctk · Все Restart=always · watchdog проверяет каждые 5 мин</span>
+    <span>🇷🇺 5 systemd сервисов на client1 · Все Restart=always · watchdog проверяет каждые 5 мин</span>
     <span>·</span>
-    <span>🇬🇧 5 systemd services on nctk · All Restart=always · watchdog checks every 5 minutes</span>
+    <span>🇬🇧 5 systemd services on client1 · All Restart=always · watchdog checks every 5 minutes</span>
   </div>
 </div>
 
@@ -1058,13 +1058,13 @@ config/grafana-provisioning/<br>
         <span class="ok">🚀</span> bootstrap.sh &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># восстановление всего</span><br>
         <span style="color:var(--orange)">🐳</span> docker-compose.yaml<br>
         <span class="b">📂</span> config/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># grafana/loki/prometheus</span><br>
-        <span class="b">📂</span> machines/nctk/<br>
+        <span class="b">📂</span> machines/client1/<br>
         &nbsp;&nbsp;<span class="ok">install.sh</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># полная установка</span><br>
         &nbsp;&nbsp;<span style="color:var(--text)">crontab</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># расписание</span><br>
-        &nbsp;&nbsp;<span class="b">scripts/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># playerctl, cron-landau</span><br>
+        &nbsp;&nbsp;<span class="b">scripts/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># playerctl, cron-media</span><br>
         &nbsp;&nbsp;<span class="b">systemd/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># все .service файлы</span><br>
         &nbsp;&nbsp;<span class="b">bot/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># bot.py</span><br>
-        <span class="b">📂</span> bots/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># narimanov, genclik</span><br>
+        <span class="b">📂</span> bots/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># client1, client2</span><br>
         <span class="b">📂</span> promtail-clients/ <span class="cm"># yaml для каждой машины</span>
       </div>
     </div>
@@ -1080,12 +1080,12 @@ config/grafana-provisioning/<br>
       <div style="padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2.2;color:var(--muted);flex:1">
         <span class="b">📂</span> server/<br>
         &nbsp;&nbsp;<span class="r">🔑</span> .env<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · GRAFANA_PASS · NCTK_HOST · …</span><br>
-        &nbsp;&nbsp;<span class="r">🔑</span> narimanov.config.env<br>
-        &nbsp;&nbsp;<span class="r">🔑</span> genclik.config.env<br>
-        <span class="b">📂</span> nctk/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · GRAFANA_PASS · CLIENT1_HOST · …</span><br>
+        &nbsp;&nbsp;<span class="r">🔑</span> client1.config.env<br>
+        &nbsp;&nbsp;<span class="r">🔑</span> client2.config.env<br>
+        <span class="b">📂</span> client1/<br>
         &nbsp;&nbsp;<span class="r">🔑</span> telegram-bot.config.env<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · LOG_GROUP_IDS · VM1_HOST · …</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · LOG_GROUP_IDS · CLIENT2_HOST · …</span><br>
         &nbsp;&nbsp;<span class="r">🔑</span> cron_notify.env<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · LOG_GROUP_ID · …</span><br><br>
         <span class="r">⚠ НИКОГДА публично · только SSH-ключ</span>
@@ -1127,9 +1127,9 @@ config/grafana-provisioning/<br>
 <span class="cm"># 3. Docker стек на сервере</span><br>
 bash machines/server/install.sh<br><br>
 <span class="cm"># 4. По SSH разворачивает audio client</span><br>
-<span class="fn">scp</span> -r machines/nctk/ nctk@CLIENT:/tmp/<br>
-<span class="fn">ssh</span> nctk@CLIENT <span class="str">"bash /tmp/nctk/install.sh"</span><br>
-<span class="fn">scp</span> secrets/nctk/*.env nctk@CLIENT:~/
+<span class="fn">scp</span> -r machines/client1/ client1@CLIENT:/tmp/<br>
+<span class="fn">ssh</span> client1@CLIENT <span class="str">"bash /tmp/client1/install.sh"</span><br>
+<span class="fn">scp</span> secrets/client1/*.env client1@CLIENT:~/
         </div>
       </div>
     </div>
@@ -1222,11 +1222,11 @@ campus-webui:<br>
     </div>
   </div>
   <div class="foot">
-    <span>🇦🇿 Flask · Bootstrap 5 · SSH/SFTP → nctk · Rollər: guest/user/admin · Real-time çat</span>
+    <span>🇦🇿 Flask · Bootstrap 5 · SSH/SFTP → client1 · Rollər: guest/user/admin · Real-time çat</span>
     <span>·</span>
-    <span>🇷🇺 Flask · Bootstrap 5 · SSH/SFTP → nctk · Роли: guest/user/admin · Real-time чат</span>
+    <span>🇷🇺 Flask · Bootstrap 5 · SSH/SFTP → client1 · Роли: guest/user/admin · Real-time чат</span>
     <span>·</span>
-    <span>🇬🇧 Flask · Bootstrap 5 · SSH/SFTP → nctk · Roles: guest/user/admin · Real-time chat</span>
+    <span>🇬🇧 Flask · Bootstrap 5 · SSH/SFTP → client1 · Roles: guest/user/admin · Real-time chat</span>
   </div>
 </div>
 
@@ -1238,7 +1238,7 @@ campus-webui:<br>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;flex:1;align-content:start;margin-top:8px">
     <div class="card cg"><div class="card-h">🎵 Плеер · Два кампуса</div>
       <div style="font-size:14px;line-height:1.8;color:var(--muted)">
-        Narimanov + Gənclik независимо<br>
+        Client1 + Client2 независимо<br>
         Сейчас играет — в реальном времени<br>
         Громкость, мут, стоп, гимн<br>
         <span class="bdg bg">mpv IPC → paramiko SSH</span>
@@ -1254,7 +1254,7 @@ campus-webui:<br>
     </div>
     <div class="card cp"><div class="card-h">🔄 Синхронизация треков</div>
       <div style="font-size:14px;line-height:1.8;color:var(--muted)">
-        Narimanov ↔ Gənclik через SFTP<br>
+        Client1 ↔ Client2 через SFTP<br>
         Показывает diff: что только у кого<br>
         Направление: туда / сюда<br>
         <span class="bdg bp">paramiko SFTP put/get</span>
@@ -1279,7 +1279,7 @@ campus-webui:<br>
     <div class="card cg"><div class="card-h">🕐 Синхронизация времени</div>
       <div style="font-size:14px;line-height:1.8;color:var(--muted)">
         Эталон — CentOS сервер<br>
-        sudo date -s → nctk, vm1<br>
+        sudo date -s → client1, client2<br>
         Тикающие часы на дашборде<br>
         <span class="bdg bg">offset-based JS · re-sync 30s</span>
       </div>
@@ -1410,7 +1410,7 @@ campus-webui:<br>
     <div style="flex:1;display:flex;flex-direction:column;gap:9px">
       <div class="card co"><div class="card-h">🖥️ Веб-терминал SSH</div>
         <div style="font-size:14px;line-height:1.8;color:var(--muted)">
-          3 машины: Narimanov · Gənclik · CentOS<br>
+          3 машины: Client1 · Client2 · CentOS<br>
           Цвет по машине: синий · фиолетовый · оранжевый<br>
           Шпаргалка с командами (6 блоков)<br>
           <span class="bdg bo">paramiko SSH · banner_timeout=30</span>
@@ -1460,33 +1460,33 @@ campus-webui:<br>
       </div>
       <div class="card cb"><div class="card-h">🎵 Музыка после перезагрузки клиентов</div>
         <div style="font-size:14px;line-height:1.8;color:var(--muted)">
-          <b style="color:var(--text)">nctk:</b> campus-player.service enabled<br>
-          <b style="color:var(--text)">vm1:</b> campus-mpv (user systemd) + watchdog<br>
+          <b style="color:var(--text)">client1:</b> campus-player.service enabled<br>
+          <b style="color:var(--text)">client2:</b> campus-mpv (user systemd) + watchdog<br>
           Обе машины: таймер каждые 5 мин<br>
           <span class="bdg bb">campus-player-watchdog.timer</span>
         </div>
       </div>
       <div class="card co"><div class="card-h">📅 Расписание переменов — cron</div>
         <div style="font-size:14px;line-height:1.8;color:var(--muted)">
-          cron.service enabled на nctk и vm1<br>
+          cron.service enabled на client1 и client2<br>
           Блокировка flock — параллельные запуски исключены<br>
           3 попытки play → log ✅ или ❌<br>
-          <span class="bdg bo">campus-cron-landau-local.sh</span>
+          <span class="bdg bo">campus-cron-media-local.sh</span>
         </div>
       </div>
     </div>
     <div style="flex:1;display:flex;flex-direction:column;gap:10px">
       <div class="card cp"><div class="card-h">📡 Telegram боты</div>
         <div style="font-size:14px;line-height:1.8;color:var(--muted)">
-          <b style="color:var(--text)">Narimanov:</b> systemd tg-campus-narimanov<br>
-          <b style="color:var(--text)">Gənclik:</b> нативно на vm1 (campus-telegram-bot)<br>
+          <b style="color:var(--text)">Client1:</b> systemd tg-campus-client1<br>
+          <b style="color:var(--text)">Client2:</b> нативно на client2 (campus-telegram-bot)<br>
           Docker-версии удалены — нет конфликтов<br>
           <span class="bdg bp">Restart=always · RestartSec=10</span>
         </div>
       </div>
       <div class="card cg"><div class="card-h">🐙 GitHub — резервная копия кода</div>
         <div style="font-size:14px;line-height:1.8;color:var(--muted)">
-          Весь код в LandauAudioserver/campus-infra<br>
+          Весь код в MediaAudioserver/campus-infra<br>
           Секреты: только в campus-secrets (private)<br>
           Токены/пароли в .gitignore<br>
           <span class="bdg bg">git push → история всех изменений</span>
@@ -1500,8 +1500,8 @@ bash scripts/campus-check.sh<br>
 <br>
 <span class="cm"># Проверяет:</span><br>
 ✅ campus-webui (Docker)<br>
-✅ nctk: player, cron, watchdog<br>
-✅ vm1: mpv, cron, tg-bot, sock<br>
+✅ client1: player, cron, watchdog<br>
+✅ client2: mpv, cron, tg-bot, sock<br>
 ✅ Telegram боты (systemd)<br>
 ✅ Docker боты (должны быть off)
         </div>
@@ -1594,9 +1594,9 @@ const TOUR = [
    az:"Mərkəzdə — Master Server.\n7 Docker konteyner:\nGrafana, Loki, Prometheus, botlar, Watchdog...",
    en:"Center — the Master Server.\n7 Docker containers:\nGrafana, Loki, Prometheus, bots, Watchdog..."},
   {pos:'pos-mr',pose:'pose-point-l',dur:4000,
-   ru:"👈 Audio Client — машина nctk.\nЗдесь mpv, Telegram бот, cron,\nnode_exporter и promtail.",
-   az:"👈 Audio Client — nctk maşını.\nBurada mpv, Telegram bot, cron,\nnode_exporter və promtail.",
-   en:"👈 The Audio Client — machine nctk.\nmpv, Telegram bot, cron,\nnode_exporter and promtail live here."},
+   ru:"👈 Audio Client — машина client1.\nЗдесь mpv, Telegram бот, cron,\nnode_exporter и promtail.",
+   az:"👈 Audio Client — client1 maşını.\nBurada mpv, Telegram bot, cron,\nnode_exporter və promtail.",
+   en:"👈 The Audio Client — machine client1.\nmpv, Telegram bot, cron,\nnode_exporter and promtail live here."},
   {pos:'pos-br',pose:'pose-idle',dur:3500,
    ru:"Справа — Telegram.\nУправление из любой точки мира\nчерез Long-Polling API без белого IP.",
    az:"Sağda — Telegram.\nDünyada istənilən yerdən idarəetmə\nLong-Polling API ilə.",
@@ -1626,9 +1626,9 @@ const TOUR = [
    az:"Bazar ertəsi 08:00 — xüsusi!\nDövlət himni volume=160 ilə.\nBu ALSA ilə 100%-dən artıq güclənmə.",
    en:"Monday 08:00 is special!\nNational anthem at volume=160.\nThat's >100% via ALSA amplification."},
   {pos:'pos-mr',pose:'pose-think',dur:4500,
-   ru:"Алгоритм скрипта: `date +%u` →\nномер дня → папка Landau/N/\n→ SLOT.mp3 → 3 попытки воспроизведения.",
-   az:"Skript alqoritmi: `date +%u` →\ngünün nömrəsi → Landau/N/ qovluğu\n→ SLOT.mp3 → 3 cəhd.",
-   en:"Script algorithm: `date +%u` →\nweekday number → folder Landau/N/\n→ SLOT.mp3 → 3 play retries."},
+   ru:"Алгоритм скрипта: `date +%u` →\nномер дня → папка Media/N/\n→ SLOT.mp3 → 3 попытки воспроизведения.",
+   az:"Skript alqoritmi: `date +%u` →\ngünün nömrəsi → Media/N/ qovluğu\n→ SLOT.mp3 → 3 cəhd.",
+   en:"Script algorithm: `date +%u` →\nweekday number → folder Media/N/\n→ SLOT.mp3 → 3 play retries."},
 ]},
 /* 4 Bot */ { steps:[
   {pos:'pos-tr',pose:'pose-think',dur:4000,
@@ -1656,13 +1656,13 @@ const TOUR = [
 ]},
 /* 6 Prometheus */ { steps:[
   {pos:'pos-mr',pose:'pose-point-l',dur:4500,
-   ru:"👈 Реальный конфиг Prometheus.\n3 цели — campus-server, nctk, vm1.\nScrape каждые 15 секунд.",
-   az:"👈 Real Prometheus konfiqurasiyası.\n3 hədəf — campus-server, nctk, vm1.\nHər 15 saniyədə bir çəkir.",
-   en:"👈 The real Prometheus config.\n3 targets — campus-server, nctk, vm1.\nScrapes every 15 seconds."},
+   ru:"👈 Реальный конфиг Prometheus.\n3 цели — campus-server, client1, client2.\nScrape каждые 15 секунд.",
+   az:"👈 Real Prometheus konfiqurasiyası.\n3 hədəf — campus-server, client1, client2.\nHər 15 saniyədə bir çəkir.",
+   en:"👈 The real Prometheus config.\n3 targets — campus-server, client1, client2.\nScrapes every 15 seconds."},
   {pos:'pos-tr',pose:'pose-think',dur:4500,
-   ru:"relabel_configs — критически важно!\nБез него instance = IP-адрес:9100.\nС ним — читаемые имена: nctk, vm1...",
-   az:"relabel_configs — kritik vacibdir!\nOnsuz instance = IP:9100.\nOnunla — oxunan adlar: nctk, vm1...",
-   en:"relabel_configs is critical!\nWithout it instance = IP:9100.\nWith it — readable names: nctk, vm1..."},
+   ru:"relabel_configs — критически важно!\nБез него instance = IP-адрес:9100.\nС ним — читаемые имена: client1, client2...",
+   az:"relabel_configs — kritik vacibdir!\nOnsuz instance = IP:9100.\nOnunla — oxunan adlar: client1, client2...",
+   en:"relabel_configs is critical!\nWithout it instance = IP:9100.\nWith it — readable names: client1, client2..."},
   {pos:'pos-bl',pose:'pose-point-r',dur:4000,
    ru:"node_exporter на каждой машине\nслушает порт :9100 и отдаёт\nCPU, RAM, Disk, температуру, uptime.",
    az:"Hər maşında node_exporter\n:9100 portunu dinləyir və\nCPU, RAM, Disk, temp, uptime verir.",
@@ -1670,17 +1670,17 @@ const TOUR = [
 ]},
 /* 7 Loki */ { steps:[
   {pos:'pos-tl',pose:'pose-point-r',dur:4500,
-   ru:"👉 Это конфиг Promtail агента на nctk.\nСледит за action.log — там все звонки.\nИ за логами campus-bot и системными.",
-   az:"👉 Bu — nctk-da Promtail agenti konfiqurasiyası.\naction.log-u izləyir — orada bütün zənglər.\nHəmçinin campus-bot və sistem logları.",
-   en:"👉 This is Promtail agent config on nctk.\nWatches action.log — all bell events.\nAlso campus-bot and system logs."},
+   ru:"👉 Это конфиг Promtail агента на client1.\nСледит за action.log — там все звонки.\nИ за логами campus-bot и системными.",
+   az:"👉 Bu — client1-da Promtail agenti konfiqurasiyası.\naction.log-u izləyir — orada bütün zənglər.\nHəmçinin campus-bot və sistem logları.",
+   en:"👉 This is Promtail agent config on client1.\nWatches action.log — all bell events.\nAlso campus-bot and system logs."},
   {pos:'pos-mr',pose:'pose-think',dur:4500,
-   ru:"nctk и сервер в разных подсетях!\nSSH туннель решает это:\nlocalhost:3101 → Loki на сервере :3100.",
-   az:"nctk və server fərqli şəbəkədə!\nSSH tunel həll edir:\nlocalhost:3101 → serverdə Loki :3100.",
-   en:"nctk and server are on different subnets!\nSSH tunnel solves this:\nlocalhost:3101 → Loki on server :3100."},
+   ru:"client1 и сервер в разных подсетях!\nSSH туннель решает это:\nlocalhost:3101 → Loki на сервере :3100.",
+   az:"client1 və server fərqli şəbəkədə!\nSSH tunel həll edir:\nlocalhost:3101 → serverdə Loki :3100.",
+   en:"client1 and server are on different subnets!\nSSH tunnel solves this:\nlocalhost:3101 → Loki on server :3100."},
   {pos:'pos-br',pose:'pose-point-l',dur:4000,
-   ru:"Поиск логов: Grafana → Explore →\nвыбрать Loki → написать запрос:\n{job='campus_landau'} → Run query.",
-   az:"Log axtarışı: Grafana → Explore →\nLoki seçin → sorğu yazın:\n{job='campus_landau'} → Run query.",
-   en:"Search logs: Grafana → Explore →\nselect Loki → write query:\n{job='campus_landau'} → Run query."},
+   ru:"Поиск логов: Grafana → Explore →\nвыбрать Loki → написать запрос:\n{job='campus_media'} → Run query.",
+   az:"Log axtarışı: Grafana → Explore →\nLoki seçin → sorğu yazın:\n{job='campus_media'} → Run query.",
+   en:"Search logs: Grafana → Explore →\nselect Loki → write query:\n{job='campus_media'} → Run query."},
 ]},
 /* 8 Grafana */ { steps:[
   {pos:'pos-bl',pose:'pose-point-r',dur:4500,
@@ -1712,17 +1712,17 @@ const TOUR = [
 ]},
 /* 10 systemd */ { steps:[
   {pos:'pos-mr',pose:'pose-point-l',dur:4500,
-   ru:"👈 На nctk пять systemd сервисов.\nВсе с Restart=always — самовосстановление.\nНикто не умирает тихо.",
-   az:"👈 nctk-da 5 systemd xidməti var.\nHamısı Restart=always — özünü bərpa edir.\nHeç kim səssiz ölmür.",
-   en:"👈 Five systemd services on nctk.\nAll Restart=always — self-healing.\nNothing dies silently."},
+   ru:"👈 На client1 пять systemd сервисов.\nВсе с Restart=always — самовосстановление.\nНикто не умирает тихо.",
+   az:"👈 client1-da 5 systemd xidməti var.\nHamısı Restart=always — özünü bərpa edir.\nHeç kim səssiz ölmür.",
+   en:"👈 Five systemd services on client1.\nAll Restart=always — self-healing.\nNothing dies silently."},
   {pos:'pos-tl',pose:'pose-think',dur:4000,
    ru:"campus-player-watchdog.timer —\nзапускается каждые 5 минут\nи проверяет: жив ли campus-mpv?",
    az:"campus-player-watchdog.timer —\nhər 5 dəqiqə işə düşür\nvə yoxlayır: campus-mpv yaşayır?",
    en:"campus-player-watchdog.timer —\nfires every 5 minutes\nand checks: is campus-mpv alive?"},
   {pos:'pos-bl',pose:'pose-point-r',dur:4000,
-   ru:"promtail хранит позицию чтения\nв /tmp/positions-nctk.yaml.\nПри рестарте не теряет прогресс.",
-   az:"promtail oxuma mövqeyini\n/tmp/positions-nctk.yaml-da saxlayır.\nYenidən başladıqda irəliləyişini itirmir.",
-   en:"promtail stores its read position\nin /tmp/positions-nctk.yaml.\nDoesn't lose progress on restart."},
+   ru:"promtail хранит позицию чтения\nв /tmp/positions-client1.yaml.\nПри рестарте не теряет прогресс.",
+   az:"promtail oxuma mövqeyini\n/tmp/positions-client1.yaml-da saxlayır.\nYenidən başladıqda irəliləyişini itirmir.",
+   en:"promtail stores its read position\nin /tmp/positions-client1.yaml.\nDoesn't lose progress on restart."},
 ]},
 /* 11 GitHub */ { steps:[
   {pos:'pos-bl',pose:'pose-point-r',dur:4500,
@@ -1740,9 +1740,9 @@ const TOUR = [
    az:"👉 Final! Əgər hər şey çöksə —\nancaq iki əmr:\ngit clone + ./bootstrap.sh all",
    en:"👉 The finale! If everything crashes —\njust two commands:\ngit clone + ./bootstrap.sh all"},
   {pos:'pos-tr',pose:'pose-think',dur:4500,
-   ru:"bootstrap.sh сам:\n• клонирует campus-secrets\n• раскладывает .env\n• поднимает Docker\n• разворачивает nctk по SSH",
-   az:"bootstrap.sh özü:\n• campus-secrets klonlayır\n• .env-ləri yerləşdirir\n• Docker-i qaldırır\n• SSH ilə nctk-nı quraşdırır",
-   en:"bootstrap.sh automatically:\n• clones campus-secrets\n• places .env files\n• starts Docker stack\n• deploys nctk via SSH"},
+   ru:"bootstrap.sh сам:\n• клонирует campus-secrets\n• раскладывает .env\n• поднимает Docker\n• разворачивает client1 по SSH",
+   az:"bootstrap.sh özü:\n• campus-secrets klonlayır\n• .env-ləri yerləşdirir\n• Docker-i qaldırır\n• SSH ilə client1-nı quraşdırır",
+   en:"bootstrap.sh automatically:\n• clones campus-secrets\n• places .env files\n• starts Docker stack\n• deploys client1 via SSH"},
   {pos:'pos-br',pose:'pose-wave',dur:4500,
    ru:"🎉 И последнее — Web UI!\nОткрываем браузер и управляем прямо\nс телефона или компьютера.",
    az:"🎉 Və sonuncu — Web UI!\nBrauzeri açırıq və birbaşa\ntelefondan və ya kompüterdən idarə edirik.",
@@ -1750,9 +1750,9 @@ const TOUR = [
 ]},
 /* 13 Web UI */ { steps:[
   {pos:'pos-bl',pose:'pose-point-r',dur:4500,
-   ru:"👉 Веб-интерфейс на порту 8090.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → напрямую в nctk.",
-   az:"👉 Veb interfeys 8090 portunda.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → birbaşa nctk-ya.",
-   en:"👉 Web interface on port 8090.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → directly to nctk."},
+   ru:"👉 Веб-интерфейс на порту 8090.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → напрямую в client1.",
+   az:"👉 Veb interfeys 8090 portunda.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → birbaşa client1-ya.",
+   en:"👉 Web interface on port 8090.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → directly to client1."},
   {pos:'pos-tr',pose:'pose-think',dur:4500,
    ru:"Три роли: guest, user, admin.\nguest — только просмотр.\nuser — управление плеером. admin — всё.",
    az:"Üç rol: guest, user, admin.\nguest — yalnız baxış.\nuser — player idarəsi. admin — hər şey.",
@@ -1821,9 +1821,9 @@ const SLIDES = [
     en:"7 Docker containers! 🐳\nEach with its own profile.\nwatchdog auto-restarts crashed ones." },
 
   { pos:'pos-mr', pose:'pose-point-l',
-    az:"👈 nctk-da 5 systemd xidməti.\nHamısı Restart=always.\nwatchdog timer hər 5 dəqiqə yoxlayır.",
-    ru:"👈 5 systemd сервисов на nctk.\nВсе с Restart=always.\nwatchdog timer проверяет каждые 5 мин.",
-    en:"👈 5 systemd services on nctk.\nAll with Restart=always.\nwatchdog timer checks every 5 minutes." },
+    az:"👈 client1-da 5 systemd xidməti.\nHamısı Restart=always.\nwatchdog timer hər 5 dəqiqə yoxlayır.",
+    ru:"👈 5 systemd сервисов на client1.\nВсе с Restart=always.\nwatchdog timer проверяет каждые 5 мин.",
+    en:"👈 5 systemd services on client1.\nAll with Restart=always.\nwatchdog timer checks every 5 minutes." },
 
   { pos:'pos-br', pose:'pose-think',
     az:"İki repo strategiyası! 🔐\ncampus-infra — açıq (public).\ncampus-secrets — gizli (private). Tokenlər orada!",
@@ -1836,9 +1836,9 @@ const SLIDES = [
     en:"Done! Just 2 commands! 🚀\ngit clone + ./bootstrap.sh all\nThe entire system rises from scratch!" },
 
   { pos:'pos-mr', pose:'pose-point-l',
-    az:"🌐 Web interfeys — brauzerdən idarəetmə!\nFlask + SSH/SFTP → nctk\nRollər: guest · user · admin",
-    ru:"🌐 Web-интерфейс — управление из браузера!\nFlask + SSH/SFTP → nctk\nРоли: guest · user · admin",
-    en:"🌐 Web interface — browser control!\nFlask + SSH/SFTP → nctk\nRoles: guest · user · admin" },
+    az:"🌐 Web interfeys — brauzerdən idarəetmə!\nFlask + SSH/SFTP → client1\nRollər: guest · user · admin",
+    ru:"🌐 Web-интерфейс — управление из браузера!\nFlask + SSH/SFTP → client1\nРоли: guest · user · admin",
+    en:"🌐 Web interface — browser control!\nFlask + SSH/SFTP → client1\nRoles: guest · user · admin" },
 ];
 
 /* ══ NAVIGATION ══ */

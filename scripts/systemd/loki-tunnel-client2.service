@@ -1,0 +1,15 @@
+[Unit]
+Description=SSH reverse tunnel: client2:3100 -> Loki on centos (для Promtail)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kamran
+# Ключ без passphrase (campus_bot или id_rsa)
+ExecStart=/usr/bin/ssh -N -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes -o BatchMode=yes -i /home/kamran/.ssh/campus_bot -R 3100:127.0.0.1:3100 client2@10.70.0.41
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

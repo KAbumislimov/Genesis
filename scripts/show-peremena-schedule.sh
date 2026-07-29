@@ -1,5 +1,5 @@
 #!/bin/bash
-# Расписание перемен на nctk и vm1 (пн–пт)
+# Расписание перемен на client1 и client2 (пн–пт)
 # Запуск: bash scripts/show-peremena-schedule.sh
 
 SSH="ssh -i ${SSH_KEY:-$HOME/.ssh/campus_bot} -o StrictHostKeyChecking=no -o ConnectTimeout=5"
@@ -17,7 +17,7 @@ fi
 echo "Папка дня: $DAY (пн=1, вт=2, ср=3, чт=4, пт=5)"
 echo ""
 echo "┌──────────┬─────────────┬─────────────┐"
-echo "│ Время    │ NCTK        │ VM1         │"
+echo "│ Время    │ CLIENT1        │ CLIENT2         │"
 echo "├──────────┼─────────────┼─────────────┤"
 echo "│ 07:45    │ utro        │ utro        │"
 echo "│ 07:59    │ stop        │ stop        │"
@@ -41,8 +41,8 @@ echo "│ 14:55    │ 9peremena   │ 9peremena   │"
 echo "│ 15:10    │ stop        │ stop        │"
 echo "└──────────┴─────────────┴─────────────┘"
 echo ""
-echo "Гимн (только понедельник): 08:00 → 08:03 (nctk)"
+echo "Гимн (только понедельник): 08:00 → 08:03 (client1)"
 echo ""
 echo "Проверка crontab:"
-$SSH nctk@10.20.0.41 "crontab -l 2>/dev/null | grep -E 'campus-cron|peremena' | head -5" 2>/dev/null || echo "nctk: недоступен"
-$SSH vm1@10.70.0.41 "crontab -l 2>/dev/null | grep -E 'campus-cron|peremena' | head -5" 2>/dev/null || echo "vm1: недоступен"
+$SSH client1@10.20.0.41 "crontab -l 2>/dev/null | grep -E 'campus-cron|peremena' | head -5" 2>/dev/null || echo "client1: недоступен"
+$SSH client2@10.70.0.41 "crontab -l 2>/dev/null | grep -E 'campus-cron|peremena' | head -5" 2>/dev/null || echo "client2: недоступен"

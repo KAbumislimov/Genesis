@@ -16,7 +16,7 @@ docker system df 2>/dev/null || echo "(Docker не доступен)"
 echo ""
 echo "=== Что можно удалить ==="
 echo ""
-echo "1. remote-logs (логи nctk/vm1 — теперь идут через Promtail)"
+echo "1. remote-logs (логи client1/client2 — теперь идут через Promtail)"
 SIZE_RL=$(du -sh /home/kamran/campus-infra/remote-logs 2>/dev/null | cut -f1)
 echo "   Размер: $SIZE_RL"
 echo "   Удалить: rm -rf /home/kamran/campus-infra/remote-logs"

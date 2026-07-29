@@ -1,6 +1,6 @@
 #!/bin/bash
 # Деплой campus-infra на CentOS (10.10.4.120)
-# Запускать с vm1. Требует пароль kamran или SSH-ключ.
+# Запускать с client2. Требует пароль kamran или SSH-ключ.
 
 CENTOS="kamran@10.10.4.120"
 DIR="$(cd "$(dirname "$0")" && pwd)"

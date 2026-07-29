@@ -4,7 +4,7 @@
 
 # Genesis
 
-🇬🇧 English · 🇷🇺 [Русский](README.ru.md)
+🇬🇧 English · 🇷🇺 [Русский](README.ru.md) · 🇦🇿 [Azərbaycan](README.az.md)
 
 **A centralized platform for managing school audio broadcasting, monitoring, and IT infrastructure across multiple campuses.**
 

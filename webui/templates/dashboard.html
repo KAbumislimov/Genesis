@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Панель — LANDAU{% endblock %}
+{% block title %}Панель — MEDIA{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -59,7 +59,7 @@
   border-color:rgba(63,185,80,.25);
   box-shadow:0 0 0 1px rgba(63,185,80,.08),0 4px 24px rgba(63,185,80,.06);
 }
-.campus-card.vm1-card.playing{
+.campus-card.client2-card.playing{
   border-color:rgba(188,130,255,.25);
   box-shadow:0 0 0 1px rgba(188,130,255,.08),0 4px 24px rgba(188,130,255,.06);
 }
@@ -71,7 +71,7 @@
   opacity:0;transition:opacity .3s;
 }
 .campus-card.playing::before{opacity:1;background:linear-gradient(90deg,transparent,rgba(63,185,80,.6),transparent)}
-.campus-card.vm1-card.playing::before{background:linear-gradient(90deg,transparent,rgba(188,130,255,.6),transparent)}
+.campus-card.client2-card.playing::before{background:linear-gradient(90deg,transparent,rgba(188,130,255,.6),transparent)}
 
 /* card header */
 .cc-header{
@@ -82,11 +82,11 @@
 .cc-title-row{display:flex;align-items:center;gap:8px}
 .cc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
   justify-content:center;font-size:16px;flex-shrink:0}
-.cc-icon-nctk{background:rgba(88,166,255,.1);color:var(--blue)}
-.cc-icon-vm1{background:rgba(188,130,255,.1);color:var(--purple)}
+.cc-icon-client1{background:rgba(88,166,255,.1);color:var(--blue)}
+.cc-icon-client2{background:rgba(188,130,255,.1);color:var(--purple)}
 .cc-name{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-.cc-name-nctk{color:var(--blue)}
-.cc-name-vm1{color:var(--purple)}
+.cc-name-client1{color:var(--blue)}
+.cc-name-client2{color:var(--purple)}
 .cc-badges{display:flex;align-items:center;gap:7px}
 
 .badge-live{
@@ -127,7 +127,7 @@
   border-color:var(--green);
   background:radial-gradient(circle at 35% 35%,#21262d,#0d1117);
 }
-.cc-disc.vm1-spinning{border-color:var(--purple)}
+.cc-disc.client2-spinning{border-color:var(--purple)}
 @keyframes disc-spin{to{transform:rotate(360deg)}}
 .cc-track-label{font-size:10px;font-weight:700;text-transform:uppercase;
   letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
@@ -155,14 +155,14 @@
 .tb2:disabled{opacity:.3;cursor:not-allowed}
 .tb2 i{font-size:15px}
 
-.tb2.himn-btn-nctk{
+.tb2.himn-btn-client1{
   border-color:rgba(88,166,255,.35);background:rgba(88,166,255,.07);color:var(--blue);
 }
-.tb2.himn-btn-nctk:hover{background:rgba(88,166,255,.15);border-color:var(--blue)}
-.tb2.himn-btn-vm1{
+.tb2.himn-btn-client1:hover{background:rgba(88,166,255,.15);border-color:var(--blue)}
+.tb2.himn-btn-client2{
   border-color:rgba(188,130,255,.35);background:rgba(188,130,255,.07);color:var(--purple);
 }
-.tb2.himn-btn-vm1:hover{background:rgba(188,130,255,.15);border-color:var(--purple)}
+.tb2.himn-btn-client2:hover{background:rgba(188,130,255,.15);border-color:var(--purple)}
 
 .tb2.stop-btn{
   border-color:rgba(248,81,73,.35);background:rgba(248,81,73,.07);color:var(--red);
@@ -1062,19 +1062,19 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <div class="wamp2-tb" id="wa-titlebar">
     <span class="wamp2-logo wa-float-drag" id="wa-drag-handle" title="Перетащить плеер">WINAMP</span>
     <div class="wamp2-camp-grp">
-      <button class="wamp2-camp active" id="wa-tab-nctk" onclick="setActiveCampus('nctk')">NAR</button>
-      <button class="wamp2-camp" id="wa-tab-vm1" onclick="setActiveCampus('vm1')">GËNC</button>
+      <button class="wamp2-camp active" id="wa-tab-client1" onclick="setActiveCampus('client1')">NAR</button>
+      <button class="wamp2-camp" id="wa-tab-client2" onclick="setActiveCampus('client2')">GËNC</button>
     </div>
     <div class="wamp2-wm" style="margin-left:auto;display:flex;align-items:center;gap:3px">
-      <label title="NAR цвет" style="cursor:pointer"><input type="color" id="hclr-nctk" value="#00e8c0" oninput="setDualColor('nctk',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
-      <label title="GËNC цвет" style="cursor:pointer"><input type="color" id="hclr-vm1" value="#c090ff" oninput="setDualColor('vm1',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
+      <label title="NAR цвет" style="cursor:pointer"><input type="color" id="hclr-client1" value="#00e8c0" oninput="setDualColor('client1',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
+      <label title="GËNC цвет" style="cursor:pointer"><input type="color" id="hclr-client2" value="#c090ff" oninput="setDualColor('client2',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
       <button class="wa-float-restore" id="wa-float-btn" onclick="toggleWaFloat()" title="Открепить / прикрепить плеер">⧉</button>
       <div class="wamp2-wmbtn" onclick="document.getElementById('wa-skin').style.display='none'" title="Свернуть">_</div>
       <div class="wamp2-wmbtn" onclick="document.getElementById('wa-skin').style.display=''" title="Восстановить">□</div>
     </div>
   </div>
-  <span class="wave-color-swatch" id="hsw-nctk" style="display:none;background:#00e8c0"></span>
-  <span class="wave-color-swatch" id="hsw-vm1" style="display:none;background:#c090ff"></span>
+  <span class="wave-color-swatch" id="hsw-client1" style="display:none;background:#00e8c0"></span>
+  <span class="wave-color-swatch" id="hsw-client2" style="display:none;background:#c090ff"></span>
   <canvas id="vol-knob" width="80" height="80" style="display:none;position:absolute"></canvas>
 
   <!-- ── LCD Display ── -->
@@ -1139,43 +1139,43 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <button class="w2b w2b-mic" id="wa-mic-btn" onclick="waOpenMic()" title="🎤 Объявление по кампусу через микрофон">🎤 МИК</button>
     <div class="w2b-gap"></div>
     {% if perms.stop %}
-    <button class="w2b w2b-snar" onclick="stopCampus('nctk')" title="Стоп только Narimanov">■ NAR</button>
-    <button class="w2b w2b-sgenc" onclick="stopCampus('vm1')" title="Стоп только Gənclik">■ GNC</button>
+    <button class="w2b w2b-snar" onclick="stopCampus('client1')" title="Стоп только Client1">■ NAR</button>
+    <button class="w2b w2b-sgenc" onclick="stopCampus('client2')" title="Стоп только Client2">■ GNC</button>
     {% endif %}
     {% if perms.himn %}
     <div class="w2b-gap"></div>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('nctk')" title="Гимн Narimanov Campus">♪ NAR</button>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('vm1')" title="Гимн Gənclik Campus">♪ GNC</button>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('nctk');setTimeout(function(){_doPlayHimn('vm1')},600)" title="Гимн оба кампуса одновременно">♪ ALL</button>
+    <button class="w2b w2b-himn" onclick="_doPlayHimn('client1')" title="Гимн Client1 Campus">♪ NAR</button>
+    <button class="w2b w2b-himn" onclick="_doPlayHimn('client2')" title="Гимн Client2 Campus">♪ GNC</button>
+    <button class="w2b w2b-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600)" title="Гимн оба кампуса одновременно">♪ ALL</button>
     {% endif %}
   </div>
 
   <!-- ── Campus status rows ── -->
   <div class="wamp2-cs-strip">
-    <div class="wamp2-cs-row" id="wamp2-row-nctk">
-      <span class="wamp2-cs-dot" id="live-nctk" style="color:var(--wt-led)">▶</span>
-      <span class="wamp2-cs-dot" id="stop-nctk" style="display:none;color:#f87060">■</span>
-      <span class="wamp2-cs-campus" style="color:var(--c-nctk,#00e8c0)">NAR</span>
-      <span id="conn-nctk" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
-      <span class="wamp2-cs-track" id="mini-name-nctk">Не играет</span>
+    <div class="wamp2-cs-row" id="wamp2-row-client1">
+      <span class="wamp2-cs-dot" id="live-client1" style="color:var(--wt-led)">▶</span>
+      <span class="wamp2-cs-dot" id="stop-client1" style="display:none;color:#f87060">■</span>
+      <span class="wamp2-cs-campus" style="color:var(--c-client1,#00e8c0)">NAR</span>
+      <span id="conn-client1" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
+      <span class="wamp2-cs-track" id="mini-name-client1">Не играет</span>
       <span id="mute-badge" style="display:none;color:#f87060">🔇</span>
-      <div class="wamp2-cs-prog" onclick="wampSeek('nctk',event,this)" title="Перемотка">
-        <div class="wamp2-cs-fill" id="prog-fill-nctk" style="width:0%"></div>
+      <div class="wamp2-cs-prog" onclick="wampSeek('client1',event,this)" title="Перемотка">
+        <div class="wamp2-cs-fill" id="prog-fill-client1" style="width:0%"></div>
       </div>
-      <span class="wamp2-cs-time" id="wamp-pos-nctk">0:00</span>
-      <span class="wamp2-cs-dur" id="wamp-dur-nctk"></span>
+      <span class="wamp2-cs-time" id="wamp-pos-client1">0:00</span>
+      <span class="wamp2-cs-dur" id="wamp-dur-client1"></span>
     </div>
-    <div class="wamp2-cs-row" id="wamp2-row-vm1">
-      <span class="wamp2-cs-dot" id="live-vm1" style="color:var(--wt-led)">▶</span>
-      <span class="wamp2-cs-dot" id="stop-vm1" style="display:none;color:#f87060">■</span>
-      <span class="wamp2-cs-campus" style="color:var(--c-vm1,#c090ff)">GNC</span>
-      <span id="conn-vm1" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
-      <span class="wamp2-cs-track" id="mini-name-vm1">Не играет</span>
-      <div class="wamp2-cs-prog" onclick="wampSeek('vm1',event,this)" title="Перемотка">
-        <div class="wamp2-cs-fill" id="prog-fill-vm1" style="width:0%"></div>
+    <div class="wamp2-cs-row" id="wamp2-row-client2">
+      <span class="wamp2-cs-dot" id="live-client2" style="color:var(--wt-led)">▶</span>
+      <span class="wamp2-cs-dot" id="stop-client2" style="display:none;color:#f87060">■</span>
+      <span class="wamp2-cs-campus" style="color:var(--c-client2,#c090ff)">GNC</span>
+      <span id="conn-client2" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
+      <span class="wamp2-cs-track" id="mini-name-client2">Не играет</span>
+      <div class="wamp2-cs-prog" onclick="wampSeek('client2',event,this)" title="Перемотка">
+        <div class="wamp2-cs-fill" id="prog-fill-client2" style="width:0%"></div>
       </div>
-      <span class="wamp2-cs-time" id="wamp-pos-vm1">0:00</span>
-      <span class="wamp2-cs-dur" id="wamp-dur-vm1"></span>
+      <span class="wamp2-cs-time" id="wamp-pos-client2">0:00</span>
+      <span class="wamp2-cs-dur" id="wamp-dur-client2"></span>
     </div>
   </div>
 
@@ -1245,8 +1245,8 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div id="eqtab-eq" class="wamp2-eqtab-body">
       <div class="wamp2-eq-campus-sel">
         <button class="wamp2-eqcs active" id="eqcs-both" onclick="eqSetCampus('both')">Оба</button>
-        <button class="wamp2-eqcs" id="eqcs-nctk" onclick="eqSetCampus('nctk')">Narimanov</button>
-        <button class="wamp2-eqcs" id="eqcs-vm1"  onclick="eqSetCampus('vm1')">Gənclik</button>
+        <button class="wamp2-eqcs" id="eqcs-client1" onclick="eqSetCampus('client1')">Client1</button>
+        <button class="wamp2-eqcs" id="eqcs-client2"  onclick="eqSetCampus('client2')">Client2</button>
       </div>
       <div class="wamp2-eq-bands" id="eq-bands-row"></div>
       <div class="wamp2-eq-presets">
@@ -1263,12 +1263,12 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div id="eqtab-opt" class="wamp2-eqtab-body" style="display:none">
       {% if perms.stop %}
       <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Стоп Narimanov</span>
-        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('nctk')">■ STOP NAR</button>
+        <span class="wamp2-opt-lbl">Стоп Client1</span>
+        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('client1')">■ STOP NAR</button>
       </div>
       <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Стоп Gənclik</span>
-        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('vm1')">■ STOP GƏNC</button>
+        <span class="wamp2-opt-lbl">Стоп Client2</span>
+        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('client2')">■ STOP GƏNC</button>
       </div>
       <div class="wamp2-opt-row">
         <span class="wamp2-opt-lbl">Стоп Все</span>
@@ -1277,16 +1277,16 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       {% endif %}
       {% if perms.himn %}
       <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Гимн Narimanov</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('nctk')">♪ HIMN NAR</button>
+        <span class="wamp2-opt-lbl">Гимн Client1</span>
+        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client1')">♪ HIMN NAR</button>
       </div>
       <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Гимн Gənclik</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('vm1')">♪ HIMN GƏNC</button>
+        <span class="wamp2-opt-lbl">Гимн Client2</span>
+        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client2')">♪ HIMN GƏNC</button>
       </div>
       <div class="wamp2-opt-row">
         <span class="wamp2-opt-lbl">Гимн Оба</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('nctk');setTimeout(function(){_doPlayHimn('vm1')},600)">♪ HIMN ALL</button>
+        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600)">♪ HIMN ALL</button>
       </div>
       {% endif %}
     </div>
@@ -1361,8 +1361,8 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <div class="float-panel-body">
     <div class="ann-chips" style="margin-bottom:10px">
       <div class="ann-chip active" data-campus="all" onclick="selectCampus(this)">📡 Все</div>
-      <div class="ann-chip" data-campus="nctk" onclick="selectCampus(this)">🏫 Narimanov</div>
-      <div class="ann-chip" data-campus="vm1" onclick="selectCampus(this)">🏫 Gənclik</div>
+      <div class="ann-chip" data-campus="client1" onclick="selectCampus(this)">🏫 Client1</div>
+      <div class="ann-chip" data-campus="client2" onclick="selectCampus(this)">🏫 Client2</div>
     </div>
     <div id="ann-https-warn" class="ann-https-warn" style="display:none">
       <i class="bi bi-shield-exclamation"></i> Микрофон работает только по HTTPS.
@@ -1419,11 +1419,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <div class="float-panel-body">
     <div style="display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;gap:8px">
-        <button id="btn-cron-nctk" class="cron-btn" onclick="cronToggle('nctk')" style="flex:1">
-          <i class="bi bi-building"></i> Narimanov <span id="cron-nctk-lbl"><i class="bi bi-play-fill"></i> вкл</span>
+        <button id="btn-cron-client1" class="cron-btn" onclick="cronToggle('client1')" style="flex:1">
+          <i class="bi bi-building"></i> Client1 <span id="cron-client1-lbl"><i class="bi bi-play-fill"></i> вкл</span>
         </button>
-        <button id="btn-cron-vm1" class="cron-btn" onclick="cronToggle('vm1')" style="flex:1">
-          <i class="bi bi-pc-display"></i> Gənclik <span id="cron-vm1-lbl"><i class="bi bi-play-fill"></i> вкл</span>
+        <button id="btn-cron-client2" class="cron-btn" onclick="cronToggle('client2')" style="flex:1">
+          <i class="bi bi-pc-display"></i> Client2 <span id="cron-client2-lbl"><i class="bi bi-play-fill"></i> вкл</span>
         </button>
       </div>
       <div style="display:flex;gap:8px">
@@ -1538,8 +1538,8 @@ function toggleAudioEngine(btn) {
 
 // ──── WAVE COLOR STATE ─────────────────────────────────
 var _waveColors = {
-  nctk: localStorage.getItem('wave_color_nctk') || '#58a6ff',
-  vm1:  localStorage.getItem('wave_color_vm1')  || '#bc8cff'
+  client1: localStorage.getItem('wave_color_client1') || '#58a6ff',
+  client2:  localStorage.getItem('wave_color_client2')  || '#bc8cff'
 };
 
 var _vizMode = 'bars';
@@ -1563,10 +1563,10 @@ var _butterFakeAnalyser = {
   getByteFrequencyData: function(arr) {
     arr.fill(0);
     var d = _audioSSE; if (!d) return;
-    var src = (d.nctk && d.nctk.active && d.nctk.bands) ? d.nctk
-            : (d.vm1  && d.vm1.active  && d.vm1.bands)  ? d.vm1
-            : (d.nctk && d.nctk.bands) ? d.nctk
-            : (d.vm1  && d.vm1.bands)  ? d.vm1 : null;
+    var src = (d.client1 && d.client1.active && d.client1.bands) ? d.client1
+            : (d.client2  && d.client2.active  && d.client2.bands)  ? d.client2
+            : (d.client1 && d.client1.bands) ? d.client1
+            : (d.client2  && d.client2.bands)  ? d.client2 : null;
     if (!src) return;
     var bands = src.bands, n = bands.length;
     for (var i = 0; i < arr.length; i++) {
@@ -1577,8 +1577,8 @@ var _butterFakeAnalyser = {
   getByteTimeDomainData: function(arr) {
     var t = Date.now() / 1000;
     var d = _audioSSE;
-    var src = d && ((d.nctk && d.nctk.active && d.nctk.bands ? d.nctk : null) ||
-                    (d.vm1  && d.vm1.active  && d.vm1.bands  ? d.vm1  : null));
+    var src = d && ((d.client1 && d.client1.active && d.client1.bands ? d.client1 : null) ||
+                    (d.client2  && d.client2.active  && d.client2.bands  ? d.client2  : null));
     var amp = src ? Math.round(src.bands.reduce(function(s,v){return s+v;},0)/src.bands.length*90) : 6;
     for (var i = 0; i < arr.length; i++) {
       arr[i] = 128 + Math.round(amp * Math.sin(i * 0.038 + t * 11) * Math.sin(i * 0.016 + t * 3));
@@ -1663,8 +1663,8 @@ function makeVisualizer(canvasId) {
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
     var R=Math.min(W/4,H/2)*0.52, maxH=R*0.75;
-    _ring(hL,pkL,ptL,actL,'nctk',W/4,H/2-10,R,maxH,0,H);
-    _ring(hR,pkR,ptR,actR,'vm1', W*3/4,H/2-10,R,maxH,1.57,H);
+    _ring(hL,pkL,ptL,actL,'client1',W/4,H/2-10,R,maxH,0,H);
+    _ring(hR,pkR,ptR,actR,'client2', W*3/4,H/2-10,R,maxH,1.57,H);
   }
 
   function _ring(hs,pk,pt,active,ck,cx,cy,R,maxH,ph,H) {
@@ -1696,7 +1696,7 @@ function makeVisualizer(canvasId) {
     c.textAlign='center'; c.textBaseline='middle'; c.fillText(active?'♪':'○',cx,cy-R*.05);
     c.font='bold 13px "JetBrains Mono",monospace';
     c.textBaseline='bottom';
-    c.fillText(ck==='nctk'?'NARIMANOV':'GƏNCLIK',cx, H-8);
+    c.fillText(ck==='client1'?'CLIENT1':'GƏNCLIK',cx, H-8);
     c.shadowBlur=0; c.shadowColor='transparent';
   }
 
@@ -1714,8 +1714,8 @@ function makeVisualizer(canvasId) {
     c.fillStyle='#040804'; c.fillRect(0,0,W,lcdH);
     c.fillStyle='rgba(0,255,65,.12)'; c.fillRect(0,lcdH-1,W,1);
 
-    var trackL=(document.getElementById('mini-name-nctk')||{}).textContent||'NARIMANOV';
-    var trackR=(document.getElementById('mini-name-vm1')||{}).textContent||'GƏNCLIK';
+    var trackL=(document.getElementById('mini-name-client1')||{}).textContent||'CLIENT1';
+    var trackR=(document.getElementById('mini-name-client2')||{}).textContent||'GƏNCLIK';
     c.font='bold 10px "JetBrains Mono","Courier New",monospace';
     c.textBaseline='middle';
     var hw=Math.floor(W/2);
@@ -1723,7 +1723,7 @@ function makeVisualizer(canvasId) {
     c.shadowColor='#00ff41'; c.shadowBlur=actL?8:3;
     c.fillStyle=actL?'#00ff41':'rgba(0,255,65,.4)';
     c.textAlign='left';
-    c.fillText((actL?'▶ ':'■ ')+(actL?trackL:'NARIMANOV').substring(0,Math.floor(hw/8)),6,lcdH/2);
+    c.fillText((actL?'▶ ':'■ ')+(actL?trackL:'CLIENT1').substring(0,Math.floor(hw/8)),6,lcdH/2);
     c.shadowColor='#b879ff'; c.shadowBlur=actR?8:3;
     c.fillStyle=actR?'#b879ff':'rgba(184,121,255,.4)';
     c.textAlign='right';
@@ -1736,11 +1736,11 @@ function makeVisualizer(canvasId) {
     var NB=40, gap=1;
     var topY=lcdH+3, botY=H-2, maxBH=botY-topY;
 
-    [{hs:hL,pk:pkL,pt:ptL,act:actL,ck:'nctk',x0:1},
-     {hs:hR,pk:pkR,pt:ptR,act:actR,ck:'vm1',x0:hw+2}].forEach(function(s){
+    [{hs:hL,pk:pkL,pt:ptL,act:actL,ck:'client1',x0:1},
+     {hs:hR,pk:pkR,pt:ptR,act:actR,ck:'client2',x0:hw+2}].forEach(function(s){
       var halfW=hw-2;
       var bw=Math.max(4,Math.floor((halfW-(NB-1)*gap)/NB));
-      var isR=(s.ck==='vm1');
+      var isR=(s.ck==='client2');
       var f=fd(s.act,s.ck);
       var ls=f?0.72:(s.act?0.32:0.16);
       var ph=isR?1.8:0;
@@ -1763,7 +1763,7 @@ function makeVisualizer(canvasId) {
             else if(hr<0.78){rv=255;gv=Math.round((1-(hr-0.55)/0.23)*220);bv=0;}
             else{rv=255;gv=Math.round((1-(hr-0.78)/0.22)*80);bv=0;}
           } else {
-            // Cyan → Blue → Purple → Pink (Gənclik)
+            // Cyan → Blue → Purple → Pink (Client2)
             if(hr<0.45){rv=Math.round(hr/0.45*120);gv=Math.round((1-hr/0.45)*180);bv=255;}
             else if(hr<0.72){rv=140+Math.round((hr-0.45)/0.27*115);gv=0;bv=255;}
             else{rv=255;gv=0;bv=Math.round((1-(hr-0.72)/0.28)*180);}
@@ -1805,7 +1805,7 @@ function makeVisualizer(canvasId) {
     c.fillStyle='#000'; c.fillRect(0,0,W,H);
 
     var NP=100;
-    [[actL,'nctk','#00e8c0'],[actR,'vm1','#c090ff']].forEach(function(cfg,idx){
+    [[actL,'client1','#00e8c0'],[actR,'client2','#c090ff']].forEach(function(cfg,idx){
       var act=cfg[0],ck=cfg[1],col=cfg[2];
       var f=fd(act,ck);
       var yBase=H*.92;
@@ -1838,7 +1838,7 @@ function makeVisualizer(canvasId) {
       // Label
       c.font='bold 10px "JetBrains Mono",monospace'; c.textBaseline='bottom';
       c.shadowColor=col; c.shadowBlur=8; c.fillStyle=col;
-      if(ck==='nctk'){c.textAlign='left';c.fillText((act?'▶ ':'○ ')+'NARIMANOV',8,H-4);}
+      if(ck==='client1'){c.textAlign='left';c.fillText((act?'▶ ':'○ ')+'CLIENT1',8,H-4);}
       else{c.textAlign='right';c.fillText((act?'▶ ':'○ ')+'GƏNCLIK',W-8,H-4);}
       c.shadowBlur=0;
     });
@@ -1853,7 +1853,7 @@ function makeVisualizer(canvasId) {
     var mid=Math.round(H/2), NB=64, SEG=3, GAP=1, STEP=SEG+GAP;
     var bw=Math.max(3,Math.floor((W-(NB-1))/NB));
     for(var i=0;i<NB;i++){
-      var fL=fd(actL,'nctk'), fR=fd(actR,'vm1');
+      var fL=fd(actL,'client1'), fR=fd(actR,'client2');
       var fi=Math.floor(i/NB*(fL||fR?Math.max(fL?fL.length:0,fR?fR.length:0):N)*.85);
       var tL,tR;
       if(fL){tL=(fL[Math.min(fi,fL.length-1)]/255)*mid*.92;}
@@ -1864,7 +1864,7 @@ function makeVisualizer(canvasId) {
       hR[i]+=(tR-hR[i])*(fR?0.72:0.15);
       var bx=i*(bw+1);
       var hue=Math.round((i/NB)*260+100); // 100°→360° rainbow
-      // Upper bars (nctk)
+      // Upper bars (client1)
       var bhL=Math.max(SEG,hL[i]);
       for(var sy=mid-SEG;sy>=mid-bhL;sy-=STEP){
         c.fillStyle='hsl('+hue+',100%,'+(actL?55:38)+'%)';
@@ -1872,7 +1872,7 @@ function makeVisualizer(canvasId) {
       }
       if(bhL>pkL[i]){pkL[i]=bhL;ptL[i]=0;} else if(ptL[i]++>22)pkL[i]=Math.max(bhL,pkL[i]-1.5);
       if(pkL[i]>SEG*2){var pkYL=Math.floor((mid-pkL[i])/STEP)*STEP;c.fillStyle=actL?'rgba(255,255,255,.97)':'rgba(255,255,255,.4)';c.fillRect(bx,pkYL,bw,SEG);}
-      // Lower bars (vm1) — complementary hue
+      // Lower bars (client2) — complementary hue
       var hueD=(hue+180)%360;
       var bhR=Math.max(SEG,hR[i]);
       for(var sy2=mid;sy2<mid+bhR;sy2+=STEP){
@@ -1888,7 +1888,7 @@ function makeVisualizer(canvasId) {
     // Labels
     c.font='bold 9px "JetBrains Mono",monospace';
     c.shadowColor='hsl(100,100%,60%)'; c.shadowBlur=8; c.fillStyle='hsl(100,100%,68%)';
-    c.textAlign='left'; c.textBaseline='top'; c.fillText('▲ NARIMANOV',6,2);
+    c.textAlign='left'; c.textBaseline='top'; c.fillText('▲ CLIENT1',6,2);
     c.shadowColor='hsl(280,100%,70%)'; c.fillStyle='hsl(280,100%,75%)';
     c.textBaseline='bottom'; c.fillText('▼ GƏNCLIK',6,H-2); c.shadowBlur=0;
   }
@@ -1902,14 +1902,14 @@ function makeVisualizer(canvasId) {
     // divider
     c.strokeStyle='rgba(150,80,255,.12)'; c.lineWidth=1; c.setLineDash([5,7]);
     c.beginPath(); c.moveTo(0,H/2); c.lineTo(W,H/2); c.stroke(); c.setLineDash([]);
-    [{mid:H*.27,act:actL,ck:'nctk',ph:0},
-     {mid:H*.73,act:actR,ck:'vm1', ph:Math.PI}].forEach(function(s){
+    [{mid:H*.27,act:actL,ck:'client1',ph:0},
+     {mid:H*.73,act:actR,ck:'client2', ph:Math.PI}].forEach(function(s){
       var col=_waveColors[s.ck], f=fd(s.act,s.ck), amp=H*.19;
       // label
       c.shadowColor=col; c.shadowBlur=s.act?14:8;
       c.fillStyle=s.act?col+'ff':col+'ee'; c.font='bold 13px "JetBrains Mono",monospace';
       c.textAlign='left'; c.textBaseline='middle';
-      c.fillText(s.ck==='nctk'?'NARIMANOV':'GƏNCLIK',12,s.mid);
+      c.fillText(s.ck==='client1'?'CLIENT1':'GƏNCLIK',12,s.mid);
       c.shadowBlur=0; c.shadowColor='transparent';
       // center line
       c.strokeStyle=col+(s.act?'22':'12'); c.lineWidth=1; c.setLineDash([3,5]);
@@ -1949,13 +1949,13 @@ function makeVisualizer(canvasId) {
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
     var t=Date.now()/1000, maxR=Math.min(W/4,H/2)-10, NR=8;
-    [[W/4,actL,'nctk',0],[W*3/4,actR,'vm1',1]].forEach(function(s){
+    [[W/4,actL,'client1',0],[W*3/4,actR,'client2',1]].forEach(function(s){
       var cx=s[0],act=s[1],ck=s[2],off=s[3];
       var col=_waveColors[ck], f=fd(act,ck);
       c.shadowColor=col; c.shadowBlur=14;
       c.fillStyle=col+'ff'; c.font='bold 13px "JetBrains Mono",monospace';
       c.textAlign='center'; c.textBaseline='bottom';
-      c.fillText(ck==='nctk'?'NARIMANOV':'GƏNCLIK',cx, H-8);
+      c.fillText(ck==='client1'?'CLIENT1':'GƏNCLIK',cx, H-8);
       c.shadowBlur=0; c.shadowColor='transparent';
       for(var r=0;r<NR;r++){
         var baseR=(r+1)/NR*maxR;
@@ -1987,8 +1987,8 @@ function makeVisualizer(canvasId) {
     var t=Date.now()/1000, hs=(t*22)%360;
     var NB=56,gap=1.5,px=14,py=26,lh=16,maxBH=H-py*2-lh;
     var aw=(W-px*2)/2, bw=(aw-(NB-1)*gap)/NB;
-    [{hs:hL,pk:pkL,pt:ptL,act:actL,ck:'nctk',x0:px,ho:0},
-     {hs:hR,pk:pkR,pt:ptR,act:actR,ck:'vm1', x0:W/2+px/2,ho:180}].forEach(function(s){
+    [{hs:hL,pk:pkL,pt:ptL,act:actL,ck:'client1',x0:px,ho:0},
+     {hs:hR,pk:pkR,pt:ptR,act:actR,ck:'client2', x0:W/2+px/2,ho:180}].forEach(function(s){
       var f=fd(s.act,s.ck), ls=f?0.65:0.13;
       for(var i=0;i<NB;i++){
         var tgt;
@@ -2011,7 +2011,7 @@ function makeVisualizer(canvasId) {
       c.fillStyle='rgba(230,235,255,'+(s.act?.93:.62)+')';
       c.font='bold 11px "JetBrains Mono",monospace';
       c.textAlign='center'; c.textBaseline='bottom';
-      c.fillText(s.ck==='nctk'?'NARIMANOV':'GƏNCLIK',s.x0+aw/2,py-5);
+      c.fillText(s.ck==='client1'?'CLIENT1':'GƏNCLIK',s.x0+aw/2,py-5);
       c.shadowBlur=0;
     });
   }
@@ -2029,7 +2029,7 @@ function makeVisualizer(canvasId) {
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
     var t=Date.now()/1000;
-    [[W/4,actL,'nctk',0],[W*3/4,actR,'vm1',1]].forEach(function(s,si){
+    [[W/4,actL,'client1',0],[W*3/4,actR,'client2',1]].forEach(function(s,si){
       var cx=s[0],act=s[1],ck=s[2]; var x0=si*(W/2), x1=x0+W/2;
       var f=fd(act,ck);
       _AURORA.forEach(function(L,li){
@@ -2068,7 +2068,7 @@ function makeVisualizer(canvasId) {
       c.font='bold 12px "JetBrains Mono",monospace';
       c.textAlign='center'; c.textBaseline='bottom';
       c.shadowColor=_AURORA[0].cols[si]; c.shadowBlur=act?14:6;
-      c.fillText(si===0?'NARIMANOV':'GƏNCLIK',cx,H-8);
+      c.fillText(si===0?'CLIENT1':'GƏNCLIK',cx,H-8);
       c.shadowBlur=0;
     });
   }
@@ -2079,7 +2079,7 @@ function makeVisualizer(canvasId) {
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
     var t=Date.now()/1000;
-    [[W/4,H/2,actL,'nctk',0],[W*3/4,H/2,actR,'vm1',180]].forEach(function(s){
+    [[W/4,H/2,actL,'client1',0],[W*3/4,H/2,actR,'client2',180]].forEach(function(s){
       var cx=s[0],cy=s[1],act=s[2],ck=s[3],hoff=s[4];
       var f=fd(act,ck), maxR=Math.min(W/4,H/2)-14;
       var hue=((t*24+hoff)%360);
@@ -2126,7 +2126,7 @@ function makeVisualizer(canvasId) {
       c.font='bold 12px "JetBrains Mono",monospace';
       c.textAlign='center'; c.textBaseline='bottom';
       c.shadowColor='hsl('+hue+',100%,62%)'; c.shadowBlur=act?16:8;
-      c.fillText(ck==='nctk'?'NARIMANOV':'GƏNCLIK',cx,H-8);
+      c.fillText(ck==='client1'?'CLIENT1':'GƏNCLIK',cx,H-8);
       c.shadowBlur=0;
     });
   }
@@ -2140,7 +2140,7 @@ function makeVisualizer(canvasId) {
     var NB=90, gap=1;
     var bw=Math.max(2,(W-(NB-1)*gap)/NB);
     // pick active campus data (prefer whichever is playing)
-    var f=fd(actL,'nctk')||fd(actR,'vm1');
+    var f=fd(actL,'client1')||fd(actR,'client2');
     var ls=f?0.68:0.14;
     for(var i=0;i<NB;i++){
       var hue=Math.round(20+(i/NB)*250); // orange→blue
@@ -2175,7 +2175,7 @@ function makeVisualizer(canvasId) {
     c.fillStyle='rgba(0,0,0,0.25)';
     c.fillRect(0,0,W,H);
     var t=Date.now()/1000;
-    var f=fd(actL,'nctk')||fd(actR,'vm1');
+    var f=fd(actL,'client1')||fd(actR,'client2');
     var act=actL||actR;
     var midY=H/2;
     // Synthesize waveform: sum of FFT-weighted harmonics
@@ -2225,7 +2225,7 @@ function makeVisualizer(canvasId) {
     var H=cv.height||240;
     var t=Date.now()/1000;
     c.fillStyle='#000'; c.fillRect(0,0,W,H);
-    var f=fd(actL,'nctk')||fd(actR,'vm1'), act=actL||actR;
+    var f=fd(actL,'client1')||fd(actR,'client2'), act=actL||actR;
     var NB=128, ls=f?0.65:0.12, maxH=H*.72;
     // Build heights
     for(var i=0;i<NB;i++){
@@ -2316,7 +2316,7 @@ function makeVisualizer(canvasId) {
     // Subtle grid lines
     c.strokeStyle='rgba(255,255,255,0.04)'; c.lineWidth=1;
     for(var y=H-20;y>0;y-=30){ c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke(); }
-    var f=fd(actL,'nctk')||fd(actR,'vm1'), act=actL||actR;
+    var f=fd(actL,'client1')||fd(actR,'client2'), act=actL||actR;
     var NB=56, gap=2, maxBH=H*0.78, botY=H-8;
     var bw=Math.max(3,(W-(NB-1)*gap)/NB);
     var ls=f?0.62:0.12;
@@ -2435,10 +2435,10 @@ function setDualColor(campus, hex) {
 }
 
 // ──── HUB STATE ───────────────────────────────────────
-var _hubStatus = { nctk: {}, vm1: {} };
+var _hubStatus = { client1: {}, client2: {} };
 var dualWave = makeVisualizer('hub-canvas');
 (function(){
-  ['nctk','vm1'].forEach(function(id){
+  ['client1','client2'].forEach(function(id){
     var sw=document.getElementById('hsw-'+id);
     var inp=document.getElementById('hclr-'+id);
     var c=_waveColors[id];
@@ -2693,7 +2693,7 @@ function toggleEqPanel() { wampShowTab('eq'); }
 
 function eqSetCampus(c) {
   _eqCampus = c;
-  ['both','nctk','vm1'].forEach(function(id){
+  ['both','client1','client2'].forEach(function(id){
     var b = document.getElementById('eqcs-'+id);
     if(b) b.classList.toggle('active', id===c);
   });
@@ -2746,7 +2746,7 @@ function eqReset() {
 }
 
 // ──── AUDIO FFT SSE ───────────────────────────────────
-var _audioSSE = {nctk: null, vm1: null};
+var _audioSSE = {client1: null, client2: null};
 var _audioSSESrc = null;
 
 function _startAudioSSE() {
@@ -2876,7 +2876,7 @@ function wampSetTheme(name) {
 })();
 
 // ──── PLAYLIST ────────────────────────────────────────
-var _plTracks = [], _plFilter = '', _plSort = 'name', _plCampus = 'nctk';
+var _plTracks = [], _plFilter = '', _plSort = 'name', _plCampus = 'client1';
 var _plLoading = false;
 function _ampSyncSongs() {
   var songs = _plTracks.map(function(tr) {
@@ -2985,7 +2985,7 @@ function wampSendToCampus(machine) {
     body:JSON.stringify({name: song.name, folder: song.folder||'', machine: machine})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) toast('⚠️ '+(d.error||'err'));
-    else toast('▶ '+(machine==='nctk'?'NAR':'GNC')+' — '+song.name.slice(0,30));
+    else toast('▶ '+(machine==='client1'?'NAR':'GNC')+' — '+song.name.slice(0,30));
   });
 }
 function wampPlayAll() {
@@ -3015,7 +3015,7 @@ function wampPlayAllOshhaya() {
   }).then(function(r){ return r.json(); }).then(function(d){
     if(btn) btn.textContent = '▶ ИГРАТЬ ВСЁ';
     if(d.ok) {
-      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + (_activeCampus === 'nctk' ? 'Narimanov' : 'Gənclik'));
+      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + (_activeCampus === 'client1' ? 'Client1' : 'Client2'));
       // Switch playlist view to Общая folder
       var tab = document.querySelector('.wamp2-fol-tab[data-folder="Общая"]');
       if(tab) wampFolderTab(tab, 'Общая');
@@ -3078,7 +3078,7 @@ function setMuteUI(muted) {
 }
 
 function stopCampus(campus) {
-  var labels = {nctk:'Narimanov', vm1:'Gənclik'};
+  var labels = {client1:'Client1', client2:'Client2'};
   fetch('/api/stop/' + campus, {method:'POST'})
     .then(function(r){ return r.json(); })
     .then(function(d){
@@ -3120,13 +3120,13 @@ function waOpenMic() {
   if(btn) btn.classList.toggle('active', !isOpen);
 }
 
-// ──── STATUS POLL — NCTK ─────────────────────────────
+// ──── STATUS POLL — CLIENT1 ─────────────────────────────
 function setIdleNctk() {
-  _hubStatus.nctk = {};
-  var live = document.getElementById('live-nctk');
-  var stop = document.getElementById('stop-nctk');
-  var dot  = document.getElementById('htab-dot-nctk');
-  var mn   = document.getElementById('mini-name-nctk');
+  _hubStatus.client1 = {};
+  var live = document.getElementById('live-client1');
+  var stop = document.getElementById('stop-client1');
+  var dot  = document.getElementById('htab-dot-client1');
+  var mn   = document.getElementById('mini-name-client1');
   if (live) live.style.display = 'none';
   if (stop) stop.style.display = '';
   if (dot) dot.className = 'htab-dot';
@@ -3136,13 +3136,13 @@ function setIdleNctk() {
 
 function pollStatus() {
   fetch('/api/status').then(function(r){return r.json();}).then(function(d) {
-    _hubStatus.nctk = d;
-    var conn = document.getElementById('conn-nctk');
-    var live = document.getElementById('live-nctk');
-    var stop = document.getElementById('stop-nctk');
-    var dot  = document.getElementById('htab-dot-nctk');
-    var hconn= document.getElementById('htab-conn-nctk');
-    var mn   = document.getElementById('mini-name-nctk');
+    _hubStatus.client1 = d;
+    var conn = document.getElementById('conn-client1');
+    var live = document.getElementById('live-client1');
+    var stop = document.getElementById('stop-client1');
+    var dot  = document.getElementById('htab-dot-client1');
+    var hconn= document.getElementById('htab-conn-client1');
+    var mn   = document.getElementById('mini-name-client1');
 
     if (conn) { conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>'; }
     if (hconn){ hconn.className='htab-conn'; hconn.innerHTML='<i class="bi bi-wifi"></i>'; }
@@ -3166,30 +3166,30 @@ function pollStatus() {
     if (dualWave) dualWave.setActiveL(d.playing || false);
 
     // Update progress bar
-    _progState.nctk.playing = d.playing || false;
+    _progState.client1.playing = d.playing || false;
     if (d.position !== undefined && d.position !== null) {
-      _progState.nctk.pos = d.position;
-      _progState.nctk.ts  = Date.now();
+      _progState.client1.pos = d.position;
+      _progState.client1.ts  = Date.now();
     }
     if (d.duration !== undefined && d.duration !== null) {
-      _progState.nctk.dur = d.duration;
+      _progState.client1.dur = d.duration;
     }
-    if (!d.playing) { _progState.nctk.pos=0; _progState.nctk.dur=0; }
-    _updateProgress('nctk');
+    if (!d.playing) { _progState.client1.pos=0; _progState.client1.dur=0; }
+    _updateProgress('client1');
 
     if (d.volume !== null && d.volume !== undefined) {
       _knob.setVal(d.volume, true);
     }
     if (d.muted !== undefined) setMuteUI(d.muted);
   }).catch(function() {
-    var conn = document.getElementById('conn-nctk');
+    var conn = document.getElementById('conn-client1');
     if (conn) { conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-    var hconn= document.getElementById('htab-conn-nctk');
+    var hconn= document.getElementById('htab-conn-client1');
     if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-    var liveEl=document.getElementById('live-nctk');
-    var stopEl=document.getElementById('stop-nctk');
-    var dotEl=document.getElementById('htab-dot-nctk');
-    var mn=document.getElementById('mini-name-nctk');
+    var liveEl=document.getElementById('live-client1');
+    var stopEl=document.getElementById('stop-client1');
+    var dotEl=document.getElementById('htab-dot-client1');
+    var mn=document.getElementById('mini-name-client1');
     if (liveEl) liveEl.style.display='none';
     if (stopEl) stopEl.style.display='';
     if (dotEl)  dotEl.className='htab-dot';
@@ -3200,19 +3200,19 @@ _knob.init();
 pollStatus();
 setInterval(pollStatus, 5000);
 
-// ──── STATUS POLL — VM1 ───────────────────────────────
+// ──── STATUS POLL — CLIENT2 ───────────────────────────────
 function pollVm1() {
-  var conn = document.getElementById('conn-vm1');
+  var conn = document.getElementById('conn-client2');
   if (!conn) return;
-  fetch('/api/status?machine=vm1', {signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined})
+  fetch('/api/status?machine=client2', {signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined})
     .then(function(r){ return r.json(); })
     .then(function(d) {
-      _hubStatus.vm1 = d;
-      var live  = document.getElementById('live-vm1');
-      var stop  = document.getElementById('stop-vm1');
-      var dot   = document.getElementById('htab-dot-vm1');
-      var hconn = document.getElementById('htab-conn-vm1');
-      var mn    = document.getElementById('mini-name-vm1');
+      _hubStatus.client2 = d;
+      var live  = document.getElementById('live-client2');
+      var stop  = document.getElementById('stop-client2');
+      var dot   = document.getElementById('htab-dot-client2');
+      var hconn = document.getElementById('htab-conn-client2');
+      var mn    = document.getElementById('mini-name-client2');
       if (d.error && !d.playing) {
         conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
         if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
@@ -3228,7 +3228,7 @@ function pollVm1() {
       if (d.playing) {
         if (live) live.style.display = '';
         if (stop) stop.style.display = 'none';
-        if (dot)  dot.className = 'htab-dot vm1live';
+        if (dot)  dot.className = 'htab-dot client2live';
         if (mn)   mn.textContent = d.track || '—';
       } else if (d.paused) {
         if (live) live.style.display = 'none';
@@ -3242,22 +3242,22 @@ function pollVm1() {
         if (mn)   mn.textContent = t('np.idle');
       }
       if (dualWave) dualWave.setActiveR(d.playing || false);
-      // Update vm1 progress bar
-      _progState.vm1.playing = d.playing || false;
+      // Update client2 progress bar
+      _progState.client2.playing = d.playing || false;
       if (d.position !== undefined && d.position !== null) {
-        _progState.vm1.pos = d.position; _progState.vm1.ts = Date.now();
+        _progState.client2.pos = d.position; _progState.client2.ts = Date.now();
       }
-      if (d.duration !== undefined && d.duration !== null) _progState.vm1.dur = d.duration;
-      if (!d.playing) { _progState.vm1.pos=0; _progState.vm1.dur=0; }
-      _updateProgress('vm1');
+      if (d.duration !== undefined && d.duration !== null) _progState.client2.dur = d.duration;
+      if (!d.playing) { _progState.client2.pos=0; _progState.client2.dur=0; }
+      _updateProgress('client2');
     }).catch(function() {
       if (conn) { conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-      var hconn=document.getElementById('htab-conn-vm1');
+      var hconn=document.getElementById('htab-conn-client2');
       if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-      var stopEl=document.getElementById('stop-vm1');
-      var liveEl=document.getElementById('live-vm1');
-      var dotEl=document.getElementById('htab-dot-vm1');
-      var mn=document.getElementById('mini-name-vm1');
+      var stopEl=document.getElementById('stop-client2');
+      var liveEl=document.getElementById('live-client2');
+      var dotEl=document.getElementById('htab-dot-client2');
+      var mn=document.getElementById('mini-name-client2');
       if (liveEl) liveEl.style.display='none';
       if (stopEl) stopEl.style.display='';
       if (dotEl)  dotEl.className='htab-dot';
@@ -3271,7 +3271,7 @@ setInterval(pollVm1, 15000);
 
 // ──── HIMN ────────────────────────────────────────────
 function _doPlayHimn(machine) {
-  var labels = {nctk:'Narimanov', vm1:'Gənclik'};
+  var labels = {client1:'Client1', client2:'Client2'};
   toast('⏳ ' + t('toast.himn_start') + ' → ' + (labels[machine] || machine));
   fetch('/api/himn/' + machine, {method:'POST'})
     .then(function(r){ return r.json(); })
@@ -3298,8 +3298,8 @@ function toast(msg) {
 // ──── MACHINE TIME ────────────────────────────────────
 {% if perms.role in ('admin','staff') %}
 const TIME_LABELS = {
-  nctk:{label:'Narimanov',color:'#58a6ff',icon:'bi-building'},
-  vm1:{label:'Gənclik',color:'#bc8cff',icon:'bi-pc-display'},
+  client1:{label:'Client1',color:'#58a6ff',icon:'bi-building'},
+  client2:{label:'Client2',color:'#bc8cff',icon:'bi-pc-display'},
   centos:{label:'CentOS',color:'#ffa657',icon:'bi-server'},
 };
 var _timeOffsets = {}, _timeOnline = {};
@@ -3375,17 +3375,17 @@ setInterval(fetchMachineTimes, 30000);
 
 // ──── CRON ────────────────────────────────────────────
 {% if perms.admin %}
-var _cronState = {nctk:false, vm1:false};
+var _cronState = {client1:false, client2:false};
 function _cronApplyUI() {
-  var bothPaused = _cronState.nctk && _cronState.vm1;
-  var anyPaused  = _cronState.nctk || _cronState.vm1;
+  var bothPaused = _cronState.client1 && _cronState.client2;
+  var anyPaused  = _cronState.client1 || _cronState.client2;
   var chip = document.getElementById('cron-status-chip');
   if (chip) {
     if (bothPaused) { chip.innerHTML = '<i class="bi bi-pause-fill"></i> '+t('cron.paused'); chip.style.cssText='background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.4);color:var(--red)'; }
     else if (anyPaused) { chip.innerHTML = '<i class="bi bi-exclamation-circle"></i> '+t('cron.partial'); chip.style.cssText='background:rgba(210,153,34,.15);border:1px solid rgba(210,153,34,.4);color:#d2a81a'; }
     else { chip.innerHTML = '<i class="bi bi-play-fill"></i> '+t('cron.active'); chip.style.cssText='background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.4);color:var(--green)'; }
   }
-  ['nctk','vm1'].forEach(function(m) {
+  ['client1','client2'].forEach(function(m) {
     var btn = document.getElementById('btn-cron-'+m);
     var lbl = document.getElementById('cron-'+m+'-lbl');
     if (!btn||!lbl) return;
@@ -3401,7 +3401,7 @@ function _cronApplyUI() {
 function pollCron() {
   fetch('/api/cron/pause').then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
-    _cronState.nctk=!!d.nctk; _cronState.vm1=!!d.vm1;
+    _cronState.client1=!!d.client1; _cronState.client2=!!d.client2;
     _cronApplyUI();
   }).catch(function(){});
 }
@@ -3706,7 +3706,7 @@ function closeFP(panelId, btnId) {
 })();
 
 // ──── PROGRESS BAR + POSITION TRACKING ────────────────
-var _progState={nctk:{pos:0,dur:0,playing:false,ts:0},vm1:{pos:0,dur:0,playing:false,ts:0}};
+var _progState={client1:{pos:0,dur:0,playing:false,ts:0},client2:{pos:0,dur:0,playing:false,ts:0}};
 
 function _fmtTime(s){
   s=Math.max(0,Math.round(s));
@@ -3727,13 +3727,13 @@ function _updateProgress(ck){
   if(posEl) posEl.textContent=_fmtTime(pos);
   if(durEl) durEl.textContent=dur>0?' / '+_fmtTime(dur):'';
 }
-setInterval(function(){_updateProgress('nctk');_updateProgress('vm1');},500);
+setInterval(function(){_updateProgress('client1');_updateProgress('client2');},500);
 
 // ──── ACTIVE CAMPUS (Winamp unified LCD + seek bar) ──────
-var _activeCampus = 'nctk';
+var _activeCampus = 'client1';
 function setActiveCampus(c) {
   _activeCampus = c;
-  ['nctk','vm1'].forEach(function(id){
+  ['client1','client2'].forEach(function(id){
     var b = document.getElementById('wa-tab-'+id);
     if(b) b.classList.toggle('active', id===c);
   });
@@ -3757,7 +3757,7 @@ setInterval(function(){
   var trackEl = document.getElementById('mini-name-'+ck);
   if(lcdTr && trackEl) lcdTr.textContent = trackEl.textContent||'CAMPUS PLAYER';
   var lcdI = document.getElementById('wa-lcd-info');
-  if(lcdI) lcdI.textContent = (ck==='nctk'?'NARIMANOV':'GƏNCLIK') + ' · ' + (st.playing?'PLAYING':'STOPPED');
+  if(lcdI) lcdI.textContent = (ck==='client1'?'CLIENT1':'GƏNCLIK') + ' · ' + (st.playing?'PLAYING':'STOPPED');
   var sf = document.getElementById('wa-seek-fill');
   var sb = document.getElementById('wa-seek-thumb');
   if(sf){ sf.style.width = pct.toFixed(1)+'%'; sf.style.transition = st.playing?'width .4s linear':'none'; }
@@ -3819,7 +3819,7 @@ function wampSeek(ck, evt, wrap){
   var r=wrap.querySelector('.wamp-progress-bar').getBoundingClientRect();
   var pct=Math.max(0,Math.min(1,(evt.clientX-r.left)/r.width));
   var newPos=Math.round(pct*st.dur);
-  var machine=(ck==='nctk')?'nctk':'vm1';
+  var machine=(ck==='client1')?'client1':'client2';
   fetch('/api/seek',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:machine,pos:newPos})
   }).then(function(r){return r.json();}).catch(function(){});

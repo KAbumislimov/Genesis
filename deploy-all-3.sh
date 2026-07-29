@@ -1,16 +1,16 @@
 #!/bin/bash
 # Деплой Docker на все 3 машины
-# Запуск: с vm1. CentOS = сервер (бот + Loki + Grafana), nctk и vm1 = Promtail.
+# Запуск: с client2. CentOS = сервер (бот + Loki + Grafana), client1 и client2 = Promtail.
 
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 CENTOS="kamran@10.10.4.120"
-NCTK="nctk@10.20.0.41"
+CLIENT1="client1@10.20.0.41"
 
 # Пароли (или из credentials.env)
-if [ -f /home/vm1/credentials.env ]; then
+if [ -f /home/client2/credentials.env ]; then
   set -a
-  . /home/vm1/credentials.env
+  . /home/client2/credentials.env
   set +a
 fi
 export CLIENT_PASSWORD="${CLIENT_PASSWORD:?Укажите CLIENT_PASSWORD}"
@@ -24,30 +24,30 @@ ssh "$CENTOS" "cd /home/kamran/campus-infra && docker compose --profile bot --pr
 
 echo ""
 echo "=========================================="
-echo "2. nctk: Promtail (логи → CentOS)"
+echo "2. client1: Promtail (логи → CentOS)"
 echo "=========================================="
-ssh "$NCTK" "mkdir -p /home/nctk/log-promtail"
-scp "$DIR/promtail-clients/promtail-nctk.yaml" "$NCTK:/home/nctk/log-promtail/promtail-config.yaml"
-ssh "$NCTK" "cd /home/nctk/log-promtail && docker run -d --name promtail --restart unless-stopped -v /home/nctk/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro -v /var/log:/var/log:ro grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml 2>/dev/null || (docker rm -f promtail; docker run -d --name promtail --restart unless-stopped -v /home/nctk/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro -v /var/log:/var/log:ro grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml)"
+ssh "$CLIENT1" "mkdir -p /home/client1/log-promtail"
+scp "$DIR/promtail-clients/promtail-client1.yaml" "$CLIENT1:/home/client1/log-promtail/promtail-config.yaml"
+ssh "$CLIENT1" "cd /home/client1/log-promtail && docker run -d --name promtail --restart unless-stopped -v /home/client1/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro -v /var/log:/var/log:ro grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml 2>/dev/null || (docker rm -f promtail; docker run -d --name promtail --restart unless-stopped -v /home/client1/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro -v /var/log:/var/log:ro grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml)"
 
 echo ""
 echo "=========================================="
-echo "3. vm1: Promtail (логи → CentOS)"
+echo "3. client2: Promtail (логи → CentOS)"
 echo "=========================================="
-mkdir -p /home/vm1/log-promtail
-cp "$DIR/promtail-clients/promtail-vm1.yaml" /home/vm1/log-promtail/promtail-config.yaml
-cd /home/vm1/log-promtail
+mkdir -p /home/client2/log-promtail
+cp "$DIR/promtail-clients/promtail-client2.yaml" /home/client2/log-promtail/promtail-config.yaml
+cd /home/client2/log-promtail
 docker run -d --name promtail --restart unless-stopped \
-  -v /home/vm1/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro \
+  -v /home/client2/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro \
   -v /var/log:/var/log:ro \
   grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml 2>/dev/null || \
   (docker rm -f promtail 2>/dev/null; docker run -d --name promtail --restart unless-stopped \
-  -v /home/vm1/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro \
+  -v /home/client2/log-promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro \
   -v /var/log:/var/log:ro \
   grafana/promtail:2.9.5 -config.file=/etc/promtail/config.yaml)
 
 echo ""
 echo "=========================================="
 echo "Готово. Grafana: http://10.10.4.120:3000 (admin/admin)"
-echo "Логи: host=centos|nctk|vm1"
+echo "Логи: host=centos|client1|client2"
 echo "=========================================="

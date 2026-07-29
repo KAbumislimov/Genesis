@@ -5,7 +5,7 @@
 #   - Устанавливает git, curl, Docker
 #   - Проверяет .env и SSH-ключи
 #   - Поднимает все Docker контейнеры (включая webui)
-#   - Прописывает cron (синхронизация времени nctk, мониторинг диска)
+#   - Прописывает cron (синхронизация времени client1, мониторинг диска)
 
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -83,7 +83,7 @@ if [[ ! -f "$KEY_FILE" ]]; then
         fi
     done
     if [[ ! -f "$KEY_FILE" ]]; then
-        echo "  ⚠️  campus_bot не найден — webui и SSH к nctk не будут работать"
+        echo "  ⚠️  campus_bot не найден — webui и SSH к client1 не будут работать"
         echo "     Положи ключ в $KEY_FILE (или в campus-secrets/server/campus_bot)"
     fi
 else
@@ -108,7 +108,7 @@ if ! grep -q "SSH_KEY_DIR" "$REPO_DIR/.env" 2>/dev/null; then
 fi
 
 # Bot configs
-for bot in narimanov genclik; do
+for bot in client1 client2; do
     cfg="$REPO_DIR/bots/$bot/config.env"
     example="$REPO_DIR/bots/$bot/config.env.example"
     [[ ! -f "$cfg" && -f "$example" ]] && cp "$example" "$cfg" && echo "  ⚠️  Заполни $cfg"
@@ -192,17 +192,17 @@ EOF
 fi
 
 # Устанавливаем sync-скрипт если нет
-SYNC_SRC="$REPO_DIR/scripts/sync-nctk-time.sh"
-SYNC_DST="$HOME/scripts/sync-nctk-time.sh"
+SYNC_SRC="$REPO_DIR/scripts/sync-client1-time.sh"
+SYNC_DST="$HOME/scripts/sync-client1-time.sh"
 if [[ -f "$SYNC_SRC" && ! -f "$SYNC_DST" ]]; then
     mkdir -p "$HOME/scripts"
     cp -f "$SYNC_SRC" "$SYNC_DST"
     chmod +x "$SYNC_DST"
-    echo "  + sync-nctk-time.sh → $SYNC_DST"
+    echo "  + sync-client1-time.sh → $SYNC_DST"
 fi
 
-# Синхронизация времени nctk (каждый час)
-[[ -f "$SYNC_DST" ]] && add_cron "0 * * * * $SYNC_DST >> $LOG_DIR/nctk-timesync.log 2>&1"
+# Синхронизация времени client1 (каждый час)
+[[ -f "$SYNC_DST" ]] && add_cron "0 * * * * $SYNC_DST >> $LOG_DIR/client1-timesync.log 2>&1"
 # Мониторинг диска (каждый час)
 DISK_MON="$REPO_DIR/scripts/check-disk-and-cleanup.sh"
 [[ -f "$DISK_MON" ]] && add_cron "0 * * * * $DISK_MON >> $LOG_DIR/disk-monitor.log 2>&1"

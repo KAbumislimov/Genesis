@@ -1,5 +1,5 @@
 #!/bin/bash
-# Копирует node_exporter.service на nctk и vm1 (с правильным путём /home/USER/bin/)
+# Копирует node_exporter.service на client1 и client2 (с правильным путём /home/USER/bin/)
 # Запуск на campus-server: bash scripts/install-node-exporter-systemd-on-clients.sh
 
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/campus_bot}"
@@ -35,6 +35,6 @@ EOF
     echo ""
 }
 
-install_on "nctk" "10.20.0.41" "nctk"
-install_on "vm1"  "10.70.0.41" "vm1"
+install_on "client1" "10.20.0.41" "client1"
+install_on "client2"  "10.70.0.41" "client2"
 echo "Готово. node_exporter будет автозапускаться после перезагрузки."

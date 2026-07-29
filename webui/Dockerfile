@@ -12,7 +12,7 @@ COPY . .
 RUN mkdir -p /data
 
 # Generate self-signed TLS cert (valid 10 years) — enables mic/getUserMedia via HTTPS
-RUN openssl req -x509 -newkey rsa:2048 -keyout /app/ssl.key -out /app/ssl.crt -days 3650 -nodes -subj "/CN=campus-webui/O=LANDAU/C=AZ"
+RUN openssl req -x509 -newkey rsa:2048 -keyout /app/ssl.key -out /app/ssl.crt -days 3650 -nodes -subj "/CN=campus-webui/O=MEDIA/C=AZ"
 
 ENV PYTHONUNBUFFERED=1
 ENV HF_HOME=/data/hf_cache

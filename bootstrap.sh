@@ -5,16 +5,16 @@
 #
 #  С нуля на новой машине (2 команды):
 #
-#    git clone https://github.com/LandauAudioserver/campus-infra.git
+#    git clone https://github.com/MediaAudioserver/campus-infra.git
 #    cd campus-infra && bash bootstrap.sh all
 #
 #  Если нужен доступ к приватному campus-secrets (токен GitHub):
 #    GH_TOKEN=ghp_xxx bash bootstrap.sh all
 #
 #  Использование:
-#    bash bootstrap.sh all       — сервер + nctk
+#    bash bootstrap.sh all       — сервер + client1
 #    bash bootstrap.sh server    — только сервер
-#    bash bootstrap.sh nctk      — только nctk (по SSH)
+#    bash bootstrap.sh client1      — только client1 (по SSH)
 #    bash bootstrap.sh secrets   — только подтянуть/обновить секреты
 #
 # ═══════════════════════════════════════════════════════════════════════
@@ -23,14 +23,14 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SECRETS_DIR="${SECRETS_DIR:-$HOME/projects/campus-secrets}"
-SECRETS_REPO_SSH="git@github.com:LandauAudioserver/campus-secrets.git"
-SECRETS_REPO_HTTPS="https://github.com/LandauAudioserver/campus-secrets.git"
+SECRETS_REPO_SSH="git@github.com:MediaAudioserver/campus-secrets.git"
+SECRETS_REPO_HTTPS="https://github.com/MediaAudioserver/campus-secrets.git"
 GH_TOKEN="${GH_TOKEN:-}"
 
-NCTK_HOST="${NCTK_HOST:-10.20.0.41}"
-NCTK_USER="${NCTK_USER:-nctk}"
-VM1_HOST="${VM1_HOST:-10.70.0.41}"
-VM1_USER="${VM1_USER:-vm1}"
+CLIENT1_HOST="${CLIENT1_HOST:-10.20.0.41}"
+CLIENT1_USER="${CLIENT1_USER:-client1}"
+CLIENT2_HOST="${CLIENT2_HOST:-10.70.0.41}"
+CLIENT2_USER="${CLIENT2_USER:-client2}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/campus_bot}"
 SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=30 -o BatchMode=yes"
 [[ -f "$SSH_KEY" ]] && SSH_OPTS="-i $SSH_KEY $SSH_OPTS"
@@ -71,7 +71,7 @@ fetch_secrets() {
 
     # Пробуем HTTPS с токеном
     if [[ -n "$GH_TOKEN" ]]; then
-        CLONE_URL="https://${GH_TOKEN}@github.com/LandauAudioserver/campus-secrets.git"
+        CLONE_URL="https://${GH_TOKEN}@github.com/MediaAudioserver/campus-secrets.git"
         git clone --quiet "$CLONE_URL" "$SECRETS_DIR"
         ok "Секреты клонированы (HTTPS+token)"
         return 0
@@ -95,7 +95,7 @@ apply_server_secrets() {
     [[ -f "$SECRETS_DIR/server/.env" ]] && cp -f "$SECRETS_DIR/server/.env" "$REPO_DIR/.env" && ok ".env"
 
     # Bot configs
-    for f in narimanov.config.env genclik.config.env; do
+    for f in client1.config.env client2.config.env; do
         bot="${f%.config.env}"
         src="$SECRETS_DIR/server/$f"
         dst="$REPO_DIR/bots/$bot/config.env"
@@ -125,11 +125,11 @@ apply_server_secrets() {
         ok "SSH_KEY_DIR=$HOME/.ssh добавлен в .env"
     fi
 
-    # Скрипт синхронизации времени nctk
-    SYNC_SCRIPT="$HOME/scripts/sync-nctk-time.sh"
+    # Скрипт синхронизации времени client1
+    SYNC_SCRIPT="$HOME/scripts/sync-client1-time.sh"
     if [[ ! -f "$SYNC_SCRIPT" ]]; then
         mkdir -p "$HOME/scripts"
-        cp -f "$REPO_DIR/scripts/sync-nctk-time.sh" "$SYNC_SCRIPT" 2>/dev/null || true
+        cp -f "$REPO_DIR/scripts/sync-client1-time.sh" "$SYNC_SCRIPT" 2>/dev/null || true
         chmod +x "$SYNC_SCRIPT" 2>/dev/null || true
     fi
 
@@ -155,39 +155,39 @@ apply_server_secrets() {
     fi
 }
 
-# ─── 3. СЕКРЕТЫ NCTK ───────────────────────────────────────────────────
-apply_nctk_secrets() {
+# ─── 3. СЕКРЕТЫ CLIENT1 ───────────────────────────────────────────────────
+apply_client1_secrets() {
     [[ ! -d "$SECRETS_DIR" ]] && return 0
 
-    echo "[nctk] Копирую секреты на nctk..."
+    echo "[client1] Копирую секреты на client1..."
     SCP="scp $SSH_OPTS"
 
-    $SCP "$SECRETS_DIR/nctk/telegram-bot.config.env" \
-        "${NCTK_USER}@${NCTK_HOST}:/home/nctk/telegram-campus-bot/config.env" 2>/dev/null && \
+    $SCP "$SECRETS_DIR/client1/telegram-bot.config.env" \
+        "${CLIENT1_USER}@${CLIENT1_HOST}:/home/client1/telegram-campus-bot/config.env" 2>/dev/null && \
         ok "telegram-bot.config.env" || warn "telegram-bot.config.env — пропущено"
 
-    $SCP "$SECRETS_DIR/nctk/cron_notify.env" \
-        "${NCTK_USER}@${NCTK_HOST}:/home/nctk/cron_notify.env" 2>/dev/null && \
+    $SCP "$SECRETS_DIR/client1/cron_notify.env" \
+        "${CLIENT1_USER}@${CLIENT1_HOST}:/home/client1/cron_notify.env" 2>/dev/null && \
         ok "cron_notify.env" || warn "cron_notify.env — пропущено"
 
-    ssh $SSH_OPTS "${NCTK_USER}@${NCTK_HOST}" \
-        "chmod 600 /home/nctk/cron_notify.env /home/nctk/telegram-campus-bot/config.env" \
+    ssh $SSH_OPTS "${CLIENT1_USER}@${CLIENT1_HOST}" \
+        "chmod 600 /home/client1/cron_notify.env /home/client1/telegram-campus-bot/config.env" \
         2>/dev/null || true
 }
 
-# ─── 3b. СЕКРЕТЫ VM1 ────────────────────────────────────────────────────
-apply_vm1_secrets() {
+# ─── 3b. СЕКРЕТЫ CLIENT2 ────────────────────────────────────────────────────
+apply_client2_secrets() {
     [[ ! -d "$SECRETS_DIR" ]] && return 0
 
-    echo "[vm1] Копирую секреты на vm1..."
+    echo "[client2] Копирую секреты на client2..."
     SCP="scp $SSH_OPTS"
 
-    $SCP "$SECRETS_DIR/vm1/telegram-bot.config.env" \
-        "${VM1_USER}@${VM1_HOST}:/home/vm1/telegram-campus-bot/config.env" 2>/dev/null && \
+    $SCP "$SECRETS_DIR/client2/telegram-bot.config.env" \
+        "${CLIENT2_USER}@${CLIENT2_HOST}:/home/client2/telegram-campus-bot/config.env" 2>/dev/null && \
         ok "telegram-bot.config.env" || warn "telegram-bot.config.env — пропущено"
 
-    ssh $SSH_OPTS "${VM1_USER}@${VM1_HOST}" \
-        "chmod 600 /home/vm1/telegram-campus-bot/config.env" 2>/dev/null || true
+    ssh $SSH_OPTS "${CLIENT2_USER}@${CLIENT2_HOST}" \
+        "chmod 600 /home/client2/telegram-campus-bot/config.env" 2>/dev/null || true
 }
 
 # ─── 4. СЕРВЕР ─────────────────────────────────────────────────────────
@@ -201,21 +201,21 @@ restore_server() {
     bash "$REPO_DIR/machines/server/install.sh"
 
     # Cron синхронизации времени
-    SYNC_SCRIPT="$HOME/scripts/sync-nctk-time.sh"
+    SYNC_SCRIPT="$HOME/scripts/sync-client1-time.sh"
     if [[ -f "$SYNC_SCRIPT" ]]; then
         CRON_TMP="/tmp/campus_cron_$$"
         crontab -l 2>/dev/null > "$CRON_TMP" || true
-        ENTRY="0 * * * * $SYNC_SCRIPT >> $HOME/log/nctk-timesync.log 2>&1"
+        ENTRY="0 * * * * $SYNC_SCRIPT >> $HOME/log/client1-timesync.log 2>&1"
         if ! grep -qF "$ENTRY" "$CRON_TMP" 2>/dev/null; then
             echo "$ENTRY" >> "$CRON_TMP"
             crontab "$CRON_TMP"
-            ok "Cron: sync-nctk-time.sh (каждый час)"
+            ok "Cron: sync-client1-time.sh (каждый час)"
         fi
         rm -f "$CRON_TMP"
     fi
 }
 
-# ─── 5. NCTK ───────────────────────────────────────────────────────────
+# ─── 5. CLIENT1 ───────────────────────────────────────────────────────────
 _restore_client() {
     local NAME="$1" HOST="$2" USER="$3" MACHINE_DIR="$4" SECRETS_FN="$5"
     echo ""
@@ -242,12 +242,12 @@ _restore_client() {
     ok "$NAME восстановлен"
 }
 
-restore_nctk() {
-    _restore_client "nctk" "$NCTK_HOST" "$NCTK_USER" "nctk" "apply_nctk_secrets"
+restore_client1() {
+    _restore_client "client1" "$CLIENT1_HOST" "$CLIENT1_USER" "client1" "apply_client1_secrets"
 }
 
-restore_vm1() {
-    _restore_client "vm1" "$VM1_HOST" "$VM1_USER" "vm1" "apply_vm1_secrets"
+restore_client2() {
+    _restore_client "client2" "$CLIENT2_HOST" "$CLIENT2_USER" "client2" "apply_client2_secrets"
 }
 
 # ─── ЗАПУСК ────────────────────────────────────────────────────────────
@@ -256,27 +256,27 @@ fetch_secrets || true  # не прерываем если секреты нед�
 case "$TARGET" in
     all)
         restore_server
-        restore_nctk
-        restore_vm1
+        restore_client1
+        restore_client2
         ;;
     server)
         restore_server
         ;;
-    nctk)
-        restore_nctk
+    client1)
+        restore_client1
         ;;
-    vm1)
-        restore_vm1
+    client2)
+        restore_client2
         ;;
     clients)
-        restore_nctk
-        restore_vm1
+        restore_client1
+        restore_client2
         ;;
     secrets)
         apply_server_secrets
         ;;
     *)
-        echo "Использование: $0 [all|server|nctk|vm1|clients|secrets]"
+        echo "Использование: $0 [all|server|client1|client2|clients|secrets]"
         exit 1
         ;;
 esac
