@@ -1,0 +1,11 @@
+[Unit]
+Description=Campus player watchdog — проверка и перезапуск campus-mpv
+After=network.target
+
+[Service]
+Type=oneshot
+User=vm1
+ExecStart=/bin/bash -c 'systemctl --user --machine=vm1@ is-active campus-mpv || sudo -u vm1 XDG_RUNTIME_DIR=/run/user/$(id -u vm1) systemctl --user start campus-mpv'
+
+[Install]
+WantedBy=multi-user.target

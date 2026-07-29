@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Объявления — LANDAU{% endblock %}
+
+{% block extra_head %}
+<style>
+.ann-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  padding:20px 24px;margin-bottom:14px;position:relative;transition:.15s;
+}
+.ann-card:hover{border-color:rgba(88,166,255,.3)}
+.ann-card.pinned{
+  border-color:rgba(255,197,61,.55);background:rgba(255,197,61,.04);
+  box-shadow:0 0 0 1px rgba(255,197,61,.2);
+}
+.ann-card.priority-info   {border-left:4px solid var(--blue)}
+.ann-card.priority-warning{border-left:4px solid var(--orange)}
+.ann-card.priority-danger {border-left:4px solid var(--red)}
+.ann-card.priority-normal {border-left:4px solid var(--border)}
+.pin-banner{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,197,61,.18);border:1px solid rgba(255,197,61,.45);
+  color:#ffc53d;font-size:11px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.07em;padding:3px 10px;border-radius:6px;margin-bottom:10px;
+}
+.ann-pin-btn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;
+  transition:.15s;display:inline-flex;align-items:center;gap:4px;
+}
+.ann-pin-btn:hover{border-color:#ffc53d;color:#ffc53d;background:rgba(255,197,61,.1)}
+.ann-pin-btn.active{border-color:#ffc53d;color:#ffc53d;background:rgba(255,197,61,.12)}
+
+.ann-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.ann-badge{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  padding:3px 8px;border-radius:6px;flex-shrink:0;margin-top:2px;
+}
+.badge-info   {background:rgba(88,166,255,.15);color:var(--blue)}
+.badge-warning{background:rgba(255,166,87,.15);color:var(--orange)}
+.badge-danger {background:rgba(248,81,73,.15);color:var(--red)}
+.badge-normal {background:var(--bg3);color:var(--muted)}
+.ann-title{font-size:17px;font-weight:800;flex:1;line-height:1.3}
+.ann-content{font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.ann-meta{
+  display:flex;align-items:center;gap:14px;margin-top:12px;
+  font-size:12px;color:var(--muted);
+}
+.ann-del-btn{
+  position:absolute;top:12px;right:14px;
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:16px;opacity:.4;transition:.15s;
+}
+.ann-del-btn:hover{color:var(--red);opacity:1}
+.pin-icon{color:#ffc53d;font-size:14px}
+
+/* Create form */
+.create-form{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-bottom:24px}
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.cf-grid{grid-template-columns:1fr}}
+.cf-full{grid-column:1/-1}
+.cf-input{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:9px 12px;font-size:14px;width:100%;transition:.15s;
+}
+.cf-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(88,166,255,.1)}
+.cf-input::placeholder{color:var(--muted)}
+textarea.cf-input{resize:vertical;min-height:100px;font-family:inherit}
+select.cf-input option{background:var(--bg2)}
+.cf-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;display:block}
+
+.empty-state{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty-state i{font-size:52px;display:block;margin-bottom:14px;opacity:.4}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">
+      <i class="bi bi-megaphone-fill text-orange"></i> Доска объявлений
+    </h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">
+      {{ announcements|length }} объявлений
+    </div>
+  </div>
+</div>
+
+{% if is_admin %}
+<!-- Create form -->
+<div class="create-form">
+  <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+              color:var(--muted);margin-bottom:14px">
+    <i class="bi bi-plus-circle-fill text-green"></i> Новое объявление
+  </div>
+  <div class="cf-grid">
+    <div class="cf-full">
+      <label class="cf-label">Заголовок</label>
+      <input type="text" id="ann-title" class="cf-input" maxlength="200" placeholder="Введите заголовок...">
+    </div>
+    <div class="cf-full">
+      <label class="cf-label">Текст</label>
+      <textarea id="ann-content" class="cf-input" maxlength="2000" placeholder="Текст объявления..."></textarea>
+    </div>
+    <div>
+      <label class="cf-label">Важность</label>
+      <select id="ann-priority" class="cf-input">
+        <option value="normal">Обычное</option>
+        <option value="info">Информация</option>
+        <option value="warning">Важно</option>
+        <option value="danger">Срочно</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding-top:20px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="ann-pin" style="width:16px;height:16px;cursor:pointer">
+        <span><i class="bi bi-pin-angle-fill" style="color:#ffc53d"></i> Закрепить сверху</span>
+      </label>
+    </div>
+    <div class="cf-full" style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-primary" onclick="createAnn()">
+        <i class="bi bi-send-fill"></i> Опубликовать
+      </button>
+      <span id="ann-msg" style="font-size:13px;min-height:18px"></span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Announcements list -->
+<div id="ann-list">
+{% if announcements %}
+  {% for a in announcements %}
+  <div class="ann-card priority-{{ a.priority }} {% if a.pin_top %}pinned{% endif %}" id="ann-{{ a.id }}">
+    {% if is_admin %}
+    <button class="ann-del-btn" onclick="deleteAnn({{ a.id }})" title="Удалить">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+    {% if a.pin_top %}
+    <div class="pin-banner">
+      <i class="bi bi-pin-angle-fill"></i>
+      <span>Закреплено</span>
+    </div>
+    {% endif %}
+    <div class="ann-header">
+      {% if a.priority == 'info' %}    <span class="ann-badge badge-info">Инфо</span>
+      {% elif a.priority == 'warning' %}<span class="ann-badge badge-warning">Важно</span>
+      {% elif a.priority == 'danger' %} <span class="ann-badge badge-danger">Срочно</span>
+      {% else %}                        <span class="ann-badge badge-normal">Объявление</span>
+      {% endif %}
+      <div class="ann-title">{{ a.title }}</div>
+    </div>
+    <div class="ann-content">{{ a.content }}</div>
+    <div class="ann-meta">
+      <span><i class="bi bi-person-fill"></i> {{ a.author }}</span>
+      <span><i class="bi bi-clock"></i> {{ a.created_at }}</span>
+      {% if is_admin %}
+      <button class="ann-pin-btn {% if a.pin_top %}active{% endif %}"
+              onclick="togglePin({{ a.id }}, {{ 'false' if a.pin_top else 'true' }})">
+        <i class="bi bi-pin-angle{% if a.pin_top %}-fill{% endif %}"></i>
+        {% if a.pin_top %}Открепить{% else %}Закрепить{% endif %}
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state" id="ann-empty">
+    <i class="bi bi-megaphone"></i>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">Объявлений пока нет</div>
+    <div style="font-size:13px">Здесь будут появляться объявления от администраторов</div>
+  </div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if is_admin %}
+function createAnn(){
+  const title   = document.getElementById('ann-title').value.trim();
+  const content = document.getElementById('ann-content').value.trim();
+  const priority= document.getElementById('ann-priority').value;
+  const pin_top = document.getElementById('ann-pin').checked;
+  const msg     = document.getElementById('ann-msg');
+  if(!title||!content){msg.style.color='var(--red)';msg.textContent='Заполните все поля';return;}
+  msg.style.color='var(--muted)';msg.textContent='...';
+  fetch('/api/announcements/create',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title,content,priority,pin_top})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      msg.style.color='var(--green)';msg.textContent='✓ Опубликовано';
+      document.getElementById('ann-title').value='';
+      document.getElementById('ann-content').value='';
+      document.getElementById('ann-pin').checked=false;
+      setTimeout(()=>window.location.reload(),600);
+    } else {
+      msg.style.color='var(--red)';msg.textContent=d.error||'Ошибка';
+    }
+  });
+}
+
+function togglePin(id, pin) {
+  fetch('/api/announcements/pin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id, pin_top: pin})
+  }).then(r => r.json()).then(d => {
+    if (d.ok) setTimeout(() => window.location.reload(), 150);
+    else alert(d.error || 'Ошибка');
+  });
+}
+
+function deleteAnn(id){
+  if(!confirm('Удалить это объявление?'))return;
+  fetch('/api/announcements/delete',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      const el=document.getElementById('ann-'+id);
+      if(el){el.style.opacity='0';el.style.transform='translateX(-20px)';
+              el.style.transition='.3s';setTimeout(()=>el.remove(),300);}
+    }
+  });
+}
+{% endif %}
+</script>
+{% endblock %}

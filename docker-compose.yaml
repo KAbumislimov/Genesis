@@ -1,0 +1,313 @@
+# Campus Infrastructure — всё в одном
+# docker compose --profile logs --profile bot --profile watchdog --profile recovery up -d
+# Если сломалось: docker compose down && docker compose up -d
+
+services:
+  # === ЛОГИ (Loki + Grafana + Promtail) ===
+  loki:
+    image: grafana/loki:2.9.5
+    container_name: loki
+    restart: unless-stopped
+    profiles: ["logs"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yaml
+    networks:
+      - campus
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    restart: unless-stopped
+    profiles: ["logs"]
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_HTTP_PORT: "3000"
+      # Для мобильного доступа (Samsung и др.): корректные ссылки и cookies
+      GF_SERVER_ROOT_URL: "http://10.10.4.120:3000"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+      # Временно false — contactpoints chatid баг в Grafana 10.x (отрицательный ID как число)
+      # Включить после настройки Telegram через UI: Alerting → Contact points
+      GF_ALERTING_ENABLED: "false"
+      # Отключить image-renderer (падает в контейнере из-за отсутствия libs)
+      GF_RENDERING_SERVER_ENABLED: "false"
+      GF_PLUGINS_DISABLE: "grafana-image-renderer"
+      # Для provisioning contact point (интерполяция $VAR)
+      NOTIFICATION_BOT_TOKEN: ${NOTIFICATION_BOT_TOKEN:-}
+      NOTIFICATION_CHAT_ID: ${NOTIFICATION_CHAT_ID:-}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # Только datasources + dashboards: provisioning alerting при пустых NOTIFICATION_*
+      # и GF_ALERTING_ENABLED=false часто роняет Grafana в restart loop.
+      # Чтобы снова поднять алерты из файлов — добавьте строку ниже (см. GRAFANA_SETUP.md).
+      - ./config/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./config/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      # - ./config/grafana-provisioning/alerting:/etc/grafana/provisioning/alerting:ro
+    depends_on:
+      - loki
+    networks:
+      - campus
+
+  promtail:
+    image: grafana/promtail:2.9.5
+    container_name: promtail
+    restart: unless-stopped
+    profiles: ["logs"]
+    volumes:
+      - ./config/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+    networks:
+      - campus
+
+  # === МЕТРИКИ (Prometheus + node_exporter) ===
+  # Prometheus в host network — чтобы достучаться до nctk/vm1
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: prometheus
+    restart: unless-stopped
+    profiles: ["logs"]
+    network_mode: host
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.listen-address=:9091
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: node-exporter
+    restart: unless-stopped
+    profiles: ["logs"]
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/rootfs
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    networks:
+      - campus
+
+  # === TELEGRAM БОТЫ ===
+  # ВНИМАНИЕ: боты управляются через systemd (tg-campus-narimanov.service / tg-campus-genclik.service)
+  # и нативно на vm1 (campus-telegram-bot.service). Docker-версии НЕ запускать — конфликт токенов.
+  # Для запуска вручную (тест): docker compose --profile bot up tg-campus-bot
+  tg-campus-bot:
+    build:
+      context: ./bots/narimanov
+      dockerfile: Dockerfile
+    container_name: tg-campus-bot
+    restart: "no"
+    profiles: ["bot"]
+    environment:
+      - CLIENT_HOST=${CLIENT_HOST:-10.20.0.41}
+      - CLIENT_USER=${CLIENT_USER:-nctk}
+      - NCTK_HOST=10.20.0.41
+      - VM1_HOST=10.70.0.41
+    volumes:
+      - ${MUSIC_ROOT_PATH:-/home/kamran/Kamran Music}:/music:ro
+      - ${LANDAU_ROOT_PATH:-/home/kamran/Landau}:/landau:ro
+      - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/root/.ssh:ro
+    env_file:
+      - ./bots/narimanov/config.env
+    networks:
+      - campus
+
+  tg-campus-genclik:
+    build:
+      context: ./bots/narimanov
+      dockerfile: Dockerfile
+    container_name: tg-campus-genclik
+    restart: "no"
+    profiles: ["bot"]
+    environment:
+      - CLIENT_HOST=10.70.0.41
+      - CLIENT_USER=vm1
+      - NCTK_HOST=10.20.0.41
+      - VM1_HOST=10.70.0.41
+    volumes:
+      - ${MUSIC_ROOT_PATH:-/home/kamran/Kamran Music}:/music:ro
+      - ${LANDAU_ROOT_PATH:-/home/kamran/Landau}:/landau:ro
+      - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/root/.ssh:ro
+    env_file:
+      - ./bots/genclik/config.env
+    networks:
+      - campus
+
+  # === RECOVERY: бэкапы + восстановление server/nctk/vm1 ===
+  campus-recovery:
+    build:
+      context: ./recovery
+      dockerfile: Dockerfile
+    container_name: campus-recovery
+    restart: always
+    profiles: ["recovery"]
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/root/.ssh:ro
+      - recovery_backups:/backups
+      - /etc:/host/etc:rw
+      - /home/kamran:/host/home/kamran:rw
+      - /root:/host/root:rw
+      - /var/spool/cron:/host/var/spool/cron:rw
+    environment:
+      - RECOVERY_CHECK_INTERVAL=${RECOVERY_CHECK_INTERVAL:-300}
+      - NOTIFICATION_BOT_TOKEN=${NOTIFICATION_BOT_TOKEN:-}
+      - NOTIFICATION_CHAT_ID=${NOTIFICATION_CHAT_ID:-}
+      - RECOVERY_VM1_PASS=${RECOVERY_VM1_PASS:-}
+      - RECOVERY_NCTK_PASS=${RECOVERY_NCTK_PASS:-}
+      - SYNC_BACKUPS_TO_NCTK=${SYNC_BACKUPS_TO_NCTK:-1}
+
+  # === CAMPUS WEB UI: управление воспроизведением + расписание ===
+  campus-webui:
+    build:
+      context: ./webui
+      dockerfile: Dockerfile
+    container_name: campus-webui
+    restart: unless-stopped
+    profiles: ["webui"]
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./data/webui:/data
+      - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/secrets:ro
+      - ${MUSIC_ROOT_PATH:-/home/kamran/Kamran Music}:/music:rw
+      - ./bots/narimanov/config.env:/bot_config.env:ro
+      - ${CAMPUS_BACKUP_DIR:-/home/kamran/campus-backups}:/campus-backups:ro
+    environment:
+      - NCTK_HOST=${NCTK_HOST:-10.20.0.41}
+      - NCTK_USER=${NCTK_USER:-nctk}
+      - NCTK_MAC=${NCTK_MAC:-}
+      - SSH_KEY=/secrets/campus_bot
+      - MUSIC_DIR=/music
+      - SECRET_KEY=${WEBUI_SECRET_KEY:-campus-change-me-in-prod}
+      - DB_PATH=/data/webui.db
+      - DEFAULT_VOL=${DEFAULT_VOL:-100}
+      - NCTK_INBOX=/var/lib/campus-player/inbox
+      # Дополнительные машины:
+      - MACHINE2_HOST=10.70.0.41
+      - MACHINE2_NAME=vm1 Campus
+      - MACHINE2_USER=vm1
+      - MACHINE2_MAC=98:ee:cb:28:c1:9f
+      # Сервер CentOS (терминал)
+      - CENTOS_HOST=${CENTOS_HOST:-10.10.4.120}
+      - CENTOS_USER=${CENTOS_USER:-kamran}
+      - CENTOS_SSH_KEY=${CENTOS_SSH_KEY:-/secrets/campus_bot}
+      - WEBUI_STREAM_BASE=${WEBUI_STREAM_BASE:-http://10.10.4.120:8090}
+      # Telegram уведомления (берём токен из bot config.env)
+      - TG_LOG_GROUPS=${TG_LOG_GROUPS:-}
+      # Бэкапы
+      - BACKUP_DIR=/campus-backups
+      - BACKUP_VAULT_PASS=${BACKUP_VAULT_PASS:-}
+      - BACKUP_ADMIN_EMAILS=${BACKUP_ADMIN_EMAILS:-}
+      # Email уведомления
+      - NOTIFY_SMTP_HOST=${NOTIFY_SMTP_HOST:-smtp.gmail.com}
+      - NOTIFY_SMTP_PORT=${NOTIFY_SMTP_PORT:-587}
+      - NOTIFY_SMTP_USER=${NOTIFY_SMTP_USER:-}
+      - NOTIFY_SMTP_PASS=${NOTIFY_SMTP_PASS:-}
+      - NOTIFY_EMAIL_TO=${NOTIFY_EMAIL_TO:-}
+      # Голосовой помощник (один из ключей достаточно)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - campus
+
+  # === WATCHDOG: автовосстановление контейнеров ===
+  campus-watchdog:
+    build:
+      context: ./watchdog
+      dockerfile: Dockerfile
+    container_name: campus-watchdog
+    restart: always
+    profiles: ["bot", "watchdog"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SSH_KEY_DIR:-/home/kamran/.ssh}:/root/.ssh:ro
+    environment:
+      - CHECK_INTERVAL=${WATCHDOG_INTERVAL:-300}
+      - SERVER_CONTAINERS=${SERVER_CONTAINERS:-loki grafana prometheus promtail node-exporter campus-watchdog campus-recovery}
+      - NOTIFICATION_BOT_TOKEN=${NOTIFICATION_BOT_TOKEN:-}
+      - NOTIFICATION_CHAT_ID=${NOTIFICATION_CHAT_ID:-}
+    networks:
+      - campus
+
+  # === LANDAU HELPDESK: публичная форма заявок на ремонт ===
+  landau-helpdesk:
+    build:
+      context: ./helpdesk
+      dockerfile: Dockerfile
+    container_name: landau-helpdesk
+    restart: unless-stopped
+    profiles: ["helpdesk"]
+    ports:
+      - "8091:8080"
+    volumes:
+      - ./data/helpdesk:/data
+    environment:
+      - SECRET_KEY=${HELPDESK_SECRET_KEY:-landau-helpdesk-2026}
+      - ADMIN_USER=${HELPDESK_ADMIN_USER:-admin}
+      - ADMIN_PASS=${HELPDESK_ADMIN_PASS:-landau2026}
+      - DB_PATH=/data/helpdesk.db
+      - UPLOAD_DIR=/data/uploads
+      - TG_TOKEN=${NOTIFICATION_BOT_TOKEN:-}
+      - TG_CHAT=${HELPDESK_TG_CHAT:-}
+      - SMTP_HOST=${NOTIFY_SMTP_HOST:-}
+      - SMTP_PORT=${NOTIFY_SMTP_PORT:-587}
+      - SMTP_USER=${NOTIFY_SMTP_USER:-}
+      - SMTP_PASS=${NOTIFY_SMTP_PASS:-}
+      - NOTIFY_TO=${HELPDESK_NOTIFY_EMAIL:-}
+    networks:
+      - campus
+
+  # === COCKPIT PROXY: доступ к vm1 Cockpit через CentOS ===
+  cockpit-proxy:
+    image: nginx:alpine
+    container_name: cockpit-proxy
+    restart: unless-stopped
+    profiles: ["cockpit"]
+    network_mode: host
+    volumes:
+      - ./config/cockpit-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  loki_data:
+  grafana_data:
+  prometheus_data:
+  recovery_backups:
+
+networks:
+  campus:
+    driver: bridge

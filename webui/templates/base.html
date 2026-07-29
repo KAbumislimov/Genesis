@@ -1,0 +1,3041 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}LANDAUSCHOOL{% endblock %}</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link id="gfont-link" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Nunito:wght@300;400;600;700&family=Ubuntu:wght@300;400;500;700&family=Open+Sans:wght@300;400;600;700&family=Montserrat:wght@300;400;500;700&family=Exo+2:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- Prevent flash -->
+<script>(function(){
+  var t=localStorage.getItem('theme')||'dark';
+  if(t==='light') document.documentElement.classList.add('light-theme');
+  else if(t!=='dark') document.documentElement.setAttribute('data-theme',t);
+  var _ts=localStorage.getItem('textSize');
+  if(_ts) document.documentElement.style.setProperty('--text-size',_ts);
+  var _tz=localStorage.getItem('textZoom');
+  if(_tz) document.documentElement.style.zoom=_tz;
+  var _tc=localStorage.getItem('textContrast');
+  if(_tc==='bright'){document.documentElement.style.setProperty('--text','#ffffff');document.documentElement.style.setProperty('--muted','#c0c8d8');}
+  else if(_tc==='max'){var _r=document.documentElement;_r.style.setProperty('--text','#ffffff');_r.style.setProperty('--muted','#d0d8e8');_r.style.setProperty('--bg','#000000');_r.style.setProperty('--bg2','#0a0a0a');_r.style.setProperty('--bg3','#141414');_r.style.setProperty('--border','#333333');}
+  else if(_tc==='custom'){var _col=localStorage.getItem('textColor');if(_col)document.documentElement.style.setProperty('--text',_col);}
+  var _lh=localStorage.getItem('lineHeight');
+  if(_lh) document.documentElement.style.setProperty('--line-height',_lh);
+  var _ff=localStorage.getItem('fontFamily')||'Roboto';
+  document.documentElement.style.setProperty('--font',_ff+',system-ui,sans-serif');
+  {% if current_user.is_authenticated and current_user.role != 'guest' %}
+  {% if current_user.role == 'admin' %}
+  var bm=localStorage.getItem('bgMode')||{{ wallpaper_default|tojson }};
+  {% else %}
+  var bm={{ wallpaper_default|tojson }};
+  {% endif %}
+  if(bm&&bm!=='off') document.documentElement.classList.add('has-wallpaper');
+  {% endif %}
+})()</script>
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
+<style>
+:root{
+  --bg:#0d1117;--bg2:rgba(22,27,34,var(--panel-opa));--bg3:rgba(33,38,45,var(--panel-opa));--border:#30363d;
+  --blue:#58a6ff;--green:#3fb950;--purple:#bc8cff;--orange:#ffa657;
+  --red:#f85149;--yellow:#e3b341;--muted:#aab4c0;--text:#f0f6fc;
+  --fon-url:none;--fon-opa:0;--panel-opa:0.50;--panel-bri:1;--panel-blur:0px;
+}
+*{box-sizing:border-box}
+html{min-height:100%;background:var(--bg);background:color-mix(in srgb,var(--bg) calc(var(--panel-opa)*100%),#e0ecf8)}
+html,body{color:var(--text);font-family:var(--font,'Roboto'),system-ui,sans-serif;
+  font-size:var(--text-size,15px);line-height:var(--line-height,1.5);margin:0}
+body{min-height:100%;background:transparent;isolation:isolate}
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:var(--fon-url) center/cover no-repeat;
+  opacity:var(--fon-opa);
+  transition:opacity .5s ease;
+  transform-origin:center center;
+}
+/* Ken Burns: slow animated zoom-pan on wallpaper */
+@keyframes kenBurns{
+  0%  {transform:scale(1)    translateX(0)    translateY(0)}
+  25% {transform:scale(1.07) translateX(-2%)  translateY(-1%)}
+  50% {transform:scale(1.05) translateX(1.5%) translateY(1%)}
+  75% {transform:scale(1.08) translateX(-1%)  translateY(0.5%)}
+  100%{transform:scale(1)    translateX(0)    translateY(0)}
+}
+html.has-wallpaper body::before{
+  animation:kenBurns 40s ease-in-out infinite;
+}
+
+/* ── Navbar ── */
+.top-nav{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px);padding:0 20px;height:80px;
+  display:flex;align-items:center;gap:16px;
+}
+.nav-logo-left,.nav-logo-right{
+  display:flex;align-items:center;justify-content:center;
+  background:#fff;border-radius:12px;padding:7px 16px;
+  flex-shrink:0;text-decoration:none;
+  box-shadow:0 2px 14px rgba(0,0,0,.35);transition:.2s;
+}
+.nav-logo-left:hover,.nav-logo-right:hover{
+  box-shadow:0 4px 22px rgba(0,0,0,.5);transform:scale(1.02);
+}
+.nav-logo-left img,.nav-logo-right img{height:56px;width:auto;display:block}
+
+/* ── Nav clock (replaces logo) ── */
+.nav-clock-box{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex-shrink:0;padding:6px 14px;min-width:110px;
+  background:rgba(0,0,0,.35);border:1px solid rgba(0,200,255,.2);
+  border-radius:12px;backdrop-filter:blur(8px);
+}
+.nav-clock-time{
+  font-family:'JetBrains Mono','Courier New',monospace;
+  font-size:22px;font-weight:900;letter-spacing:.05em;color:#00e8ff;
+  text-shadow:0 0 6px #00e8ff,0 0 16px rgba(0,200,255,.5);
+  font-variant-numeric:tabular-nums;line-height:1;
+}
+.nav-clock-date{
+  font-size:10px;font-weight:700;letter-spacing:.07em;
+  color:rgba(0,200,255,.65);margin-top:3px;text-transform:uppercase;
+}
+.nav-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-link{color:var(--muted);text-decoration:none;padding:7px 14px;border-radius:8px;
+  font-size:14px;font-weight:500;transition:.15s;display:flex;align-items:center;gap:6px}
+.nav-link:hover{background:var(--bg3);color:var(--text)}
+.nav-link.active{background:rgba(88,166,255,.12);color:var(--blue)}
+.nav-right{display:flex;align-items:center;gap:12px;flex-shrink:0;margin-left:auto}
+.nav-user{color:var(--muted);font-size:14px;display:flex;align-items:center;gap:6px}
+.btn-logout{background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+  padding:6px 16px;border-radius:8px;font-size:14px;cursor:pointer;
+  text-decoration:none;transition:.15s;display:flex;align-items:center;gap:5px}
+.btn-logout:hover{color:var(--text);border-color:var(--muted)}
+/* ── Hamburger button ── */
+.burger-btn{background:none;border:none;cursor:pointer;padding:6px 8px;
+  border-radius:8px;display:flex;flex-direction:column;gap:5px;flex-shrink:0;
+  transition:.15s}
+.burger-btn:hover{background:var(--bg3)}
+.burger-btn span{display:block;width:22px;height:2px;background:var(--text);
+  border-radius:2px;transition:transform .25s,opacity .25s}
+/* ── Sidebar ── */
+#sidebar{position:fixed;top:0;left:0;height:100vh;width:260px;
+  background:var(--bg2);border-right:1px solid var(--border);
+  z-index:10001;transform:translateX(-100%);transition:transform .25s ease;
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:4px 0 24px rgba(0,0,0,.4)}
+#sidebar.open{transform:translateX(0)}
+#sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:10000;display:none;opacity:0;transition:opacity .25s}
+#sidebar-overlay.show{display:block;opacity:1}
+.sb-header{padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sb-close{background:none;border:none;cursor:pointer;color:var(--text2);
+  font-size:20px;padding:4px;border-radius:6px;line-height:1;transition:.15s}
+.sb-close:hover{background:var(--bg3);color:var(--text)}
+.sb-user{display:flex;align-items:center;gap:10px}
+.sb-links{flex:1;overflow-y:auto;padding:8px 10px}
+.sb-link{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:9px;text-decoration:none;color:var(--text);
+  font-size:14px;font-weight:500;transition:.12s;margin-bottom:2px;
+  border:none;background:none;cursor:pointer;width:100%;text-align:left}
+.sb-link:hover{background:var(--bg3);color:var(--blue)}
+.sb-link.active{background:rgba(88,166,255,.12);color:var(--blue)}
+.sb-link i{font-size:16px;flex-shrink:0;width:20px;text-align:center}
+.sb-sep{height:1px;background:var(--border);margin:6px 10px}
+.sb-section-lbl{padding:8px 14px 3px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.sb-fold-hdr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--muted);border:none;background:none;cursor:pointer;font-size:14px;font-family:inherit;width:100%;text-align:left}
+.sb-fold-hdr:hover{background:var(--bg3);color:var(--blue)}
+.sb-folder-list{overflow:hidden;max-height:0;transition:max-height .28s ease}
+.sb-folder-list.open{max-height:320px}
+.sb-sub{padding:7px 12px 7px 32px!important;font-size:13px}
+.sb-sub i{font-size:12px!important}
+.font-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.font-btn:hover{border-color:var(--blue);color:var(--blue)}
+.font-btn.active{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+
+/* ── Layout ── */
+.main{padding:28px 28px 60px;max-width:1400px;margin:0 auto}
+
+/* ── Cards ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:0}
+.card-hd{background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:13px 20px;display:flex;align-items:center;gap:10px}
+.card-hd-title{font-size:14px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--muted)}
+.card-body{padding:20px}
+
+/* ── Alerts ── */
+.alert{border-radius:8px;padding:11px 16px;font-size:14px;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px}
+.alert-success{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);color:var(--green)}
+.alert-danger {background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red)}
+.alert-info   {background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
+
+/* ── Badges ── */
+.bdg{display:inline-flex;align-items:center;font-size:12px;font-weight:700;
+  padding:2px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace}
+.bdg-admin {background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.4)}
+.bdg-viewer{background:rgba(88,166,255,.1);color:var(--blue);border:1px solid rgba(88,166,255,.3)}
+
+/* ── Tables ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:var(--bg3);padding:10px 14px;text-align:left;font-size:13px;
+  font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;
+  border-bottom:1px solid var(--border)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:15px;
+  vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+.tbl .mono{font-family:'JetBrains Mono',monospace;font-size:13px}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;
+  border-radius:8px;font-size:14px;font-weight:600;border:none;
+  cursor:pointer;transition:.15s;text-decoration:none}
+.btn:hover{opacity:.88;transform:translateY(-1px)}
+.btn-primary{background:var(--blue);color:#000}
+.btn-danger {background:var(--red);color:#fff}
+.btn-success{background:var(--green);color:#000}
+.btn-ghost  {background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text)}
+.btn-sm{padding:4px 12px;font-size:13px}
+
+/* ── Forms ── */
+.form-control,.form-select{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:8px 12px;font-size:14px;width:100%}
+.form-control:focus,.form-select:focus{
+  background:var(--bg3);border-color:var(--blue);color:var(--text);
+  outline:none;box-shadow:0 0 0 3px rgba(88,166,255,.15)}
+.form-control::placeholder{color:var(--muted)}
+.form-select option{background:var(--bg3)}
+.form-label{font-size:13px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;display:block}
+
+/* ── Live dot ── */
+.live{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;
+  animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,.5)}
+  50%{box-shadow:0 0 0 6px rgba(63,185,80,0)}}
+
+/* ── Light theme ── */
+html.light-theme{
+  --bg:#f0f4f8;--bg2:rgba(255,255,255,0.90);--bg3:rgba(226,234,245,0.90);--border:#bdc6d3;
+  --text:#1c2333;--muted:#455060;
+  --blue:#0969da;--green:#1a7f37;--red:#cf222e;--orange:#bc4c00;--purple:#6639ba;
+}
+html.light-theme .top-nav{background:rgba(248,250,252,.96);border-bottom-color:#bdc6d3}
+html.light-theme .card{background:var(--bg2);border-color:var(--border)}
+html.light-theme .nav-link{color:#444d56}
+html.light-theme .nav-link:hover{background:rgba(0,0,0,.06);color:#1c2333}
+html.light-theme .nav-link.active{background:rgba(9,105,218,.1);color:#0969da}
+html.light-theme #sidebar{background:rgba(245,248,252,.97);border-right-color:#bdc6d3}
+html.light-theme .info-chip{background:rgba(0,0,0,.05);border-color:#bdc6d3;color:#1c2333}
+html.light-theme input,html.light-theme select,html.light-theme textarea{
+  background:#fff;border-color:#bdc6d3;color:#1c2333}
+html.light-theme button:not(.tp-swatch):not(.ann-send-btn):not(.ann-rec-btn){
+  color:inherit}
+html.light-theme .cc-track-name{color:#1c2333}
+html.light-theme .cc-track-name.idle{color:#6a737d}
+html.light-theme .campus-card{border-color:#c8d3dd;background:rgba(255,255,255,.75)}
+html.light-theme .vol-track{background:rgba(0,0,0,.1)}
+html.light-theme .eq-panel,html.light-theme .cron-panel{
+  background:rgba(255,255,255,.85);border-color:#bdc6d3}
+
+/* ── Extra color themes ── */
+html[data-theme="ocean"]{
+  --bg:#060e1e;--bg2:rgba(10,22,40,var(--panel-opa));--bg3:rgba(15,32,64,var(--panel-opa));--border:#1a3460;
+  --blue:#4fc3f7;--green:#4db6ac;--purple:#7986cb;--orange:#ffa726;
+  --red:#ef5350;--muted:#607d8b;--text:#eceff1;
+}
+html[data-theme="ocean"] .top-nav{background:var(--bg2);border-bottom-color:#1a3460}
+
+html[data-theme="forest"]{
+  --bg:#060f06;--bg2:rgba(10,26,10,var(--panel-opa));--bg3:rgba(15,38,15,var(--panel-opa));--border:#183618;
+  --blue:#64b5f6;--green:#66bb6a;--purple:#ba68c8;--orange:#ffb74d;
+  --red:#e57373;--muted:#6a9b6a;--text:#e8f5e9;
+}
+html[data-theme="forest"] .top-nav{background:var(--bg2);border-bottom-color:#183618}
+
+html[data-theme="sunset"]{
+  --bg:#120600;--bg2:rgba(30,13,0,var(--panel-opa));--bg3:rgba(45,21,0,var(--panel-opa));--border:#4a2200;
+  --blue:#82b1ff;--green:#a5d6a7;--purple:#f48fb1;--orange:#ffa726;
+  --red:#ef5350;--muted:#8d6e63;--text:#fff8e1;
+}
+html[data-theme="sunset"] .top-nav{background:var(--bg2);border-bottom-color:#4a2200}
+
+html[data-theme="purple"]{
+  --bg:#08050f;--bg2:rgba(15,10,30,var(--panel-opa));--bg3:rgba(22,15,46,var(--panel-opa));--border:#241a4e;
+  --blue:#82b1ff;--green:#b9f6ca;--purple:#ce93d8;--orange:#ffd54f;
+  --red:#ff8a80;--muted:#9575cd;--text:#ede7f6;
+}
+html[data-theme="purple"] .top-nav{background:var(--bg2);border-bottom-color:#241a4e}
+
+/* ── IT themes ── */
+html[data-theme="cyber"]{
+  --bg:#04001a;--bg2:rgba(9,0,58,var(--panel-opa));--bg3:rgba(18,0,74,var(--panel-opa));--border:#3d00b0;
+  --blue:#00f5ff;--green:#39ff14;--purple:#ff0099;--orange:#ffcc00;
+  --red:#ff3366;--muted:#9060e0;--text:#e8d8ff;
+}
+html[data-theme="cyber"] .top-nav{background:var(--bg2);border-bottom-color:#3d00b0}
+
+html[data-theme="matrix"]{
+  --bg:#000900;--bg2:rgba(0,18,0,var(--panel-opa));--bg3:rgba(0,31,0,var(--panel-opa));--border:#003800;
+  --blue:#00ccff;--green:#00ff41;--purple:#39ff14;--orange:#ffe000;
+  --red:#ff5555;--muted:#4caf50;--text:#ccffcc;
+}
+html[data-theme="matrix"] .top-nav{background:var(--bg2);border-bottom-color:#003800}
+
+html[data-theme="nord"]{
+  --bg:#2e3440;--bg2:rgba(59,66,82,var(--panel-opa));--bg3:rgba(67,76,94,var(--panel-opa));--border:#4c566a;
+  --blue:#88c0d0;--green:#a3be8c;--purple:#b48ead;--orange:#d08770;
+  --red:#bf616a;--muted:#7a8899;--text:#eceff4;
+}
+html[data-theme="nord"] .top-nav{background:var(--bg2);border-bottom-color:#4c566a}
+
+html[data-theme="dracula"]{
+  --bg:#1e1f2b;--bg2:rgba(40,42,54,var(--panel-opa));--bg3:rgba(50,52,74,var(--panel-opa));--border:#44475a;
+  --blue:#8be9fd;--green:#50fa7b;--purple:#ff79c6;--orange:#ffb86c;
+  --red:#ff5555;--muted:#6272a4;--text:#f8f8f2;
+}
+html[data-theme="dracula"] .top-nav{background:var(--bg2);border-bottom-color:#44475a}
+
+/* ── LANDAU Campus Black ── */
+html[data-theme="campus"]{
+  --bg:#000000;--bg2:rgba(7,7,7,var(--panel-opa));--bg3:rgba(14,14,14,var(--panel-opa));
+  --border:#1a1a1a;
+  --text:#ffffff;--muted:#668899;
+  --blue:#00d4ff;--green:#00ff88;
+  --purple:#a855f7;--orange:#ff6b35;
+  --red:#ff3366;--yellow:#ffd700;
+}
+html[data-theme="campus"] .top-nav{
+  background:rgba(0,0,0,.97);
+  border-bottom:1px solid rgba(0,212,255,.18);
+}
+html[data-theme="campus"] #sidebar{
+  background:#040404;
+  border-right:1px solid rgba(0,212,255,.12);
+}
+html[data-theme="campus"]::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 180% 130% at 50% 50%,transparent 21.6%,rgba(0,212,255,.028) 22%,transparent 22.4%),
+    radial-gradient(ellipse 180% 130% at 50% 50%,transparent 34.6%,rgba(0,212,255,.022) 35%,transparent 35.4%),
+    radial-gradient(ellipse 180% 130% at 50% 50%,transparent 49.6%,rgba(0,212,255,.018) 50%,transparent 50.4%),
+    radial-gradient(ellipse 180% 130% at 50% 50%,transparent 66.6%,rgba(0,212,255,.013) 67%,transparent 67.4%),
+    radial-gradient(ellipse 180% 130% at 50% 50%,transparent 85.6%,rgba(0,212,255,.009) 86%,transparent 86.4%),
+    linear-gradient(rgba(0,212,255,.016) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.016) 1px,transparent 1px);
+  background-size:100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,72px 72px,72px 72px;
+}
+html[data-theme="campus"] .nav-link.active{
+  color:var(--blue);background:rgba(0,212,255,.08);
+  box-shadow:0 0 14px rgba(0,212,255,.12);
+}
+html[data-theme="campus"] .nav-link:hover{background:rgba(0,212,255,.05);color:var(--blue)}
+html[data-theme="campus"] .sb-link.active{
+  background:rgba(0,212,255,.1);color:var(--blue);
+  box-shadow:inset 3px 0 0 var(--blue);
+}
+html[data-theme="campus"] .sb-link:hover{background:rgba(0,212,255,.06);color:var(--blue)}
+html[data-theme="campus"] .card{background:var(--bg2);border-color:rgba(0,212,255,.1)}
+html[data-theme="campus"] .card-hd{background:var(--bg3);border-bottom-color:rgba(0,212,255,.1)}
+html[data-theme="campus"] .btn-primary{
+  background:linear-gradient(135deg,#00d4ff,#0090bb);
+  color:#000;font-weight:800;border:none;border-radius:999px;
+  box-shadow:0 0 22px rgba(0,212,255,.35),0 4px 16px rgba(0,0,0,.4);
+  transition:all .18s;
+}
+html[data-theme="campus"] .btn-primary:hover{
+  box-shadow:0 0 34px rgba(0,212,255,.55),0 6px 22px rgba(0,0,0,.5);
+  transform:translateY(-2px);color:#000;background:linear-gradient(135deg,#22dcff,#00a8d4);
+}
+html[data-theme="campus"] .btn-primary:active{transform:translateY(0)}
+html[data-theme="campus"] .btn-ghost{
+  border-radius:999px;border-color:rgba(0,212,255,.3);color:var(--blue);
+}
+html[data-theme="campus"] .btn-ghost:hover{
+  background:rgba(0,212,255,.1);border-color:var(--blue);
+}
+html[data-theme="campus"] .btn-secondary{
+  border-radius:999px;border-color:rgba(255,255,255,.12);
+}
+html[data-theme="campus"] input,html[data-theme="campus"] select,html[data-theme="campus"] textarea{
+  background:var(--bg2)!important;border-color:rgba(0,212,255,.18)!important;
+}
+html[data-theme="campus"] input:focus,html[data-theme="campus"] select:focus{
+  border-color:rgba(0,212,255,.55)!important;
+  box-shadow:0 0 0 3px rgba(0,212,255,.1)!important;
+}
+html[data-theme="campus"] .alert-info{
+  background:rgba(0,212,255,.07);border-color:rgba(0,212,255,.25);color:var(--blue);
+}
+html[data-theme="campus"] .cp-send{
+  background:linear-gradient(135deg,#00d4ff,#0090bb)!important;
+  border-radius:999px!important;color:#000!important;
+  box-shadow:0 0 12px rgba(0,212,255,.35)!important;
+}
+html[data-theme="campus"] .nav-logo-left,html[data-theme="campus"] .nav-logo-right{
+  background:#0a0a0a!important;
+  box-shadow:0 0 0 1px rgba(0,212,255,.2),0 2px 14px rgba(0,0,0,.5)!important;
+}
+
+/* ── ABYSS: deep navy + electric cyan ── */
+html[data-theme="abyss"]{
+  --bg:#060b14;--bg2:rgba(10,20,34,var(--panel-opa));--bg3:rgba(15,28,46,var(--panel-opa));--border:rgba(0,150,255,.13);
+  --blue:#00c8ff;--green:#00e87a;--purple:#b887ff;
+  --orange:#ff9f40;--red:#ff4f4f;--yellow:#ffd700;
+  --muted:rgba(90,150,210,.75);--text:#dceeff;
+}
+html[data-theme="abyss"] .top-nav{background:var(--bg2);border-bottom:1px solid rgba(0,180,255,.1)}
+html[data-theme="abyss"] #sidebar{background:rgba(5,9,17,.98);border-right:1px solid rgba(0,150,255,.1)}
+html[data-theme="abyss"] .nav-link.active{color:var(--blue);background:rgba(0,200,255,.08)}
+html[data-theme="abyss"] .nav-link:hover{background:rgba(0,200,255,.05);color:var(--blue)}
+html[data-theme="abyss"] .sb-link.active{background:rgba(0,200,255,.09);color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
+html[data-theme="abyss"] .sb-link:hover{background:rgba(0,200,255,.05);color:var(--blue)}
+html[data-theme="abyss"] .card{background:var(--bg2);border-color:rgba(0,150,255,.1)}
+html[data-theme="abyss"] .card-hd{background:var(--bg3);border-bottom-color:rgba(0,150,255,.1)}
+html[data-theme="abyss"] .btn-primary{
+  background:linear-gradient(135deg,#00c8ff,#0090c0);color:#020d18;font-weight:800;
+  border:none;border-radius:999px;box-shadow:0 0 22px rgba(0,200,255,.35);}
+html[data-theme="abyss"] .btn-primary:hover{box-shadow:0 0 38px rgba(0,200,255,.55);transform:translateY(-2px)}
+html[data-theme="abyss"] .btn-ghost{border-color:rgba(0,200,255,.3);color:var(--blue);border-radius:999px}
+html[data-theme="abyss"] .btn-ghost:hover{background:rgba(0,200,255,.09);border-color:var(--blue)}
+html[data-theme="abyss"] .nav-logo-left,html[data-theme="abyss"] .nav-logo-right{
+  background:#0a1828!important;box-shadow:0 0 0 1px rgba(0,200,255,.15),0 2px 14px rgba(0,0,0,.5)!important;}
+
+/* ── MIDNIGHT: ultra-dark violet + electric purple ── */
+html[data-theme="midnight"]{
+  --bg:#09080d;--bg2:rgba(17,15,26,var(--panel-opa));--bg3:rgba(26,22,40,var(--panel-opa));--border:rgba(150,80,255,.12);
+  --blue:#b24bff;--green:#3de0b0;--purple:#ff4d8f;
+  --orange:#ff9f40;--red:#ff5566;--yellow:#ffd700;
+  --muted:rgba(145,110,210,.7);--text:#ede8ff;
+}
+html[data-theme="midnight"] .top-nav{background:var(--bg2);border-bottom:1px solid rgba(140,70,255,.12)}
+html[data-theme="midnight"] #sidebar{background:rgba(7,6,11,.98);border-right:1px solid rgba(140,70,255,.1)}
+html[data-theme="midnight"] .nav-link.active{color:var(--blue);background:rgba(178,75,255,.09)}
+html[data-theme="midnight"] .nav-link:hover{background:rgba(178,75,255,.05);color:var(--blue)}
+html[data-theme="midnight"] .sb-link.active{background:rgba(178,75,255,.1);color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
+html[data-theme="midnight"] .sb-link:hover{background:rgba(178,75,255,.06);color:var(--blue)}
+html[data-theme="midnight"] .card{background:var(--bg2);border-color:rgba(150,80,255,.1)}
+html[data-theme="midnight"] .card-hd{background:var(--bg3);border-bottom-color:rgba(150,80,255,.1)}
+html[data-theme="midnight"] .btn-primary{
+  background:linear-gradient(135deg,#b24bff,#7020c0);color:#fff;font-weight:800;
+  border:none;border-radius:999px;box-shadow:0 0 22px rgba(178,75,255,.4);}
+html[data-theme="midnight"] .btn-primary:hover{box-shadow:0 0 38px rgba(178,75,255,.6);transform:translateY(-2px)}
+html[data-theme="midnight"] .btn-ghost{border-color:rgba(178,75,255,.35);color:var(--blue);border-radius:999px}
+html[data-theme="midnight"] .btn-ghost:hover{background:rgba(178,75,255,.1);border-color:var(--blue)}
+html[data-theme="midnight"] .nav-logo-left,html[data-theme="midnight"] .nav-logo-right{
+  background:#0e0a1c!important;box-shadow:0 0 0 1px rgba(178,75,255,.18),0 2px 14px rgba(0,0,0,.5)!important;}
+
+/* ── STUDIO: dark steel-blue (classic broadcast) ── */
+html[data-theme="studio"]{
+  --bg:#060a0f;--bg2:rgba(10,16,24,var(--panel-opa));--bg3:rgba(16,24,32,var(--panel-opa));--border:rgba(0,130,220,.1);
+  --blue:#4fc3f7;--green:#26c6da;--purple:#b388ff;
+  --orange:#ffcc80;--red:#ef5350;--yellow:#fff59d;
+  --muted:rgba(90,140,195,.7);--text:#e3f2fd;
+}
+html[data-theme="studio"] .top-nav{background:var(--bg2);border-bottom:1px solid rgba(0,120,200,.12)}
+html[data-theme="studio"] #sidebar{background:rgba(5,8,14,.98);border-right:1px solid rgba(0,120,200,.1)}
+html[data-theme="studio"] .nav-link.active{color:var(--blue);background:rgba(79,195,247,.08)}
+html[data-theme="studio"] .nav-link:hover{background:rgba(79,195,247,.05);color:var(--blue)}
+html[data-theme="studio"] .sb-link.active{background:rgba(79,195,247,.09);color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
+html[data-theme="studio"] .sb-link:hover{background:rgba(79,195,247,.05);color:var(--blue)}
+html[data-theme="studio"] .card{background:var(--bg2);border-color:rgba(0,130,220,.09)}
+html[data-theme="studio"] .card-hd{background:var(--bg3);border-bottom-color:rgba(0,130,220,.09)}
+html[data-theme="studio"] .btn-primary{
+  background:linear-gradient(135deg,#4fc3f7,#0288d1);color:#020d18;font-weight:800;
+  border:none;border-radius:999px;box-shadow:0 0 20px rgba(79,195,247,.35);}
+html[data-theme="studio"] .btn-primary:hover{box-shadow:0 0 34px rgba(79,195,247,.5);transform:translateY(-2px)}
+html[data-theme="studio"] .btn-ghost{border-color:rgba(79,195,247,.3);color:var(--blue);border-radius:999px}
+html[data-theme="studio"] .btn-ghost:hover{background:rgba(79,195,247,.08);border-color:var(--blue)}
+html[data-theme="studio"] .nav-logo-left,html[data-theme="studio"] .nav-logo-right{
+  background:#081422!important;box-shadow:0 0 0 1px rgba(79,195,247,.15),0 2px 14px rgba(0,0,0,.5)!important;}
+
+html.light-theme body{background:var(--bg);color:var(--text)}
+
+/* ── Transparency/backdrop brightness — affects ALL pages, ALL elements ── */
+.card,.player-hub,#online-panel,#chat-panel,#sidebar,.top-nav,.campus-card,
+.info-chip,.hub-card,.eq-panel,.cron-panel,.pc,.pz{
+  backdrop-filter:blur(var(--panel-blur,0px)) brightness(var(--panel-bri,1));
+  -webkit-backdrop-filter:blur(var(--panel-blur,0px)) brightness(var(--panel-bri,1));
+}
+/* ── Wallpaper glassmorphism — panel-blur controls blur on all pages ── */
+html.has-wallpaper {
+  --text: #f0f6fc;
+  --muted: #8b949e;
+}
+/* Light theme + wallpaper: keep dark text so it's readable on bright backgrounds */
+html.has-wallpaper.light-theme {
+  --text: #1c2333;
+  --muted: #455060;
+  --bg2: rgba(255,255,255,0.72);
+  --bg3: rgba(235,240,248,0.72);
+  --border: rgba(0,0,0,0.15);
+}
+
+/* ── Lang / theme controls ── */
+.lang-group{display:flex;gap:3px;align-items:center}
+.lang-btn{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:4px 9px;border-radius:6px;font-size:13px;font-weight:700;
+  cursor:pointer;letter-spacing:.04em;transition:.15s;
+}
+.lang-btn:hover{color:var(--text);border-color:var(--muted)}
+.lang-btn.lang-active{background:rgba(88,166,255,.15);color:var(--blue);border-color:var(--blue)}
+.theme-btn{
+  background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+  width:32px;height:32px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:15px;transition:.15s;
+}
+.theme-btn:hover{color:var(--text);border-color:var(--muted)}
+
+/* ── Misc ── */
+.text-muted  {color:var(--muted)!important}
+.text-blue   {color:var(--blue)}
+.text-green  {color:var(--green)}
+.text-red    {color:var(--red)}
+.text-orange {color:var(--orange)}
+.text-purple {color:var(--purple)}
+.mono{font-family:'JetBrains Mono',monospace}
+.mb-4{margin-bottom:1.5rem}
+.mt-4{margin-top:1.5rem}
+.d-flex{display:flex}
+.align-items-center{align-items:center}
+.justify-content-between{justify-content:space-between}
+.gap-2{gap:.5rem}
+.gap-3{gap:1rem}
+.flex-1{flex:1}
+
+/* ── Online sidebar (right) ── */
+#online-panel{
+  position:fixed;right:0;top:60%;transform:translateY(-50%);
+  z-index:800;background:var(--bg2);border:1px solid var(--border);
+  border-right:none;border-radius:12px 0 0 12px;
+  padding:10px 8px;min-width:126px;max-width:160px;
+  box-shadow:-2px 0 16px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;
+}
+#online-panel-head{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text);margin-bottom:8px;padding-bottom:7px;
+  border-bottom:1px solid var(--border);
+}
+.op-count{background:rgba(63,185,80,.2);color:var(--green);
+  border-radius:4px;padding:0 6px;font-size:11px;font-weight:700;margin-left:auto}
+#op-list{display:flex;flex-direction:column;gap:3px;max-height:300px;overflow-y:auto}
+.op-user{display:flex;align-items:center;gap:6px;padding:4px 4px;
+  border-radius:6px;transition:.1s;cursor:default}
+.op-user:hover{background:var(--bg3)}
+.op-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.op-name{font-size:13px;font-weight:600;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.op-role{font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;flex-shrink:0}
+.op-role-admin{background:rgba(188,140,255,.2);color:var(--purple)}
+.op-role-user,.op-role-viewer{background:rgba(88,166,255,.12);color:var(--blue)}
+.op-role-staff{background:rgba(255,166,87,.15);color:var(--orange)}
+
+/* ── Chat/Online widget ── */
+@keyframes voicePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}}
+.cp-voice-player{display:flex;align-items:center;gap:7px;min-width:160px}
+.cp-vp-btn{background:rgba(88,166,255,.2);border:1px solid rgba(88,166,255,.4);color:var(--blue);
+  border-radius:50%;width:28px;height:28px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
+.cp-vp-btn:hover{background:rgba(88,166,255,.35)}
+.cp-vp-bar{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;cursor:pointer;min-width:60px}
+.cp-vp-fill{height:100%;background:var(--blue);border-radius:3px;width:0%;transition:width .2s linear}
+.cp-vp-time{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+#chat-widget{position:fixed;bottom:24px;right:24px;z-index:900;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+#chat-toggle{
+  width:52px;height:52px;border-radius:50%;background:var(--blue);color:#000;
+  border:none;cursor:pointer;font-size:22px;display:flex;align-items:center;
+  justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.4);
+  position:relative;transition:.2s;
+}
+#chat-toggle:hover{transform:scale(1.08)}
+.w-badge{
+  position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;
+  border-radius:9px;background:var(--green);color:#000;font-size:10px;
+  font-weight:800;display:flex;align-items:center;justify-content:center;
+  padding:0 4px;border:2px solid var(--bg);
+}
+.w-unread{background:var(--red)!important;color:#fff!important}
+#chat-panel{
+  width:320px;height:460px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:16px;
+  display:none;flex-direction:column;overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);
+  position:relative;
+}
+/* Resize handles */
+.cp-rh-top   {position:absolute;top:0;left:20px;right:20px;height:5px;cursor:ns-resize;z-index:20}
+.cp-rh-left  {position:absolute;left:0;top:20px;bottom:20px;width:5px;cursor:ew-resize;z-index:20}
+.cp-rh-corner{position:absolute;top:0;left:0;width:20px;height:20px;cursor:nw-resize;z-index:21;
+  display:flex;align-items:center;justify-content:center;opacity:0.45;transition:.15s}
+.cp-rh-corner:hover{opacity:1}
+.cp-rh-corner svg{color:var(--blue)}
+#chat-panel.open{display:flex}
+.cp-header{
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:10px 14px;display:flex;align-items:center;justify-content:space-between;
+  font-size:13px;font-weight:700;
+}
+.cp-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;
+  line-height:1;padding:0 2px;transition:.15s}
+.cp-close:hover{color:var(--text)}
+.cp-online{max-height:110px;overflow-y:auto;border-bottom:1px solid var(--border);padding:6px 0}
+.cp-online-user{
+  display:flex;align-items:center;gap:8px;padding:4px 12px;font-size:13px;
+}
+.cp-online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.cp-online-name{font-weight:600;flex:1}
+.cp-online-role{
+  font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;
+  font-family:'JetBrains Mono',monospace;flex-shrink:0;
+}
+.cp-role-admin{background:rgba(188,140,255,.2);color:var(--purple)}
+.cp-role-user,.cp-role-viewer{background:rgba(88,166,255,.15);color:var(--blue)}
+.cp-role-guest{background:rgba(139,148,158,.15);color:var(--muted)}
+.cp-chat-lbl{
+  padding:5px 12px;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--text);border-bottom:1px solid var(--border);
+  background:var(--bg3);
+}
+.cp-msgs{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-height:80px}
+.cp-msg{display:flex;flex-direction:column;max-width:85%}
+.cp-msg.mine{align-self:flex-end;align-items:flex-end}
+.cp-msg-meta{font-size:12px;color:var(--muted);margin-bottom:2px;display:flex;gap:5px}
+.cp-msg-bubble{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:10px;padding:6px 10px;font-size:13px;
+  word-break:break-word;line-height:1.4;
+}
+.cp-msg.mine .cp-msg-bubble{background:rgba(88,166,255,.15);border-color:rgba(88,166,255,.3)}
+.private-bubble{background:rgba(188,130,255,.1)!important;border-color:rgba(188,130,255,.3)!important}
+.cp-msg.mine .private-bubble{background:rgba(188,130,255,.2)!important}
+.cp-input-row{
+  display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);
+  background:var(--bg3);
+}
+.cp-input-row input{
+  flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:6px 10px;font-size:13px;
+}
+.cp-input-row input:focus{outline:none;border-color:var(--blue)}
+.cp-input-row input::placeholder{color:var(--muted)}
+.cp-send{
+  background:var(--blue);color:#000;border:none;border-radius:8px;
+  width:34px;flex-shrink:0;cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;transition:.15s;
+}
+.cp-send:hover{opacity:.85}
+.cp-emoji-btn{
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  width:34px;flex-shrink:0;cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:.15s;
+}
+.cp-emoji-btn:hover{border-color:var(--blue)}
+.cp-emoji-panel{
+  position:absolute;bottom:54px;right:10px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:8px;display:none;flex-wrap:wrap;gap:2px;width:220px;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;
+}
+.cp-emoji-panel.open{display:flex}
+.cp-emoji-item{
+  font-size:20px;width:32px;height:32px;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;border-radius:6px;
+}
+.cp-emoji-item:hover{background:var(--bg3)}
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+
+<!-- NAV -->
+<nav class="top-nav">
+  <!-- CLOCK (replaces logo) -->
+  <div class="nav-clock-box">
+    <div class="nav-clock-time" id="nav-clock">--:--:--</div>
+    <div class="nav-clock-date" id="nav-date">--.--.----</div>
+  </div>
+  <div class="nav-divider"></div>
+
+  <!-- HAMBURGER -->
+  <button class="burger-btn" onclick="openSidebar()" title="Меню" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+  <!-- HOME BUTTON -->
+  <a href="{{ url_for('dashboard') }}"
+     class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}"
+     style="font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px">
+    <i class="bi bi-house-fill"></i> Главная
+  </a>
+
+  <!-- NAV CHIPS SLOT (filled by dashboard) -->
+  {% block nav_chips %}{% endblock %}
+
+  <!-- TOP RIGHT: только язык + тема + выход -->
+  <div class="nav-right">
+    <a href="{{ url_for('logout') }}" class="btn-logout" title="Выход">
+      <i class="bi bi-box-arrow-right"></i>
+      <span data-i18n="nav.logout">Выход</span>
+    </a>
+    <div class="nav-divider"></div>
+    {% if current_user.role == 'admin' %}
+    <!-- Wallpaper picker (admin only — controls for everyone) -->
+    <div style="position:relative">
+      <button class="theme-btn" id="bg-picker-btn" onclick="toggleBgPicker(event)"
+              data-i18n-title="wall.title" title="Фоновое изображение">
+        <i class="bi bi-image"></i>
+      </button>
+      <div id="bg-picker-panel" onclick="event.stopPropagation()" style="
+        display:none;position:absolute;top:42px;right:0;
+        background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+        padding:14px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.6);width:290px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;
+                       letter-spacing:.08em;color:var(--muted)" data-i18n="wall.title">Фоновое изображение</span>
+          {% if current_user.role == 'admin' %}
+          <button onclick="wallUpload()"
+                  style="background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);
+                         color:var(--blue);border-radius:6px;padding:2px 8px;font-size:11px;
+                         font-weight:700;cursor:pointer;white-space:nowrap">
+            <i class="bi bi-upload"></i> <span data-i18n="wall.upload">Загрузить</span>
+          </button>
+          {% endif %}
+        </div>
+        <div id="wall-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+             max-height:230px;overflow-y:auto;margin-bottom:8px;padding-right:2px">
+          <div style="color:var(--muted);font-size:12px;grid-column:1/-1;text-align:center;
+                      padding:20px 0" data-i18n="wall.loading">загрузка...</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <button onclick="setBg('animated')" id="bg-opt-animated"
+                  style="flex:1;background:rgba(63,185,80,.1);border:2px solid rgba(63,185,80,.3);
+                         color:var(--green);border-radius:8px;padding:6px;font-size:12px;
+                         font-weight:700;cursor:pointer;transition:.15s">
+            ✦ <span>Живой</span>
+          </button>
+          <button onclick="setBg('slide')" id="bg-opt-slide"
+                  style="flex:1;background:rgba(88,166,255,.1);border:2px solid rgba(88,166,255,.3);
+                         color:var(--blue);border-radius:8px;padding:6px;font-size:12px;
+                         font-weight:700;cursor:pointer;transition:.15s">
+            <i class="bi bi-play-circle"></i> <span data-i18n="wall.slide">Слайд</span>
+          </button>
+          <button onclick="setBg('off')" id="bg-opt-off"
+                  style="flex:1;background:var(--bg3);border:2px solid var(--border);
+                         color:var(--muted);border-radius:8px;padding:6px;font-size:12px;
+                         font-weight:700;cursor:pointer;transition:.15s">
+            <i class="bi bi-x-circle"></i> <span data-i18n="wall.off">Выкл</span>
+          </button>
+        </div>
+        <!-- Opacity controls -->
+        <div style="margin:8px 0 10px;padding:8px 6px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:11px;color:var(--muted)" data-i18n="wall.bg_opacity">🖼 Фон</span>
+            <span id="wall-img-opa-val" style="font-size:11px;font-weight:700;color:var(--blue)">65%</span>
+          </div>
+          <input type="range" min="10" max="100" value="65" id="wall-img-opa"
+            oninput="setWallImgOpa(this.value)"
+            style="width:100%;accent-color:var(--blue);height:4px;cursor:pointer">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px">
+            <span style="font-size:11px;color:var(--muted)" data-i18n="wall.panel_opacity">🪟 Панели</span>
+            <span id="wall-panel-opa-val" style="font-size:11px;font-weight:700;color:var(--purple)">50%</span>
+          </div>
+          <input type="range" min="20" max="100" value="50" id="wall-panel-opa"
+            oninput="setWallPanelOpa(this.value)"
+            style="width:100%;accent-color:var(--purple);height:4px;cursor:pointer">
+        </div>
+        <!-- Apply globally for all users -->
+        <button onclick="wallSetDefault()"
+                style="width:100%;background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);
+                       color:var(--green);border-radius:8px;padding:7px;font-size:12px;
+                       font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <i class="bi bi-people-fill"></i> Применить для всех пользователей
+        </button>
+        <div id="wall-default-lbl" style="font-size:10px;color:var(--muted);text-align:center;margin-top:5px"></div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="nav-divider"></div>
+    <!-- Lang switcher -->
+    <div class="lang-group">
+      <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn" data-lang="az" onclick="setLang('az')">AZ</button>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    </div>
+    <!-- Theme palette picker -->
+    <div style="position:relative">
+      <button onclick="toggleThemePicker(event)"
+              style="background:rgba(88,166,255,.12);border:1.5px solid rgba(88,166,255,.45);color:var(--blue);
+                     padding:5px 14px;border-radius:8px;cursor:pointer;font-size:13px;
+                     font-weight:700;display:flex;align-items:center;gap:7px;transition:.15s;
+                     white-space:nowrap;box-shadow:0 0 12px rgba(88,166,255,.15)"
+              onmouseover="this.style.boxShadow='0 0 20px rgba(88,166,255,.35)';this.style.borderColor='rgba(88,166,255,.8)'"
+              onmouseout="this.style.boxShadow='0 0 12px rgba(88,166,255,.15)';this.style.borderColor='rgba(88,166,255,.45)'">
+        <i class="bi bi-palette-fill"></i>
+        <span data-i18n="nav.design">Дизайн</span>
+      </button>
+      <div id="theme-picker" style="display:none;position:absolute;top:42px;right:0;
+           background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+           padding:14px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.6);width:268px"
+           onclick="event.stopPropagation()">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+                    color:var(--muted);margin-bottom:10px" data-i18n="theme.title">Тема оформления</div>
+        <!-- ★ FEATURED 4 DESIGNS ★ -->
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
+                    color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <span style="flex:1;height:1px;background:var(--border)"></span>
+          ★ Рекомендуемые
+          <span style="flex:1;height:1px;background:var(--border)"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+          <button class="tp-swatch" data-theme="abyss" onclick="setTheme('abyss')"
+                  style="height:66px;border-radius:10px;border:1px solid rgba(0,200,255,.2);cursor:pointer;
+                         background:linear-gradient(160deg,#060b14,#0a1422);
+                         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:16px;height:16px;border-radius:50%;background:#00c8ff;box-shadow:0 0 10px #00c8ff;display:block"></span>
+            <span style="font-size:9px;font-weight:800;color:#3a8fb5;letter-spacing:.05em">ABYSS</span>
+          </button>
+          <button class="tp-swatch" data-theme="studio" onclick="setTheme('studio')"
+                  style="height:66px;border-radius:10px;border:1px solid rgba(79,195,247,.15);cursor:pointer;
+                         background:linear-gradient(160deg,#060a0f,#0a1018);
+                         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:16px;height:16px;border-radius:50%;background:#4fc3f7;box-shadow:0 0 10px #4fc3f7;display:block"></span>
+            <span style="font-size:9px;font-weight:800;color:#2a6a8a;letter-spacing:.05em">STUDIO</span>
+          </button>
+          <button class="tp-swatch" data-theme="midnight" onclick="setTheme('midnight')"
+                  style="height:66px;border-radius:10px;border:1px solid rgba(178,75,255,.2);cursor:pointer;
+                         background:linear-gradient(160deg,#09080d,#110f1a);
+                         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:16px;height:16px;border-radius:50%;background:#b24bff;box-shadow:0 0 10px #b24bff;display:block"></span>
+            <span style="font-size:9px;font-weight:800;color:#6a30a0;letter-spacing:.05em">MIDNIGHT</span>
+          </button>
+          <button class="tp-swatch" data-theme="campus" onclick="setTheme('campus')"
+                  style="height:66px;border-radius:10px;border:1px solid #1a1a1a;cursor:pointer;
+                         background:#000;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:5px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:16px;height:16px;border-radius:50%;background:#00d4ff;box-shadow:0 0 10px #00d4ff;display:block"></span>
+            <span style="font-size:9px;font-weight:800;color:#006888;letter-spacing:.05em">КАМПУС</span>
+          </button>
+        </div>
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
+                    color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <span style="flex:1;height:1px;background:var(--border)"></span>
+          Остальные
+          <span style="flex:1;height:1px;background:var(--border)"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+          <button class="tp-swatch" data-theme="dark" onclick="setTheme('dark')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#0d1117;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#58a6ff;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#8b949e;letter-spacing:.04em" data-i18n="theme.dark">ТЁМНАЯ</span>
+          </button>
+          <button class="tp-swatch" data-theme="light" onclick="setTheme('light')"
+                  style="height:58px;border-radius:10px;border:1px solid #cdd4df;cursor:pointer;
+                         background:linear-gradient(135deg,#f0f4f8,#e2eaf5);display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#0969da;box-shadow:0 0 6px rgba(9,105,218,.4);display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#1c2333;letter-spacing:.04em" data-i18n="theme.light">СВЕТЛАЯ</span>
+          </button>
+          <button class="tp-swatch" data-theme="ocean" onclick="setTheme('ocean')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#060e1e;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#4fc3f7;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#607d8b;letter-spacing:.04em" data-i18n="theme.ocean">ОКЕАН</span>
+          </button>
+          <button class="tp-swatch" data-theme="nord" onclick="setTheme('nord')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#2e3440;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#88c0d0;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#7a8899;letter-spacing:.04em" data-i18n="theme.nord">НОРД</span>
+          </button>
+          <button class="tp-swatch" data-theme="forest" onclick="setTheme('forest')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#060f06;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#66bb6a;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#6a9b6a;letter-spacing:.04em" data-i18n="theme.forest">ЛЕС</span>
+          </button>
+          <button class="tp-swatch" data-theme="sunset" onclick="setTheme('sunset')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#120600;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#ffa726;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#8d6e63;letter-spacing:.04em" data-i18n="theme.sunset">ЗАКАТ</span>
+          </button>
+          <button class="tp-swatch" data-theme="purple" onclick="setTheme('purple')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#08050f;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#ce93d8;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#9575cd;letter-spacing:.04em" data-i18n="theme.purple">ФИОЛЕТ</span>
+          </button>
+          <button class="tp-swatch" data-theme="dracula" onclick="setTheme('dracula')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#1e1f2b;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#ff79c6;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#6272a4;letter-spacing:.04em" data-i18n="theme.dracula">ДРАКУЛА</span>
+          </button>
+          <button class="tp-swatch" data-theme="cyber" onclick="setTheme('cyber')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:linear-gradient(135deg,#04001a,#10005a);
+                         display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#ff0099;box-shadow:0 0 6px #ff0099;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#7040c0;letter-spacing:.04em" data-i18n="theme.cyber">КИБЕР</span>
+          </button>
+          <button class="tp-swatch" data-theme="matrix" onclick="setTheme('matrix')"
+                  style="height:58px;border-radius:10px;border:none;cursor:pointer;
+                         background:#000900;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#00ff41;box-shadow:0 0 6px #00ff41;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#2e7d2e;letter-spacing:.04em" data-i18n="theme.matrix">МАТРИЦА</span>
+          </button>
+          <button class="tp-swatch" data-theme="campus" onclick="setTheme('campus')"
+                  style="height:58px;border-radius:10px;border:1px solid #1a1a1a;cursor:pointer;
+                         background:#000;display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#00d4ff;box-shadow:0 0 8px #00d4ff;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#006888;letter-spacing:.04em">КАМПУС</span>
+          </button>
+        </div>
+        <!-- Link to full settings page -->
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);text-align:center">
+          <a href="{{ url_for('settings_page') }}"
+             style="font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+            <i class="bi bi-gear-fill"></i> Все настройки оформления
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">
+        <i class="bi bi-{% if cat=='success' %}check-circle{% elif cat=='danger' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+
+{% if current_user.role in ('admin','staff') %}
+<!-- ── Web Terminal modal ── -->
+<div id="term-overlay" onclick="if(event.target===this)closeTerminal()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+            z-index:8000;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="width:min(1000px,98vw);background:#0d1117;border:1px solid #30363d;
+              border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.7);
+              display:flex;flex-direction:column;height:min(640px,92vh)">
+
+    <!-- header -->
+    <div style="background:#161b22;border-bottom:1px solid #30363d;padding:10px 16px;
+                display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <i class="bi bi-terminal-fill" style="color:#58a6ff"></i>
+      <span style="font-size:13px;font-weight:700;color:#f0f6fc">SSH Терминал</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="setTermMachine('nctk')" id="tbtn-nctk"
+                style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;
+                       background:rgba(88,166,255,.2);border:1px solid #58a6ff;color:#58a6ff">
+          <i class="bi bi-building"></i> Narimanov
+        </button>
+        <button onclick="setTermMachine('vm1')" id="tbtn-vm1"
+                style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;
+                       background:#21262d;border:1px solid #30363d;color:#8b949e">
+          <i class="bi bi-pc-display"></i> Gənclik
+        </button>
+        <button onclick="setTermMachine('centos')" id="tbtn-centos"
+                style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;
+                       background:#21262d;border:1px solid #30363d;color:#8b949e">
+          <i class="bi bi-server"></i> CentOS
+        </button>
+        <button onclick="toggleCheatsheet()" id="tbtn-cheat"
+                style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer;
+                       background:#21262d;border:1px solid #30363d;color:#8b949e"
+                title="Шпаргалка команд">
+          <i class="bi bi-journal-code"></i> Команды
+        </button>
+      </div>
+      <span id="term-status" style="margin-left:auto;font-size:11px;color:#8b949e"></span>
+      <button onclick="closeTerminal()"
+              style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;
+                     line-height:1;padding:0 4px">&times;</button>
+    </div>
+
+    <!-- cheatsheet panel (hidden by default) -->
+    <div id="term-cheat" style="display:none;background:#0d1117;border-bottom:1px solid #30363d;
+         padding:12px 16px;overflow-y:auto;max-height:220px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                      color:#ffa657;margin-bottom:7px"><i class="bi bi-music-note-beamed"></i> Плеер (Narimanov / Gənclik)</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <button class="cheat-btn" onclick="termPaste('campus-playerctl status')">campus-playerctl status</button>
+            <button class="cheat-btn" onclick="termPaste('campus-playerctl stop')">campus-playerctl stop</button>
+            <button class="cheat-btn" onclick="termPaste('campus-playerctl play /var/lib/campus-player/inbox/in.mp3 100')">campus-playerctl play … 100</button>
+            <button class="cheat-btn" onclick="termPaste('pkill -9 mpv')">pkill -9 mpv</button>
+            <button class="cheat-btn" onclick="termPaste('ls /var/lib/campus-player/inbox/')">ls inbox/</button>
+            <button class="cheat-btn" onclick="termPaste('journalctl -u campus-player -n 30 --no-pager')">journalctl campus-player -30</button>
+          </div>
+        </div>
+
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                      color:#58a6ff;margin-bottom:7px"><i class="bi bi-calendar-check"></i> Cron / Расписание</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <button class="cheat-btn" onclick="termPaste('crontab -l')">crontab -l</button>
+            <button class="cheat-btn" onclick="termPaste('crontab -e')">crontab -e</button>
+            <button class="cheat-btn" onclick="termPaste('systemctl list-timers --all')">systemctl list-timers</button>
+            <button class="cheat-btn" onclick="termPaste('cat /etc/campus-schedule.json')">cat campus-schedule.json</button>
+            <button class="cheat-btn" onclick="termPaste('journalctl -u cron -n 20 --no-pager')">journalctl cron -20</button>
+            <button class="cheat-btn" onclick="termPaste('grep CRON /var/log/syslog | tail -20')">grep CRON syslog</button>
+          </div>
+        </div>
+
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                      color:#3fb950;margin-bottom:7px"><i class="bi bi-soundwave"></i> Звук / Аудио</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <button class="cheat-btn" onclick="termPaste('aplay -l')">aplay -l (устройства)</button>
+            <button class="cheat-btn" onclick="termPaste('amixer get Master')">amixer get Master</button>
+            <button class="cheat-btn" onclick="termPaste('amixer set Master 80%')">amixer set Master 80%</button>
+            <button class="cheat-btn" onclick="termPaste('pactl list sinks short')">pactl list sinks</button>
+            <button class="cheat-btn" onclick="termPaste('pactl set-sink-volume @DEFAULT_SINK@ 80%')">pactl set-sink-volume 80%</button>
+            <button class="cheat-btn" onclick="termPaste('ls /proc/asound/cards')">ls /proc/asound/cards</button>
+          </div>
+        </div>
+
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                      color:#bc8cff;margin-bottom:7px"><i class="bi bi-cpu"></i> Система</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <button class="cheat-btn" onclick="termPaste('df -h')">df -h (диск)</button>
+            <button class="cheat-btn" onclick="termPaste('free -h')">free -h (память)</button>
+            <button class="cheat-btn" onclick="termPaste('uptime')">uptime</button>
+            <button class="cheat-btn" onclick="termPaste('systemctl status campus-player')">systemctl status campus-player</button>
+            <button class="cheat-btn" onclick="termPaste('systemctl restart campus-player')">systemctl restart campus-player</button>
+            <button class="cheat-btn" onclick="termPaste('ip a')">ip a (сеть)</button>
+          </div>
+        </div>
+
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                      color:#f85149;margin-bottom:7px"><i class="bi bi-file-earmark-music"></i> Файлы треков</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <button class="cheat-btn" onclick="termPaste('ls -lh /var/lib/campus-player/inbox/')">ls inbox</button>
+            <button class="cheat-btn" onclick="termPaste('ls -lh /home/nctk/music/ 2>/dev/null || ls -lh /music/')">ls music dir</button>
+            <button class="cheat-btn" onclick="termPaste('du -sh /var/lib/campus-player/')">du campus-player</button>
+            <button class="cheat-btn" onclick="termPaste('find /var/lib/campus-player -name \"*.mp3\" | wc -l')">счёт mp3</button>
+          </div>
+        </div>
+
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                      color:#e3b341;margin-bottom:7px"><i class="bi bi-hdd-stack"></i> CentOS — сервер</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <button class="cheat-btn" onclick="termPaste('systemctl list-units --type=service --state=running')">running services</button>
+            <button class="cheat-btn" onclick="termPaste('docker ps')">docker ps</button>
+            <button class="cheat-btn" onclick="termPaste('docker compose --profile webui ps')">docker compose ps</button>
+            <button class="cheat-btn" onclick="termPaste('journalctl -u docker -n 30 --no-pager')">journalctl docker</button>
+            <button class="cheat-btn" onclick="termPaste('ss -tlnp')">ss -tlnp (порты)</button>
+            <button class="cheat-btn" onclick="termPaste('tail -50 /var/log/messages')">tail /var/log/messages</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- output -->
+    <div id="term-out" style="flex:1;overflow-y:auto;padding:12px 16px;
+         font-family:'JetBrains Mono',monospace;font-size:13px;color:#e6edf3;
+         line-height:1.6;white-space:pre-wrap;word-break:break-all"></div>
+
+    <!-- input -->
+    <div style="border-top:1px solid #30363d;padding:10px 14px;
+                display:flex;align-items:center;gap:8px;background:#161b22">
+      <span style="color:#58a6ff;font-family:'JetBrains Mono',monospace;font-size:13px;
+                   font-weight:700;white-space:nowrap" id="term-prompt">nctk $</span>
+      <input id="term-input" type="text" autocomplete="off" spellcheck="false"
+             style="flex:1;background:transparent;border:none;outline:none;
+                    color:#f0f6fc;font-family:'JetBrains Mono',monospace;font-size:13px"
+             placeholder="введите команду..."
+             onkeydown="if(event.key==='Enter')termExec()">
+      <button onclick="termExec()"
+              style="background:rgba(88,166,255,.15);border:1px solid rgba(88,166,255,.4);
+                     color:#58a6ff;border-radius:7px;padding:5px 14px;font-size:12px;
+                     font-weight:700;cursor:pointer">
+        <i class="bi bi-send-fill"></i>
+      </button>
+      <button onclick="termClear()"
+              style="background:#21262d;border:1px solid #30363d;color:#8b949e;
+                     border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer"
+              title="Очистить">
+        <i class="bi bi-trash3"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.cheat-btn{
+  background:transparent;border:none;color:#8b949e;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  text-align:left;cursor:pointer;padding:2px 4px;border-radius:4px;
+  transition:.1s;width:100%;
+}
+.cheat-btn:hover{background:rgba(88,166,255,.12);color:#f0f6fc}
+</style>
+
+<script>
+var _termMachine='nctk';
+var _termHistory=[], _termHistIdx=-1;
+var _termCheatVisible=false;
+
+var _TERM_COLORS={
+  nctk:'#58a6ff', vm1:'#bc8cff', centos:'#ffa657'
+};
+var _TERM_PROMPTS={
+  nctk:'nctk', vm1:'vm1', centos:'kamran@centos'
+};
+
+function openTerminal(){
+  document.getElementById('term-overlay').style.display='flex';
+  document.getElementById('term-input').focus();
+  setTermMachine('nctk');
+}
+function closeTerminal(){
+  document.getElementById('term-overlay').style.display='none';
+}
+function toggleCheatsheet(){
+  _termCheatVisible=!_termCheatVisible;
+  document.getElementById('term-cheat').style.display=_termCheatVisible?'':'none';
+  var b=document.getElementById('tbtn-cheat');
+  if(_termCheatVisible){
+    b.style.background='rgba(88,166,255,.15)';b.style.borderColor='#58a6ff';b.style.color='#58a6ff';
+  } else {
+    b.style.background='#21262d';b.style.borderColor='#30363d';b.style.color='#8b949e';
+  }
+}
+function termPaste(cmd){
+  var inp=document.getElementById('term-input');
+  inp.value=cmd; inp.focus();
+}
+function setTermMachine(m){
+  _termMachine=m;
+  var color=_TERM_COLORS[m]||'#58a6ff';
+  var prompt=_TERM_PROMPTS[m]||m;
+  var pEl=document.getElementById('term-prompt');
+  pEl.textContent=prompt+' $';
+  pEl.style.color=color;
+  ['nctk','vm1','centos'].forEach(function(k){
+    var b=document.getElementById('tbtn-'+k);
+    if(!b)return;
+    var c=_TERM_COLORS[k]||'#58a6ff';
+    if(k===m){
+      b.style.background='rgba('+hexToRgb(c)+',.2)';
+      b.style.borderColor=c; b.style.color=c;
+    } else {
+      b.style.background='#21262d'; b.style.borderColor='#30363d'; b.style.color='#8b949e';
+    }
+  });
+}
+function hexToRgb(h){
+  var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return r+','+g+','+b;
+}
+function termAppend(txt, cls){
+  var out=document.getElementById('term-out');
+  var span=document.createElement('span');
+  span.textContent=txt+'\n';
+  if(cls==='cmd') span.style.color=_TERM_COLORS[_termMachine]||'#58a6ff';
+  else if(cls==='err') span.style.color='#f85149';
+  else if(cls==='ok') span.style.color='#e6edf3';
+  out.appendChild(span);
+  out.scrollTop=out.scrollHeight;
+}
+function termClear(){
+  document.getElementById('term-out').innerHTML='';
+}
+function termExec(){
+  var inp=document.getElementById('term-input');
+  var cmd=inp.value.trim();
+  if(!cmd)return;
+  inp.value='';
+  _termHistory.unshift(cmd); _termHistIdx=-1;
+  var prompt=_TERM_PROMPTS[_termMachine]||_termMachine;
+  termAppend(prompt+' $ '+cmd,'cmd');
+  var st=document.getElementById('term-status');
+  st.textContent='⏳ выполняется...';
+  fetch('/api/terminal',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({cmd:cmd,machine:_termMachine})
+  }).then(function(r){return r.json()}).then(function(d){
+    st.textContent='';
+    if(d.output) termAppend(d.output, d.ok?'ok':'err');
+    if(!d.ok&&d.error) termAppend('Ошибка: '+d.error,'err');
+  }).catch(function(e){
+    st.textContent='';
+    termAppend('Нет связи: '+e,'err');
+  });
+}
+
+// History navigation
+document.addEventListener('keydown',function(e){
+  var inp=document.getElementById('term-input');
+  if(document.getElementById('term-overlay').style.display!=='flex') return;
+  if(document.activeElement!==inp) return;
+  if(e.key==='ArrowUp'){
+    e.preventDefault();
+    if(_termHistIdx<_termHistory.length-1){
+      _termHistIdx++;
+      inp.value=_termHistory[_termHistIdx];
+    }
+  } else if(e.key==='ArrowDown'){
+    e.preventDefault();
+    if(_termHistIdx>0){ _termHistIdx--; inp.value=_termHistory[_termHistIdx]; }
+    else { _termHistIdx=-1; inp.value=''; }
+  } else if(e.key==='Escape'){
+    closeTerminal();
+  }
+});
+</script>
+{% endif %}
+
+<!-- ── Wallpaper system ── -->
+<script>
+var _bgWalls = [];
+var _bgTimer = null, _bgIdx = 0;
+var _bgIsAdmin = {{ 'true' if current_user.role == 'admin' else 'false' }};
+var _bgIsGuest = {{ 'true' if current_user.role == 'guest' else 'false' }};
+var _bgServerDefault = {{ wallpaper_default | tojson }};
+// Non-admins always follow server default; admins use their own localStorage choice
+var _bgMode = _bgIsAdmin
+  ? (localStorage.getItem('bgMode') || _bgServerDefault)
+  : _bgServerDefault;
+
+var _wallImgOpa   = parseFloat(localStorage.getItem('wallImgOpa')   || '0.65');
+var _wallPanelOpa = parseFloat(localStorage.getItem('wallPanelOpa3') || '0.50');
+
+function _calcPanelBri(opa) {
+  // At opa=1: bri=1 (no change). At opa=0.5: bri≈2.25. At opa=0.2: bri≈3.
+  return (1 + (1 - opa) * 2.5).toFixed(2);
+}
+
+function _applyOpaToDOM() {
+  var root = document.documentElement;
+  var pct_p = Math.round(_wallPanelOpa * 100);
+  var pct_i = Math.round(_wallImgOpa * 100);
+  root.style.setProperty('--panel-opa', String(_wallPanelOpa));
+  root.style.setProperty('--panel-bri', _calcPanelBri(_wallPanelOpa));
+  var savedBlur = localStorage.getItem('wallPanelBlur');
+  root.style.setProperty('--panel-blur', (savedBlur !== null ? savedBlur : '0') + 'px');
+  root.style.setProperty('--fon-opa', root.classList.contains('has-wallpaper') ? String(_wallImgOpa) : '0');
+  ['wall-panel-opa-val','sb-panel-opa-val'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.textContent=pct_p+'%';
+  });
+  ['wall-img-opa-val','sb-img-opa-val'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.textContent=pct_i+'%';
+  });
+  ['wall-panel-opa','sb-panel-opa'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value=pct_p;
+  });
+  ['wall-img-opa','sb-img-opa'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value=pct_i;
+  });
+}
+function setWallImgOpa(pct) {
+  _wallImgOpa = parseInt(pct) / 100;
+  localStorage.setItem('wallImgOpa', _wallImgOpa);
+  ['wall-img-opa-val','sb-img-opa-val'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.textContent=pct+'%';
+  });
+  ['wall-img-opa','sb-img-opa'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value=pct;
+  });
+  if (document.documentElement.classList.contains('has-wallpaper'))
+    document.documentElement.style.setProperty('--fon-opa', String(_wallImgOpa));
+}
+function setWallPanelOpa(pct) {
+  _wallPanelOpa = parseInt(pct) / 100;
+  localStorage.setItem('wallPanelOpa3', _wallPanelOpa);
+  ['wall-panel-opa-val','sb-panel-opa-val'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.textContent=pct+'%';
+  });
+  ['wall-panel-opa','sb-panel-opa'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value=pct;
+  });
+  var root = document.documentElement;
+  root.style.setProperty('--panel-opa', String(_wallPanelOpa));
+  root.style.setProperty('--panel-bri', _calcPanelBri(_wallPanelOpa));
+  /* blur scales with opacity: transparent=0px blur, opaque=8px blur */
+  var blurPx = Math.round((1 - _wallPanelOpa) * 0 + _wallPanelOpa * 8);
+  root.style.setProperty('--panel-blur', blurPx + 'px');
+  localStorage.setItem('wallPanelBlur', blurPx);
+}
+_applyOpaToDOM();
+
+function _bgSet(url) {
+  var root = document.documentElement;
+  root.style.setProperty('--fon-url', url ? "url('" + url + "')" : 'none');
+  root.style.setProperty('--fon-opa', url ? String(_wallImgOpa) : '0');
+  root.classList.toggle('has-wallpaper', !!url);
+}
+function _bgStopSlide() { if (_bgTimer) { clearInterval(_bgTimer); _bgTimer = null; } }
+function _bgStartSlide() {
+  _bgStopSlide();
+  if (!_bgWalls.length) return;
+  _bgIdx = 0; _bgSet('/wallpapers/' + encodeURIComponent(_bgWalls[0]));
+  _bgTimer = setInterval(function() {
+    _bgIdx = (_bgIdx + 1) % _bgWalls.length;
+    _bgSet('/wallpapers/' + encodeURIComponent(_bgWalls[_bgIdx]));
+  }, 15000);
+}
+
+// ── Animated particle-network background ──────────────────
+var _animBgCanvas = null, _animBgAF = null, _animBgPts = [];
+var _overlayCanvas = null, _overlayAF = null, _overlayPts = [];
+
+function _animGetColor() {
+  var b = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || '#00c8ff';
+  if (b.startsWith('#') && b.length === 7) {
+    return parseInt(b.slice(1,3),16)+','+parseInt(b.slice(3,5),16)+','+parseInt(b.slice(5,7),16);
+  }
+  return '0,200,255';
+}
+
+function _makeBgCanvas(zIdx) {
+  var cv = document.createElement('canvas');
+  cv.style.cssText = 'position:fixed;inset:0;z-index:'+zIdx+';pointer-events:none;width:100%;height:100%';
+  document.body.appendChild(cv);
+  return cv;
+}
+
+function _buildPts(N, W, H, speed) {
+  var pts = [];
+  for (var i = 0; i < N; i++) {
+    var hue = Math.random() * 360;
+    pts.push({x:Math.random()*W, y:Math.random()*H,
+      vx:(Math.random()-.5)*speed, vy:(Math.random()-.5)*speed,
+      r:1+Math.random()*2.5, hue:hue, dh:(Math.random()-.5)*.4});
+  }
+  return pts;
+}
+
+function startAnimatedBg() {
+  stopAnimatedBg();
+  var cv = _makeBgCanvas(-1);
+  _animBgCanvas = cv;
+  var ctx = cv.getContext('2d');
+  var N = 90;
+  function resize() {
+    cv.width = innerWidth; cv.height = innerHeight;
+    _animBgPts = _buildPts(N, cv.width, cv.height, 0.55);
+  }
+  cv._rh = function(){ resize(); };
+  window.addEventListener('resize', cv._rh);
+  resize();
+  function loop() {
+    var W=cv.width, H=cv.height;
+    var baseCol = _animGetColor();
+    ctx.clearRect(0,0,W,H);
+    var t = Date.now() / 1000;
+    for (var i=0; i<_animBgPts.length; i++) {
+      var p=_animBgPts[i];
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      p.hue=(p.hue+p.dh+360)%360;
+      var glow = p.r * 3;
+      ctx.shadowColor = 'hsla('+p.hue+',100%,70%,.7)';
+      ctx.shadowBlur = glow;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='hsla('+p.hue+',90%,72%,.62)'; ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    var DIST = 160;
+    for (var i=0; i<_animBgPts.length; i++) {
+      for (var j=i+1; j<_animBgPts.length; j++) {
+        var dx=_animBgPts[i].x-_animBgPts[j].x, dy=_animBgPts[i].y-_animBgPts[j].y;
+        var d=Math.sqrt(dx*dx+dy*dy);
+        if(d<DIST){
+          var hm=(_animBgPts[i].hue+_animBgPts[j].hue)/2;
+          ctx.beginPath(); ctx.moveTo(_animBgPts[i].x,_animBgPts[i].y);
+          ctx.lineTo(_animBgPts[j].x,_animBgPts[j].y);
+          ctx.strokeStyle='hsla('+hm+',80%,65%,'+((1-d/DIST)*.35).toFixed(2)+')';
+          ctx.lineWidth=.9; ctx.stroke();
+        }
+      }
+    }
+    _animBgAF = requestAnimationFrame(loop);
+  }
+  loop();
+  document.documentElement.classList.add('has-wallpaper');
+}
+
+function stopAnimatedBg() {
+  if (_animBgAF) { cancelAnimationFrame(_animBgAF); _animBgAF = null; }
+  if (_animBgCanvas) {
+    if (_animBgCanvas._rh) window.removeEventListener('resize', _animBgCanvas._rh);
+    _animBgCanvas.remove(); _animBgCanvas = null;
+  }
+  _animBgPts = [];
+}
+
+// Light particle overlay for image wallpapers
+function startParticleOverlay() {
+  stopParticleOverlay();
+  var cv = _makeBgCanvas(0);
+  _overlayCanvas = cv;
+  var ctx = cv.getContext('2d');
+  var N = 40;
+  function resize() {
+    cv.width = innerWidth; cv.height = innerHeight;
+    _overlayPts = _buildPts(N, cv.width, cv.height, 0.35);
+  }
+  cv._rh = function(){ resize(); };
+  window.addEventListener('resize', cv._rh);
+  resize();
+  function loop() {
+    var W=cv.width, H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    for (var i=0; i<_overlayPts.length; i++) {
+      var p=_overlayPts[i];
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      p.hue=(p.hue+p.dh+360)%360;
+      ctx.shadowColor='hsla('+p.hue+',100%,70%,.5)'; ctx.shadowBlur=p.r*2.5;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='hsla('+p.hue+',85%,72%,.38)'; ctx.fill();
+      ctx.shadowBlur=0;
+    }
+    var DIST=130;
+    for (var i=0; i<_overlayPts.length; i++) {
+      for (var j=i+1; j<_overlayPts.length; j++) {
+        var dx=_overlayPts[i].x-_overlayPts[j].x, dy=_overlayPts[i].y-_overlayPts[j].y;
+        var d=Math.sqrt(dx*dx+dy*dy);
+        if(d<DIST){
+          var hm=(_overlayPts[i].hue+_overlayPts[j].hue)/2;
+          ctx.beginPath(); ctx.moveTo(_overlayPts[i].x,_overlayPts[i].y);
+          ctx.lineTo(_overlayPts[j].x,_overlayPts[j].y);
+          ctx.strokeStyle='hsla('+hm+',75%,65%,'+((1-d/DIST)*.2).toFixed(2)+')';
+          ctx.lineWidth=.7; ctx.stroke();
+        }
+      }
+    }
+    _overlayAF = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function stopParticleOverlay() {
+  if (_overlayAF) { cancelAnimationFrame(_overlayAF); _overlayAF = null; }
+  if (_overlayCanvas) {
+    if (_overlayCanvas._rh) window.removeEventListener('resize', _overlayCanvas._rh);
+    _overlayCanvas.remove(); _overlayCanvas = null;
+  }
+  _overlayPts = [];
+}
+
+function setBg(val) {
+  stopAnimatedBg(); stopParticleOverlay();
+  _bgMode = val;
+  localStorage.setItem('bgMode', val);
+  _bgStopSlide();
+  if (val === 'animated') {
+    _bgSet(null);
+    startAnimatedBg();
+  } else if (val === 'slide') {
+    _bgStartSlide();
+    startParticleOverlay();
+  } else if (val === 'off') {
+    _bgSet(null); document.documentElement.classList.remove('has-wallpaper');
+  } else {
+    _bgSet('/wallpapers/' + encodeURIComponent(val));
+    startParticleOverlay();
+  }
+  _bgUpdateUI();
+  var p = document.getElementById('bg-picker-panel');
+  if (p) p.style.display = 'none';
+}
+
+function _bgUpdateUI() {
+  document.querySelectorAll('.wall-thumb').forEach(function(el) {
+    el.style.outline = (el.dataset.wall === _bgMode) ? '3px solid var(--blue)' : '2px solid transparent';
+  });
+  var bs = document.getElementById('bg-opt-slide');
+  if (bs) bs.style.borderColor = _bgMode === 'slide' ? 'var(--blue)' : 'rgba(88,166,255,.3)';
+  var bo = document.getElementById('bg-opt-off');
+  if (bo) bo.style.borderColor = _bgMode === 'off' ? 'var(--red)' : 'var(--border)';
+  var ba = document.getElementById('bg-opt-animated');
+  if (ba) ba.style.borderColor = _bgMode === 'animated' ? 'var(--green)' : 'rgba(63,185,80,.3)';
+}
+
+function _bgBuildGrid(walls) {
+  _bgWalls = walls;
+  var grid = document.getElementById('wall-grid');
+  if (!grid) return;
+  if (!walls.length) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;grid-column:1/-1;text-align:center;padding:20px 0" data-i18n="wall.none">' + t('wall.none') + '</div>';
+    return;
+  }
+  // Sort: light- prefix first, then alphabetical
+  walls = walls.slice().sort(function(a,b){
+    var al = a.startsWith('light-'), bl = b.startsWith('light-');
+    if (al && !bl) return -1; if (!al && bl) return 1;
+    return a.localeCompare(b);
+  });
+  grid.innerHTML = '';
+  // Light wallpapers section header
+  var lightWalls = walls.filter(function(w){ return w.startsWith('light-'); });
+  var darkWalls  = walls.filter(function(w){ return !w.startsWith('light-'); });
+  function _addSep(label) {
+    var sep = document.createElement('div');
+    sep.style.cssText = 'grid-column:1/-1;font-size:9px;font-weight:800;text-transform:uppercase;' +
+      'letter-spacing:.1em;color:var(--muted);padding:4px 0 2px;display:flex;align-items:center;gap:6px';
+    sep.innerHTML = '<span style="flex:1;height:1px;background:var(--border)"></span>' + label +
+      '<span style="flex:1;height:1px;background:var(--border)"></span>';
+    grid.appendChild(sep);
+  }
+  if (lightWalls.length) { _addSep('☀ Светлые'); }
+  walls = lightWalls.concat(darkWalls.length && lightWalls.length ? ['__sep__'] : []).concat(darkWalls);
+  walls.forEach(function(w) {
+    if (w === '__sep__') { _addSep('🌙 Тёмные'); return; }
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;height:60px;border-radius:8px;overflow:hidden';
+    var btn = document.createElement('button');
+    btn.className = 'wall-thumb';
+    btn.dataset.wall = w;
+    btn.title = w.replace(/\.[^.]+$/, '');
+    btn.style.cssText = 'width:100%;height:100%;border:2px solid transparent;cursor:pointer;' +
+      'padding:0;transition:.15s;border-radius:8px;overflow:hidden;display:block;' +
+      'background:url("/wallpapers/' + w.replace(/\\/g,'').replace(/'/g,'') + '") center/cover';
+    btn.onclick = function() { setBg(w); };
+    wrap.appendChild(btn);
+    if (_bgIsAdmin) {
+      var del = document.createElement('button');
+      del.innerHTML = '&times;';
+      del.title = t('common.delete');
+      del.style.cssText = 'position:absolute;top:2px;right:2px;width:18px;height:18px;' +
+        'background:rgba(0,0,0,.75);border:none;color:#fff;border-radius:50%;' +
+        'font-size:14px;line-height:1;cursor:pointer;display:none;' +
+        'align-items:center;justify-content:center;font-weight:700;padding:0';
+      del.onclick = function(e) { e.stopPropagation(); _bgDelete(w, wrap); };
+      wrap.appendChild(del);
+      wrap.onmouseenter = function() { del.style.display = 'flex'; };
+      wrap.onmouseleave = function() { del.style.display = 'none'; };
+    }
+    grid.appendChild(wrap);
+  });
+  _bgUpdateUI();
+}
+
+function _bgLoadWalls() {
+  var grid = document.getElementById('wall-grid');
+  if (!grid) return;
+  fetch('/api/wallpapers/list').then(function(r){return r.json();}).then(function(d){
+    if (d.ok) _bgBuildGrid(d.wallpapers);
+  }).catch(function(){});
+}
+
+function _bgDelete(fname, el) {
+  if (!confirm(t('wall.del_confirm'))) return;
+  fetch('/api/wallpapers/delete', {method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({filename:fname})})
+  .then(function(r){return r.json();}).then(function(d){
+    if (d.ok) {
+      el.remove();
+      _bgWalls = _bgWalls.filter(function(w){return w!==fname;});
+      if (_bgMode === fname) setBg('off');
+      _bgUpdateUI();
+    }
+  });
+}
+
+function wallSetDefault() {
+  var lbl = document.getElementById('wall-default-lbl');
+  fetch('/api/wallpapers/default', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({value: _bgMode})})
+  .then(function(r){return r.json();}).then(function(d){
+    if (d.ok) {
+      _bgServerDefault = _bgMode;
+      if (lbl) lbl.textContent = '✅ Сохранено для всех пользователей: ' + (_bgMode === 'off' ? 'выкл' : _bgMode === 'slide' ? 'слайд' : _bgMode);
+      if (typeof toast === 'function') toast('✅ Обои применены для всех пользователей');
+    } else {
+      if (lbl) lbl.textContent = '❌ ' + (d.error || 'Ошибка');
+    }
+  }).catch(function(){ if (lbl) lbl.textContent = '❌ Ошибка сети'; });
+}
+
+function wallUpload() {
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+  inp.onchange = function() {
+    if (!inp.files.length) return;
+    var fd = new FormData();
+    for (var i = 0; i < inp.files.length; i++) fd.append('files', inp.files[i]);
+    fetch('/api/wallpapers/upload', {method:'POST', body:fd})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if (d.ok) {
+          _bgLoadWalls();
+          if (typeof toast === 'function') toast('✅ ' + t('wall.uploaded') + ' ' + d.saved.length + ' ' + t('wall.photos'));
+        }
+      });
+  };
+  inp.click();
+}
+
+function toggleBgPicker(e) {
+  e.stopPropagation();
+  var p = document.getElementById('bg-picker-panel');
+  if (!p) return;
+  var open = p.style.display === 'block';
+  p.style.display = open ? 'none' : 'block';
+  if (!open) _bgLoadWalls();
+}
+document.addEventListener('click', function(e) {
+  var p = document.getElementById('bg-picker-panel');
+  var btn = document.getElementById('bg-picker-btn');
+  if (p && p.style.display === 'block' && btn && !p.contains(e.target) && !btn.contains(e.target))
+    p.style.display = 'none';
+});
+
+// Apply saved wallpaper on load
+(function() {
+  if (_bgIsGuest || _bgMode === 'off') return;
+  if (_bgMode === 'animated') {
+    startAnimatedBg();
+  } else if (_bgMode === 'slide') {
+    fetch('/api/wallpapers/list').then(function(r){return r.json();}).then(function(d){
+      if (d.ok) { _bgWalls = d.wallpapers; _bgStartSlide(); startParticleOverlay(); }
+    }).catch(function(){});
+  } else {
+    _bgSet('/wallpapers/' + encodeURIComponent(_bgMode));
+    startParticleOverlay();
+  }
+})();
+</script>
+
+<!-- ── Custom emoji/sticker JS ── -->
+<script>
+var _cpEmojiTab = 'std';
+var _cpCustomEmojis = [];
+
+window.cpEmojiTab = function(tab) {
+  _cpEmojiTab = tab;
+  document.getElementById('ep-std').style.display = tab === 'std' ? 'flex' : 'none';
+  document.getElementById('ep-stk').style.display = tab === 'stk' ? 'flex' : 'none';
+  document.getElementById('ep-tab-std').style.background = tab === 'std' ? 'rgba(88,166,255,.15)' : 'transparent';
+  document.getElementById('ep-tab-std').style.color = tab === 'std' ? 'var(--blue)' : 'var(--muted)';
+  document.getElementById('ep-tab-stk').style.background = tab === 'stk' ? 'rgba(88,166,255,.15)' : 'transparent';
+  document.getElementById('ep-tab-stk').style.color = tab === 'stk' ? 'var(--blue)' : 'var(--muted)';
+  if (tab === 'stk' && !_cpCustomEmojis.length) _cpLoadEmojis();
+};
+
+function _cpLoadEmojis() {
+  fetch('/api/emojis/list').then(function(r){return r.json();}).then(function(d){
+    if (!d.ok) return;
+    _cpCustomEmojis = d.emojis;
+    var grid = document.getElementById('ep-stk-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!d.emojis.length) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px;text-align:center" data-i18n="emoji.none">' + t('emoji.none') + '</div>';
+      return;
+    }
+    d.emojis.forEach(function(fn) {
+      var img = document.createElement('img');
+      img.src = '/emojis/' + encodeURIComponent(fn);
+      img.title = fn.replace(/\.[^.]+$/, '');
+      img.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:.15s';
+      img.onmouseenter = function(){this.style.borderColor='var(--blue)';};
+      img.onmouseleave = function(){this.style.borderColor='transparent';};
+      img.onclick = function() { cpInsertCustomEmoji(fn); };
+      grid.appendChild(img);
+    });
+  }).catch(function(){});
+}
+
+window.cpInsertCustomEmoji = function(fname) {
+  var inp = document.getElementById('cp-input');
+  inp.value += '[sticker:' + fname + ']';
+  inp.focus();
+  document.getElementById('cp-emoji-panel').classList.remove('open');
+};
+
+window.emojiUpload = function() {
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+  inp.onchange = function() {
+    if (!inp.files.length) return;
+    var fd = new FormData();
+    for (var i = 0; i < inp.files.length; i++) fd.append('files', inp.files[i]);
+    fetch('/api/emojis/upload', {method:'POST', body:fd})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if (d.ok) { _cpCustomEmojis = []; _cpLoadEmojis(); }
+      });
+  };
+  inp.click();
+};
+
+// Chat resize — preset buttons
+window.cpSetSize = function(sz) {
+  var sizes = {s:{w:'280px',h:'320px'}, m:{w:'360px',h:'460px'}, l:{w:'480px',h:'640px'}};
+  var s = sizes[sz] || sizes.m;
+  var p = document.getElementById('chat-panel');
+  if (p) { p.style.width = s.w; p.style.height = s.h; p.style.maxHeight = ''; }
+  localStorage.setItem('chatSize', sz);
+  localStorage.removeItem('chatCustomW'); localStorage.removeItem('chatCustomH');
+};
+// Restore saved size + bind drag handles — must run after DOM exists
+window.addEventListener('DOMContentLoaded', function() {
+  var p = document.getElementById('chat-panel');
+  if (!p) return;
+
+  // Restore saved size
+  var cw = localStorage.getItem('chatCustomW');
+  var ch = localStorage.getItem('chatCustomH');
+  if (cw && ch) { p.style.width = cw; p.style.height = ch; }
+  else { var sz = localStorage.getItem('chatSize') || 'm'; window.cpSetSize(sz); }
+
+  // Chat drag-resize — left/top/corner handles
+  function bindHandle(id, resizeW, resizeH) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var sx = e.clientX, sy = e.clientY;
+      var sw = p.offsetWidth, sh = p.offsetHeight;
+      document.body.style.userSelect = 'none';
+      function onMove(e) {
+        if (resizeW) {
+          var w = Math.max(240, Math.min(800, sw + (sx - e.clientX)));
+          p.style.width = w + 'px';
+        }
+        if (resizeH) {
+          var h = Math.max(260, Math.min(900, sh + (sy - e.clientY)));
+          p.style.height = h + 'px';
+          p.style.maxHeight = '';
+        }
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.userSelect = '';
+        localStorage.setItem('chatCustomW', p.style.width);
+        localStorage.setItem('chatCustomH', p.style.height);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  bindHandle('cp-rh-top',    false, true);
+  bindHandle('cp-rh-left',   true,  false);
+  bindHandle('cp-rh-corner', true,  true);
+});
+</script>
+
+{% if current_user.is_authenticated %}
+<!-- ── Chat / Online widget ── -->
+<div id="chat-widget">
+  <div id="chat-panel">
+    <!-- Resize handles -->
+    <div class="cp-rh-top"    id="cp-rh-top"></div>
+    <div class="cp-rh-left"   id="cp-rh-left"></div>
+    <div class="cp-rh-corner" id="cp-rh-corner" title="Растянуть чат">
+      <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+        <path d="M1 8L8 1M1 4.5L4.5 1M4.5 8L8 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="cp-header">
+      <span><span class="cp-online-dot" style="display:inline-block;margin-right:6px"></span>
+        <span data-i18n="chat.online">Онлайн:</span> <span id="cp-count">…</span></span>
+      <!-- Size buttons -->
+      <div style="display:flex;gap:3px;margin-left:auto;margin-right:8px">
+        <button onclick="cpSetSize('s')" title="Small"
+                style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+                       border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;cursor:pointer">S</button>
+        <button onclick="cpSetSize('m')" title="Medium"
+                style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+                       border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;cursor:pointer">M</button>
+        <button onclick="cpSetSize('l')" title="Large"
+                style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+                       border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;cursor:pointer">L</button>
+      </div>
+      <button class="cp-close" onclick="toggleChat()">×</button>
+    </div>
+    <div class="cp-online" id="cp-online-list"></div>
+    <!-- To: selector -->
+    <div style="padding:6px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--bg3)">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0" data-i18n="chat.to">Кому:</span>
+      <select id="cp-to-user"
+              style="flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--text);
+                     border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer">
+        <option value="" data-i18n="chat.to_all">Всем</option>
+      </select>
+    </div>
+    <div class="cp-msgs" id="cp-msgs"></div>
+    <!-- Emoji panel: standard + custom stickers tabs -->
+    <div class="cp-emoji-panel" id="cp-emoji-panel">
+      <div style="display:flex;border-bottom:1px solid var(--border);margin:-8px -8px 6px">
+        <button id="ep-tab-std" onclick="cpEmojiTab('std')"
+                style="flex:1;background:rgba(88,166,255,.15);border:none;color:var(--blue);
+                       padding:5px;font-size:11px;font-weight:700;cursor:pointer;border-radius:0">😊</button>
+        <button id="ep-tab-stk" onclick="cpEmojiTab('stk')"
+                style="flex:1;background:transparent;border:none;color:var(--muted);
+                       padding:5px;font-size:11px;font-weight:700;cursor:pointer">
+          <span data-i18n="emoji.stickers">Стикеры</span>
+        </button>
+      </div>
+      <!-- Standard emojis -->
+      <div id="ep-std" style="display:flex;flex-wrap:wrap;gap:2px">
+        {% for em in ['😊','😂','😄','😅','😆','😎','😉','😍','🥳','😜',
+                      '😏','😒','😭','😤','😡','🥺','😱','🤔','🤗','🤣',
+                      '👍','👎','👋','🙏','💪','🤝','✌️','👀','💯','✅',
+                      '❌','🔥','❤️','💔','🎵','🎶','🎉','🎊','🎯','🏆',
+                      '🚀','⭐','💡','📢','📣','🔔','⏰','🕐','🔑','🔒',
+                      '💬','📱','💻','🖥️','📊','📋','✏️','🗑️','📁','🤖'] %}
+        <span class="cp-emoji-item" onclick="cpInsertEmoji('{{ em }}')">{{ em }}</span>
+        {% endfor %}
+      </div>
+      <!-- Custom stickers -->
+      <div id="ep-stk" style="display:none;flex-wrap:wrap;gap:4px;max-height:140px;overflow-y:auto">
+        <div id="ep-stk-grid" style="display:flex;flex-wrap:wrap;gap:4px;width:100%"></div>
+        {% if current_user.role == 'admin' %}
+        <button onclick="emojiUpload()"
+                style="width:100%;margin-top:4px;background:rgba(88,166,255,.1);border:1px dashed rgba(88,166,255,.4);
+                       color:var(--blue);border-radius:6px;padding:5px;font-size:11px;font-weight:700;cursor:pointer">
+          <i class="bi bi-upload"></i> <span data-i18n="emoji.upload">Загрузить стикеры</span>
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    <div id="cp-typing-lbl" style="display:none;padding:2px 12px;font-size:11px;
+         color:var(--muted);font-style:italic;background:var(--bg3)"></div>
+    <!-- Voice recording bar (hidden by default) -->
+    <div id="cp-voice-bar" style="display:none;align-items:center;gap:8px;
+         padding:8px 10px;background:rgba(248,81,73,.08);border-top:1px solid rgba(248,81,73,.25)">
+      <span id="cp-voice-dot" style="width:9px;height:9px;border-radius:50%;background:#f85149;
+            flex-shrink:0;animation:voicePulse 1s ease-in-out infinite"></span>
+      <span id="cp-voice-timer" style="font-size:12px;font-weight:700;color:#f85149;
+            font-variant-numeric:tabular-nums;min-width:36px">0:00</span>
+      <canvas id="cp-voice-wave" width="120" height="28"
+              style="flex:1;border-radius:6px;background:rgba(248,81,73,.06)"></canvas>
+      <button onclick="cpVoiceCancel()" title="Отмена"
+              style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px">✕</button>
+      <button onclick="cpVoiceSend()" title="Отправить"
+              style="background:#f85149;border:none;color:#fff;border-radius:8px;
+                     padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">
+        <i class="bi bi-send-fill"></i>
+      </button>
+    </div>
+    <div class="cp-input-row">
+      <button class="cp-emoji-btn" id="cp-emoji-btn" onclick="toggleEmojiPanel(event)" title="Эмодзи/Стикеры">😊</button>
+      <input type="text" id="cp-input" data-i18n-ph="chat.msg_ph" placeholder="Сообщение…" maxlength="500"
+             onkeydown="if(event.key==='Enter')cpSend()">
+      <button id="cp-mic-btn" onclick="cpVoiceToggle()" title="Голосовое сообщение"
+              style="background:none;border:none;color:var(--muted);font-size:17px;
+                     cursor:pointer;padding:0 4px;flex-shrink:0;transition:color .15s">
+        <i class="bi bi-mic-fill"></i>
+      </button>
+      <button class="cp-send" onclick="cpSend()">
+        <i class="bi bi-send-fill"></i>
+      </button>
+    </div>
+  </div>
+  <button id="chat-toggle" onclick="toggleChat()" title="Чат и онлайн">
+    <i class="bi bi-chat-dots-fill"></i>
+    <span class="w-badge" id="cp-online-badge">0</span>
+    <span class="w-badge w-unread" id="cp-unread-badge" style="display:none;top:-4px;left:-4px;right:auto">!</span>
+  </button>
+</div>
+
+<script>
+(function(){
+  var cpOpen = false;
+  var cpUnread = 0;
+  var cpMyUser = {{ current_user.username | tojson }};
+  var _cpLoading = false;  // prevents concurrent fetch calls
+
+  var _lsKey = 'chat_since_' + cpMyUser;
+  var cpLastId = 0;  // always load fresh on page load
+
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+  function renderMsg(text) {
+    var escaped = esc(text);
+    return escaped.replace(/\[sticker:([a-zA-Z0-9._\-]+)\]/g, function(_, fn) {
+      return '<img src="/emojis/' + fn + '" style="height:48px;border-radius:6px;vertical-align:middle;margin:2px 0">';
+    });
+  }
+
+  // Load users into the To: dropdown
+  function cpLoadUsers(){
+    fetch('/api/users/list').then(function(r){return r.json()}).then(function(d){
+      if(!d.ok)return;
+      var sel=document.getElementById('cp-to-user');
+      var cur=sel.value;
+      while(sel.options.length>1)sel.remove(1);
+      if(sel.options[0]) sel.options[0].textContent = t('chat.to_all');
+      d.users.forEach(function(u){
+        var opt=document.createElement('option');
+        opt.value=u.username;
+        opt.textContent=u.username+' ('+u.role+')';
+        sel.appendChild(opt);
+      });
+      if(cur)sel.value=cur;
+    }).catch(function(){});
+  }
+
+  window.toggleChat = function(){
+    cpOpen = !cpOpen;
+    document.getElementById('chat-panel').classList.toggle('open', cpOpen);
+    if(cpOpen){
+      cpUnread = 0;
+      document.getElementById('cp-unread-badge').style.display='none';
+      cpLoadUsers();
+      // Reset and reload all messages from scratch
+      _cpLoading = false;
+      cpLastId = 0;
+      document.getElementById('cp-msgs').innerHTML = '';
+      cpLoadMsgs().then(function(){ scrollMsgs(); });
+      setTimeout(function(){
+        var inp=document.getElementById('cp-input'); if(inp) inp.focus();
+      }, 200);
+    } else {
+      // Clear messages when closing so next open starts fresh
+      cpLastId = 0;
+      document.getElementById('cp-msgs').innerHTML = '';
+    }
+  };
+
+  function scrollMsgs(){
+    var el=document.getElementById('cp-msgs');
+    el.scrollTop=el.scrollHeight;
+  }
+
+  async function cpHeartbeat(){
+    try{
+      await fetch('/api/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({page:document.title})});
+    }catch(e){}
+    cpLoadOnline();
+    cpLoadMsgs();
+  }
+
+  async function cpLoadOnline(){
+    try{
+      var r=await fetch('/api/online');
+      var d=await r.json();
+      if(!d.ok)return;
+      document.getElementById('cp-count').textContent=d.users.length;
+      document.getElementById('cp-online-badge').textContent=d.users.length;
+      document.getElementById('cp-online-list').innerHTML=d.users.map(function(u){
+        return '<div class="cp-online-user">'
+          +'<span class="cp-online-dot"></span>'
+          +'<span class="cp-online-name">'+esc(u.username)+'</span>'
+          +'<span class="cp-online-role cp-role-'+esc(u.role)+'">'+esc(u.role)+'</span>'
+          +'</div>';
+      }).join('');
+      // Update right sidebar panel
+      var opCount=document.getElementById('op-count');
+      var opList=document.getElementById('op-list');
+      if(opCount) opCount.textContent=d.users.length;
+      if(opList){
+        if(!d.users.length){
+          opList.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:4px 0">—</div>';
+        } else {
+          opList.innerHTML=d.users.map(function(u){
+            var roleClass='op-role-'+esc(u.role);
+            var roleLabel={'admin':'ADM','staff':'STF','viewer':'VIEW'}[u.role]||'USR';
+            return '<div class="op-user">'
+              +'<span class="op-dot"></span>'
+              +'<span class="op-name">'+esc(u.username)+'</span>'
+              +'<span class="op-role '+roleClass+'">'+roleLabel+'</span>'
+              +'</div>';
+          }).join('');
+        }
+      }
+    }catch(e){}
+  }
+
+  async function cpLoadMsgs(){
+    if(_cpLoading) return;
+    _cpLoading = true;
+    try{
+      var r=await fetch('/api/chat/messages?since='+cpLastId);
+      if(!r.ok) return;
+      var d=await r.json();
+      if(!d.ok||!d.messages||!d.messages.length) return;
+      var list=document.getElementById('cp-msgs');
+      if(!list) return;
+      var newCount=0;
+      d.messages.forEach(function(m){
+        if(m.id<=cpLastId)return;
+        cpLastId=m.id;
+        newCount++;
+        var mine=(m.from_user===cpMyUser);
+        var isPrivate=(m.to_user && m.to_user!=='');
+        var div=document.createElement('div');
+        div.className='cp-msg'+(mine?' mine':'');
+        var metaHtml='<div class="cp-msg-meta">';
+        if(!mine) metaHtml+='<span>'+esc(m.from_user)+'</span>';
+        if(isPrivate){
+          var toLabel=mine?('→ '+esc(m.to_user)):('→ тебе');
+          metaHtml+='<span style="color:var(--purple);font-size:10px">🔒 '+toLabel+'</span>';
+        }
+        metaHtml+='<span>'+esc(m.sent_at.slice(11,16))+'</span></div>';
+        var bubbleContent;
+        if(m.voice_file){
+          bubbleContent='<div class="cp-voice-player">'
+            +'<button class="cp-vp-btn" onclick="cpVoicePlay(this)" data-src="/api/voice/'+esc(m.voice_file)+'">'
+            +'<i class="bi bi-play-fill"></i></button>'
+            +'<div class="cp-vp-bar"><div class="cp-vp-fill"></div></div>'
+            +'<span class="cp-vp-time">0:00</span>'
+            +'</div>';
+        } else {
+          bubbleContent=renderMsg(m.content);
+        }
+        div.innerHTML=metaHtml+'<div class="cp-msg-bubble'+(isPrivate?' private-bubble':'')+'">'+bubbleContent+'</div>';
+        list.appendChild(div);
+      });
+      if(cpOpen && newCount>0) scrollMsgs();
+      if(!cpOpen && newCount>0){
+        cpUnread+=newCount;
+        var ub=document.getElementById('cp-unread-badge');
+        if(ub){ ub.textContent=cpUnread>9?'9+':cpUnread; ub.style.display=''; }
+      }
+    }catch(e){} finally { _cpLoading = false; }
+  }
+
+  // ── Voice message player ──
+  window.cpVoicePlay = function(btn){
+    var src = btn.dataset.src;
+    var bar = btn.nextElementSibling;
+    var fill = bar.querySelector('.cp-vp-fill');
+    var timeEl = bar.nextElementSibling;
+    if(btn._audio && !btn._audio.paused){
+      btn._audio.pause();
+      btn.innerHTML='<i class="bi bi-play-fill"></i>';
+      return;
+    }
+    if(!btn._audio){ btn._audio = new Audio(src); }
+    var au = btn._audio;
+    au.ontimeupdate = function(){
+      var pct = au.duration ? (au.currentTime/au.duration*100) : 0;
+      fill.style.width = pct+'%';
+      var s = Math.floor(au.currentTime);
+      timeEl.textContent = Math.floor(s/60)+':'+(s%60<10?'0':'')+s%60;
+    };
+    au.onended = function(){
+      btn.innerHTML='<i class="bi bi-play-fill"></i>';
+      fill.style.width='0%';
+      timeEl.textContent='0:00';
+    };
+    au.play();
+    btn.innerHTML='<i class="bi bi-pause-fill"></i>';
+  };
+
+  // ── Voice recording ──
+  var cpMediaRec = null, cpVoiceChunks = [], cpVoiceTimer = null, cpVoiceSecs = 0;
+  var cpWaveAnim = null, cpWaveCtx = null, cpWaveStream = null, cpWaveAnalyser = null;
+
+  function _cpShowHttpsHint(){
+    var bar = document.getElementById('cp-voice-bar');
+    var httpsUrl = 'https://' + location.hostname + ':' + location.port + location.pathname;
+    bar.innerHTML = '<span style="font-size:12px;color:var(--orange);display:flex;align-items:center;gap:8px;padding:4px 2px;flex:1">'
+      + '<i class="bi bi-shield-lock" style="font-size:15px;flex-shrink:0"></i>'
+      + '<span>Микрофон работает по HTTPS. <a href="'+httpsUrl+'" '
+      + 'style="color:var(--blue);font-weight:700;text-decoration:underline">Перейти на HTTPS →</a>'
+      + ' (один раз принять сертификат)</span></span>'
+      + '<button onclick="document.getElementById(\'cp-voice-bar\').style.display=\'none\'" '
+      + 'style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px">✕</button>';
+    bar.style.display = 'flex';
+  }
+
+  window.cpVoiceToggle = function(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      _cpShowHttpsHint();
+      return;
+    }
+    if(cpMediaRec && cpMediaRec.state==='recording'){ cpVoiceSend(); return; }
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      cpWaveStream = stream;
+      var mimeType = ['audio/webm','audio/ogg','audio/mp4'].find(function(t){
+        try{return MediaRecorder.isTypeSupported(t);}catch(e){return false;}
+      }) || '';
+      cpMediaRec = new MediaRecorder(stream, mimeType ? {mimeType:mimeType} : {});
+      cpVoiceChunks = [];
+      cpMediaRec.ondataavailable = function(e){ if(e.data.size>0) cpVoiceChunks.push(e.data); };
+      cpMediaRec.start(200);
+
+      // Show bar
+      document.getElementById('cp-voice-bar').style.display='flex';
+      document.getElementById('cp-input').style.display='none';
+      document.getElementById('cp-emoji-btn').style.display='none';
+      document.getElementById('cp-mic-btn').style.color='#f85149';
+
+      // Timer
+      cpVoiceSecs=0;
+      cpVoiceTimer=setInterval(function(){
+        cpVoiceSecs++;
+        var m=Math.floor(cpVoiceSecs/60), s=cpVoiceSecs%60;
+        document.getElementById('cp-voice-timer').textContent=m+':'+(s<10?'0':'')+s;
+        if(cpVoiceSecs>=120) cpVoiceSend(); // max 2 min
+      },1000);
+
+      // Waveform
+      var ac=new (window.AudioContext||window.webkitAudioContext)();
+      if(ac.state==='suspended') ac.resume();
+      cpWaveAnalyser=ac.createAnalyser();
+      cpWaveAnalyser.fftSize=64;
+      ac.createMediaStreamSource(stream).connect(cpWaveAnalyser);
+      var canvas=document.getElementById('cp-voice-wave');
+      cpWaveCtx=canvas.getContext('2d');
+      var buf=new Uint8Array(cpWaveAnalyser.frequencyBinCount);
+      function drawWave(){
+        if(!cpWaveAnalyser) return;
+        cpWaveAnim=requestAnimationFrame(drawWave);
+        cpWaveAnalyser.getByteFrequencyData(buf);
+        var W=canvas.width,H=canvas.height;
+        cpWaveCtx.clearRect(0,0,W,H);
+        var barW=W/buf.length*0.6, gap=W/buf.length*0.4;
+        cpWaveCtx.fillStyle='#f85149';
+        buf.forEach(function(v,i){
+          var h=Math.max(3,(v/255)*H*0.85);
+          cpWaveCtx.fillRect(i*(barW+gap),H/2-h/2,barW,h);
+        });
+      }
+      drawWave();
+    }).catch(function(err){
+      console.warn('Mic error:', err);
+      var msg = (err && err.name === 'NotAllowedError')
+        ? 'Доступ к микрофону запрещён — разрешите в настройках браузера'
+        : 'Микрофон недоступен: ' + (err && err.message || err);
+      try{ toast('🎙 ' + msg); } catch(e){ alert(msg); }
+    });
+  };
+
+  window.cpVoiceCancel = function(){
+    if(cpMediaRec) try{ cpMediaRec.stop(); }catch(e){}
+    if(cpWaveStream) cpWaveStream.getTracks().forEach(function(t){t.stop();});
+    clearInterval(cpVoiceTimer);
+    cancelAnimationFrame(cpWaveAnim);
+    cpWaveAnalyser=null; cpMediaRec=null; cpVoiceChunks=[];
+    document.getElementById('cp-voice-bar').style.display='none';
+    document.getElementById('cp-input').style.display='';
+    document.getElementById('cp-emoji-btn').style.display='';
+    document.getElementById('cp-mic-btn').style.color='';
+    document.getElementById('cp-voice-timer').textContent='0:00';
+    if(cpWaveCtx) cpWaveCtx.clearRect(0,0,document.getElementById('cp-voice-wave').width,document.getElementById('cp-voice-wave').height);
+  };
+
+  window.cpVoiceSend = function(){
+    if(!cpMediaRec || cpMediaRec.state!=='recording') return;
+    cpMediaRec.onstop = function(){
+      var mimeType = cpMediaRec.mimeType || 'audio/webm';
+      var blob = new Blob(cpVoiceChunks, {type: mimeType});
+      var toUser = document.getElementById('cp-to-user').value || null;
+      var fd = new FormData();
+      fd.append('audio', blob, 'voice.webm');
+      if(toUser) fd.append('to_user', toUser);
+      fetch('/api/voice/upload', {method:'POST', body:fd})
+        .then(function(r){return r.json();})
+        .then(function(d){ if(d.ok) cpLoadMsgs(); });
+    };
+    cpMediaRec.stop();
+    if(cpWaveStream) cpWaveStream.getTracks().forEach(function(t){t.stop();});
+    clearInterval(cpVoiceTimer);
+    cancelAnimationFrame(cpWaveAnim);
+    cpWaveAnalyser=null;
+    document.getElementById('cp-voice-bar').style.display='none';
+    document.getElementById('cp-input').style.display='';
+    document.getElementById('cp-emoji-btn').style.display='';
+    document.getElementById('cp-mic-btn').style.color='';
+    document.getElementById('cp-voice-timer').textContent='0:00';
+  };
+
+  window.cpSend=function(){
+    var inp=document.getElementById('cp-input');
+    var txt=inp.value.trim();
+    var toUser=document.getElementById('cp-to-user').value||null;
+    if(!txt)return;
+    inp.value='';
+    fetch('/api/chat/send',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({content:txt, to_user:toUser})})
+    .then(function(r){return r.json()})
+    .then(function(d){if(d.ok)cpLoadMsgs();});
+  };
+
+  window.toggleEmojiPanel = function(e) {
+    e.stopPropagation();
+    document.getElementById('cp-emoji-panel').classList.toggle('open');
+  };
+  window.cpInsertEmoji = function(em) {
+    var inp = document.getElementById('cp-input');
+    var pos = inp.selectionStart;
+    inp.value = inp.value.slice(0, pos) + em + inp.value.slice(pos);
+    inp.selectionStart = inp.selectionEnd = pos + em.length;
+    inp.focus();
+    document.getElementById('cp-emoji-panel').classList.remove('open');
+  };
+  document.addEventListener('click', function(e) {
+    var panel = document.getElementById('cp-emoji-panel');
+    if (panel && !panel.contains(e.target) && e.target.id !== 'cp-emoji-btn')
+      panel.classList.remove('open');
+  });
+
+  // Load initial messages on page load; poll every 3s
+  cpHeartbeat();
+  setInterval(cpHeartbeat, 30000);
+  setInterval(cpLoadMsgs,   3000);
+})();
+</script>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<!-- ── Contact Admin ─────────────────────────────── -->
+<style>
+.contact-float{
+  position:fixed;bottom:90px;left:24px;z-index:8800;
+  width:44px;height:44px;border-radius:50%;
+  background:var(--blue);border:none;color:#fff;
+  font-size:18px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(88,166,255,.45);
+  display:flex;align-items:center;justify-content:center;transition:.2s;
+}
+.contact-float:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(88,166,255,.6)}
+.cm-bg{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:9900;align-items:center;justify-content:center;
+}
+.cm-bg.show{display:flex}
+.cm-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:20px;
+  padding:32px 36px;width:360px;max-width:94vw;
+}
+.cm-title{font-size:18px;font-weight:800;margin:0 0 4px}
+.cm-sub{color:var(--muted);font-size:13px;margin-bottom:22px}
+.cm-link{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;
+  border-radius:12px;text-decoration:none;margin-bottom:10px;
+  border:1px solid var(--border);transition:.15s;
+}
+.cm-link:hover{transform:translateX(3px);text-decoration:none}
+.cm-link.tg{color:#2AABEE;border-color:rgba(42,171,238,.25);background:rgba(42,171,238,.06)}
+.cm-link.tg:hover{border-color:rgba(42,171,238,.5);background:rgba(42,171,238,.12)}
+.cm-link.wa{color:#25D366;border-color:rgba(37,211,102,.25);background:rgba(37,211,102,.06)}
+.cm-link.wa:hover{border-color:rgba(37,211,102,.5);background:rgba(37,211,102,.12)}
+.cm-link.em{color:var(--orange);border-color:rgba(255,166,87,.25);background:rgba(255,166,87,.06)}
+.cm-link.em:hover{border-color:rgba(255,166,87,.5);background:rgba(255,166,87,.12)}
+.cm-link i:first-child{font-size:26px;flex-shrink:0}
+.cm-link-title{font-size:14px;font-weight:700}
+.cm-link-sub{font-size:12px;opacity:.7}
+.cm-arrow{margin-left:auto;opacity:.5;font-size:18px}
+.cm-link:hover .cm-arrow{opacity:1}
+</style>
+
+<button class="contact-float" onclick="document.getElementById('cm').classList.add('show')"
+        title="Связаться с администратором">
+  <i class="bi bi-headset"></i>
+</button>
+
+<div class="cm-bg" id="cm" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="cm-box">
+    <div class="cm-title" data-i18n="contact.title">Связаться с администратором</div>
+    <div class="cm-sub" data-i18n="contact.sub">Выберите удобный способ</div>
+    <a href="https://t.me/Xxx19910101" target="_blank" rel="noopener" class="cm-link tg">
+      <i class="bi bi-telegram"></i>
+      <div><div class="cm-link-title">Telegram</div><div class="cm-link-sub">@Xxx19910101</div></div>
+      <i class="bi bi-arrow-right-circle-fill cm-arrow"></i>
+    </a>
+    <a href="https://wa.me/994552531882" target="_blank" rel="noopener" class="cm-link wa">
+      <i class="bi bi-whatsapp"></i>
+      <div><div class="cm-link-title">WhatsApp</div><div class="cm-link-sub">+994 55 253 1882</div></div>
+      <i class="bi bi-arrow-right-circle-fill cm-arrow"></i>
+    </a>
+    <a href="mailto:k.abumislimov@leg.edu.az" class="cm-link em">
+      <i class="bi bi-envelope-fill"></i>
+      <div><div class="cm-link-title">Email (работа)</div><div class="cm-link-sub">k.abumislimov@leg.edu.az</div></div>
+      <i class="bi bi-arrow-right-circle-fill cm-arrow"></i>
+    </a>
+    <a href="mailto:kamran19910101@gmail.com" class="cm-link em">
+      <i class="bi bi-envelope-at-fill"></i>
+      <div><div class="cm-link-title">Email (личный)</div><div class="cm-link-sub">kamran19910101@gmail.com</div></div>
+      <i class="bi bi-arrow-right-circle-fill cm-arrow"></i>
+    </a>
+    <button class="btn btn-ghost" style="width:100%;margin-top:10px"
+            onclick="document.getElementById('cm').classList.remove('show')"
+            data-i18n="contact.close">
+      Закрыть
+    </button>
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════ -->
+{% if current_user.is_authenticated %}
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+<nav id="sidebar">
+  <!-- Шапка: аватар + имя пользователя — кликабельно = профиль -->
+  <div class="sb-header">
+    <a class="sb-user" href="{{ url_for('profile') }}" onclick="closeSidebar()"
+       style="text-decoration:none;flex:1;display:flex;align-items:center;gap:10px;min-width:0">
+      {% if current_user.avatar %}
+        <img src="/avatars/{{ current_user.avatar }}" alt="av"
+             style="width:36px;height:36px;border-radius:50%;object-fit:cover;
+                    border:2px solid var(--blue);flex-shrink:0">
+      {% else %}
+        <span style="width:36px;height:36px;border-radius:50%;flex-shrink:0;
+          background:linear-gradient(135deg,var(--blue),var(--purple));
+          display:inline-flex;align-items:center;justify-content:center;
+          font-size:15px;font-weight:800;color:#fff">
+          {{ (current_user.display_name[0] if current_user.display_name else current_user.username[0])|upper }}
+        </span>
+      {% endif %}
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text);
+                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ current_user.display_name if current_user.display_name != current_user.username else current_user.username }}
+        </div>
+        <div style="font-size:10px;color:var(--muted)">
+          {% if current_user.role == 'admin' %}администратор
+          {% elif current_user.role == 'staff' %}сотрудник
+          {% elif current_user.role == 'guest' %}гость
+          {% else %}пользователь{% endif %}
+        </div>
+      </div>
+    </a>
+    <button class="sb-close" onclick="closeSidebar()">×</button>
+  </div>
+
+  <!-- Ссылки -->
+  <div class="sb-links">
+    <a class="sb-link {% if request.endpoint=='dashboard' %}active{% endif %}"
+       href="{{ url_for('dashboard') }}" onclick="closeSidebar()">
+      <i class="bi bi-house-fill"></i>
+      <span>Главная</span>
+    </a>
+    <div class="sb-sep"></div>
+    <div class="sb-section-lbl">🎵 Музыкальный плеер</div>
+
+    <!-- Player quick-links -->
+    <a class="sb-link {% if request.endpoint=='dashboard' %}active{% endif %}"
+       href="{{ url_for('dashboard') }}#player" onclick="closeSidebar()">
+      <i class="bi bi-play-circle-fill" style="color:var(--green)"></i>
+      <span>Плеер</span>
+    </a>
+
+    <!-- Folders collapsible -->
+    <button class="sb-link sb-fold-hdr" id="sb-folders-btn" onclick="toggleSbFolders()" style="width:100%;text-align:left;background:none;border:none;cursor:pointer">
+      <i class="bi bi-folder2-open" style="color:var(--orange)"></i>
+      <span>Папки с музыкой</span>
+      <i class="bi bi-chevron-down sb-fold-chev" id="sb-fold-chev" style="margin-left:auto;font-size:11px;transition:.2s"></i>
+    </button>
+    <div id="sb-folders" class="sb-folder-list">
+      <a class="sb-link sb-sub" href="{{ url_for('tracks') }}" onclick="closeSidebar()">
+        <i class="bi bi-collection-fill" style="color:var(--blue);font-size:11px"></i>
+        <span>Все треки</span>
+      </a>
+      {% for folder_item in [
+        ('Общая',       'bi-folder-fill',   'var(--blue)',   '📁'),
+        ('Русские',     'bi-folder-fill',   '#e57373',       '🇷🇺'),
+        ('Зарубежные',  'bi-folder-fill',   '#81c784',       '🌍'),
+        ('Азербайджанские','bi-folder-fill','#ffb74d',       '🇦🇿'),
+        ('Турецкие',    'bi-folder-fill',   '#ce93d8',       '🇹🇷'),
+        ('Смешанная',   'bi-folder-fill',   '#4db6ac',       '🎲'),
+        ('KAMRAN',      'bi-folder-fill',   '#ffd54f',       '⭐'),
+      ] %}
+      <a class="sb-link sb-sub" href="{{ url_for('tracks') }}?folder={{ folder_item[0] }}" onclick="closeSidebar()">
+        <i class="bi {{ folder_item[1] }}" style="color:{{ folder_item[2] }};font-size:11px"></i>
+        <span>{{ folder_item[0] }}</span>
+      </a>
+      {% endfor %}
+    </div>
+
+    <a class="sb-link {% if request.endpoint=='tracks' %}active{% endif %}"
+       href="{{ url_for('tracks') }}" onclick="closeSidebar()">
+      <i class="bi bi-music-note-list"></i>
+      <span data-i18n="nav.tracks">Треки</span>
+    </a>
+
+    <a class="sb-link {% if request.endpoint=='announcements_page' %}active{% endif %}"
+       href="{{ url_for('announcements_page') }}" onclick="closeSidebar()"
+       style="position:relative">
+      <i class="bi bi-megaphone-fill"></i>
+      <span>Объявления</span>
+      {% if ann_count > 0 %}
+      <span style="margin-left:auto;background:var(--orange);color:#000;
+        font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px">
+        {{ ann_count }}
+      </span>
+      {% endif %}
+    </a>
+
+    {% if current_user.role in ('admin','staff') %}
+    <div class="sb-sep"></div>
+    <a class="sb-link {% if request.endpoint=='upload_page' %}active{% endif %}"
+       href="{{ url_for('upload_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-cloud-upload-fill"></i>
+      <span data-i18n="nav.upload">Загрузка треков</span>
+    </a>
+    <a class="sb-link {% if request.endpoint=='monitor_page' %}active{% endif %}"
+       href="{{ url_for('monitor_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-cpu-fill"></i>
+      <span data-i18n="nav.monitor">Монитор</span>
+    </a>
+    <button class="sb-link" onclick="closeSidebar();openTerminal()">
+      <i class="bi bi-terminal-fill"></i>
+      <span data-i18n="nav.terminal">Терминал</span>
+    </button>
+    <a class="sb-link {% if request.endpoint=='cheatsheet_page' %}active{% endif %}"
+       href="{{ url_for('cheatsheet_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-journal-code" style="color:var(--purple)"></i>
+      <span>Шпаргалка команд</span>
+    </a>
+    <a class="sb-link {% if request.endpoint=='announce_page' %}active{% endif %}"
+       href="{{ url_for('announce_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-megaphone-fill" style="color:var(--orange)"></i>
+      <span>Объявление по радио</span>
+    </a>
+    {% endif %}
+
+    {% if current_user.role == 'admin' %}
+    <div class="sb-sep"></div>
+    <a class="sb-link {% if request.endpoint=='admin' %}active{% endif %}"
+       href="{{ url_for('admin') }}" onclick="closeSidebar()">
+      <i class="bi bi-people"></i>
+      <span data-i18n="nav.users">Пользователи</span>
+    </a>
+    <a class="sb-link {% if request.endpoint=='admin_cron' %}active{% endif %}"
+       href="{{ url_for('admin_cron') }}" onclick="closeSidebar()">
+      <i class="bi bi-clock"></i>
+      <span>Cron</span>
+    </a>
+    <a class="sb-link {% if request.endpoint=='admin_schedule' %}active{% endif %}"
+       href="{{ url_for('admin_schedule') }}" onclick="closeSidebar()">
+      <i class="bi bi-calendar-week-fill"></i>
+      <span data-i18n="nav.schedule">Расписание</span>
+    </a>
+    <a class="sb-link {% if request.endpoint=='admin_activity' %}active{% endif %}"
+       href="{{ url_for('admin_activity') }}" onclick="closeSidebar()">
+      <i class="bi bi-journal-text"></i>
+      <span data-i18n="nav.log">Лог активности</span>
+    </a>
+    <button class="sb-link" onclick="closeSidebar();openBugReports()" style="width:100%;text-align:left">
+      <i class="bi bi-bug-fill" style="color:#ff6b6b"></i>
+      <span>Отчёты о проблемах</span>
+      <span id="sb-bug-badge" style="display:none;margin-left:auto;background:#ff6b6b;color:#fff;
+            border-radius:999px;padding:1px 7px;font-size:10px;font-weight:700"></span>
+    </button>
+    <a class="sb-link {% if request.endpoint=='backups_page' %}active{% endif %}"
+       href="{{ url_for('backups_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-archive-fill"></i>
+      <span data-i18n="nav.backups">Бэкапы</span>
+    </a>
+    <a class="sb-link {% if request.endpoint=='machines_page' %}active{% endif %}"
+       href="{{ url_for('machines_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-pc-display" style="color:var(--green)"></i>
+      <span>Тонкие клиенты</span>
+    </a>
+    <div class="sb-sep"></div>
+    <div style="padding:4px 12px 3px;font-size:10px;font-weight:700;text-transform:uppercase;
+                letter-spacing:.07em;color:var(--muted)">Мониторинг</div>
+    <a class="sb-link" href="http://10.10.4.120:3000" target="_blank" rel="noopener" onclick="closeSidebar()">
+      <i class="bi bi-graph-up" style="color:#F46800"></i>
+      <span>Grafana</span>
+      <i class="bi bi-box-arrow-up-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+    </a>
+    <div style="padding:4px 12px 3px;font-size:10px;font-weight:700;text-transform:uppercase;
+                letter-spacing:.07em;color:var(--muted)">Cockpit :1991</div>
+    <a class="sb-link" href="http://10.10.4.120:1991" target="_blank" rel="noopener" onclick="closeSidebar()">
+      <i class="bi bi-server" style="color:var(--orange)"></i>
+      <span>CentOS Server</span>
+      <i class="bi bi-box-arrow-up-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+    </a>
+    <a class="sb-link" href="http://10.20.0.41:1991" target="_blank" rel="noopener" onclick="closeSidebar()">
+      <i class="bi bi-building" style="color:var(--blue)"></i>
+      <span>Narimanov Campus</span>
+      <i class="bi bi-box-arrow-up-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+    </a>
+    <a class="sb-link" href="http://10.10.4.120:19912" target="_blank" rel="noopener" onclick="closeSidebar()">
+      <i class="bi bi-pc-display" style="color:var(--purple)"></i>
+      <span>Gənclik Campus</span>
+      <i class="bi bi-box-arrow-up-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+    </a>
+    {% endif %}
+
+    <div class="sb-sep"></div>
+    <button class="sb-link" onclick="closeSidebar();openMusicRequest()">
+      <i class="bi bi-music-note-beamed" style="color:var(--green)"></i>
+      <span>Запросить трек</span>
+    </button>
+    <a class="sb-link {% if request.endpoint=='qr_page' %}active{% endif %}"
+       href="{{ url_for('qr_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-qr-code"></i>
+      <span>QR-код</span>
+    </a>
+    <a class="sb-link {% if request.endpoint=='settings_page' %}active{% endif %}"
+       href="{{ url_for('settings_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-gear-fill"></i>
+      <span>Настройки</span>
+    </a>
+    <div class="sb-sep"></div>
+    <!-- Opacity controls — always visible in sidebar -->
+    <div style="padding:10px 14px 14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+                  color:var(--muted);margin-bottom:12px">🎛 Прозрачность</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-size:12px;color:var(--muted)">🪟 Панели</span>
+        <span id="sb-panel-opa-val" style="font-size:12px;font-weight:700;color:var(--blue)">50%</span>
+      </div>
+      <input type="range" min="20" max="100" value="50" id="sb-panel-opa"
+        oninput="setWallPanelOpa(this.value)"
+        style="width:100%;accent-color:var(--blue);height:5px;cursor:pointer;margin-bottom:12px;display:block">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-size:12px;color:var(--muted)">🖼 Обои</span>
+        <span id="sb-img-opa-val" style="font-size:12px;font-weight:700;color:var(--purple)">65%</span>
+      </div>
+      <input type="range" min="10" max="100" value="65" id="sb-img-opa"
+        oninput="setWallImgOpa(this.value)"
+        style="width:100%;accent-color:var(--purple);height:5px;cursor:pointer;display:block">
+    </div>
+    <a class="sb-link" href="{{ url_for('logout') }}" style="color:#f85149">
+      <i class="bi bi-box-arrow-right"></i>
+      <span data-i18n="nav.logout">Выход</span>
+    </a>
+  </div>
+</nav>
+{% endif %}
+
+<script>
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+  var ov=document.getElementById('sidebar-overlay');
+  ov.style.display='block';
+  requestAnimationFrame(function(){ov.classList.add('show')});
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  var ov=document.getElementById('sidebar-overlay');
+  ov.classList.remove('show');
+  setTimeout(function(){ov.style.display='none'},260);
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') closeSidebar();
+});
+function toggleSbFolders() {
+  var list = document.getElementById('sb-folders');
+  var chev = document.getElementById('sb-fold-chev');
+  if(!list) return;
+  var open = list.classList.toggle('open');
+  if(chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+</script>
+
+{% if current_user.is_authenticated %}
+<!-- ── Online sidebar panel (right) ── -->
+<div id="online-panel">
+  <div id="online-panel-head">
+    <span class="op-dot" style="animation:pulse 2s infinite"></span>
+    Онлайн
+    <span class="op-count" id="op-count">0</span>
+  </div>
+  <div id="op-list">
+    <div style="font-size:11px;color:var(--muted);text-align:center;padding:4px 0">—</div>
+  </div>
+</div>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<!-- ── Music Request Modal ── -->
+<div id="mr-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+     z-index:9900;align-items:center;justify-content:center;backdrop-filter:blur(4px)"
+     onclick="if(event.target===this)closeMusicRequest()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;
+              padding:28px 32px;width:380px;max-width:94vw">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">
+      <i class="bi bi-music-note-beamed" style="color:var(--green)"></i> Запросить трек
+    </div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:20px">
+      Администратор получит уведомление в Telegram
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="form-label">Исполнитель</label>
+      <input class="form-control" id="mr-artist" placeholder="Например: Michael Jackson" maxlength="100">
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="form-label">Название трека <span style="color:var(--red)">*</span></label>
+      <input class="form-control" id="mr-title" placeholder="Название песни" maxlength="200">
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="form-label">Комментарий</label>
+      <input class="form-control" id="mr-comment" placeholder="Для какого мероприятия / камп. ..." maxlength="300">
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-success" onclick="submitMusicRequest()">
+        <i class="bi bi-send-fill"></i> Отправить
+      </button>
+      <button class="btn btn-ghost" onclick="closeMusicRequest()">Отмена</button>
+      <span id="mr-msg" style="font-size:13px;margin-left:auto;min-height:18px"></span>
+    </div>
+  </div>
+</div>
+<script>
+window.openMusicRequest = function() {
+  document.getElementById('mr-bg').style.display = 'flex';
+  document.getElementById('mr-artist').value = '';
+  document.getElementById('mr-title').value = '';
+  document.getElementById('mr-comment').value = '';
+  document.getElementById('mr-msg').textContent = '';
+  document.getElementById('mr-title').focus();
+};
+window.closeMusicRequest = function() {
+  document.getElementById('mr-bg').style.display = 'none';
+};
+window.submitMusicRequest = function() {
+  const artist  = document.getElementById('mr-artist').value.trim();
+  const title   = document.getElementById('mr-title').value.trim();
+  const comment = document.getElementById('mr-comment').value.trim();
+  const msg     = document.getElementById('mr-msg');
+  if (!title) { msg.style.color='var(--red)'; msg.textContent='Укажите название'; return; }
+  msg.style.color='var(--muted)'; msg.textContent='...';
+  fetch('/api/music-request', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({artist, title, comment})})
+  .then(r => r.json()).then(d => {
+    if (d.ok) {
+      msg.style.color = 'var(--green)'; msg.textContent = '✓ Отправлено!';
+      setTimeout(closeMusicRequest, 1500);
+    } else {
+      msg.style.color = 'var(--red)'; msg.textContent = d.error || 'Ошибка';
+    }
+  }).catch(() => { msg.style.color='var(--red)'; msg.textContent='Нет связи'; });
+};
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('mr-bg').style.display === 'flex')
+    closeMusicRequest();
+});
+</script>
+{% endif %}
+
+<!-- ── Chat typing indicator ── -->
+<script>
+(function(){
+  var _typingTimer = null;
+  var _lastTypingSent = 0;
+
+  function sendTyping() {
+    var now = Date.now();
+    if (now - _lastTypingSent < 2000) return;
+    _lastTypingSent = now;
+    fetch('/api/chat/typing', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body:'{}'}).catch(function(){});
+  }
+
+  function pollTyping() {
+    fetch('/api/chat/typing').then(function(r){return r.json();}).then(function(d){
+      var lbl = document.getElementById('cp-typing-lbl');
+      if (!lbl) return;
+      if (d.ok && d.typing && d.typing.length) {
+        lbl.textContent = d.typing.join(', ') + ' печатает...';
+        lbl.style.display = '';
+      } else {
+        lbl.style.display = 'none';
+      }
+    }).catch(function(){});
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+    var inp = document.getElementById('cp-input');
+    if (inp) {
+      inp.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter') sendTyping();
+      });
+    }
+    setInterval(pollTyping, 2500);
+  });
+})();
+</script>
+
+<!-- ── PWA Service Worker ── -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  });
+}
+</script>
+
+<!-- ═══════════════════════════════════════════
+     BUG / ISSUE REPORT BUTTON + MODAL + PANEL
+     ═══════════════════════════════════════════ -->
+<style>
+.bug-fab{
+  position:fixed;top:92px;left:14px;z-index:800;
+  display:flex;align-items:center;gap:7px;
+  background:rgba(20,20,40,.88);
+  border:1.5px solid rgba(255,107,107,.45);
+  color:rgba(255,160,160,.9);
+  border-radius:24px;padding:7px 14px 7px 11px;
+  cursor:pointer;font-size:12px;font-weight:700;
+  box-shadow:0 3px 16px rgba(255,80,80,.15),0 2px 8px rgba(0,0,0,.4);
+  transition:all .22s;letter-spacing:.01em;font-family:inherit;
+  backdrop-filter:blur(8px);
+  animation:fabpulse 4s ease-in-out infinite;
+}
+.bug-fab:hover{
+  border-color:rgba(255,107,107,.8);color:#ff8888;
+  box-shadow:0 5px 22px rgba(255,80,80,.3);
+  transform:translateX(2px);animation:none;
+}
+@keyframes fabpulse{
+  0%,100%{box-shadow:0 3px 16px rgba(255,80,80,.15),0 0 0 0 rgba(255,80,80,.25)}
+  50%{box-shadow:0 3px 16px rgba(255,80,80,.15),0 0 0 6px rgba(255,80,80,.0)}
+}
+.bug-fab i{font-size:15px}
+
+/* ── Bug Report Modal ── */
+.bug-mo-ov{
+  position:fixed;inset:0;z-index:9000;
+  background:rgba(0,0,0,.55);display:none;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(6px);
+}
+.bug-mo-ov.open{display:flex}
+.bug-mo{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:22px;padding:28px 26px 22px;
+  width:420px;max-width:96vw;
+  box-shadow:0 24px 80px rgba(0,0,0,.5);
+  position:relative;
+}
+.bug-mo-title{
+  font-size:17px;font-weight:800;color:var(--text);
+  margin-bottom:4px;display:flex;align-items:center;gap:10px;
+}
+.bug-mo-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.bug-mo-close{
+  position:absolute;top:14px;right:16px;
+  background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:8px;padding:4px 9px;cursor:pointer;font-size:16px;
+  transition:.18s;font-family:inherit;line-height:1;
+}
+.bug-mo-close:hover{color:var(--text);border-color:var(--blue)}
+.bug-cats{display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap}
+.bug-cat{
+  padding:5px 13px;border-radius:20px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);font-size:12px;font-weight:600;
+  cursor:pointer;transition:.15s;font-family:inherit;
+}
+.bug-cat:hover{border-color:rgba(255,107,107,.5);color:#ff8888}
+.bug-cat.sel{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.5);color:#ff8888}
+.bug-ta{
+  width:100%;min-height:120px;resize:vertical;
+  background:var(--ibg,rgba(255,255,255,.06));
+  border:1.5px solid var(--iborder,var(--border));
+  color:var(--text);border-radius:11px;padding:12px 14px;
+  font-size:14px;font-family:inherit;outline:none;
+  transition:border-color .2s;line-height:1.5;
+}
+.bug-ta:focus{border-color:rgba(255,107,107,.5);box-shadow:0 0 0 3px rgba(255,107,107,.1)}
+.bug-ta::placeholder{color:var(--muted)}
+.bug-send{
+  width:100%;margin-top:14px;padding:11px;
+  background:linear-gradient(135deg,rgba(220,50,50,.8),rgba(255,100,100,.7));
+  border:1.5px solid rgba(255,100,100,.5);color:#fff;
+  border-radius:11px;font-size:14px;font-weight:700;
+  cursor:pointer;transition:.2s;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.bug-send:hover{background:linear-gradient(135deg,rgba(255,60,60,.9),rgba(255,120,120,.8));transform:translateY(-1px)}
+.bug-send:disabled{opacity:.5;cursor:default;transform:none}
+.bug-success{
+  text-align:center;padding:20px 0 10px;
+  color:#22c55e;font-size:15px;font-weight:700;display:none;
+}
+.bug-success i{font-size:40px;display:block;margin-bottom:10px}
+
+/* ── Bug Reports Admin Panel ── */
+#bug-reports-panel{
+  position:fixed;top:0;right:0;width:420px;max-width:100vw;height:100vh;
+  background:var(--bg2);border-left:1px solid var(--border);
+  z-index:5000;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#bug-reports-panel.open{transform:translateX(0)}
+.brp-head{padding:18px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0}
+.brp-head h3{font-size:15px;font-weight:800;color:var(--text);flex:1;margin:0}
+.brp-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px}
+.brp-filter{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.brp-fb{font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;
+  border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;
+  transition:.15s;font-family:inherit}
+.brp-fb.on{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.4);color:#ff8888}
+.brp-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.brp-item{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.brp-item.resolved{opacity:.5}
+.brp-it-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.brp-it-cat{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 8px;border-radius:8px;background:rgba(255,107,107,.12);color:#ff8888;flex-shrink:0}
+.brp-it-user{font-size:11px;color:var(--muted);flex:1}
+.brp-it-time{font-size:10px;color:var(--muted)}
+.brp-it-msg{font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px;word-break:break-word}
+.brp-it-actions{display:flex;gap:5px;flex-wrap:wrap}
+.brp-action{font-size:10px;font-weight:700;padding:3px 10px;border-radius:7px;
+  border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;
+  transition:.15s;font-family:inherit}
+.brp-action:hover{border-color:var(--blue);color:var(--blue)}
+.brp-action.resolve{border-color:rgba(34,197,94,.35);color:#22c55e}
+.brp-action.resolve:hover{background:rgba(34,197,94,.1)}
+.brp-empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 20px}
+</style>
+
+<!-- Floating bug report button -->
+<button class="bug-fab" onclick="openBugReport()" title="Нашли баг или неисправность?">
+  <i class="bi bi-lightbulb-fill"></i>
+  Сообщить о проблеме
+</button>
+
+<!-- Bug report modal -->
+<div class="bug-mo-ov" id="bug-mo-ov" onclick="if(event.target===this)closeBugReport()">
+  <div class="bug-mo">
+    <button class="bug-mo-close" onclick="closeBugReport()">×</button>
+    <div class="bug-mo-title">
+      <i class="bi bi-lightbulb-fill" style="color:#fbbf24;font-size:22px"></i>
+      Нашли баг или неисправность?
+    </div>
+    <div class="bug-mo-sub">Ваша помощь колоссальна — сообщите нам о проблеме!</div>
+    <div class="bug-cats">
+      <button class="bug-cat sel" data-cat="bug" onclick="selBugCat(this,'bug')">🐛 Баг</button>
+      <button class="bug-cat" data-cat="equipment" onclick="selBugCat(this,'equipment')">🔧 Оборудование</button>
+      <button class="bug-cat" data-cat="idea" onclick="selBugCat(this,'idea')">💡 Идея</button>
+      <button class="bug-cat" data-cat="other" onclick="selBugCat(this,'other')">📝 Другое</button>
+    </div>
+    <textarea class="bug-ta" id="bug-ta" placeholder="Опишите проблему подробно — что случилось, где, когда..." maxlength="2000"></textarea>
+    <div style="font-size:11px;color:var(--muted);margin-top:5px;text-align:right">
+      <span id="bug-charcount">0</span>/2000
+    </div>
+    <button class="bug-send" id="bug-send-btn" onclick="submitBugReport()">
+      <i class="bi bi-send-fill"></i> Отправить сообщение
+    </button>
+    <div class="bug-success" id="bug-success">
+      <i class="bi bi-check-circle-fill"></i>
+      Спасибо! Ваш отчёт отправлен и уже летит к нам в Telegram ✈️
+    </div>
+  </div>
+</div>
+
+<!-- Admin Bug Reports Panel -->
+<div id="bug-reports-panel">
+  <div class="brp-head">
+    <i class="bi bi-bug-fill" style="color:#ff6b6b;font-size:18px"></i>
+    <h3>Отчёты о проблемах</h3>
+    <span id="brp-count" style="background:rgba(255,107,107,.15);color:#ff8888;font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;margin-right:8px"></span>
+    <button class="brp-close" onclick="closeBugReports()">×</button>
+  </div>
+  <div class="brp-filter">
+    <button class="brp-fb on" data-filter="all" onclick="brpFilter(this,'all')">Все</button>
+    <button class="brp-fb" data-filter="new" onclick="brpFilter(this,'new')">🆕 Новые</button>
+    <button class="brp-fb" data-filter="in_progress" onclick="brpFilter(this,'in_progress')">⚙️ В работе</button>
+    <button class="brp-fb" data-filter="resolved" onclick="brpFilter(this,'resolved')">✅ Решено</button>
+  </div>
+  <div class="brp-list" id="brp-list">
+    <div class="brp-empty">загрузка...</div>
+  </div>
+</div>
+<div id="brp-overlay" onclick="closeBugReports()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:4999"></div>
+
+<script>
+// ── Bug Report Submit ──
+var _bugCat = 'bug';
+function selBugCat(btn, cat) {
+  _bugCat = cat;
+  document.querySelectorAll('.bug-cat').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel');
+}
+function openBugReport() {
+  document.getElementById('bug-mo-ov').classList.add('open');
+  document.getElementById('bug-ta').focus();
+  document.getElementById('bug-success').style.display = 'none';
+  document.getElementById('bug-send-btn').style.display = '';
+  document.getElementById('bug-ta').style.display = '';
+}
+function closeBugReport() {
+  document.getElementById('bug-mo-ov').classList.remove('open');
+}
+document.getElementById('bug-ta').addEventListener('input', function() {
+  document.getElementById('bug-charcount').textContent = this.value.length;
+});
+function submitBugReport() {
+  var msg = document.getElementById('bug-ta').value.trim();
+  if (!msg) { document.getElementById('bug-ta').focus(); return; }
+  var btn = document.getElementById('bug-send-btn');
+  btn.disabled = true;
+  fetch('/api/bug_report', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: msg, category: _bugCat})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok) {
+      document.getElementById('bug-success').style.display = 'block';
+      document.getElementById('bug-send-btn').style.display = 'none';
+      document.getElementById('bug-ta').style.display = 'none';
+      document.getElementById('bug-ta').value = '';
+      document.getElementById('bug-charcount').textContent = '0';
+      setTimeout(closeBugReport, 3000);
+    }
+    btn.disabled = false;
+  }).catch(function(){ btn.disabled = false; });
+}
+
+// ── Admin Bug Reports Panel ──
+var _brpFilter = 'all', _brpData = [];
+function openBugReports() {
+  document.getElementById('bug-reports-panel').classList.add('open');
+  document.getElementById('brp-overlay').style.display = 'block';
+  loadBugReports();
+}
+function closeBugReports() {
+  document.getElementById('bug-reports-panel').classList.remove('open');
+  document.getElementById('brp-overlay').style.display = 'none';
+}
+function loadBugReports() {
+  fetch('/api/bug_reports/list').then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok) { _brpData = d.reports; renderBugReports(); }
+  }).catch(function(){});
+}
+function brpFilter(btn, f) {
+  _brpFilter = f;
+  document.querySelectorAll('.brp-fb').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  renderBugReports();
+}
+function renderBugReports() {
+  var list = _brpFilter === 'all' ? _brpData : _brpData.filter(function(r){ return r.status === _brpFilter; });
+  var el = document.getElementById('brp-list');
+  var badge = document.getElementById('sb-bug-badge');
+  var newCount = _brpData.filter(function(r){ return r.status === 'new'; }).length;
+  var countEl = document.getElementById('brp-count');
+  if (countEl) countEl.textContent = _brpData.length + ' отчётов';
+  if (badge) { badge.textContent = newCount; badge.style.display = newCount > 0 ? '' : 'none'; }
+  if (!list.length) { el.innerHTML = '<div class="brp-empty"><i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:8px"></i>Нет отчётов</div>'; return; }
+  var catIcons = {bug:'🐛',equipment:'🔧',idea:'💡',other:'📝'};
+  var statusLabels = {new:'🆕 Новый',in_progress:'⚙️ В работе',resolved:'✅ Решено',closed:'🔒 Закрыт'};
+  el.innerHTML = list.map(function(r) {
+    var d = new Date(r.created_at);
+    var dStr = d.toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+    return '<div class="brp-item'+(r.status==='resolved'||r.status==='closed'?' resolved':'')+'" data-id="'+r.id+'">'+
+      '<div class="brp-it-hdr">'+
+      '<span class="brp-it-cat">'+(catIcons[r.category]||'📝')+' '+r.category+'</span>'+
+      '<span class="brp-it-user">👤 '+r.username+(r.campus?' · '+r.campus:'')+'</span>'+
+      '<span class="brp-it-time">'+dStr+'</span></div>'+
+      '<div class="brp-it-msg">'+r.message.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'+
+      '<div class="brp-it-actions">'+
+      '<span style="font-size:11px;color:var(--muted)">'+statusLabels[r.status]+'</span>'+
+      (r.status==='new'?'<button class="brp-action" onclick="brpSetStatus('+r.id+',\'in_progress\')">⚙️ В работе</button>':'')+
+      (r.status!=='resolved'&&r.status!=='closed'?'<button class="brp-action resolve" onclick="brpSetStatus('+r.id+',\'resolved\')">✅ Решено</button>':'')+
+      (r.status!=='closed'?'<button class="brp-action" onclick="brpSetStatus('+r.id+',\'closed\')">🔒 Закрыть</button>':'')+
+      '</div></div>';
+  }).join('');
+}
+function brpSetStatus(id, status) {
+  fetch('/api/bug_reports/status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:id,status:status})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.ok) loadBugReports();
+  });
+}
+{% if current_user.is_authenticated and current_user.role == 'admin' %}
+(function(){
+  setTimeout(function(){
+    fetch('/api/bug_reports/list').then(function(r){return r.json();}).then(function(d){
+      if(!d.ok)return;
+      var n=d.reports.filter(function(r){return r.status==='new';}).length;
+      var b=document.getElementById('sb-bug-badge');
+      if(b){b.textContent=n;b.style.display=n>0?'':'none';}
+    }).catch(function(){});
+  }, 3000);
+})();
+{% endif %}
+</script>
+
+<!-- ── PWA Service Worker ── -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  });
+}
+</script>
+
+<script>
+/* Nav clock — runs on every page */
+(function(){
+  var _DOW = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  function tickNavClock(){
+    var now = new Date();
+    var h = String(now.getHours()).padStart(2,'0');
+    var m = String(now.getMinutes()).padStart(2,'0');
+    var s = String(now.getSeconds()).padStart(2,'0');
+    var d = String(now.getDate()).padStart(2,'0');
+    var mo= String(now.getMonth()+1).padStart(2,'0');
+    var y = now.getFullYear();
+    var el = document.getElementById('nav-clock');
+    var ed = document.getElementById('nav-date');
+    if(el) el.textContent = h+':'+m+':'+s;
+    if(ed) ed.textContent = _DOW[now.getDay()]+' · '+d+'.'+mo+'.'+y;
+  }
+  tickNavClock();
+  setInterval(tickNavClock, 1000);
+})();
+</script>
+
+</body>
+</html>

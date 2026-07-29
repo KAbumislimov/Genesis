@@ -1,0 +1,648 @@
+<title>LANDAU Audio System — Presentation</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070d1a;color:#e6edf3;font-family:-apple-system,'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh}
+
+/* ── LANGUAGE BAR ── */
+.lang-bar{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:6px;padding:8px 18px;background:rgba(10,20,42,.85);border-radius:0 0 14px 14px;backdrop-filter:blur(12px);border:1px solid rgba(88,166,255,.15);border-top:none}
+.lbtn{padding:4px 14px;border-radius:7px;border:1px solid rgba(88,166,255,.2);background:transparent;color:rgba(160,180,220,.7);font-size:12px;font-weight:600;letter-spacing:.05em;cursor:pointer;transition:.2s;font-family:inherit}
+.lbtn:hover{color:#e6edf3;border-color:rgba(88,166,255,.5)}
+.lbtn.on{background:rgba(88,166,255,.18);border-color:rgba(88,166,255,.55);color:#7dd3fc}
+
+/* ── SLIDES ── */
+.slides{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px 80px;
+  opacity:0;pointer-events:none;transition:opacity .55s ease;
+  background:radial-gradient(ellipse at 50% 0%,var(--scd,#0a3c8c) 0%,#070d1a 65%)}
+.slide.active{opacity:1;pointer-events:all}
+.slide-icon{font-size:52px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--sc,#1a6dff));animation:iconbob 3s ease-in-out infinite}
+@keyframes iconbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.slide-title{font-size:clamp(22px,3.2vw,40px);font-weight:800;text-align:center;background:linear-gradient(135deg,#e6edf3,var(--scl,#58a6ff));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;line-height:1.2}
+.slide-sub{font-size:clamp(13px,1.5vw,17px);color:rgba(180,200,230,.7);text-align:center;margin-bottom:20px;max-width:700px}
+
+/* ── CONTENT ── */
+.slide-content{width:100%;max-width:860px}
+.blist{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:7px}
+.bitem{font-size:clamp(12px,1.25vw,14.5px);line-height:1.55;padding:9px 13px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:rgba(210,225,245,.88)}
+.bitem b{color:var(--scl,#7dd3fc)}
+
+/* Stack grid */
+.stack-grid{display:flex;flex-direction:column;gap:7px;width:100%;max-width:760px}
+.stack-row{display:flex;gap:14px;align-items:baseline;padding:8px 14px;background:rgba(255,255,255,.04);border-radius:9px;border:1px solid rgba(255,255,255,.06)}
+.stack-cat{min-width:160px;font-weight:700;font-size:13px;color:var(--scl,#7dd3fc)}
+.stack-items{font-size:13px;color:rgba(210,225,245,.8)}
+
+/* Checklist */
+.chk-cols{display:flex;gap:20px;width:100%;max-width:960px}
+.chk-col{flex:1;display:flex;flex-direction:column;gap:5px}
+.chk-item{font-size:clamp(11px,1.15vw,13.5px);padding:6px 12px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);color:rgba(210,225,245,.85)}
+
+/* ── PROGRESS BAR ── */
+.progress-bar{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,var(--sc,#1a6dff),var(--scl,#58a6ff));transition:width .1s linear;z-index:50}
+.progress-track{position:fixed;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.06)}
+
+/* ── NAV DOTS ── */
+.nav-dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:50}
+.dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:.25s;border:none}
+.dot.on{background:rgba(88,166,255,.85);transform:scale(1.35)}
+
+/* ── CONTROLS ── */
+.ctrl-btn{position:fixed;top:50%;z-index:50;background:rgba(10,20,42,.6);border:1px solid rgba(88,166,255,.2);color:rgba(180,200,230,.7);width:36px;height:60px;border-radius:8px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:.2s;backdrop-filter:blur(8px)}
+.ctrl-btn:hover{color:#e6edf3;border-color:rgba(88,166,255,.6)}
+.ctrl-prev{left:10px;transform:translateY(-50%)}
+.ctrl-next{right:10px;transform:translateY(-50%)}
+
+/* ── PAUSE / COUNTER ── */
+.counter{position:fixed;top:10px;right:14px;z-index:100;font-size:11px;color:rgba(160,180,220,.5);letter-spacing:.08em}
+.pause-btn{position:fixed;top:10px;right:60px;z-index:100;background:rgba(10,20,42,.6);border:1px solid rgba(88,166,255,.2);color:rgba(160,180,220,.6);padding:3px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;transition:.2s;backdrop-filter:blur(8px)}
+.pause-btn:hover{color:#e6edf3;border-color:rgba(88,166,255,.5)}
+
+/* ── SLIDE NUM ── */
+.slide-num{position:fixed;top:10px;left:14px;z-index:100;font-size:11px;color:rgba(160,180,220,.4);letter-spacing:.08em}
+
+/* ── TITLE SLIDE SPECIAL ── */
+.slide[data-index="0"] .slide-title{font-size:clamp(28px,4vw,52px);margin-bottom:14px}
+.slide[data-index="0"] .slide-sub{font-size:clamp(15px,1.8vw,20px)}
+
+/* ── CONTACT BTN ── */
+.contact-bar{position:fixed;bottom:24px;right:14px;z-index:100}
+.contact-link{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(10,20,42,.7);border:1px solid rgba(88,166,255,.2);border-radius:8px;color:rgba(160,180,220,.6);font-size:11px;text-decoration:none;transition:.2s;backdrop-filter:blur(8px)}
+.contact-link:hover{color:#e6edf3;border-color:rgba(88,166,255,.5)}
+
+@media(max-width:700px){
+  .blist{grid-template-columns:1fr}
+  .chk-cols{flex-direction:column}
+  .stack-cat{min-width:100px}
+}
+</style>
+
+<div class="lang-bar">
+  <button class="lbtn" onclick="setLang('en')">EN</button>
+  <button class="lbtn on" onclick="setLang('ru')">RU</button>
+  <button class="lbtn" onclick="setLang('az')">AZ</button>
+</div>
+
+<button class="pause-btn" id="pbtn" onclick="togglePause()">⏸ Пауза</button>
+<div class="counter" id="counter">10</div>
+<div class="slide-num" id="slideNum">1 / 24</div>
+
+<div class="slides" id="slides">
+<div class="slide" data-index="0" style="--sc:#1a6dff;--scd:#0a3c8c;--scl:#58a6ff">
+<div class="slide-icon">🎵</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">LANDAU Audio Control System</h2>
+<p class="slide-sub">Centralized school audio management — Baku, Azerbaijan</p>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Система управления аудио LANDAU</h2>
+<p class="slide-sub">Централизованное управление аудио школы — Баку, Азербайджан</p>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">LANDAU Audio İdarəetmə Sistemi</h2>
+<p class="slide-sub">Məktəb audio sisteminin mərkəzləşdirilmiş idarə olunması — Bakı, Azərbaycan</p>
+</div>
+</div>
+<div class="slide" data-index="1" style="--sc:#00c8ff;--scd:#006080;--scl:#7dd3fc">
+<div class="slide-icon">🏗️</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">System Overview</h2>
+<p class="slide-sub">What it is, how it works, what powers it</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🖥️ <b>Web interface</b> — Flask (Python) running in Docker on a Debian Linux server</li><li class="bitem">📡 <b>Thin clients</b> — Raspberry Pi / mini-PCs with mpg123, VLC, cron, SSH</li><li class="bitem">🔒 <b>Security</b> — HTTPS, session auth, role-based access, secrets vault</li><li class="bitem">📦 <b>GitHub</b> — full disaster recovery: restore everything in minutes</li><li class="bitem">🤖 <b>Telegram bot</b> — live notifications + remote control buttons</li><li class="bitem">📊 <b>Monitoring</b> — Grafana + Prometheus + Loki + node-exporter</li><li class="bitem">🎵 <b>Audio</b> — real-time playback control via SSH + mpg123/VLC on clients</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Обзор системы</h2>
+<p class="slide-sub">Что это, как работает и на чём собрано</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🖥️ <b>Веб-интерфейс</b> — Flask (Python) в Docker на сервере Debian Linux</li><li class="bitem">📡 <b>Тонкие клиенты</b> — Raspberry Pi / мини-ПК с mpg123, VLC, cron, SSH</li><li class="bitem">🔒 <b>Безопасность</b> — HTTPS, сессионная авторизация, роли, хранилище секретов</li><li class="bitem">📦 <b>GitHub</b> — полное восстановление после сбоя за несколько минут</li><li class="bitem">🤖 <b>Telegram-бот</b> — живые уведомления + кнопки удалённого управления</li><li class="bitem">📊 <b>Мониторинг</b> — Grafana + Prometheus + Loki + node-exporter</li><li class="bitem">🎵 <b>Аудио</b> — управление воспроизведением в реальном времени через SSH + mpg123/VLC</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Sistemə Ümumi Baxış</h2>
+<p class="slide-sub">Nədir, necə işləyir, nə ilə qurulub</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🖥️ <b>Veb interfeys</b> — Debian Linux serverindəki Dockerda Flask (Python)</li><li class="bitem">📡 <b>Nazik müştərilər</b> — mpg123, VLC, cron, SSH ilə Raspberry Pi / mini-PK</li><li class="bitem">🔒 <b>Təhlükəsizlik</b> — HTTPS, sesiya autentifikasiyası, rollar, sirr anbarı</li><li class="bitem">📦 <b>GitHub</b> — dəqiqələr içində tam bərpa mümkündür</li><li class="bitem">🤖 <b>Telegram botu</b> — canlı bildirişlər + uzaqdan idarəetmə düymələri</li><li class="bitem">📊 <b>Monitorinq</b> — Grafana + Prometheus + Loki + node-exporter</li><li class="bitem">🎵 <b>Audio</b> — SSH + mpg123/VLC vasitəsilə real vaxt rejimində idarəetmə</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="2" style="--sc:#a855f7;--scd:#4c1d95;--scl:#c084fc">
+<div class="slide-icon">⚙️</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Technology Stack</h2>
+<p class="slide-sub">What tools and technologies power the system</p>
+<div class="slide-content"><div class="stack-grid"><div class="stack-row"><span class="stack-cat">Backend</span><span class="stack-items">Flask · Python 3 · SQLAlchemy · SQLite · Docker</span></div><div class="stack-row"><span class="stack-cat">Frontend</span><span class="stack-items">Vanilla JS · CSS3 · Canvas API · Bootstrap Icons · Web Audio API</span></div><div class="stack-row"><span class="stack-cat">Audio</span><span class="stack-items">mpg123 · VLC · ALSA · cron · bash scripts</span></div><div class="stack-row"><span class="stack-cat">Infrastructure</span><span class="stack-items">Debian Linux · Docker Compose · Nginx (reverse proxy) · SSH</span></div><div class="stack-row"><span class="stack-cat">Monitoring</span><span class="stack-items">Prometheus · Grafana · Loki · node-exporter · alertmanager</span></div><div class="stack-row"><span class="stack-cat">DevOps / DR</span><span class="stack-items">GitHub · git · docker compose · weekly encrypted backups</span></div><div class="stack-row"><span class="stack-cat">Bot</span><span class="stack-items">Python-telegram-bot · Telegram Bot API · inline keyboards</span></div></div></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Технический стек</h2>
+<p class="slide-sub">Какие инструменты и технологии лежат в основе</p>
+<div class="slide-content"><div class="stack-grid"><div class="stack-row"><span class="stack-cat">Бэкенд</span><span class="stack-items">Flask · Python 3 · SQLAlchemy · SQLite · Docker</span></div><div class="stack-row"><span class="stack-cat">Фронтенд</span><span class="stack-items">Vanilla JS · CSS3 · Canvas API · Bootstrap Icons · Web Audio API</span></div><div class="stack-row"><span class="stack-cat">Аудио</span><span class="stack-items">mpg123 · VLC · ALSA · cron · bash scripts</span></div><div class="stack-row"><span class="stack-cat">Инфраструктура</span><span class="stack-items">Debian Linux · Docker Compose · Nginx (reverse proxy) · SSH</span></div><div class="stack-row"><span class="stack-cat">Мониторинг</span><span class="stack-items">Prometheus · Grafana · Loki · node-exporter · alertmanager</span></div><div class="stack-row"><span class="stack-cat">DevOps / Восстановление</span><span class="stack-items">GitHub · git · docker compose · weekly encrypted backups</span></div><div class="stack-row"><span class="stack-cat">Бот</span><span class="stack-items">Python-telegram-bot · Telegram Bot API · inline keyboards</span></div></div></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Texnologiya Steki</h2>
+<p class="slide-sub">Sistemin əsasında hansı alətlər durur</p>
+<div class="slide-content"><div class="stack-grid"><div class="stack-row"><span class="stack-cat">Backend</span><span class="stack-items">Flask · Python 3 · SQLAlchemy · SQLite · Docker</span></div><div class="stack-row"><span class="stack-cat">Frontend</span><span class="stack-items">Vanilla JS · CSS3 · Canvas API · Bootstrap Icons · Web Audio API</span></div><div class="stack-row"><span class="stack-cat">Audio</span><span class="stack-items">mpg123 · VLC · ALSA · cron · bash scripts</span></div><div class="stack-row"><span class="stack-cat">İnfrastruktur</span><span class="stack-items">Debian Linux · Docker Compose · Nginx (reverse proxy) · SSH</span></div><div class="stack-row"><span class="stack-cat">Monitorinq</span><span class="stack-items">Prometheus · Grafana · Loki · node-exporter · alertmanager</span></div><div class="stack-row"><span class="stack-cat">DevOps / Bərpa</span><span class="stack-items">GitHub · git · docker compose · weekly encrypted backups</span></div><div class="stack-row"><span class="stack-cat">Bot</span><span class="stack-items">Python-telegram-bot · Telegram Bot API · inline keyboards</span></div></div></div>
+</div>
+</div>
+<div class="slide" data-index="3" style="--sc:#22c55e;--scd:#14532d;--scl:#4ade80">
+<div class="slide-icon">🔐</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Login & Security</h2>
+<p class="slide-sub">Animated puzzle login, role-based access, auto-logout</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎭 <b>Animated login page</b> — logos and form assemble from puzzle pieces on load</li><li class="bitem">👤 <b>User roles</b> — Admin (full access) vs Viewer (read-only, limited controls)</li><li class="bitem">⏱️ <b>Auto-logout</b> — all users are automatically logged out after 5 min of inactivity</li><li class="bitem">🔑 <b>Remember Me</b> — optional persistent session across browser restarts</li><li class="bitem">🛡️ <b>HTTPS only</b> — all traffic encrypted with TLS certificate</li><li class="bitem">📜 <b>Full audit log</b> — every action by every user is logged with timestamp</li><li class="bitem">🔒 <b>Password-protected music library</b> — songs sorted in folders, access controlled</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Вход и безопасность</h2>
+<p class="slide-sub">Анимированный пазл-вход, роли, автовыход</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎭 <b>Анимированная страница входа</b> — логотипы и форма складываются из пазлов при загрузке</li><li class="bitem">👤 <b>Роли пользователей</b> — Админ (полный доступ) vs Зритель (только чтение, ограниченные кнопки)</li><li class="bitem">⏱️ <b>Автовыход</b> — все пользователи автоматически выходят после 5 мин бездействия</li><li class="bitem">🔑 <b>Запомнить меня</b> — опциональная постоянная сессия</li><li class="bitem">🛡️ <b>Только HTTPS</b> — весь трафик шифруется TLS-сертификатом</li><li class="bitem">📜 <b>Полный журнал аудита</b> — каждое действие каждого пользователя логируется с меткой времени</li><li class="bitem">🔒 <b>Защищённая музыкальная библиотека</b> — песни в папках, доступ контролируется</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Giriş və Təhlükəsizlik</h2>
+<p class="slide-sub">Animasiyalı puzzle giriş, rollar, avtomatik çıxış</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎭 <b>Animasiyalı giriş səhifəsi</b> — loqolar və forma yüklənmə zamanı puzzle hissələrindən yığılır</li><li class="bitem">👤 <b>İstifadəçi rolları</b> — Admin (tam giriş) vs Baxıcı (yalnız oxuma, məhdud düymələr)</li><li class="bitem">⏱️ <b>Avtomatik çıxış</b> — bütün istifadəçilər 5 dəq fəaliyyətsizlikdən sonra avtomatik çıxarılır</li><li class="bitem">🔑 <b>Məni xatırla</b> — isteğe bağlı daimi sessiya</li><li class="bitem">🛡️ <b>Yalnız HTTPS</b> — bütün trafik TLS sertifikatı ilə şifrələnir</li><li class="bitem">📜 <b>Tam audit loqu</b> — hər istifadəçinin hər əməliyyatı vaxt damğası ilə qeyd edilir</li><li class="bitem">🔒 <b>Şifrəli musiqi kitabxanası</b> — mahnılar qovluqlarda, giriş idarə olunur</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="4" style="--sc:#f97316;--scd:#7c2d12;--scl:#fb923c">
+<div class="slide-icon">👥</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">User Management</h2>
+<p class="slide-sub">Create users, assign roles, manage profiles with avatars</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">➕ <b>Create users directly from the web interface</b> — no server access needed</li><li class="bitem">🎭 <b>Role assignment</b> — set Admin or Viewer role per user at any time</li><li class="bitem">🖼️ <b>Profile photos</b> — each user can upload a personal avatar</li><li class="bitem">📋 <b>Detailed profiles</b> — name, role, contact info, login history</li><li class="bitem">🟢 <b>Online presence</b> — see exactly who is on the site right now in a separate panel</li><li class="bitem">🗑️ <b>Delete / disable users</b> — instant access revocation</li><li class="bitem">🔑 <b>Password reset</b> — admins can reset any user's password from the interface</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Управление пользователями</h2>
+<p class="slide-sub">Создание пользователей, назначение ролей, профили с аватарами</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">➕ <b>Создание пользователей прямо из веб-интерфейса</b> — доступ к серверу не нужен</li><li class="bitem">🎭 <b>Назначение ролей</b> — установить роль Админ или Зритель в любое время</li><li class="bitem">🖼️ <b>Фотографии профиля</b> — каждый пользователь может загрузить аватар</li><li class="bitem">📋 <b>Подробные профили</b> — имя, роль, контакты, история входа</li><li class="bitem">🟢 <b>Онлайн-присутствие</b> — видно кто сейчас на сайте в отдельной панели</li><li class="bitem">🗑️ <b>Удаление / отключение</b> — мгновенный отзыв доступа</li><li class="bitem">🔑 <b>Сброс пароля</b> — админы могут сбросить пароль любого пользователя из интерфейса</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">İstifadəçi İdarəetməsi</h2>
+<p class="slide-sub">İstifadəçi yaratmaq, rol təyin etmək, avatar ilə profillər</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">➕ <b>Veb interfeysdən birbaşa istifadəçi yaratmaq</b> — serverə giriş lazım deyil</li><li class="bitem">🎭 <b>Rol təyin etmək</b> — istədiyiniz vaxt Admin və ya Baxıcı rolu seçin</li><li class="bitem">🖼️ <b>Profil şəkilləri</b> — hər istifadəçi şəxsi avatar yükləyə bilər</li><li class="bitem">📋 <b>Ətraflı profillər</b> — ad, rol, əlaqə məlumatları, giriş tarixi</li><li class="bitem">🟢 <b>Onlayn varlıq</b> — hal-hazırda saytda kim olduğunu ayrıca paneldə görün</li><li class="bitem">🗑️ <b>Silmək / deaktiv etmək</b> — ani giriş ləğvi</li><li class="bitem">🔑 <b>Şifrə sıfırlama</b> — adminlər interfeysdən istənilən istifadəçinin şifrəsini sıfırlaya bilər</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="5" style="--sc:#00c8ff;--scd:#006080;--scl:#7dd3fc">
+<div class="slide-icon">📡</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Client Management</h2>
+<p class="slide-sub">Add, configure and control thin clients directly from the UI</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">➕ <b>Add new clients via web UI</b> — name, IP, campus assignment, no CLI needed</li><li class="bitem">🏢 <b>Campus grouping</b> — clients grouped by campus (Narimanov / Gənclik)</li><li class="bitem">🖥️ <b>Web terminal</b> — connect to any client's terminal directly from the browser</li><li class="bitem">🔄 <b>Status monitoring</b> — see which clients are online/offline in real time</li><li class="bitem">🕐 <b>Time synchronization</b> — sync system clock on clients for correct cron scheduling</li><li class="bitem">📶 <b>Ping / connectivity check</b> — verify client is reachable before sending commands</li><li class="bitem">🏷️ <b>Floor/Zone labeling</b> — assign clients to floors (1F, 2F, 3F) for zone control</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Управление клиентами</h2>
+<p class="slide-sub">Добавление, настройка и управление тонкими клиентами прямо из интерфейса</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">➕ <b>Добавление клиентов через веб-интерфейс</b> — имя, IP, кампус — без CLI</li><li class="bitem">🏢 <b>Группировка по кампусам</b> — клиенты сгруппированы по кампусам (Нариманов / Генджлик)</li><li class="bitem">🖥️ <b>Веб-терминал</b> — подключение к терминалу любого клиента прямо из браузера</li><li class="bitem">🔄 <b>Мониторинг статуса</b> — видно какие клиенты онлайн/оффлайн в реальном времени</li><li class="bitem">🕐 <b>Синхронизация времени</b> — синхронизация часов на клиентах для корректной работы cron</li><li class="bitem">📶 <b>Ping / проверка связи</b> — проверка доступности клиента перед отправкой команд</li><li class="bitem">🏷️ <b>Метки этаж/зона</b> — назначение клиентов по этажам (1Э, 2Э, 3Э) для зонального управления</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Müştəri İdarəetməsi</h2>
+<p class="slide-sub">Nazik müştəriləri birbaşa interfeysdən əlavə edin, konfiqurasiya edin, idarə edin</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">➕ <b>Veb interfeysdən müştəri əlavə etmək</b> — ad, IP, kampus — CLI olmadan</li><li class="bitem">🏢 <b>Kampus üzrə qruplaşdırma</b> — müştərilər kampuslara görə qruplaşdırılıb (Nərimanov / Gənclik)</li><li class="bitem">🖥️ <b>Veb terminal</b> — brauzerdan birbaşa istənilən müştərinin terminalına qoşulmaq</li><li class="bitem">🔄 <b>Status monitorinqi</b> — hansı müştərilərin onlayn/offlayn olduğunu real vaxtda görün</li><li class="bitem">🕐 <b>Vaxt sinxronizasiyası</b> — cron-un düzgün işləməsi üçün müştərilərdə sistem saatını sinxronlaşdırın</li><li class="bitem">📶 <b>Ping / əlaqə yoxlaması</b> — əmr göndərməzdən əvvəl müştərinin əlçatanlığını yoxlayın</li><li class="bitem">🏷️ <b>Mərtəbə/Zona etiketləri</b> — zona idarəetməsi üçün müştəriləri mərtəbələrə (1M, 2M, 3M) təyin edin</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="6" style="--sc:#1a6dff;--scd:#0a3c8c;--scl:#58a6ff">
+<div class="slide-icon">🎶</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Audio Hub</h2>
+<p class="slide-sub">Play music on all campuses simultaneously or individually</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">▶️ <b>Play / Pause / Stop</b> — control playback on each campus independently</li><li class="bitem">⏭️ <b>Next / Previous track</b> — navigate the queue from the web interface</li><li class="bitem">🔊 <b>Volume control</b> — adjust audio level in real time during playback</li><li class="bitem">🔇 <b>Global mute (SILENCE)</b> — 1 button silences ALL campuses even if amplifiers are on</li><li class="bitem">📋 <b>Track queue</b> — view current queue and full track list for each campus</li><li class="bitem">🎼 <b>Play All</b> — start the full library on all clients simultaneously</li><li class="bitem">📤 <b>Track request</b> — users can request a specific track to be played</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Аудио-хаб</h2>
+<p class="slide-sub">Воспроизведение музыки на всех кампусах одновременно или по отдельности</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">▶️ <b>Play / Pause / Stop</b> — управление воспроизведением на каждом кампусе отдельно</li><li class="bitem">⏭️ <b>След. / Пред. трек</b> — навигация по очереди из веб-интерфейса</li><li class="bitem">🔊 <b>Управление громкостью</b> — регулировка уровня звука в реальном времени</li><li class="bitem">🔇 <b>Глобальное отключение (ТИШИНА)</b> — 1 кнопка заглушает ВСЕ кампусы даже при включённых усилителях</li><li class="bitem">📋 <b>Очередь треков</b> — просмотр текущей очереди и полного списка треков</li><li class="bitem">🎼 <b>Играть всё</b> — запуск всей библиотеки на всех клиентах одновременно</li><li class="bitem">📤 <b>Запрос трека</b> — пользователи могут запросить конкретный трек</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Audio Hub</h2>
+<p class="slide-sub">Bütün kampuslarda eyni anda və ya ayrıca musiqi çalmaq</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">▶️ <b>Play / Pause / Stop</b> — hər kampusda müstəqil oynatma idarəetməsi</li><li class="bitem">⏭️ <b>Növbəti / Əvvəlki trək</b> — veb interfeysdən növbədə gəzmək</li><li class="bitem">🔊 <b>Səs idarəetməsi</b> — oynatma zamanı real vaxtda səs səviyyəsini tənzimləyin</li><li class="bitem">🔇 <b>Qlobal susturmaq (SÜKUNƏt)</b> — 1 düymə gücləndiricilər açıq olsa belə BÜTÜN kampusları susturur</li><li class="bitem">📋 <b>Trək növbəsi</b> — cari növbə və tam trək siyahısını görün</li><li class="bitem">🎼 <b>Hamısını çal</b> — bütün kitabxananı bütün müştərilərdə eyni anda başlat</li><li class="bitem">📤 <b>Trək sorğusu</b> — istifadəçilər müəyyən bir trəkin çalınmasını istəyə bilər</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="7" style="--sc:#f59e0b;--scd:#78350f;--scl:#fcd34d">
+<div class="slide-icon">🎺</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Anthem & Bell Schedule</h2>
+<p class="slide-sub">Automatic anthem playback + customizable bell schedule with cron</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎺 <b>Play anthem on all campuses</b> — with one button, broadcast anthem everywhere</li><li class="bitem">🏫 <b>Play anthem per campus</b> — independently trigger anthem on Narimanov or Gənclik only</li><li class="bitem">⏹️ <b>Stop anthem</b> — stop on all campuses at once, or per campus individually</li><li class="bitem">⏰ <b>Automatic bell schedule</b> — cron-based, runs even without the web interface open</li><li class="bitem">✏️ <b>Edit schedule from UI</b> — modify bell times directly in the web interface</li><li class="bitem">🕐 <b>Time sync on clients</b> — ensures all clients have correct time for accurate scheduling</li><li class="bitem">🛡️ <b>Accidental play protection</b> — confirmation required before playing anthem</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Гимн и расписание звонков</h2>
+<p class="slide-sub">Автоматическое воспроизведение гимна + настраиваемое расписание звонков</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎺 <b>Воспроизведение гимна на всех кампусах</b> — одной кнопкой транслируем гимн везде</li><li class="bitem">🏫 <b>Воспроизведение гимна по кампусу</b> — независимый запуск только на Нариманове или Генджлике</li><li class="bitem">⏹️ <b>Остановка гимна</b> — стоп на всех кампусах сразу или по отдельности</li><li class="bitem">⏰ <b>Автоматическое расписание звонков</b> — cron, работает даже без открытого браузера</li><li class="bitem">✏️ <b>Редактирование расписания из UI</b> — изменение времени звонков прямо в интерфейсе</li><li class="bitem">🕐 <b>Синхронизация времени</b> — обеспечивает точное время на клиентах для точного расписания</li><li class="bitem">🛡️ <b>Защита от случайного включения</b> — требуется подтверждение перед воспроизведением гимна</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Gimn və Zəng Cədvəli</h2>
+<p class="slide-sub">Avtomatik gimn oynatma + tənzimlənə bilən zəng cədvəli</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎺 <b>Bütün kampuslarda gimn çalmaq</b> — bir düymə ilə hər yerdə gimni yayımlamaq</li><li class="bitem">🏫 <b>Kampus üzrə gimn çalmaq</b> — yalnız Nərimanov və ya Gənclikdə müstəqil olaraq gimni başlatmaq</li><li class="bitem">⏹️ <b>Gimni dayandırmaq</b> — bütün kampuslarda birlikdə və ya ayrıca dayandırmaq</li><li class="bitem">⏰ <b>Avtomatik zəng cədvəli</b> — cron əsaslı, veb interfeys açıq olmasa da işləyir</li><li class="bitem">✏️ <b>UI-dan cədvəli redaktə etmək</b> — zəng vaxtlarını birbaşa veb interfeysdə dəyişdirin</li><li class="bitem">🕐 <b>Vaxt sinxronizasiyası</b> — dəqiq cədvəlləmə üçün müştərilərdə düzgün vaxta zəmanət verir</li><li class="bitem">🛡️ <b>Təsadüfi oynatmadan qorunma</b> — gimni çalmadan əvvəl təsdiq tələb olunur</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="8" style="--sc:#a855f7;--scd:#4c1d95;--scl:#c084fc">
+<div class="slide-icon">📁</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Music Library</h2>
+<p class="slide-sub">Upload, download and manage tracks from the web interface</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📤 <b>Upload music via web UI</b> — drag & drop MP3/audio files directly to the server</li><li class="bitem">📥 <b>Download tracks</b> — download any track from the server library to your device</li><li class="bitem">📂 <b>Folder organization</b> — tracks sorted in password-protected folders by category</li><li class="bitem">🔒 <b>Access control</b> — music library protected, only authorized users can manage</li><li class="bitem">🎵 <b>Full track list view</b> — browse all available tracks with metadata</li><li class="bitem">🗑️ <b>Delete tracks</b> — remove tracks from the library (admin only)</li><li class="bitem">🔍 <b>Search</b> — find tracks quickly by name or artist</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Музыкальная библиотека</h2>
+<p class="slide-sub">Загрузка, скачивание и управление треками через веб-интерфейс</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📤 <b>Загрузка музыки через веб</b> — перетащите MP3/аудио файлы прямо на сервер</li><li class="bitem">📥 <b>Скачивание треков</b> — скачайте любой трек из серверной библиотеки на устройство</li><li class="bitem">📂 <b>Организация по папкам</b> — треки отсортированы в защищённых папках по категориям</li><li class="bitem">🔒 <b>Контроль доступа</b> — библиотека защищена, управлять могут только авторизованные</li><li class="bitem">🎵 <b>Просмотр полного списка треков</b> — все доступные треки с метаданными</li><li class="bitem">🗑️ <b>Удаление треков</b> — удаление из библиотеки (только для админа)</li><li class="bitem">🔍 <b>Поиск</b> — быстрый поиск треков по имени или исполнителю</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Musiqi Kitabxanası</h2>
+<p class="slide-sub">Veb interfeysdən trəkləri yükləyin, endirin və idarə edin</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📤 <b>Veb üzərindən musiqi yükləmək</b> — MP3/audio faylları birbaşa serverə sürükleyin</li><li class="bitem">📥 <b>Trəkləri endirmək</b> — server kitabxanasından istənilən trəki cihazınıza endirin</li><li class="bitem">📂 <b>Qovluq təşkilatı</b> — trəklər kateqoriyaya görə şifrəli qovluqlarda sıralanıb</li><li class="bitem">🔒 <b>Giriş nəzarəti</b> — kitabxana qorunur, yalnız icazəli istifadəçilər idarə edə bilər</li><li class="bitem">🎵 <b>Tam trək siyahısı görünüşü</b> — metadata ilə bütün mövcud trəklərə baxın</li><li class="bitem">🗑️ <b>Trəkləri silmək</b> — kitabxanadan silmək (yalnız admin)</li><li class="bitem">🔍 <b>Axtarış</b> — trəkləri ad və ya ifaçıya görə tez tapın</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="9" style="--sc:#1a6dff;--scd:#0a3c8c;--scl:#58a6ff">
+<div class="slide-icon">🎛️</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Equalizer & Visualizer</h2>
+<p class="slide-sub">Real-time EQ control + 4 stunning visualization modes</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎛️ <b>Real-time equalizer</b> — adjust audio frequencies during live playback</li><li class="bitem">◎ <b>Radial mode</b> — circular frequency rings radiating outward (default)</li><li class="bitem">▮▮▮ <b>Bars mode</b> — classic frequency bar spectrum analyzer</li><li class="bitem">〰 <b>Wave mode</b> — smooth waveform display with amplitude envelope</li><li class="bitem">⊙ <b>Rings mode</b> — concentric pulsing circles reacting to bass</li><li class="bitem">🎨 <b>Custom colors</b> — pick individual colors for each campus visualization</li><li class="bitem">💾 <b>Saved preference</b> — visualization mode remembered per browser session</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Эквалайзер и визуализатор</h2>
+<p class="slide-sub">Управление эквалайзером в реальном времени + 4 режима визуализации</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎛️ <b>Эквалайзер в реальном времени</b> — регулировка частот во время воспроизведения</li><li class="bitem">◎ <b>Режим Radial</b> — круговые кольца частот, расходящиеся наружу (по умолчанию)</li><li class="bitem">▮▮▮ <b>Режим Bars</b> — классический анализатор спектра в виде столбиков</li><li class="bitem">〰 <b>Режим Wave</b> — плавная осциллограмма с огибающей амплитуды</li><li class="bitem">⊙ <b>Режим Rings</b> — концентрические пульсирующие круги, реагирующие на бас</li><li class="bitem">🎨 <b>Цвета на выбор</b> — выбор индивидуальных цветов для каждого кампуса</li><li class="bitem">💾 <b>Запоминание</b> — режим визуализации сохраняется в браузере</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Ekvalayzер və Vizuallaşdırıcı</h2>
+<p class="slide-sub">Real vaxt EQ idarəetməsi + 4 vizuallaşdırma rejimi</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎛️ <b>Real vaxt ekvalayzeri</b> — canlı oynatma zamanı audio tezliklərini tənzimləyin</li><li class="bitem">◎ <b>Radial rejim</b> — xaricə yayılan dairəvi tezlik halqaları (standart)</li><li class="bitem">▮▮▮ <b>Bars rejimi</b> — klassik tezlik çubuğu spektr analizatoru</li><li class="bitem">〰 <b>Wave rejimi</b> — amplituda zarfı ilə hamar dalğa forması göstərişi</li><li class="bitem">⊙ <b>Rings rejimi</b> — basa reaksiya verən konsentrik nəbz dairələri</li><li class="bitem">🎨 <b>Xüsusi rənglər</b> — hər kampusun vizuallaşdırması üçün ayrıca rəng seçin</li><li class="bitem">💾 <b>Saxlanan seçim</b> — vizuallaşdırma rejimi brauzer sessiyasında yadda saxlanılır</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="10" style="--sc:#14b8a6;--scd:#134e4a;--scl:#5eead4">
+<div class="slide-icon">📢</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Announcements & Weather</h2>
+<p class="slide-sub">Text announcements visible to all users + live weather widget</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📝 <b>Post text announcements</b> — write a message and all users see it on the dashboard</li><li class="bitem">📣 <b>Audio announcements</b> — record voice and broadcast to all clients in real time</li><li class="bitem">🌤️ <b>Weather info</b> — current Baku weather shown on the dashboard (temp, conditions)</li><li class="bitem">📅 <b>Announcement history</b> — all past announcements logged and viewable</li><li class="bitem">🎙️ <b>Voice recording from browser</b> — mic recording directly in the web interface</li><li class="bitem">📻 <b>Campus-specific broadcast</b> — send audio to all campuses or just one</li><li class="bitem">🔔 <b>Notification in Telegram</b> — announcement also sent to Telegram group automatically</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Объявления и погода</h2>
+<p class="slide-sub">Текстовые объявления видны всем пользователям + виджет погоды</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📝 <b>Публикация текстовых объявлений</b> — напишите сообщение и все увидят его на дашборде</li><li class="bitem">📣 <b>Аудио объявления</b> — запись голоса и трансляция на все клиенты в реальном времени</li><li class="bitem">🌤️ <b>Информация о погоде</b> — текущая погода Баку на дашборде (температура, условия)</li><li class="bitem">📅 <b>История объявлений</b> — все прошлые объявления залогированы и доступны</li><li class="bitem">🎙️ <b>Запись голоса в браузере</b> — запись с микрофона прямо в веб-интерфейсе</li><li class="bitem">📻 <b>Трансляция по кампусу</b> — отправка аудио на все кампусы или только на один</li><li class="bitem">🔔 <b>Уведомление в Telegram</b> — объявление также автоматически отправляется в группу Telegram</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Elanlar və Hava</h2>
+<p class="slide-sub">Bütün istifadəçilərə görünən mətn elanları + canlı hava vidiçeti</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📝 <b>Mətn elanı yerləşdirmək</b> — mesaj yazın, bütün istifadəçilər paneldə görsün</li><li class="bitem">📣 <b>Audio elanlar</b> — səs qeyd edin və real vaxtda bütün müştərilərə yayımlayın</li><li class="bitem">🌤️ <b>Hava məlumatı</b> — paneldə cari Bakı havası (temperatur, şərait)</li><li class="bitem">📅 <b>Elan tarixi</b> — bütün keçmiş elanlar qeydə alınır və baxıla bilər</li><li class="bitem">🎙️ <b>Brauzerdən səs yazısı</b> — birbaşa veb interfeysdə mikrofon qeydiyyatı</li><li class="bitem">📻 <b>Kampusa xüsusi yayım</b> — audio bütün kampuslara və ya yalnız birinə göndərin</li><li class="bitem">🔔 <b>Telegramda bildiriş</b> — elan avtomatik olaraq Telegram qrupuna da göndərilir</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="11" style="--sc:#22c55e;--scd:#14532d;--scl:#4ade80">
+<div class="slide-icon">💬</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Internal Chat</h2>
+<p class="slide-sub">Real-time text + audio chat between all online users</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">💬 <b>Text messaging</b> — real-time chat between all logged-in users</li><li class="bitem">🎤 <b>Voice messages</b> — record and send audio messages within the chat</li><li class="bitem">👥 <b>Broadcast to all</b> — send message to everyone online at once</li><li class="bitem">🎯 <b>Direct messages</b> — choose a specific user and chat privately</li><li class="bitem">🟢 <b>Who is online</b> — see the exact list of currently active users</li><li class="bitem">📜 <b>Chat history</b> — messages persisted and accessible to review</li><li class="bitem">🔔 <b>Notification on new message</b> — instant alert when someone writes</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Внутренний чат</h2>
+<p class="slide-sub">Чат в реальном времени с текстом и аудио между всеми онлайн-пользователями</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">💬 <b>Текстовые сообщения</b> — чат в реальном времени между всеми вошедшими</li><li class="bitem">🎤 <b>Голосовые сообщения</b> — запись и отправка аудио в чате</li><li class="bitem">👥 <b>Отправить всем</b> — сообщение сразу всем онлайн-пользователям</li><li class="bitem">🎯 <b>Прямые сообщения</b> — выбор конкретного пользователя и личное общение</li><li class="bitem">🟢 <b>Кто онлайн</b> — точный список активных пользователей</li><li class="bitem">📜 <b>История чата</b> — сообщения сохраняются и доступны для просмотра</li><li class="bitem">🔔 <b>Уведомление о новом сообщении</b> — мгновенный сигнал когда кто-то пишет</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Daxili Çat</h2>
+<p class="slide-sub">Bütün onlayn istifadəçilər arasında real vaxt mətn + audio çatı</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">💬 <b>Mətn mesajlaşması</b> — bütün daxil olmuş istifadəçilər arasında real vaxt çatı</li><li class="bitem">🎤 <b>Səs mesajları</b> — çatda audio qeyd et və göndər</li><li class="bitem">👥 <b>Hamıya yayımla</b> — bütün onlayn istifadəçilərə eyni anda mesaj göndər</li><li class="bitem">🎯 <b>Birbaşa mesajlar</b> — müəyyən istifadəçini seçin və şəxsi ünsiyyət qurun</li><li class="bitem">🟢 <b>Kim onlayndır</b> — hal-hazırda aktiv istifadəçilərin dəqiq siyahısı</li><li class="bitem">📜 <b>Çat tarixi</b> — mesajlar saxlanılır və baxıla bilər</li><li class="bitem">🔔 <b>Yeni mesaj bildirişi</b> — kimsə yazanda ani xəbərdarlıq</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="12" style="--sc:#22c55e;--scd:#14532d;--scl:#4ade80">
+<div class="slide-icon">🟢</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Online Users & Activity</h2>
+<p class="slide-sub">See who is on the site right now and their activity</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">👥 <b>Live user count</b> — separate panel shows exact number of users on site now</li><li class="bitem">🏷️ <b>User list</b> — names, avatars, and roles of all currently online users</li><li class="bitem">⏱️ <b>Last activity</b> — when each user was last active</li><li class="bitem">📜 <b>Full audit log</b> — every action logged: who played what, when, from where</li><li class="bitem">🔍 <b>Action history</b> — filter logs by user, campus, or action type</li><li class="bitem">📊 <b>Statistics</b> — usage patterns, most played tracks, activity peaks</li><li class="bitem">🚨 <b>Security events</b> — failed login attempts, unauthorized access logged</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Онлайн-пользователи и активность</h2>
+<p class="slide-sub">Кто сейчас на сайте и чем занят</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">👥 <b>Количество онлайн</b> — отдельная панель показывает точное число пользователей</li><li class="bitem">🏷️ <b>Список пользователей</b> — имена, аватары и роли всех онлайн-пользователей</li><li class="bitem">⏱️ <b>Последняя активность</b> — когда каждый пользователь был активен в последний раз</li><li class="bitem">📜 <b>Полный журнал аудита</b> — каждое действие: кто что включил, когда и откуда</li><li class="bitem">🔍 <b>История действий</b> — фильтрация логов по пользователю, кампусу или типу действия</li><li class="bitem">📊 <b>Статистика</b> — паттерны использования, самые слушаемые треки, пики активности</li><li class="bitem">🚨 <b>События безопасности</b> — неудачные попытки входа, несанкционированный доступ</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Onlayn İstifadəçilər və Fəaliyyət</h2>
+<p class="slide-sub">Şu anda saytda kimin olduğunu və fəaliyyətini görün</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">👥 <b>Canlı istifadəçi sayı</b> — ayrıca panel hal-hazırda saytdakı istifadəçilərin dəqiq sayını göstərir</li><li class="bitem">🏷️ <b>İstifadəçi siyahısı</b> — bütün onlayn istifadəçilərin adları, avatarları və rolları</li><li class="bitem">⏱️ <b>Son fəaliyyət</b> — hər istifadəçinin son dəfə nə vaxt aktiv olduğu</li><li class="bitem">📜 <b>Tam audit loqu</b> — hər əməliyyat: kim nə etdi, nə vaxt, haradan</li><li class="bitem">🔍 <b>Əməliyyat tarixi</b> — istifadəçi, kampus və ya əməliyyat növünə görə logları filtrləyin</li><li class="bitem">📊 <b>Statistika</b> — istifadə nümunələri, ən çox çalınan trəklər, aktivlik zirvələri</li><li class="bitem">🚨 <b>Təhlükəsizlik hadisələri</b> — uğursuz giriş cəhdləri, icazəsiz giriş qeydə alınır</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="13" style="--sc:#f97316;--scd:#7c2d12;--scl:#fb923c">
+<div class="slide-icon">📊</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">System Monitoring</h2>
+<p class="slide-sub">Grafana dashboards, Prometheus metrics, Loki logs — all in the web UI</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📈 <b>Grafana dashboards</b> — real-time graphs embedded directly in the web page</li><li class="bitem">🔢 <b>Prometheus metrics</b> — CPU, RAM, disk, network on all clients and server</li><li class="bitem">📋 <b>Loki log aggregation</b> — centralized logs from all machines searchable in UI</li><li class="bitem">💻 <b>node-exporter</b> — system metrics from every thin client and the main server</li><li class="bitem">🚨 <b>Alerting</b> — notifications when clients go offline or thresholds exceeded</li><li class="bitem">🕐 <b>Historical data</b> — view performance over days, weeks, months</li><li class="bitem">🌡️ <b>Hardware health</b> — temperature, uptime, disk usage monitored continuously</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Системный мониторинг</h2>
+<p class="slide-sub">Дашборды Grafana, метрики Prometheus, логи Loki — прямо в веб-интерфейсе</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📈 <b>Дашборды Grafana</b> — графики в реальном времени прямо на веб-странице</li><li class="bitem">🔢 <b>Метрики Prometheus</b> — CPU, RAM, диск, сеть на всех клиентах и сервере</li><li class="bitem">📋 <b>Агрегация логов Loki</b> — централизованные логи со всех машин</li><li class="bitem">💻 <b>node-exporter</b> — системные метрики с каждого тонкого клиента и сервера</li><li class="bitem">🚨 <b>Алертинг</b> — уведомления когда клиенты уходят оффлайн или превышены пороги</li><li class="bitem">🕐 <b>Исторические данные</b> — просмотр производительности за дни, недели, месяцы</li><li class="bitem">🌡️ <b>Здоровье оборудования</b> — температура, uptime, использование диска</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Sistem Monitorinqi</h2>
+<p class="slide-sub">Grafana panelləri, Prometheus metrikaləri, Loki logları — veb interfeysdə</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📈 <b>Grafana panelləri</b> — veb səhifəsinə birbaşa daxil edilmiş real vaxt qrafikləri</li><li class="bitem">🔢 <b>Prometheus metrikaləri</b> — bütün müştərilərdə və serverdə CPU, RAM, disk, şəbəkə</li><li class="bitem">📋 <b>Loki log aqreqasiyası</b> — axtarıla bilən bütün maşınlardan mərkəzləşdirilmiş loqlar</li><li class="bitem">💻 <b>node-exporter</b> — hər nazik müştəri və əsas serverdən sistem metrikaləri</li><li class="bitem">🚨 <b>Xəbərdarlıq</b> — müştərilər offlayn olduqda və ya həddlər aşıldıqda bildirişlər</li><li class="bitem">🕐 <b>Tarixi məlumat</b> — günlər, həftələr, aylar üzrə performansa baxış</li><li class="bitem">🌡️ <b>Avadanlıq sağlamlığı</b> — temperatur, uptime, disk istifadəsi davamlı izlənilir</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="14" style="--sc:#2aabee;--scd:#0a4a6e;--scl:#7dd3fc">
+<div class="slide-icon">🤖</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Telegram Bot & Notifications</h2>
+<p class="slide-sub">Full remote control via Telegram + instant notifications for everything</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🔔 <b>Notifications for ALL actions</b> — every play, stop, login, backup, error — instantly</li><li class="bitem">🎛️ <b>Inline keyboard buttons</b> — control music without opening the web interface:</li><li class="bitem">&nbsp;&nbsp;&nbsp;🔊 Volume Up &nbsp; 🔉 Volume Down &nbsp; ⏹ STOP</li><li class="bitem">&nbsp;&nbsp;&nbsp;⏭ Next Track &nbsp; ⏮ Prev Track &nbsp; 📜 History</li><li class="bitem">&nbsp;&nbsp;&nbsp;📋 Track List &nbsp; 📃 Full Track List &nbsp; ▶ Play All</li><li class="bitem">&nbsp;&nbsp;&nbsp;ℹ️ Info &nbsp; 📡 Status &nbsp; 🕐 Client Time &nbsp; 🕐 Server Time</li><li class="bitem">&nbsp;&nbsp;&nbsp;📱 Menu &nbsp; 🔄 Refresh &nbsp; 💾 Backups</li><li class="bitem">✅ <b>Everything tested and working</b> — all buttons functional in production</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Telegram-бот и уведомления</h2>
+<p class="slide-sub">Полное удалённое управление через Telegram + мгновенные уведомления обо всём</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🔔 <b>Уведомления обо ВСЕХ действиях</b> — каждый play, stop, вход, бекап, ошибка — мгновенно</li><li class="bitem">🎛️ <b>Инлайн-кнопки</b> — управление музыкой без открытия веб-интерфейса:</li><li class="bitem">&nbsp;&nbsp;&nbsp;🔊 Громче &nbsp; 🔉 Тише &nbsp; ⏹ СТОП</li><li class="bitem">&nbsp;&nbsp;&nbsp;⏭ Следующая &nbsp; ⏮ Предыдущая &nbsp; 📜 История</li><li class="bitem">&nbsp;&nbsp;&nbsp;📋 Список треков &nbsp; 📃 Полный список &nbsp; ▶ Играть всё</li><li class="bitem">&nbsp;&nbsp;&nbsp;ℹ️ Инфо &nbsp; 📡 Статус &nbsp; 🕐 Время клиент &nbsp; 🕐 Время сервер</li><li class="bitem">&nbsp;&nbsp;&nbsp;📱 Меню &nbsp; 🔄 Обновить &nbsp; 💾 Бекапы</li><li class="bitem">✅ <b>Всё протестировано и работает</b> — все кнопки работают в продакшне</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Telegram Botu və Bildirişlər</h2>
+<p class="slide-sub">Telegram vasitəsilə tam uzaqdan idarəetmə + hər şey üçün ani bildirişlər</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🔔 <b>BÜTÜN əməliyyatlar üçün bildirişlər</b> — hər play, stop, giriş, backup, xəta — anında</li><li class="bitem">🎛️ <b>Inline klaviatura düymələri</b> — veb interfeys açmadan musiqi idarəetməsi:</li><li class="bitem">&nbsp;&nbsp;&nbsp;🔊 Səsi Artır &nbsp; 🔉 Səsi Azalt &nbsp; ⏹ STOP</li><li class="bitem">&nbsp;&nbsp;&nbsp;⏭ Növbəti Trək &nbsp; ⏮ Əvvəlki Trək &nbsp; 📜 Tarix</li><li class="bitem">&nbsp;&nbsp;&nbsp;📋 Trək Siyahısı &nbsp; 📃 Tam Siyahı &nbsp; ▶ Hamısını Çal</li><li class="bitem">&nbsp;&nbsp;&nbsp;ℹ️ Məlumat &nbsp; 📡 Status &nbsp; 🕐 Müştəri Vaxtı &nbsp; 🕐 Server Vaxtı</li><li class="bitem">&nbsp;&nbsp;&nbsp;📱 Menyu &nbsp; 🔄 Yenilə &nbsp; 💾 Backuplar</li><li class="bitem">✅ <b>Hər şey sınaqdan keçirilmiş və işləyir</b> — istehsalda bütün düymələr aktivdir</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="15" style="--sc:#a855f7;--scd:#4c1d95;--scl:#c084fc">
+<div class="slide-icon">🎨</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Themes & Appearance</h2>
+<p class="slide-sub">4 built-in themes, live wallpapers, transparency and blur effects</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎨 <b>4 stunning themes</b> — Abyss (dark blue), Studio (dark), Midnight (deep purple), Campus (teal)</li><li class="bitem">🖼️ <b>17+ live wallpapers</b> — animated backgrounds including particle systems and Ken Burns effect</li><li class="bitem">🌟 <b>Particle animation</b> — floating glowing particles as animated background</li><li class="bitem">🏔️ <b>Ken Burns effect</b> — slow pan & zoom on scenic photo backgrounds</li><li class="bitem">🔲 <b>Transparency control</b> — adjust card/panel transparency level (0–100%)</li><li class="bitem">💨 <b>Blur effect</b> — frosted glass backdrop-filter for panels</li><li class="bitem">🔤 <b>Font settings</b> — choose font family and size for the interface</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Темы и оформление</h2>
+<p class="slide-sub">4 встроенные темы, живые обои, прозрачность и эффекты размытия</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎨 <b>4 крутые темы</b> — Abyss (тёмно-синий), Studio (тёмная), Midnight (глубокий фиолетовый), Campus (бирюзовый)</li><li class="bitem">🖼️ <b>17+ живых обоев</b> — анимированные фоны включая частицы и эффект Кена Бёрнса</li><li class="bitem">🌟 <b>Анимация частиц</b> — парящие светящиеся частицы как анимированный фон</li><li class="bitem">🏔️ <b>Эффект Кена Бёрнса</b> — медленный панорамный зум на пейзажных фотографиях</li><li class="bitem">🔲 <b>Управление прозрачностью</b> — настройка уровня прозрачности карточек/панелей (0–100%)</li><li class="bitem">💨 <b>Эффект размытия</b> — матовое стекло (backdrop-filter: blur) для панелей</li><li class="bitem">🔤 <b>Настройки шрифтов</b> — выбор шрифта и размера для интерфейса</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Temalar və Görünüş</h2>
+<p class="slide-sub">4 daxili tema, canlı divarqağızları, şəffaflıq və bulanıqlıq effektləri</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🎨 <b>4 əla tema</b> — Abyss (tünd mavi), Studio (qaranlıq), Midnight (dərin bənövşəyi), Campus (firuzəyi)</li><li class="bitem">🖼️ <b>17+ canlı divarqağızı</b> — zərrəcik sistemləri və Ken Burns effekti daxil olmaqla animasiyalı fonlar</li><li class="bitem">🌟 <b>Zərrəcik animasiyası</b> — animasiyalı fon kimi üzən parıldayan zərrəciklər</li><li class="bitem">🏔️ <b>Ken Burns effekti</b> — mənzərəli foto fonlarında yavaş panorama və zum</li><li class="bitem">🔲 <b>Şəffaflıq idarəetməsi</b> — kart/panel şəffaflıq səviyyəsini tənzimləyin (0–100%)</li><li class="bitem">💨 <b>Bulanıqlıq effekti</b> — panellər üçün dondurulmuş şüşə backdrop-filter</li><li class="bitem">🔤 <b>Şrift parametrləri</b> — interfeys üçün şrift ailəsi və ölçüsü seçin</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="16" style="--sc:#f97316;--scd:#7c2d12;--scl:#fb923c">
+<div class="slide-icon">💾</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Backup System</h2>
+<p class="slide-sub">Weekly encrypted backups, viewable and downloadable from the web UI</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📅 <b>Automatic weekly backups</b> — scheduled via cron every week automatically</li><li class="bitem">🔒 <b>Encrypted vault</b> — backups protected with vault password (stored in secrets)</li><li class="bitem">👁️ <b>View backups in UI</b> — list of all backups visible directly in the web interface</li><li class="bitem">📥 <b>Download any backup</b> — download encrypted archive to local device from the UI</li><li class="bitem">🗜️ <b>Compressed archives</b> — tar.gz archives for efficient storage</li><li class="bitem">📦 <b>Full system backup</b> — includes database, config, music library metadata</li><li class="bitem">🔄 <b>Easy restore</b> — documented restore procedure with step-by-step commands</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Система резервного копирования</h2>
+<p class="slide-sub">Еженедельные зашифрованные бекапы, просмотр и скачивание из веб-интерфейса</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📅 <b>Автоматические еженедельные бекапы</b> — запланированы через cron каждую неделю</li><li class="bitem">🔒 <b>Зашифрованное хранилище</b> — бекапы защищены паролем (хранится в секретах)</li><li class="bitem">👁️ <b>Просмотр бекапов в UI</b> — список всех бекапов виден прямо в веб-интерфейсе</li><li class="bitem">📥 <b>Скачивание любого бекапа</b> — загрузка зашифрованного архива из интерфейса</li><li class="bitem">🗜️ <b>Сжатые архивы</b> — tar.gz архивы для эффективного хранения</li><li class="bitem">📦 <b>Полный бекап системы</b> — включает БД, конфиги, метаданные музыкальной библиотеки</li><li class="bitem">🔄 <b>Простое восстановление</b> — задокументированная процедура с командами</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Ehtiyat Nüsxə Sistemi</h2>
+<p class="slide-sub">Həftəlik şifrəli ehtiyat nüsxələr, veb interfeysdən baxmaq və endirmək</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📅 <b>Avtomatik həftəlik ehtiyat nüsxələr</b> — hər həftə cron vasitəsilə planlaşdırılmış</li><li class="bitem">🔒 <b>Şifrəli anbar</b> — ehtiyat nüsxələr anbar şifrəsi ilə qorunur (sirrlərdə saxlanılır)</li><li class="bitem">👁️ <b>UI-da ehtiyat nüsxələrə baxmaq</b> — bütün ehtiyat nüsxələrin siyahısı birbaşa veb interfeysdə görünür</li><li class="bitem">📥 <b>İstənilən ehtiyat nüsxəni endirmək</b> — interfeysdən şifrəli arxivi yerli cihaza endirin</li><li class="bitem">🗜️ <b>Sıxılmış arxivlər</b> — səmərəli saxlama üçün tar.gz arxivləri</li><li class="bitem">📦 <b>Tam sistem ehtiyat nüsxəsi</b> — verilənlər bazası, konfiqurasiya, musiqi kitabxanası meta məlumatları daxildir</li><li class="bitem">🔄 <b>Asan bərpa</b> — addım-addım əmrlərlə sənədləşdirilmiş bərpa proseduru</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="17" style="--sc:#6b7280;--scd:#1f2937;--scl:#9ca3af">
+<div class="slide-icon">🐙</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">GitHub & Disaster Recovery</h2>
+<p class="slide-sub">Replace server hardware and restore everything in minutes</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📦 <b>Full codebase on GitHub</b> — every script, config, docker-compose, template</li><li class="bitem">🔄 <b>Restore in minutes</b> — git clone + docker compose up = system back online</li><li class="bitem">🖥️ <b>New machine? No problem</b> — install Docker, clone repo, restore backup, done</li><li class="bitem">📝 <b>Documented commands</b> — step-by-step recovery guide included in repo</li><li class="bitem">🔐 <b>Secrets in private repo</b> — passwords/tokens in separate campus-secrets repo</li><li class="bitem">🌿 <b>Version control</b> — all changes tracked, easy rollback to any previous version</li><li class="bitem">🤝 <b>Collaboration</b> — multiple admins can contribute and deploy changes</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">GitHub и восстановление после сбоя</h2>
+<p class="slide-sub">Замените оборудование и восстановите всё за несколько минут</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📦 <b>Весь код на GitHub</b> — каждый скрипт, конфиг, docker-compose, шаблон</li><li class="bitem">🔄 <b>Восстановление за минуты</b> — git clone + docker compose up = система снова онлайн</li><li class="bitem">🖥️ <b>Новая машина? Не проблема</b> — установи Docker, клонируй репо, восстанови бекап</li><li class="bitem">📝 <b>Задокументированные команды</b> — пошаговое руководство по восстановлению в репозитории</li><li class="bitem">🔐 <b>Секреты в приватном репо</b> — пароли/токены в отдельном репозитории campus-secrets</li><li class="bitem">🌿 <b>Контроль версий</b> — все изменения отслеживаются, откат к любой предыдущей версии</li><li class="bitem">🤝 <b>Совместная работа</b> — несколько администраторов могут вносить изменения</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">GitHub və Fəlakətin Bərpası</h2>
+<p class="slide-sub">Server avadanlığını dəyişdirin və hər şeyi dəqiqələr içində bərpa edin</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📦 <b>GitHub-da tam kod bazası</b> — hər skript, konfiqurasiya, docker-compose, şablon</li><li class="bitem">🔄 <b>Dəqiqələr içində bərpa</b> — git clone + docker compose up = sistem yenidən onlayn</li><li class="bitem">🖥️ <b>Yeni maşın? Problem deyil</b> — Docker quraşdır, repo klonla, ehtiyat nüsxəni bərpa et</li><li class="bitem">📝 <b>Sənədləşdirilmiş əmrlər</b> — repoda addım-addım bərpa bələdçisi var</li><li class="bitem">🔐 <b>Sirrlər xüsusi repoda</b> — şifrələr/tokenlər ayrıca campus-secrets repodadır</li><li class="bitem">🌿 <b>Versiya nəzarəti</b> — bütün dəyişikliklər izlənilir, istənilən əvvəlki versiyaya geri dönmək mümkündür</li><li class="bitem">🤝 <b>Əməkdaşlıq</b> — bir neçə admin dəyişiklik edə və deploy edə bilər</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="18" style="--sc:#14b8a6;--scd:#134e4a;--scl:#5eead4">
+<div class="slide-icon">📋</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Command Cheat Sheets</h2>
+<p class="slide-sub">Quick reference guides for Linux, Windows, Cisco, Access Points</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🐧 <b>Linux commands</b> — essential admin commands: service management, networking, filesystem</li><li class="bitem">🪟 <b>Windows commands</b> — CMD/PowerShell: network config, RDP, updates</li><li class="bitem">🔌 <b>Cisco commands</b> — switch/router: VLAN, port config, show commands</li><li class="bitem">📶 <b>Access Point commands</b> — WiFi AP management: SSID, channels, clients</li><li class="bitem">📖 <b>Always accessible</b> — cheat sheets visible in the web interface at any time</li><li class="bitem">✏️ <b>Editable</b> — admins can update cheat sheets without redeploying</li><li class="bitem">🔍 <b>Searchable</b> — find the right command quickly</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Шпаргалки команд</h2>
+<p class="slide-sub">Быстрые справочники для Linux, Windows, Cisco, точек доступа</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🐧 <b>Команды Linux</b> — основные команды admin: управление сервисами, сетью, файловой системой</li><li class="bitem">🪟 <b>Команды Windows</b> — CMD/PowerShell: сетевые настройки, RDP, обновления</li><li class="bitem">🔌 <b>Команды Cisco</b> — коммутатор/маршрутизатор: VLAN, настройка портов, show команды</li><li class="bitem">📶 <b>Команды точек доступа</b> — управление WiFi AP: SSID, каналы, клиенты</li><li class="bitem">📖 <b>Всегда доступны</b> — шпаргалки видны в интерфейсе в любое время</li><li class="bitem">✏️ <b>Редактируемые</b> — администраторы могут обновлять без переразвёртывания</li><li class="bitem">🔍 <b>С поиском</b> — быстрый поиск нужной команды</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Əmr Kömək Sənədləri</h2>
+<p class="slide-sub">Linux, Windows, Cisco, Giriş Nöqtələri üçün sürətli istinad bələdçiləri</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🐧 <b>Linux əmrləri</b> — əsas admin əmrləri: xidmət idarəetməsi, şəbəkə, fayl sistemi</li><li class="bitem">🪟 <b>Windows əmrləri</b> — CMD/PowerShell: şəbəkə konfiqurasiyası, RDP, yeniləmələr</li><li class="bitem">🔌 <b>Cisco əmrləri</b> — açar/router: VLAN, port konfiqurasiyası, show əmrləri</li><li class="bitem">📶 <b>Giriş nöqtəsi əmrləri</b> — WiFi AP idarəetməsi: SSID, kanallar, müştərilər</li><li class="bitem">📖 <b>Həmişə əlçatan</b> — kömək sənədləri istənilən vaxt interfeysdə görünür</li><li class="bitem">✏️ <b>Redaktə edilə bilən</b> — adminlər yenidən deploy etmədən yeniləyə bilər</li><li class="bitem">🔍 <b>Axtarıla bilən</b> — lazımlı əmri tez tapın</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="19" style="--sc:#1a6dff;--scd:#0a3c8c;--scl:#58a6ff">
+<div class="slide-icon">🖥️</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Thin Client Management</h2>
+<p class="slide-sub">Raspberry Pi / mini-PCs at each campus — fully managed from the web</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🖥️ <b>Dedicated thin clients</b> — Raspberry Pi / mini-PC at each campus connected to amplifiers</li><li class="bitem">🔊 <b>Audio output</b> — mpg123/VLC plays audio through client's 3.5mm or HDMI output</li><li class="bitem">⚡ <b>Always-on</b> — clients run headlessly 24/7, controlled via SSH</li><li class="bitem">🔒 <b>SSH key auth</b> — passwordless SSH from server to clients for secure command execution</li><li class="bitem">📊 <b>Resource monitoring</b> — CPU/RAM/temp of each client visible in monitoring</li><li class="bitem">🔄 <b>Remote reboot</b> — restart any client remotely from the web interface</li><li class="bitem">🕐 <b>Cron-based automation</b> — bell schedule runs locally even if server is unreachable</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Управление тонкими клиентами</h2>
+<p class="slide-sub">Raspberry Pi / мини-ПК на каждом кампусе — полное управление из веб</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🖥️ <b>Выделенные тонкие клиенты</b> — Raspberry Pi / мини-ПК на каждом кампусе, подключённые к усилителям</li><li class="bitem">🔊 <b>Аудиовыход</b> — mpg123/VLC воспроизводит через 3.5mm или HDMI выход клиента</li><li class="bitem">⚡ <b>Всегда включены</b> — клиенты работают без монитора 24/7, управляются по SSH</li><li class="bitem">🔒 <b>SSH-аутентификация по ключу</b> — SSH без пароля от сервера к клиентам</li><li class="bitem">📊 <b>Мониторинг ресурсов</b> — CPU/RAM/температура каждого клиента в мониторинге</li><li class="bitem">🔄 <b>Удалённая перезагрузка</b> — перезапуск любого клиента из веб-интерфейса</li><li class="bitem">🕐 <b>Автоматизация через cron</b> — расписание звонков работает локально даже без сервера</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Nazik Müştəri İdarəetməsi</h2>
+<p class="slide-sub">Hər kampusda Raspberry Pi / mini-PK — vebdən tam idarəetmə</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🖥️ <b>Xüsusi nazik müştərilər</b> — gücləndiricilərə qoşulmuş hər kampusda Raspberry Pi / mini-PK</li><li class="bitem">🔊 <b>Audio çıxışı</b> — mpg123/VLC müştərinin 3.5mm və ya HDMI çıxışından audio çalır</li><li class="bitem">⚡ <b>Həmişə aktiv</b> — müştərilər monitorsuz 24/7 işləyir, SSH ilə idarə olunur</li><li class="bitem">🔒 <b>SSH açar autentifikasiyası</b> — serverdən müştərilərə şifrəsiz SSH</li><li class="bitem">📊 <b>Resurs monitorinqi</b> — hər müştərinin CPU/RAM/temperaturu monitorinqdə görünür</li><li class="bitem">🔄 <b>Uzaqdan yenidən başlatmaq</b> — veb interfeysdən istənilən müştərini yenidən başlatın</li><li class="bitem">🕐 <b>Cron əsaslı avtomatlaşdırma</b> — zəng cədvəli server əlçatmaz olsa belə yerli olaraq işləyir</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="20" style="--sc:#ef4444;--scd:#7f1d1d;--scl:#f87171">
+<div class="slide-icon">🆘</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">IT Helpdesk</h2>
+<p class="slide-sub">Public incident reporting portal — trilingual IT support for staff</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📝 <b>Submit IT incidents</b> — staff can report problems without calling anyone</li><li class="bitem">🌐 <b>Trilingual</b> — interface in Azerbaijani, Russian, and English</li><li class="bitem">🏷️ <b>Categories</b> — hardware, software, network, audio, printing, access, other</li><li class="bitem">📊 <b>Status tracking</b> — open / in progress / resolved for each ticket</li><li class="bitem">👤 <b>No login required</b> — public form, anyone at the school can submit</li><li class="bitem">📬 <b>Admin dashboard</b> — all tickets visible to IT admin with management controls</li><li class="bitem">🔔 <b>Telegram notification</b> — new ticket instantly sent to IT Telegram group</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">ИТ-helpdesk</h2>
+<p class="slide-sub">Публичный портал сообщений об инцидентах — трёхъязычная ИТ-поддержка</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📝 <b>Подача ИТ-инцидентов</b> — сотрудники сообщают о проблемах без звонков</li><li class="bitem">🌐 <b>Трёхъязычный</b> — интерфейс на азербайджанском, русском и английском</li><li class="bitem">🏷️ <b>Категории</b> — оборудование, ПО, сеть, аудио, печать, доступ, другое</li><li class="bitem">📊 <b>Отслеживание статуса</b> — открыт / в работе / решён для каждого тикета</li><li class="bitem">👤 <b>Без входа</b> — публичная форма, любой сотрудник школы может отправить</li><li class="bitem">📬 <b>Дашборд администратора</b> — все тикеты видны ИТ-admin с элементами управления</li><li class="bitem">🔔 <b>Уведомление в Telegram</b> — новый тикет мгновенно в ИТ Telegram-группу</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">İT Helpdesk</h2>
+<p class="slide-sub">İctimai insidentlər bildiriş portalı — üç dilli İT dəstək</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">📝 <b>İT insidentləri bildirmək</b> — işçilər heç kimə zəng etmədən problemləri bildirir</li><li class="bitem">🌐 <b>Üç dilli</b> — Azərbaycan, Rus və İngilis dillərində interfeys</li><li class="bitem">🏷️ <b>Kateqoriyalar</b> — avadanlıq, proqram, şəbəkə, audio, çap, giriş, digər</li><li class="bitem">📊 <b>Status izlənməsi</b> — hər bilet üçün açıq / işlənir / həll edilib</li><li class="bitem">👤 <b>Giriş tələb olunmur</b> — ictimai forma, məktəbdəki hər kəs göndərə bilər</li><li class="bitem">📬 <b>Admin paneli</b> — bütün biletlər idarəetmə nəzarəti ilə İT adminine görünür</li><li class="bitem">🔔 <b>Telegram bildirişi</b> — yeni bilet dərhal İT Telegram qrupuna göndərilir</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="21" style="--sc:#f59e0b;--scd:#78350f;--scl:#fcd34d">
+<div class="slide-icon">💡</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Ideas & Feedback</h2>
+<p class="slide-sub">Any user can submit ideas — they arrive in the web UI and Telegram</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">💡 <b>"Have an idea? Share it!"</b> — feedback button visible on every page</li><li class="bitem">✍️ <b>Text submission</b> — user writes their idea in a simple form</li><li class="bitem">📨 <b>Delivered to admin</b> — message appears in the web interface notification panel</li><li class="bitem">🤖 <b>Telegram notification</b> — idea also sent instantly to the Telegram group</li><li class="bitem">📋 <b>Ideas log</b> — all submitted ideas stored and reviewable</li><li class="bitem">🔔 <b>No account needed</b> — anyone with access to the site can submit</li><li class="bitem">✅ <b>Acknowledgement</b> — submitter gets a confirmation that the idea was received</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Идеи и обратная связь</h2>
+<p class="slide-sub">Любой пользователь может подать идею — приходит в веб-интерфейс и Telegram</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">💡 <b>«Есть идеи? Поделись!»</b> — кнопка обратной связи видна на каждой странице</li><li class="bitem">✍️ <b>Текстовая подача</b> — пользователь пишет идею в простой форме</li><li class="bitem">📨 <b>Доставка администратору</b> — сообщение появляется в панели уведомлений интерфейса</li><li class="bitem">🤖 <b>Уведомление в Telegram</b> — идея также мгновенно отправляется в группу Telegram</li><li class="bitem">📋 <b>Журнал идей</b> — все поданные идеи хранятся и доступны для просмотра</li><li class="bitem">🔔 <b>Без аккаунта не нужно</b> — любой с доступом к сайту может подать</li><li class="bitem">✅ <b>Подтверждение</b> — отправитель получает подтверждение что идея принята</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Fikirlər və Rəylər</h2>
+<p class="slide-sub">İstənilən istifadəçi fikir bildirə bilər — veb interfeysinə və Teleqrama çatır</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">💡 <b>«Fikriniz var? Paylaşın!»</b> — rəy düyməsi hər səhifədə görünür</li><li class="bitem">✍️ <b>Mətn göndərişi</b> — istifadəçi sadə formada ideyasını yazır</li><li class="bitem">📨 <b>Adminə çatdırılır</b> — mesaj veb interfeysin bildiriş panelində görünür</li><li class="bitem">🤖 <b>Telegram bildirişi</b> — ideya dərhal Telegram qrupuna da göndərilir</li><li class="bitem">📋 <b>Fikirlər loqu</b> — bütün göndərilmiş fikirlər saxlanılır və baxıla bilər</li><li class="bitem">🔔 <b>Hesab tələb olunmur</b> — sayta girişi olan hər kəs göndərə bilər</li><li class="bitem">✅ <b>Təsdiq</b> — göndərən ideyasının qəbul edildiyinə dair təsdiq alır</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="22" style="--sc:#00c8ff;--scd:#006080;--scl:#7dd3fc">
+<div class="slide-icon">🏢</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">Zone & Floor Control</h2>
+<p class="slide-sub">Control audio per floor — silence 3rd floor independently</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🏢 <b>Floor assignment</b> — each thin client labeled with its floor (1F, 2F, 3F)</li><li class="bitem">🎯 <b>Per-floor control</b> — play / stop / mute only on selected floors</li><li class="bitem">🔇 <b>Selective silence</b> — silence 3rd floor without affecting 1st and 2nd</li><li class="bitem">📻 <b>Zone broadcasting</b> — send specific audio only to certain floors</li><li class="bitem">🔧 <b>Configurable from UI</b> — assign/reassign floors without touching server</li><li class="bitem">🏫 <b>Cross-campus zones</b> — works independently on both Narimanov and Gənclik campuses</li><li class="bitem">📱 <b>Telegram zone control</b> — per-floor commands also available in Telegram bot</li></ul></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Зональное управление по этажам</h2>
+<p class="slide-sub">Управление аудио по этажам — тишина на 3-м этаже отдельно</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🏢 <b>Назначение этажа</b> — каждый клиент помечен своим этажом (1Э, 2Э, 3Э)</li><li class="bitem">🎯 <b>Управление по этажу</b> — play / stop / mute только на выбранных этажах</li><li class="bitem">🔇 <b>Избирательная тишина</b> — тишина на 3-м этаже без влияния на 1-й и 2-й</li><li class="bitem">📻 <b>Зональная трансляция</b> — отправка аудио только на определённые этажи</li><li class="bitem">🔧 <b>Настройка из UI</b> — назначение/переназначение этажей без серверного доступа</li><li class="bitem">🏫 <b>Зоны между кампусами</b> — работает независимо на Нариманове и Генджлике</li><li class="bitem">📱 <b>Зональный контроль в Telegram</b> — команды по этажам доступны в боте</li></ul></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Zona və Mərtəbə İdarəetməsi</h2>
+<p class="slide-sub">Mərtəbə üzrə audio idarəetmə — 3-cü mərtəbəni müstəqil susdurun</p>
+<div class="slide-content"><ul class="blist"><li class="bitem">🏢 <b>Mərtəbə təyinatı</b> — hər nazik müştəri öz mərtəbəsi ilə etiketlənib (1M, 2M, 3M)</li><li class="bitem">🎯 <b>Mərtəbəyə görə idarəetmə</b> — yalnız seçilmiş mərtəbələrdə play / stop / mute</li><li class="bitem">🔇 <b>Seçici susqunluq</b> — 1-ci və 2-ci mərtəbəyə təsir etmədən 3-cü mərtəbəni susdurun</li><li class="bitem">📻 <b>Zona yayımı</b> — yalnız müəyyən mərtəbələrə xüsusi audio göndərin</li><li class="bitem">🔧 <b>UI-dan konfiqurasiya</b> — serverə toxunmadan mərtəbə təyinat/yenidən təyinatı</li><li class="bitem">🏫 <b>Kampuslararası zonalar</b> — Nərimanov və Gənclik kampuslarında müstəqil işləyir</li><li class="bitem">📱 <b>Telegramda zona idarəetməsi</b> — mərtəbəyə görə əmrlər botda da mövcuddur</li></ul></div>
+</div>
+</div>
+<div class="slide" data-index="23" style="--sc:#22c55e;--scd:#14532d;--scl:#4ade80">
+<div class="slide-icon">✅</div>
+<div class="slide-lang lang-en" style="display:none">
+<h2 class="slide-title">What We Built</h2>
+<p class="slide-sub">A complete, production-ready school audio management platform</p>
+<div class="slide-content"><div class="chk-cols"><div class="chk-col"><div class="chk-item">✅ Web-based audio control for 2 campuses (Narimanov + Gənclik)</div><div class="chk-item">✅ User management with roles, profiles, avatars</div><div class="chk-item">✅ Real-time music playback, anthem, bell schedule</div><div class="chk-item">✅ Zone/floor control per campus</div><div class="chk-item">✅ Music library: upload, download, browse</div><div class="chk-item">✅ 4 visualization modes + real-time EQ</div><div class="chk-item">✅ 4 themes + 17+ live wallpapers + blur/transparency</div><div class="chk-item">✅ Announcements (text + audio) + weather widget</div><div class="chk-item">✅ Internal chat (text + voice)</div></div><div class="chk-col"><div class="chk-item">✅ Telegram bot with 15+ remote control buttons</div><div class="chk-item">✅ Grafana + Prometheus + Loki monitoring</div><div class="chk-item">✅ Weekly encrypted backups + web UI viewer</div><div class="chk-item">✅ GitHub-based disaster recovery</div><div class="chk-item">✅ Helpdesk portal (trilingual)</div><div class="chk-item">✅ Command cheat sheets for Linux/Windows/Cisco/AP</div><div class="chk-item">✅ Ideas/Feedback submission → web + Telegram</div><div class="chk-item">✅ Full audit log of all actions</div><div class="chk-item">✅ Auto-logout, HTTPS, role-based security</div></div></div></div>
+</div>
+<div class="slide-lang lang-ru" >
+<h2 class="slide-title">Что мы создали</h2>
+<p class="slide-sub">Полноценная, готовая к эксплуатации платформа управления аудио школы</p>
+<div class="slide-content"><div class="chk-cols"><div class="chk-col"><div class="chk-item">✅ Веб-управление аудио для 2 кампусов (Нариманов + Генджлик)</div><div class="chk-item">✅ Управление пользователями: роли, профили, аватары</div><div class="chk-item">✅ Воспроизведение музыки, гимн, расписание звонков в реальном времени</div><div class="chk-item">✅ Зональное управление по этажам на каждом кампусе</div><div class="chk-item">✅ Музыкальная библиотека: загрузка, скачивание, просмотр</div><div class="chk-item">✅ 4 режима визуализации + эквалайзер в реальном времени</div><div class="chk-item">✅ 4 темы + 17+ живых обоев + размытие/прозрачность</div><div class="chk-item">✅ Объявления (текст + аудио) + виджет погоды</div><div class="chk-item">✅ Внутренний чат (текст + голос)</div></div><div class="chk-col"><div class="chk-item">✅ Telegram-бот с 15+ кнопками удалённого управления</div><div class="chk-item">✅ Мониторинг: Grafana + Prometheus + Loki</div><div class="chk-item">✅ Еженедельные зашифрованные бекапы + просмотр из UI</div><div class="chk-item">✅ Восстановление через GitHub</div><div class="chk-item">✅ Хелпдеск-портал (трёхъязычный)</div><div class="chk-item">✅ Шпаргалки команд для Linux/Windows/Cisco/AP</div><div class="chk-item">✅ Подача идей → веб + Telegram</div><div class="chk-item">✅ Полный журнал аудита всех действий</div><div class="chk-item">✅ Автовыход, HTTPS, безопасность на основе ролей</div></div></div></div>
+</div>
+<div class="slide-lang lang-az" style="display:none">
+<h2 class="slide-title">Nə Qurduq</h2>
+<p class="slide-sub">Tam, istehsala hazır məktəb audio idarəetmə platforması</p>
+<div class="slide-content"><div class="chk-cols"><div class="chk-col"><div class="chk-item">✅ 2 kampus üçün veb əsaslı audio idarəetmə (Nərimanov + Gənclik)</div><div class="chk-item">✅ İstifadəçi idarəetməsi: rollar, profillər, avatarlar</div><div class="chk-item">✅ Real vaxtda musiqi oynatma, gimn, zəng cədvəli</div><div class="chk-item">✅ Hər kampusda mərtəbəyə görə zona idarəetməsi</div><div class="chk-item">✅ Musiqi kitabxanası: yükləmə, endirmə, baxış</div><div class="chk-item">✅ 4 vizuallaşdırma rejimi + real vaxt ekvalayzeri</div><div class="chk-item">✅ 4 tema + 17+ canlı divarqağızı + bulanıqlıq/şəffaflıq</div><div class="chk-item">✅ Elanlar (mətn + audio) + hava vidiçeti</div><div class="chk-item">✅ Daxili çat (mətn + səs)</div></div><div class="chk-col"><div class="chk-item">✅ 15+ uzaqdan idarəetmə düyməsi ilə Telegram botu</div><div class="chk-item">✅ Grafana + Prometheus + Loki monitorinqi</div><div class="chk-item">✅ Həftəlik şifrəli ehtiyat nüsxələr + UI baxıcısı</div><div class="chk-item">✅ GitHub əsaslı fəlakətin bərpası</div><div class="chk-item">✅ Helpdesk portalı (üç dilli)</div><div class="chk-item">✅ Linux/Windows/Cisco/AP üçün əmr kömək sənədləri</div><div class="chk-item">✅ Fikirlər/Rəylər → veb + Telegram</div><div class="chk-item">✅ Bütün əməliyyatların tam audit loqu</div><div class="chk-item">✅ Avtomatik çıxış, HTTPS, rol əsaslı təhlükəsizlik</div></div></div></div>
+</div>
+</div>
+</div>
+
+<div class="progress-track"></div>
+<div class="progress-bar" id="pbar" style="width:0%"></div>
+
+<button class="ctrl-btn ctrl-prev" onclick="go(-1)">‹</button>
+<button class="ctrl-btn ctrl-next" onclick="go(1)">›</button>
+
+<div class="nav-dots" id="dots"></div>
+
+<div class="contact-bar">
+  <a href="#" class="contact-link" onclick="window.parent&&window.parent.history?history.back():null;return false">✦ LANDAU Audio System</a>
+</div>
+
+<script>
+var TOTAL = 24;
+var DURATION = 10;
+var cur = 0, paused = false, lang = 'ru';
+var timer, startTime, elapsed = 0;
+
+var slides = document.querySelectorAll('.slide');
+var dots = document.getElementById('dots');
+
+// Build dots
+for (var i = 0; i < TOTAL; i++) {
+  var d = document.createElement('button');
+  d.className = 'dot' + (i===0?' on':'');
+  d.setAttribute('data-i', i);
+  d.onclick = (function(j){ return function(){ goTo(j); }; })(i);
+  dots.appendChild(d);
+}
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  dots.children[cur].classList.remove('on');
+  cur = (n + TOTAL) % TOTAL;
+  slides[cur].classList.add('active');
+  dots.children[cur].classList.add('on');
+  document.getElementById('slideNum').textContent = (cur+1) + ' / ' + TOTAL;
+  resetTimer();
+}
+
+function go(dir) { goTo(cur + dir); }
+
+function resetTimer() {
+  clearInterval(timer);
+  elapsed = 0;
+  updateProgress(0);
+  updateCounter(DURATION);
+  if (!paused) startTimer();
+}
+
+function startTimer() {
+  startTime = Date.now();
+  timer = setInterval(function() {
+    elapsed = (Date.now() - startTime) / 1000;
+    if (elapsed >= DURATION) {
+      goTo((cur + 1) % TOTAL);
+    } else {
+      updateProgress(elapsed / DURATION * 100);
+      updateCounter(Math.ceil(DURATION - elapsed));
+    }
+  }, 100);
+}
+
+function updateProgress(pct) {
+  document.getElementById('pbar').style.width = pct + '%';
+}
+
+function updateCounter(sec) {
+  document.getElementById('counter').textContent = sec + 's';
+}
+
+function togglePause() {
+  paused = !paused;
+  var btn = document.getElementById('pbtn');
+  if (paused) {
+    clearInterval(timer);
+    // save remaining
+    var remaining = DURATION - elapsed;
+    btn.textContent = '▶ Продолжить';
+    btn.style.borderColor = 'rgba(248,81,73,.4)';
+    btn.style.color = '#f87171';
+  } else {
+    btn.textContent = '⏸ Пауза';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    startTime = Date.now() - elapsed * 1000;
+    startTimer();
+  }
+}
+
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lbtn').forEach(function(b){ b.classList.remove('on'); });
+  document.querySelector('.lbtn[onclick="setLang(\''+l+'\')"]').classList.add('on');
+  document.querySelectorAll('.slide-lang').forEach(function(el){
+    el.style.display = el.classList.contains('lang-' + l) ? '' : 'none';
+  });
+  // Update pause button text to current lang
+  var labels = {en:'Pause', ru:'Пауза', az:'Fasilə'};
+  var cont = {en:'Resume', ru:'Продолжить', az:'Davam et'};
+  var btn = document.getElementById('pbtn');
+  btn.textContent = paused ? ('▶ ' + cont[l]) : ('⏸ ' + labels[l]);
+}
+
+// Keyboard
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+  if (e.key === 'Escape') togglePause();
+  if (e.key === '1') setLang('en');
+  if (e.key === '2') setLang('ru');
+  if (e.key === '3') setLang('az');
+});
+
+// Touch swipe
+var tx0 = 0;
+document.addEventListener('touchstart', function(e){ tx0 = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', function(e){
+  var dx = e.changedTouches[0].clientX - tx0;
+  if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+}, {passive:true});
+
+// Init
+slides[0].classList.add('active');
+startTimer();
+</script>

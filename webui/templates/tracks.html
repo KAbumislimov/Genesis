@@ -1,0 +1,681 @@
+{% extends "base.html" %}
+{% block title %}Треки — LANDAUSCHOOL{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Folder grid ─────────────────────────────────── */
+.folder-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:14px;margin-top:8px;
+}
+.folder-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  padding:28px 20px;cursor:pointer;transition:.18s;text-decoration:none;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  position:relative;
+}
+.folder-card:hover{
+  border-color:var(--blue);background:rgba(88,166,255,.07);
+  transform:translateY(-2px);text-decoration:none;
+}
+.folder-card.locked-card{cursor:pointer}
+.folder-card.kamran-card{border-color:rgba(255,197,61,.35)}
+.folder-card.kamran-card:hover{border-color:#ffc53d;background:rgba(255,197,61,.07)}
+.folder-card .fc-icon{font-size:44px;line-height:1}
+.folder-card .fc-name{font-size:16px;font-weight:800;color:var(--text);text-align:center}
+.folder-card .fc-count{font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.folder-card .fc-lock{
+  position:absolute;top:10px;right:12px;
+  font-size:16px;color:var(--muted);opacity:.6;
+}
+.folder-card.kamran-card .fc-lock{color:#ffc53d;opacity:.8}
+.folder-card.open-card .fc-lock{color:var(--green);opacity:.8}
+
+/* ── Track list ──────────────────────────────────── */
+.back-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.back-btn{
+  background:var(--bg2);border:1px solid var(--border);color:var(--muted);
+  padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;transition:.15s;text-decoration:none;
+}
+.back-btn:hover{color:var(--text);border-color:var(--blue);text-decoration:none}
+.folder-title{font-size:20px;font-weight:800}
+.folder-title.kamran-title{color:#ffc53d}
+
+.search-bar{position:relative;margin-bottom:16px}
+.search-bar .bi-search{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:var(--muted);font-size:16px;pointer-events:none;
+}
+#search-input{
+  background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  border-radius:10px;padding:13px 16px 13px 44px;font-size:15px;width:100%;transition:.2s;
+}
+#search-input:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 3px rgba(88,166,255,.12)}
+#search-input::placeholder{color:var(--muted)}
+
+.stats-bar{
+  display:flex;gap:14px;align-items:center;margin-bottom:14px;
+  font-size:13px;color:var(--muted);flex-wrap:wrap;
+}
+.stats-bar strong{color:var(--text)}
+
+.track-row{
+  display:flex;align-items:center;gap:12px;padding:9px 16px;
+  border-bottom:1px solid var(--border);transition:.1s;
+}
+.track-row:last-child{border-bottom:none}
+.track-row:hover{background:rgba(88,166,255,.04)}
+.track-idx{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);min-width:38px;text-align:right;flex-shrink:0}
+.track-name{flex:1;font-size:14px;word-break:break-word;font-family:'JetBrains Mono',monospace}
+.track-name mark{background:rgba(88,166,255,.22);color:var(--blue);border-radius:3px;padding:0 2px}
+
+.btn-play{
+  border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:4px;flex-shrink:0;transition:.15s;
+  white-space:nowrap;padding:5px 11px;
+}
+.btn-play.nctk{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
+.btn-play.nctk:hover{background:rgba(88,166,255,.2)}
+.btn-play.nctk.is-playing{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green)}
+.btn-play.vm1{background:rgba(188,130,255,.1);border:1px solid rgba(188,130,255,.3);color:#bc82ff}
+.btn-play.vm1:hover{background:rgba(188,130,255,.2)}
+.btn-play.vm1.is-playing{background:rgba(188,130,255,.2);border-color:#bc82ff;color:#bc82ff}
+.btn-stop-inline{
+  background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.3);color:var(--red);
+  padding:5px 10px;border-radius:7px;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;gap:4px;flex-shrink:0;transition:.15s;
+}
+.btn-stop-inline:hover{background:rgba(248,81,73,.18)}
+.btn-group-play{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.tracks-container{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.no-results{text-align:center;padding:60px 20px;color:var(--muted)}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin .7s linear infinite}
+.refresh-btn{
+  background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+  padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;transition:.15s;
+}
+.refresh-btn:hover{color:var(--text);border-color:var(--blue)}
+
+/* ── PIN modal ────────────────────────────────────── */
+.pin-modal-bg{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:9999;align-items:center;justify-content:center;
+}
+.pin-modal-bg.show{display:flex}
+.pin-modal{
+  background:var(--bg2);border:1px solid var(--border);border-radius:20px;
+  padding:36px 40px;width:360px;max-width:94vw;text-align:center;
+}
+.pin-modal-header{font-size:36px;margin-bottom:12px;line-height:1}
+.pin-modal h3{margin:0 0 4px;font-size:18px;font-weight:800}
+.pin-modal .folder-label{
+  font-size:13px;font-weight:700;padding:3px 12px;border-radius:20px;
+  background:rgba(88,166,255,.12);color:var(--blue);
+  display:inline-block;margin-bottom:20px;
+}
+.pin-modal .folder-label.kamran{background:rgba(255,197,61,.12);color:#ffc53d}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:8px}
+.pin-dot{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--bg3);border:2px solid var(--border);transition:.15s;
+}
+.pin-dot.filled{background:var(--blue);border-color:var(--blue)}
+.pin-dot.filled.kamran{background:#ffc53d;border-color:#ffc53d}
+.pin-err{color:var(--red);font-size:13px;min-height:20px;margin-bottom:12px}
+.pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pin-btn{
+  background:var(--bg3);border:1px solid var(--border);border-radius:12px;
+  color:var(--text);font-size:22px;font-weight:700;padding:15px 0;
+  cursor:pointer;transition:.12s;font-family:'JetBrains Mono',monospace;user-select:none;
+}
+.pin-btn:hover{background:rgba(88,166,255,.12);border-color:var(--blue)}
+.pin-btn:active{transform:scale(.94)}
+.pin-btn.del{font-size:18px;color:var(--muted)}
+.pin-btn.del:hover{color:var(--red);border-color:rgba(248,81,73,.4)}
+
+/* admin set-pin row */
+.set-pin-row{
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--border);
+  display:flex;gap:8px;align-items:center;
+}
+.set-pin-input{
+  flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:9px 12px;font-size:14px;font-family:'JetBrains Mono',monospace;
+  letter-spacing:3px;
+}
+.set-pin-input:focus{outline:none;border-color:var(--blue)}
+
+/* gear button on folder card */
+.fc-gear-btn{
+  position:absolute;bottom:8px;right:8px;
+  background:none;border:none;padding:4px 6px;
+  color:var(--muted);font-size:14px;cursor:pointer;
+  opacity:0;transition:.15s;border-radius:6px;line-height:1;
+}
+.folder-card:hover .fc-gear-btn{opacity:.65}
+.fc-gear-btn:hover{opacity:1!important;color:var(--blue);background:rgba(88,166,255,.1)}
+.kamran-card .fc-gear-btn:hover{color:#ffc53d;background:rgba(255,197,61,.1)}
+
+/* upload button on folder card */
+.fc-upload-btn{
+  position:absolute;bottom:8px;left:8px;
+  background:none;border:1px solid rgba(88,166,255,.35);padding:3px 8px;
+  color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;
+  opacity:0;transition:.15s;border-radius:6px;line-height:1;
+  display:flex;align-items:center;gap:4px;
+}
+.folder-card:hover .fc-upload-btn{opacity:1}
+.fc-upload-btn:hover{background:rgba(88,166,255,.15);border-color:var(--blue)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not folder %}
+{# ══════════════════════════════════════════
+   FOLDER GRID VIEW
+   ══════════════════════════════════════════ #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">Музыкальная библиотека</h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">Выберите папку — введите PIN для входа</div>
+  </div>
+  <span class="text-muted" style="font-size:13px">{{ total }} треков</span>
+</div>
+
+<div class="folder-grid">
+  {% for f in folders %}
+  {% set count = folder_counts.get(f, 0) %}
+  {% set is_open = f in unlocked_folders %}
+  {% if f == 'Русские' %}     {% set icon='🇷🇺' %}
+  {% elif f == 'Зарубежные' %}{% set icon='🌍' %}
+  {% elif f == 'Азербайджанские' %}{% set icon='🇦🇿' %}
+  {% elif f == 'Турецкие' %}  {% set icon='🇹🇷' %}
+  {% elif f == 'Смешанная' %} {% set icon='🎵' %}
+  {% elif f == 'KAMRAN' %}    {% set icon='👑' %}
+  {% else %}                  {% set icon='📁' %}
+  {% endif %}
+
+  {% if is_open %}
+    <a href="{{ url_for('tracks', folder=f) }}"
+       class="folder-card open-card {% if f=='KAMRAN' %}kamran-card{% endif %}">
+      <i class="bi bi-lock-open-fill fc-lock" style="color:var(--green)"></i>
+      <span class="fc-icon">{{ icon }}</span>
+      <span class="fc-name {% if f=='KAMRAN' %}" style="color:#ffc53d"{% else %}"{% endif %}>{{ f }}</span>
+      <span class="fc-count">{{ count }} треков</span>
+      {% if is_pin_owner %}
+      <button class="fc-gear-btn" title="Изменить PIN папки"
+              onclick="event.preventDefault();event.stopPropagation();openChangePinModal('{{ f }}','{{ icon }}')">
+        <i class="bi bi-gear-fill"></i>
+      </button>
+      {% endif %}
+      {% if current_user.role in ('admin', 'staff') %}
+      <button class="fc-upload-btn" title="Загрузить в {{ f }}"
+              onclick="event.preventDefault();event.stopPropagation();window.location='/upload?folder={{ f|urlencode }}'">
+        <i class="bi bi-cloud-upload-fill"></i> Загрузить
+      </button>
+      {% endif %}
+    </a>
+  {% else %}
+    <div class="folder-card locked-card {% if f=='KAMRAN' %}kamran-card{% endif %}"
+         onclick="openPinModal('{{ f }}','{{ icon }}')">
+      <i class="bi bi-lock-fill fc-lock"></i>
+      <span class="fc-icon">{{ icon }}</span>
+      <span class="fc-name {% if f=='KAMRAN' %}" style="color:#ffc53d"{% else %}"{% endif %}>{{ f }}</span>
+      <span class="fc-count">{{ count }} треков</span>
+      {% if is_pin_owner %}
+      <button class="fc-gear-btn" title="Изменить PIN папки"
+              onclick="event.preventDefault();event.stopPropagation();openChangePinModal('{{ f }}','{{ icon }}')">
+        <i class="bi bi-gear-fill"></i>
+      </button>
+      {% endif %}
+    </div>
+  {% endif %}
+  {% endfor %}
+</div>
+
+
+{% else %}
+{# ══════════════════════════════════════════
+   TRACK LIST VIEW
+   ══════════════════════════════════════════ #}
+<div class="back-bar">
+  <a href="{{ url_for('tracks') }}" class="back-btn">
+    <i class="bi bi-arrow-left"></i> Папки
+  </a>
+  <span class="folder-title {% if folder=='KAMRAN' %}kamran-title{% endif %}">
+    {% if folder=='KAMRAN' %}👑
+    {% elif folder=='Русские' %}🇷🇺
+    {% elif folder=='Зарубежные' %}🌍
+    {% elif folder=='Азербайджанские' %}🇦🇿
+    {% elif folder=='Турецкие' %}🇹🇷
+    {% elif folder=='Смешанная' %}🎵
+    {% endif %} {{ folder }}
+  </span>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    {% if current_user.role in ('admin', 'staff') %}
+    <a href="/upload?folder={{ folder|urlencode }}" class="refresh-btn"
+       style="color:var(--blue);border-color:rgba(88,166,255,.35);text-decoration:none">
+      <i class="bi bi-cloud-upload-fill"></i> Загрузить
+    </a>
+    {% endif %}
+    <button class="refresh-btn" onclick="lockFolder('{{ folder }}')">
+      <i class="bi bi-lock-fill"></i> Закрыть папку
+    </button>
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshTracks()">
+      <i class="bi bi-arrow-clockwise" id="refresh-icon"></i>
+    </button>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <span>Треков: <strong id="cnt-found">{{ found }}</strong></span>
+  {% if q %}
+  <a href="{{ url_for('tracks', folder=folder) }}" style="color:var(--muted);font-size:12px">
+    <i class="bi bi-x-circle"></i> Сбросить
+  </a>{% endif %}
+  <span id="refresh-status" style="display:none;color:var(--green);font-size:12px">
+    <i class="bi bi-check-circle"></i> обновлено
+  </span>
+</div>
+
+<div class="search-bar">
+  <i class="bi bi-search"></i>
+  <input type="text" id="search-input" placeholder="Поиск..." value="{{ q }}" autocomplete="off">
+</div>
+
+<div class="tracks-container" id="tracks-wrap">
+  {% if tracks %}
+    {% for t in tracks %}
+    <div class="track-row" data-name="{{ t.name|lower }}" data-file="{{ t.name }}" data-folder="{{ t.folder }}">
+      <span class="track-idx">{{ t.idx }}</span>
+      <i class="bi bi-music-note text-muted" style="font-size:14px;flex-shrink:0"></i>
+      <span class="track-name">{{ t.name }}</span>
+      <div class="btn-group-play">
+        {% if perms.play %}
+        <button class="btn-play nctk"
+                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','nctk',this)">
+          <i class="bi bi-building"></i> <span class="btn-lbl">Narimanov</span>
+        </button>
+        <button class="btn-play vm1"
+                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','vm1',this)">
+          <i class="bi bi-pc-display"></i> <span class="btn-lbl">Gənclik</span>
+        </button>
+        {% else %}
+        <span style="font-size:12px;color:var(--muted);padding:4px 8px">
+          <i class="bi bi-lock-fill"></i> нет доступа
+        </span>
+        {% endif %}
+        {% if perms.stop %}
+        <button class="btn-stop-inline" onclick="stopAll(this)">
+          <i class="bi bi-stop-fill"></i>
+        </button>
+        {% endif %}
+        <a class="btn-stop-inline" style="color:var(--muted);border-color:rgba(139,148,158,.25)"
+           href="/api/tracks/download?name={{ t.name|urlencode }}&folder={{ t.folder|urlencode }}"
+           download="{{ t.name }}" title="Скачать">
+          <i class="bi bi-download"></i>
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="no-results">
+      <i class="bi bi-folder-x" style="font-size:42px;display:block;margin-bottom:12px"></i>
+      {% if q %}Ничего не найдено{% else %}Папка пуста{% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── PIN modal (always present) ────────────────── #}
+<div class="pin-modal-bg" id="pin-modal">
+  <div class="pin-modal">
+    <div class="pin-modal-header">🔒</div>
+    <h3>Введите PIN</h3>
+    <div class="folder-label" id="pin-folder-label"></div>
+
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-err" id="pin-err"></div>
+
+    <div class="pin-numpad">
+      {% for n in ['1','2','3','4','5','6','7','8','9','','0','⌫'] %}
+      {% if n == '' %}<div></div>
+      {% elif n == '⌫' %}<button class="pin-btn del" onclick="pinDel()">⌫</button>
+      {% else %}<button class="pin-btn" onclick="pinAdd('{{ n }}')">{{ n }}</button>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    <button class="btn btn-ghost" style="width:100%;margin-top:14px" onclick="closePinModal()">
+      Отмена
+    </button>
+  </div>
+</div>
+
+{# ── Change-PIN modal (admin only) ────────────── #}
+{% if is_pin_owner %}
+<div class="pin-modal-bg" id="cpm-bg">
+  <div class="pin-modal">
+    <div id="cpm-icon-h" style="font-size:40px;line-height:1;margin-bottom:10px"></div>
+    <h3 style="margin:0 0 4px">Изменить PIN</h3>
+    <div class="folder-label" id="cpm-folder-label"></div>
+
+    <div class="pin-dots" id="cpm-dots">
+      <div class="pin-dot" id="cpd0"></div>
+      <div class="pin-dot" id="cpd1"></div>
+      <div class="pin-dot" id="cpd2"></div>
+      <div class="pin-dot" id="cpd3"></div>
+    </div>
+    <div class="pin-err" id="cpm-err"></div>
+
+    <div class="pin-numpad">
+      {% for n in ['1','2','3','4','5','6','7','8','9','','0','⌫'] %}
+      {% if n == '' %}<div></div>
+      {% elif n == '⌫' %}<button class="pin-btn del" onclick="cpmDel()">⌫</button>
+      {% else %}<button class="pin-btn" onclick="cpmAdd('{{ n }}')">{{ n }}</button>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    <button class="btn btn-primary" id="cpm-save-btn" style="width:100%;margin-top:14px;opacity:.45;cursor:not-allowed"
+            onclick="saveFolderPin()" disabled>
+      Сохранить
+    </button>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeChangePinModal()">
+      Отмена
+    </button>
+    <div id="cpm-ok" style="color:var(--green);font-size:13px;min-height:18px;margin-top:6px"></div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPlayBtn = null;
+const FOLDER = '{{ folder }}';
+const OPEN_FOR = '{{ open_pin_for }}';
+
+const ML = {
+  nctk:{icon:'bi-building',lbl:'Narimanov'},
+  vm1:{icon:'bi-pc-display',lbl:'Gənclik'},
+};
+
+/* ── PIN modal ────────────────────────────────── */
+let _pinFolder = '';
+let _pinVal    = '';
+const KAMRAN_COLOR = '#ffc53d';
+
+function openPinModal(folder, icon) {
+  _pinFolder = folder;
+  _pinVal    = '';
+  const lbl = document.getElementById('pin-folder-label');
+  lbl.textContent = (icon||'') + ' ' + folder;
+  lbl.className = 'folder-label' + (folder==='KAMRAN'?' kamran':'');
+  document.getElementById('pin-err').textContent = '';
+  updateDots();
+  document.getElementById('pin-modal').classList.add('show');
+}
+function closePinModal() {
+  document.getElementById('pin-modal').classList.remove('show');
+  _pinVal = '';
+  updateDots();
+}
+document.getElementById('pin-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePinModal();
+});
+
+function pinAdd(d) {
+  if (_pinVal.length >= 4) return;
+  _pinVal += d;
+  updateDots();
+  if (_pinVal.length === 4) setTimeout(submitPin, 120);
+}
+function pinDel() {
+  _pinVal = _pinVal.slice(0,-1);
+  updateDots();
+  document.getElementById('pin-err').textContent = '';
+}
+function updateDots() {
+  for (let i=0;i<4;i++) {
+    const d = document.getElementById('pd'+i);
+    d.classList.toggle('filled', i < _pinVal.length);
+    if (i < _pinVal.length) {
+      d.style.background = _pinFolder==='KAMRAN' ? KAMRAN_COLOR : 'var(--blue)';
+      d.style.borderColor = _pinFolder==='KAMRAN' ? KAMRAN_COLOR : 'var(--blue)';
+    } else {
+      d.style.background = '';
+      d.style.borderColor = '';
+    }
+  }
+}
+function submitPin() {
+  fetch('/api/folder/unlock', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({pin:_pinVal, folder:_pinFolder})
+  }).then(r=>r.json()).then(d=>{
+    if (d.ok) {
+      closePinModal();
+      window.location.href = '/tracks?folder=' + encodeURIComponent(_pinFolder);
+    } else {
+      document.getElementById('pin-err').textContent = d.error || 'Неверный PIN';
+      _pinVal = '';
+      updateDots();
+    }
+  });
+}
+
+// Keyboard support
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('pin-modal').classList.contains('show')) return;
+  if (e.key >= '0' && e.key <= '9') pinAdd(e.key);
+  else if (e.key === 'Backspace') pinDel();
+  else if (e.key === 'Escape') closePinModal();
+});
+
+// Auto-open PIN modal if redirected here for a locked folder
+if (OPEN_FOR) {
+  const icons = {
+    'Русские':'🇷🇺','Зарубежные':'🌍','Азербайджанские':'🇦🇿',
+    'Турецкие':'🇹🇷','Смешанная':'🎵','KAMRAN':'👑'
+  };
+  openPinModal(OPEN_FOR, icons[OPEN_FOR]||'📁');
+}
+
+{% if folder %}
+/* ── Folder is open: play/search/refresh ──────── */
+function lockFolder(f) {
+  fetch('/api/folder/lock', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({folder:f})
+  }).then(()=>window.location.href='/tracks');
+}
+
+function stopAll(btn) {
+  const orig=btn.innerHTML;
+  btn.innerHTML='<i class="bi bi-arrow-repeat spin"></i>';
+  fetch('/api/stop',{method:'POST'}).then(r=>r.json()).then(d=>{
+    btn.innerHTML=d.ok?'<i class="bi bi-check-lg"></i>':orig;
+    if(currentPlayBtn){
+      const m=currentPlayBtn.dataset.machine||'nctk';
+      currentPlayBtn.classList.remove('is-playing');
+      currentPlayBtn.innerHTML=`<i class="bi ${ML[m].icon}"></i> <span class="btn-lbl">${ML[m].lbl}</span>`;
+      currentPlayBtn=null;
+    }
+    setTimeout(()=>{btn.innerHTML='<i class="bi bi-stop-fill"></i>';},1200);
+  }).catch(()=>{btn.innerHTML=orig;});
+}
+
+function playTrack(name,folder,machine,btn){
+  machine=machine||'nctk';
+  btn.dataset.machine=machine;
+  const ml=ML[machine]||ML.nctk;
+  if(currentPlayBtn&&currentPlayBtn!==btn){
+    const pm=currentPlayBtn.dataset.machine||'nctk';
+    currentPlayBtn.classList.remove('is-playing');
+    currentPlayBtn.innerHTML=`<i class="bi ${ML[pm].icon}"></i> <span class="btn-lbl">${ML[pm].lbl}</span>`;
+  }
+  btn.innerHTML='<i class="bi bi-arrow-repeat spin"></i> <span class="btn-lbl">...</span>';
+  fetch('/api/play',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,folder,machine})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){btn.classList.add('is-playing');
+      btn.innerHTML=`<i class="bi bi-volume-up-fill"></i> <span class="btn-lbl">Играет</span>`;
+      currentPlayBtn=btn;
+    } else {
+      btn.innerHTML=`<i class="bi bi-exclamation-triangle"></i> <span class="btn-lbl">Ошибка</span>`;
+      setTimeout(()=>btn.innerHTML=`<i class="bi ${ml.icon}"></i> <span class="btn-lbl">${ml.lbl}</span>`,2000);
+    }
+  }).catch(()=>btn.innerHTML=`<i class="bi ${ml.icon}"></i> <span class="btn-lbl">${ml.lbl}</span>`);
+}
+
+const searchInput=document.getElementById('search-input');
+let st=null;
+searchInput.addEventListener('input',function(){
+  clearTimeout(st);st=setTimeout(()=>filterTracks(this.value.trim()),200);
+});
+
+function filterTracks(q){
+  const ql=q.toLowerCase();
+  const rows=document.querySelectorAll('#tracks-wrap .track-row');
+  let shown=0,nd=document.getElementById('nrd');
+  rows.forEach(row=>{
+    const vis=!ql||(row.dataset.name||'').includes(ql);
+    row.style.display=vis?'':'none';
+    if(vis){shown++;
+      const sp=row.querySelector('.track-name');
+      if(ql){const e=ql.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        sp.innerHTML=sp.textContent.replace(new RegExp(e,'gi'),m=>`<mark>${m}</mark>`);
+      } else sp.textContent=sp.textContent;
+    }
+  });
+  document.getElementById('cnt-found').textContent=shown;
+  if(!nd){nd=document.createElement('div');nd.id='nrd';nd.className='no-results';
+    nd.innerHTML='<i class="bi bi-search" style="font-size:42px;display:block;margin-bottom:12px"></i>Ничего не найдено';
+    document.getElementById('tracks-wrap').appendChild(nd);}
+  nd.style.display=shown===0?'':'none';
+  const url=new URL(window.location);
+  ql?url.searchParams.set('q',ql):url.searchParams.delete('q');
+  window.history.replaceState(null,'',url);
+}
+
+function refreshTracks(){
+  const icon=document.getElementById('refresh-icon');
+  if(!icon)return;
+  icon.className='bi bi-arrow-repeat spin';
+  fetch('/api/tracks?folder='+encodeURIComponent(FOLDER)).then(r=>r.json()).then(d=>{
+    icon.className='bi bi-arrow-clockwise';
+    const wrap=document.getElementById('tracks-wrap');
+    if(!d.tracks||!d.tracks.length){
+      wrap.innerHTML='<div class="no-results"><i class="bi bi-folder-x" style="font-size:42px;display:block;margin-bottom:12px"></i>Пусто</div>';
+      return;
+    }
+    wrap.innerHTML=d.tracks.map(t=>{
+      const fn=t.name.replace(/'/g,"\\'").replace(/</g,'&lt;');
+      const dn=t.name.replace(/</g,'&lt;');
+      const fo=(t.folder||'').replace(/'/g,"\\'");
+      return `<div class="track-row" data-name="${t.name.toLowerCase()}" data-file="${fn}" data-folder="${fo}">
+        <span class="track-idx">${t.idx}</span>
+        <i class="bi bi-music-note text-muted" style="font-size:14px;flex-shrink:0"></i>
+        <span class="track-name">${dn}</span>
+        <div class="btn-group-play">
+          <button class="btn-play nctk" data-machine="nctk" onclick="playTrack('${fn}','${fo}','nctk',this)">
+            <i class="bi bi-building"></i><span class="btn-lbl"> Narimanov</span></button>
+          <button class="btn-play vm1" data-machine="vm1" onclick="playTrack('${fn}','${fo}','vm1',this)">
+            <i class="bi bi-pc-display"></i><span class="btn-lbl"> Gənclik</span></button>
+          <button class="btn-stop-inline" onclick="stopAll(this)"><i class="bi bi-stop-fill"></i></button>
+        </div></div>`;
+    }).join('');
+    document.getElementById('cnt-found').textContent=d.found;
+    currentPlayBtn=null;
+    const q=searchInput.value.trim();
+    if(q)filterTracks(q);
+    const rs=document.getElementById('refresh-status');
+    if(rs){rs.style.display='';setTimeout(()=>rs.style.display='none',2500);}
+  }).catch(()=>{icon.className='bi bi-arrow-clockwise';});
+}
+setInterval(refreshTracks,60000);
+if(searchInput.value)filterTracks(searchInput.value.trim());
+{% endif %}
+
+{% if is_pin_owner %}
+let _cpmFolder='', _cpmVal='';
+
+function openChangePinModal(folder, icon){
+  _cpmFolder=folder; _cpmVal='';
+  document.getElementById('cpm-icon-h').textContent=icon;
+  const lbl=document.getElementById('cpm-folder-label');
+  lbl.textContent=folder;
+  lbl.className='folder-label'+(folder==='KAMRAN'?' kamran':'');
+  document.getElementById('cpm-err').textContent='';
+  document.getElementById('cpm-ok').textContent='';
+  const sb=document.getElementById('cpm-save-btn');
+  sb.disabled=true; sb.style.opacity='.45'; sb.style.cursor='not-allowed';
+  updateCpmDots();
+  document.getElementById('cpm-bg').classList.add('show');
+}
+function closeChangePinModal(){
+  document.getElementById('cpm-bg').classList.remove('show');
+  _cpmVal='';
+}
+document.getElementById('cpm-bg').addEventListener('click',function(e){
+  if(e.target===this)closeChangePinModal();
+});
+function cpmAdd(d){
+  if(_cpmVal.length>=8)return;
+  _cpmVal+=d; updateCpmDots();
+  const sb=document.getElementById('cpm-save-btn');
+  const ok=_cpmVal.length>=4;
+  sb.disabled=!ok; sb.style.opacity=ok?'1':'.45'; sb.style.cursor=ok?'pointer':'not-allowed';
+}
+function cpmDel(){
+  _cpmVal=_cpmVal.slice(0,-1); updateCpmDots();
+  document.getElementById('cpm-err').textContent='';
+  const sb=document.getElementById('cpm-save-btn');
+  const ok=_cpmVal.length>=4;
+  sb.disabled=!ok; sb.style.opacity=ok?'1':'.45'; sb.style.cursor=ok?'pointer':'not-allowed';
+}
+function updateCpmDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('cpd'+i);
+    d.classList.toggle('filled',i<_cpmVal.length);
+    if(i<_cpmVal.length){
+      d.style.background=_cpmFolder==='KAMRAN'?KAMRAN_COLOR:'var(--blue)';
+      d.style.borderColor=_cpmFolder==='KAMRAN'?KAMRAN_COLOR:'var(--blue)';
+    } else { d.style.background=''; d.style.borderColor=''; }
+  }
+}
+function saveFolderPin(){
+  if(_cpmVal.length<4){document.getElementById('cpm-err').textContent='Минимум 4 цифры';return;}
+  const sb=document.getElementById('cpm-save-btn');
+  sb.disabled=true; sb.textContent='...';
+  fetch('/api/tracks/set-pin',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({pin:_cpmVal,folder:_cpmFolder})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      document.getElementById('cpm-ok').textContent='✓ PIN сохранён для папки '+_cpmFolder;
+      setTimeout(closeChangePinModal,900);
+    } else {
+      document.getElementById('cpm-err').textContent=d.error||'Ошибка';
+      sb.disabled=false; sb.style.opacity='1'; sb.textContent='Сохранить';
+      _cpmVal=''; updateCpmDots();
+    }
+  });
+}
+{% endif %}
+</script>
+{% endblock %}

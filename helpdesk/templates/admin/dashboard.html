@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Заявки — LANDAU Admin{% endblock %}
+{% block header_nav %}
+<a href="/admin/assets" class="btn btn-ghost btn-sm"><i class="bi bi-hdd-stack"></i> Активы</a>
+<a href="/admin/logout" class="btn btn-ghost btn-sm"><i class="bi bi-box-arrow-right"></i> Выход</a>
+{% endblock %}
+{% block content %}
+<div class="container-wide">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h1 style="font-size:22px;font-weight:800">📋 Все заявки</h1>
+    <div style="font-size:13px;color:var(--muted)">Всего: {{ reports|length }}</div>
+  </div>
+
+  <!-- Фильтры -->
+  <div class="card" style="padding:16px">
+    <form method="GET" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Кампус</label>
+        <select name="campus" style="width:180px">
+          <option value="">Все кампусы</option>
+          {% for c in campuses %}
+          <option value="{{ c }}" {% if f_campus==c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Статус</label>
+        <select name="status" style="width:150px">
+          <option value="">Все статусы</option>
+          {% for k,(icon,label) in statuses.items() %}
+          <option value="{{ k }}" {% if f_status==k %}selected{% endif %}>{{ icon }} {{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Категория</label>
+        <select name="cat" style="width:180px">
+          <option value="">Все категории</option>
+          {% for c in cats %}
+          <option value="{{ c }}" {% if f_cat==c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-ghost btn-sm"><i class="bi bi-funnel"></i> Применить</button>
+      <a href="/admin/dashboard" class="btn btn-ghost btn-sm">Сбросить</a>
+    </form>
+  </div>
+
+  <!-- Таблица -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Дата</th>
+            <th>Кампус</th>
+            <th>Кто подал</th>
+            <th>Категория / Актив</th>
+            <th>Проблема</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reports %}
+          <tr style="cursor:pointer" onclick="location.href='/admin/report/{{ r.id }}'">
+            <td style="color:var(--muted);font-size:13px">#{{ r.id }}</td>
+            <td style="color:var(--muted);font-size:12px;white-space:nowrap">{{ r.created_at[:16] }}</td>
+            <td><strong>{{ r.campus }}</strong></td>
+            <td style="font-size:13px">
+              {{ r.reporter or '—' }}
+              {% if r.contact %}<div style="color:var(--muted);font-size:11px">{{ r.contact }}</div>{% endif %}
+            </td>
+            <td style="font-size:13px">
+              <span style="color:var(--muted)">{{ r.cat_name or '—' }}</span>
+              {% if r.asset_name %}<div>{{ r.asset_name }}</div>{% endif %}
+              {% if r.inv_code %}<div style="color:var(--muted);font-size:11px">{{ r.inv_code }}</div>{% endif %}
+            </td>
+            <td style="font-size:13px;max-width:200px">
+              <strong>{{ r.problem_type }}</strong>
+              {% if r.description %}
+              <div style="color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">{{ r.description }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-{{ r.status }}">
+                {{ statuses[r.status][0] if r.status in statuses else '' }}
+                {{ statuses[r.status][1] if r.status in statuses else r.status }}
+              </span>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Заявок не найдено</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

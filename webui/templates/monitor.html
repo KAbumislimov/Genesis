@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Мониторинг — Campus Audio{% endblock %}
+
+{% block extra_head %}
+<style>
+.mon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px}
+.mon-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.mon-hd{
+  padding:12px 16px;display:flex;align-items:center;gap:9px;
+  border-bottom:1px solid var(--border);background:var(--bg3);
+}
+.mon-hd .mc-name{font-size:13px;font-weight:700}
+.mon-hd .mc-host{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-left:auto}
+.mon-body{padding:14px 16px}
+.metric-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.metric-row:last-child{margin-bottom:0}
+.metric-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);width:44px;flex-shrink:0}
+.metric-bar-wrap{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.metric-bar{height:100%;border-radius:4px;transition:width .6s ease;width:0%}
+.metric-val{font-size:12px;font-family:'JetBrains Mono',monospace;width:80px;text-align:right;flex-shrink:0}
+.bar-mem{background:var(--blue)}
+.bar-disk{background:var(--green)}
+.bar-load{background:var(--orange)}
+.bar-cpu{background:var(--purple)}
+.mon-extra{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+.mon-extra span{display:flex;align-items:center;gap:6px}
+.mon-svc{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.svc-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
+}
+.svc-ok  {background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.svc-err {background:rgba(248,81,73,.1);color:var(--red);border:1px solid rgba(248,81,73,.25)}
+.svc-na  {background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.svc-dot {width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.mon-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  display:flex;gap:6px;flex-wrap:wrap}
+.btn-restart{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+  background:rgba(255,166,87,.1);border:1px solid rgba(255,166,87,.3);
+  color:var(--orange);border-radius:7px;font-size:11px;font-weight:700;
+  cursor:pointer;transition:.15s;
+}
+.btn-restart:hover{background:rgba(255,166,87,.2);border-color:var(--orange)}
+.btn-restart:disabled{opacity:.4;cursor:not-allowed}
+.btn-cockpit{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+  background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);
+  color:var(--blue);border-radius:7px;font-size:11px;font-weight:700;
+  text-decoration:none;transition:.15s;
+}
+.btn-cockpit:hover{background:rgba(88,166,255,.2);border-color:var(--blue);color:var(--blue)}
+
+.mon-err{padding:14px 16px;color:var(--red);font-size:13px;display:flex;align-items:center;gap:8px}
+.mon-loading{padding:14px 16px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px}
+
+.online-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-ok  {background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-err {background:var(--red)}
+.dot-wait{background:var(--muted)}
+
+.refresh-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.last-upd{font-size:12px;color:var(--muted)}
+
+.rst-msg{font-size:12px;color:var(--green);margin-left:auto;opacity:0;transition:.3s}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">Мониторинг серверов</h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">
+      CPU · RAM · Диск · Сервисы — Narimanov · Gənclik · CentOS
+    </div>
+  </div>
+  <button class="btn btn-ghost btn-sm" id="btn-refresh" onclick="doRefresh()">
+    <i class="bi bi-arrow-clockwise" id="ref-icon"></i> Обновить
+  </button>
+</div>
+
+<div class="refresh-row">
+  <div id="status-text" class="last-upd">Загрузка данных...</div>
+  <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input type="checkbox" id="auto-refresh" checked onchange="toggleAuto(this.checked)">
+    Авто каждые 30 с
+  </label>
+</div>
+
+<div class="mon-grid" id="mon-grid">
+  {% for m in machines %}
+    {% if m.id == 'nctk' %}{% set icon='bi-building' %}{% set color='88,166,255' %}
+    {% elif m.from_db %}{% set icon='bi-pc-display' %}{% set color='63,185,80' %}
+    {% else %}{% set icon='bi-pc-display' %}{% set color='188,130,255' %}
+    {% endif %}
+  <div class="mon-card" id="card-{{ m.id }}">
+    <div class="mon-hd">
+      <span class="online-dot dot-wait" id="dot-{{ m.id }}"></span>
+      <i class="bi {{ icon }}" style="color:rgba({{ color }},1);font-size:15px"></i>
+      <span class="mc-name">{{ m.name }}</span>
+      <span class="mc-host">{{ m.host }}</span>
+    </div>
+    <div class="mon-loading" id="body-{{ m.id }}">
+      <i class="bi bi-hourglass-split"></i> Сбор данных...
+    </div>
+  </div>
+  {% endfor %}
+  {# CentOS — infrastructure server, always shown separately #}
+  <div class="mon-card" id="card-centos">
+    <div class="mon-hd">
+      <span class="online-dot dot-wait" id="dot-centos"></span>
+      <i class="bi bi-server" style="color:rgba(255,166,87,1);font-size:15px"></i>
+      <span class="mc-name">CentOS Server</span>
+      <span class="mc-host">{{ centos_host }}</span>
+    </div>
+    <div class="mon-loading" id="body-centos">
+      <i class="bi bi-hourglass-split"></i> Сбор данных...
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MACHINE_META = {
+  {% for m in machines %}
+  '{{ m.id }}': {
+    label:   {{ m.name | tojson }},
+    color:   {% if m.id == 'nctk' %}'rgb(88,166,255)'{% elif m.from_db %}'rgb(63,185,80)'{% else %}'rgb(188,130,255)'{% endif %},
+    cockpit: {{ (m.cockpit_url or '') | tojson }},
+    services: ['campus-player'],
+  },
+  {% endfor %}
+  centos: {label:'CentOS Server', color:'rgb(255,166,87)', cockpit:{{ centos_cockpit | tojson }}, services:['docker']},
+};
+
+const IS_ADMIN = {{ 'true' if current_user.role == 'admin' else 'false' }};
+
+let autoTimer = null;
+
+function toggleAuto(on) {
+  if (on) autoTimer = setInterval(doRefresh, 30000);
+  else { clearInterval(autoTimer); autoTimer = null; }
+}
+
+function doRefresh() {
+  document.getElementById('ref-icon').className = 'bi bi-arrow-repeat spin';
+  document.getElementById('status-text').textContent = 'Обновляю...';
+
+  fetch('/api/sysinfo')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('ref-icon').className = 'bi bi-arrow-clockwise';
+      const now = new Date().toLocaleTimeString('ru');
+      document.getElementById('status-text').textContent = 'Обновлено: ' + now;
+      if (!d.ok) return;
+      for (const [id, info] of Object.entries(d.machines)) {
+        renderCard(id, info);
+      }
+    })
+    .catch(e => {
+      document.getElementById('ref-icon').className = 'bi bi-arrow-clockwise';
+      document.getElementById('status-text').textContent = 'Ошибка: ' + e;
+    });
+}
+
+function renderCard(id, info) {
+  const body = document.getElementById('body-' + id);
+  const dot  = document.getElementById('dot-' + id);
+  if (!body) return;
+  const meta = MACHINE_META[id] || {color:'#8b949e', services:[]};
+
+  if (!info.ok) {
+    dot.className = 'online-dot dot-err';
+    body.className = 'mon-err';
+    body.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${escHtml(info.error || 'нет связи')}`;
+    return;
+  }
+
+  dot.className = 'online-dot dot-ok';
+  body.className = 'mon-body';
+
+  const memPct  = info.mem_pct  || 0;
+  const diskNum = parseInt(info.disk_pct) || 0;
+  const cpuPct  = info.cpu_pct  || 0;
+  const loadVal = (info.load || '').split(',')[0].trim();
+  const loadNum = Math.min(100, Math.round(parseFloat(loadVal) * 50));
+
+  const memColor  = memPct  > 85 ? 'var(--red)' : memPct  > 65 ? 'var(--orange)' : 'var(--blue)';
+  const diskColor = diskNum > 85 ? 'var(--red)' : diskNum > 65 ? 'var(--orange)' : 'var(--green)';
+  const cpuColor  = cpuPct  > 85 ? 'var(--red)' : cpuPct  > 65 ? 'var(--orange)' : 'var(--purple)';
+
+  // Service status badges
+  let svcHtml = '<div class="mon-svc">';
+  const player = info.player || 'unknown';
+  const docker = info.docker || 'unknown';
+  if (meta.services.includes('campus-player')) {
+    const cls = player === 'active' ? 'svc-ok' : player === 'na' ? 'svc-na' : 'svc-err';
+    svcHtml += `<span class="svc-badge ${cls}"><span class="svc-dot"></span>campus-player: ${escHtml(player)}</span>`;
+  }
+  if (meta.services.includes('docker')) {
+    const cls = docker === 'active' ? 'svc-ok' : docker === 'na' ? 'svc-na' : 'svc-err';
+    svcHtml += `<span class="svc-badge ${cls}"><span class="svc-dot"></span>docker: ${escHtml(docker)}</span>`;
+  }
+  svcHtml += '</div>';
+
+  // Restart buttons (admin only)
+  let actHtml = '';
+  if (IS_ADMIN) {
+    actHtml = '<div class="mon-actions">';
+    if (meta.services.includes('campus-player')) {
+      actHtml += `<button class="btn-restart" id="rst-${id}-campus-player" onclick="restartSvc('${id}','campus-player')"><i class="bi bi-arrow-repeat"></i> Рестарт campus-player</button>`;
+    }
+    if (meta.services.includes('docker')) {
+      actHtml += `<button class="btn-restart" id="rst-${id}-docker" onclick="restartSvc('${id}','docker')"><i class="bi bi-arrow-repeat"></i> Рестарт Docker</button>`;
+    }
+    if (meta.cockpit) {
+      actHtml += `<a class="btn-cockpit" href="${meta.cockpit}" target="_blank" rel="noopener"><i class="bi bi-terminal-fill"></i> Cockpit</a>`;
+    }
+    actHtml += `<span class="rst-msg" id="rst-msg-${id}"></span>`;
+    actHtml += '</div>';
+  }
+
+  body.innerHTML = `
+    <div class="metric-row">
+      <span class="metric-lbl">CPU</span>
+      <div class="metric-bar-wrap">
+        <div class="metric-bar bar-cpu" style="width:${cpuPct}%;background:${cpuColor}"></div>
+      </div>
+      <span class="metric-val" style="color:${cpuColor}">${cpuPct}%</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-lbl">RAM</span>
+      <div class="metric-bar-wrap">
+        <div class="metric-bar" style="width:${memPct}%;background:${memColor}"></div>
+      </div>
+      <span class="metric-val" style="color:${memColor}">${info.mem_used} / ${info.mem_total} MB</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-lbl">Диск</span>
+      <div class="metric-bar-wrap">
+        <div class="metric-bar" style="width:${diskNum}%;background:${diskColor}"></div>
+      </div>
+      <span class="metric-val" style="color:${diskColor}">${info.disk_pct} (${info.disk_free})</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-lbl">Load</span>
+      <div class="metric-bar-wrap">
+        <div class="metric-bar bar-load" style="width:${loadNum}%"></div>
+      </div>
+      <span class="metric-val" style="color:var(--orange)">${info.load}</span>
+    </div>
+    <div class="mon-extra">
+      <span><i class="bi bi-clock"></i> Работает: ${escHtml(info.uptime || '?')}</span>
+    </div>
+    ${svcHtml}
+    ${actHtml}
+  `;
+}
+
+function restartSvc(machine, service) {
+  const btn = document.getElementById(`rst-${machine}-${service}`);
+  const msg = document.getElementById(`rst-msg-${machine}`);
+  if (!btn) return;
+  if (!confirm(`Перезапустить ${service} на ${machine}?`)) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Рестарт...';
+  fetch('/api/service/restart', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({machine, service})
+  }).then(r => r.json()).then(d => {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat"></i> Рестарт ${service}`;
+    if (msg) {
+      msg.textContent = d.ok ? '✓ Готово' : '✗ ' + (d.error || 'Ошибка');
+      msg.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+      msg.style.opacity = '1';
+      setTimeout(() => { msg.style.opacity = '0'; }, 4000);
+    }
+    setTimeout(doRefresh, 2000);
+  }).catch(e => {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat"></i> Рестарт ${service}`;
+    if (msg) { msg.textContent = '✗ Сеть'; msg.style.color = 'var(--red)'; msg.style.opacity = '1'; }
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Start
+doRefresh();
+toggleAuto(true);
+</script>
+<style>
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin .7s linear infinite}
+</style>
+{% endblock %}

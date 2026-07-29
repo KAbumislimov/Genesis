@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# Campus Telegram-бот: управление плеером на nctk/vm1
+# Кнопки, SSH, музыка
+
+import os
+import sys
+import subprocess
+import asyncio
+from functools import partial
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+CLIENT_HOST = os.environ.get("CLIENT_HOST", "10.20.0.41")
+CLIENT_USER = os.environ.get("CLIENT_USER", "nctk")
+# Выбор ключа: id_ed25519 (часто без пароля), id_rsa, campus_bot
+SSH_KEY = os.environ.get("SSH_KEY", "")
+if not SSH_KEY or not os.path.isfile(SSH_KEY):
+    for k in ["/root/.ssh/id_ed25519", "/root/.ssh/id_rsa", "/root/.ssh/campus_bot"]:
+        if os.path.isfile(k):
+            SSH_KEY = k
+            break
+if not SSH_KEY:
+    SSH_KEY = "/root/.ssh/id_rsa"  # fallback
+
+if not BOT_TOKEN or BOT_TOKEN == "your_bot_token":
+    print("BOT_TOKEN не задан в config.env", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
+    from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+except ImportError:
+    print("Установите: pip install python-telegram-bot", file=sys.stderr)
+    sys.exit(1)
+
+def run_ssh(cmd: str) -> tuple[bool, str]:
+    """Выполнить команду по SSH на клиенте."""
+    ssh_cmd = ["ssh", "-i", SSH_KEY, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=5",
+               f"{CLIENT_USER}@{CLIENT_HOST}", cmd]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=10)
+        return r.returncode == 0, (r.stdout or r.stderr or "").strip()
+    except Exception as e:
+        return False, str(e)
+
+def main_keyboard():
+    return ReplyKeyboardMarkup(
+        [["▶️ Play", "⏸ Pause", "⏹ Stop"], ["🔊+ Громче", "🔊- Тише"], ["📋 Статус"]],
+        resize_keyboard=True
+    )
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        f"Campus bot ({CLIENT_USER}@{CLIENT_HOST})\nИспользуйте кнопки для управления.",
+        reply_markup=main_keyboard()
+    )
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    text = (update.message.text or "").strip()
+    loop = asyncio.get_event_loop()
+    
+    if text == "▶️ Play":
+        ok, out = await loop.run_in_executor(None, run_ssh, "pkill -CONT mpv 2>/dev/null || systemctl --user start campus-mpv 2>/dev/null || true")
+        await update.message.reply_text("▶️ Play" if ok else f"Ошибка: {out}")
+    elif text == "⏸ Pause":
+        ok, out = await loop.run_in_executor(None, run_ssh, "pkill -STOP mpv 2>/dev/null || pkill -USR1 mpv 2>/dev/null || true")
+        await update.message.reply_text("⏸ Pause" if ok else f"Ошибка: {out}")
+    elif text == "⏹ Stop":
+        ok, out = await loop.run_in_executor(None, run_ssh, "pkill mpv 2>/dev/null || systemctl --user stop campus-mpv 2>/dev/null || true")
+        await update.message.reply_text("⏹ Stop" if ok else f"Ошибка: {out}")
+    elif text == "🔊+ Громче":
+        ok, out = await loop.run_in_executor(None, run_ssh, "pactl set-sink-volume @DEFAULT_SINK@ +5% 2>/dev/null || amixer set Master 5%+ 2>/dev/null || true")
+        await update.message.reply_text("🔊 Громче" if ok else f"Ошибка: {out}")
+    elif text == "🔊- Тише":
+        ok, out = await loop.run_in_executor(None, run_ssh, "pactl set-sink-volume @DEFAULT_SINK@ -5% 2>/dev/null || amixer set Master 5%- 2>/dev/null || true")
+        await update.message.reply_text("🔊 Тише" if ok else f"Ошибка: {out}")
+    elif text == "📋 Статус":
+        ok, out = await loop.run_in_executor(None, run_ssh, "pgrep -a mpv 2>/dev/null || echo 'Плеер не запущен'")
+        await update.message.reply_text(out[:400] if out else "Нет данных")
+    else:
+        await update.message.reply_text("Используйте кнопки.", reply_markup=main_keyboard())
+
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, button_handler))
+    await app.initialize()
+    await app.start()
+    print("Бот запущен.")
+    await app.updater.start_polling()
+    while True:
+        await asyncio.sleep(3600)
+
+if __name__ == "__main__":
+    asyncio.run(main())

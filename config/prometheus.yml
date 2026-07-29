@@ -1,0 +1,39 @@
+# Prometheus — метрики (node_exporter на каждой машине)
+# host_ip — для подписей в Grafana; на 10.20.1.106 нужен установленный node_exporter :9100
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['127.0.0.1:9091']
+
+  # nodename + relabel → instance: иначе Prometheus подставляет instance=HOST:9100,
+  # а дашборды ждут campus-server / nctk / vm1 / host-10.20.1.106 — графики пустые.
+  - job_name: node
+    static_configs:
+      - targets: ['127.0.0.1:9100']
+        labels:
+          nodename: campus-server
+          host_ip: 10.10.4.120
+      - targets: ['10.20.0.41:9100']
+        labels:
+          nodename: nctk
+          host_ip: 10.20.0.41
+      - targets: ['10.70.0.41:9100']
+        labels:
+          nodename: vm1
+          host_ip: 10.70.0.41
+      - targets: ['10.20.1.106:9100']
+        labels:
+          nodename: host-10.20.1.106
+          host_ip: 10.20.1.106
+    relabel_configs:
+      - source_labels: [nodename]
+        regex: (.+)
+        target_label: instance
+        replacement: ${1}
+        action: replace
+      - action: labeldrop
+        regex: '^nodename$'

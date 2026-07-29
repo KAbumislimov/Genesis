@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+SOCK="/run/campus-player/mpv.sock"
+LASTFILE="/run/campus-player/lastfile"
+VOLFILE="/run/campus-player/volume"
+
+check_socket() {
+  if [ ! -S "$SOCK" ]; then
+    echo "SOCK_STATE=missing"
+    return 1
+  fi
+  echo "SOCK_STATE=ok"
+  return 0
+}
+
+send_cmd() {
+  local json="$1"
+  if [ ! -S "$SOCK" ]; then
+    echo "Error: socket not found" >&2
+    return 1
+  fi
+  echo "$json" | socat - "$SOCK" 2>/dev/null
+}
+
+cmd="$1"
+arg="$2"
+
+case "$cmd" in
+  play)
+    if [ -z "$arg" ]; then
+      echo "Usage: campus-playerctl play /path/to/file.mp3" >&2
+      exit 1
+    fi
+    if [ ! -f "$arg" ]; then
+      echo "Error: file not found: $arg" >&2
+      exit 1
+    fi
+    echo "$arg" > "$LASTFILE" 2>/dev/null || true
+    send_cmd "{\"command\": [\"loadfile\", \"${arg}\", \"replace\"]}"
+    ;;
+  pause)
+    send_cmd '{"command": ["cycle", "pause"]}'
+    ;;
+  stop)
+    send_cmd '{"command": ["stop"]}' >/dev/null 2>&1 || true
+    pkill -9 mpv 2>/dev/null || true
+    pkill -9 ffmpeg 2>/dev/null || true
+    pkill -9 aplay 2>/dev/null || true
+    pkill -9 paplay 2>/dev/null || true
+    pkill -9 edge-tts 2>/dev/null || true
+    sleep 0.3
+    ;;
+  vol|volume)
+    if [ -z "$arg" ]; then
+      echo "Usage: campus-playerctl vol 0-160" >&2
+      exit 1
+    fi
+    echo "$arg" > "$VOLFILE" 2>/dev/null || true
+    send_cmd "{\"command\": [\"set_property\", \"volume\", ${arg}]}" >/dev/null 2>&1 || true
+    alsa_pct=$((arg * 100 / 160))
+    [ "$alsa_pct" -gt 100 ] && alsa_pct=100
+    amixer -q set Speaker "${alsa_pct}%" 2>/dev/null || amixer -q set Master "${alsa_pct}%" 2>/dev/null || amixer -q set PCM "${alsa_pct}%" 2>/dev/null || true
+    ;;
+  volup)
+    cur=$(send_cmd '{"command": ["get_property", "volume"]}' | jq -r '.data // 0' 2>/dev/null)
+    [ -z "$cur" ] && cur=0
+    new=$((cur + 10))
+    [ "$new" -gt 160 ] && new=160
+    echo "$new" > "$VOLFILE" 2>/dev/null || true
+    send_cmd "{\"command\": [\"set_property\", \"volume\", $new]}" >/dev/null 2>&1 || true
+    alsa_pct=$((new * 100 / 160))
+    [ "$alsa_pct" -gt 100 ] && alsa_pct=100
+    amixer -q set Speaker "${alsa_pct}%" 2>/dev/null || amixer -q set Master "${alsa_pct}%" 2>/dev/null || amixer -q set PCM "${alsa_pct}%" 2>/dev/null || true
+    echo "VOL=$new"
+    ;;
+  voldown)
+    cur=$(send_cmd '{"command": ["get_property", "volume"]}' | jq -r '.data // 0' 2>/dev/null)
+    [ -z "$cur" ] && cur=0
+    new=$((cur - 10))
+    [ "$new" -lt 0 ] && new=0
+    echo "$new" > "$VOLFILE" 2>/dev/null || true
+    send_cmd "{\"command\": [\"set_property\", \"volume\", $new]}" >/dev/null 2>&1 || true
+    alsa_pct=$((new * 100 / 160))
+    [ "$alsa_pct" -gt 100 ] && alsa_pct=100
+    amixer -q set Speaker "${alsa_pct}%" 2>/dev/null || amixer -q set Master "${alsa_pct}%" 2>/dev/null || amixer -q set PCM "${alsa_pct}%" 2>/dev/null || true
+    echo "VOL=$new"
+    ;;
+  status)
+    check_socket
+    if [ -f "$LASTFILE" ]; then
+      echo "LAST=$(cat "$LASTFILE")"
+    fi
+    if [ -f "$VOLFILE" ]; then
+      echo "VOL=$(cat "$VOLFILE")"
+    else
+      cur=$(send_cmd '{"command": ["get_property", "volume"]}' | jq -r '.data // empty' 2>/dev/null)
+      if [ -n "$cur" ]; then
+        echo "$cur" > "$VOLFILE" 2>/dev/null || true
+        echo "VOL=$cur"
+      fi
+    fi
+    state=$(send_cmd '{"command": ["get_property", "pause"]}' | jq -r '.data // "unknown"' 2>/dev/null)
+    if [ "$state" = "true" ]; then
+      echo "STATE=paused"
+    elif [ "$state" = "false" ]; then
+      echo "STATE=playing"
+    else
+      echo "STATE=stopped"
+    fi
+    ;;
+  *)
+    echo "Usage: campus-playerctl {play|pause|stop|vol|volup|voldown|status} [arg]" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,17 @@
+# Секреты — никогда не в образ
+config.env
+*.env
+.env*
+
+# Git
+.git
+.gitignore
+
+# Документация и мусор
+*.md
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+*.log

@@ -1,0 +1,25 @@
+[Unit]
+Description=Campus Web UI (Docker Compose)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=kamran
+WorkingDirectory=/home/kamran/projects/campus-infra
+ExecStart=/usr/bin/docker compose --profile webui up -d --no-build
+ExecStop=/usr/bin/docker compose --profile webui stop campus-webui
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target
+
+# Установка:
+#   sudo cp systemd/campus-webui.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable campus-webui.service
+#
+# Примечание: при restart: unless-stopped в docker-compose.yaml
+# контейнер также автоматически стартует при запуске Docker демона.

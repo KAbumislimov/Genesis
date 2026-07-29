@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ru" id="root">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Landau Audio — Вход</title>
+<style>
+/* ── CSS Variables ── */
+:root{
+  --bg:#f4f7ff;--card:#fff;--border:#e2e8f0;
+  --text:#1a1a2e;--sub:#64748b;--lbl:#374151;
+  --ibg:#f1f5fd;--iborder:#dde5f0;--ifocus:#3b82f6;
+  --b1:#2563eb;--b2:#4f46e5;--sep:#edf0f7;
+  --note:#94a3b8;--rem:#374151;--shadow:rgba(30,60,200,.07);
+  --lglow:rgba(79,11,255,.18);
+}
+[data-theme="dark"]{
+  --bg:#080d18;--card:rgba(10,20,42,.97);--border:rgba(88,166,255,.18);
+  --text:#e6edf3;--sub:rgba(139,148,158,.9);--lbl:rgba(210,225,240,.92);
+  --ibg:rgba(255,255,255,.07);--iborder:rgba(88,166,255,.22);--ifocus:#60a5fa;
+  --b1:#1d4ed8;--b2:#7c3aed;--sep:rgba(88,166,255,.07);
+  --note:rgba(100,116,139,.6);--rem:rgba(210,225,240,.85);--shadow:rgba(0,0,0,.45);
+  --lglow:rgba(124,58,237,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
+  font-family:-apple-system,'Segoe UI',system-ui,sans-serif;
+  transition:background .35s,color .35s}
+
+/* ── Theme toggle ── */
+.theme-bar{position:fixed;top:16px;right:20px;z-index:200;
+  display:flex;background:var(--card);border:1.5px solid var(--border);
+  border-radius:32px;padding:4px;box-shadow:0 2px 14px var(--shadow);
+  transition:background .35s,border-color .35s}
+.tbtn{display:flex;align-items:center;gap:5px;padding:7px 16px;border-radius:26px;
+  font-size:12px;font-weight:600;cursor:pointer;color:var(--sub);background:transparent;
+  border:none;font-family:inherit;letter-spacing:.02em;transition:all .22s}
+.tbtn.on{background:linear-gradient(135deg,var(--b1),var(--b2));
+  color:#fff;box-shadow:0 2px 12px rgba(37,99,235,.35)}
+
+/* ── Support button ── */
+.contact-bar{position:fixed;top:16px;left:20px;z-index:200}
+.contact-trigger{display:flex;align-items:center;gap:7px;background:var(--card);
+  border:1.5px solid var(--border);color:var(--sub);font-size:12px;font-weight:600;
+  letter-spacing:.02em;border-radius:24px;padding:8px 16px;cursor:pointer;
+  font-family:inherit;box-shadow:0 2px 14px var(--shadow);transition:all .2s}
+.contact-trigger:hover{color:var(--text);border-color:var(--b1)}
+.ct-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;
+  box-shadow:0 0 0 2px rgba(34,197,94,.25);animation:ct-pulse 2s ease infinite}
+@keyframes ct-pulse{
+  0%,100%{box-shadow:0 0 0 2px rgba(34,197,94,.25)}
+  50%{box-shadow:0 0 0 5px rgba(34,197,94,.08)}}
+
+/* ── Contact modal ── */
+.cm-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.5);
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.cm-overlay.open{display:flex}
+.cm-card{background:var(--card);border:1px solid var(--border);border-radius:22px;
+  padding:28px 24px 20px;width:340px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,.2)}
+.cm-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;text-align:center}
+.cm-close{position:absolute;top:14px;right:18px;background:none;border:none;
+  font-size:20px;cursor:pointer;color:var(--sub);line-height:1;padding:4px;
+  border-radius:6px;border:1px solid transparent;transition:.2s;font-family:inherit}
+.cm-close:hover{color:var(--text);border-color:var(--b1)}
+.cm-list{display:flex;flex-direction:column;gap:8px}
+.cm-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:13px;
+  border:1px solid;cursor:pointer;text-decoration:none;transition:.18s}
+.cm-ph {background:rgba(34,197,94,.08); border-color:rgba(34,197,94,.22)}
+.cm-ph:hover{background:rgba(34,197,94,.16)}
+.cm-sn {background:rgba(139,92,246,.09);border-color:rgba(139,92,246,.25)}
+.cm-sn:hover{background:rgba(139,92,246,.17)}
+.cm-tg {background:rgba(41,182,246,.08);border-color:rgba(41,182,246,.22)}
+.cm-tg:hover{background:rgba(41,182,246,.16)}
+.cm-wa {background:rgba(37,211,102,.08);border-color:rgba(37,211,102,.22)}
+.cm-wa:hover{background:rgba(37,211,102,.16)}
+.cm-gm {background:rgba(234,67,53,.07); border-color:rgba(234,67,53,.2)}
+.cm-gm:hover{background:rgba(234,67,53,.14)}
+.cm-ol {background:rgba(0,120,212,.07); border-color:rgba(0,120,212,.2)}
+.cm-ol:hover{background:rgba(0,120,212,.14)}
+.cm-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:18px}
+.cm-ph .cm-icon{background:rgba(34,197,94,.18)}
+.cm-sn .cm-icon{background:rgba(139,92,246,.18);overflow:hidden}
+.cm-tg .cm-icon{background:rgba(41,182,246,.15)}
+.cm-wa .cm-icon{background:rgba(37,211,102,.15)}
+.cm-gm .cm-icon{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.cm-ol .cm-icon{background:rgba(0,120,212,.12)}
+.cm-label{font-size:13px;font-weight:600;color:var(--text)}
+.cm-val{font-size:11px;color:var(--sub);margin-top:1px}
+.cm-rel{position:relative}
+
+/* ── Input style ── */
+.inp-wrap{display:flex;align-items:center;gap:8px;
+  background:var(--ibg);border:1.5px solid var(--iborder);
+  border-radius:10px;padding:0 14px;transition:border-color .2s,box-shadow .2s,background .35s}
+.inp-wrap:focus-within{border-color:var(--ifocus);box-shadow:0 0 0 3px rgba(59,130,246,.14)}
+
+/* ── 3-column grid ── */
+.page{display:grid;grid-template-columns:1fr 370px 1fr;min-height:100vh;align-items:center;
+  position:relative;z-index:2}
+
+/* ── Logo columns ── */
+.col-lion,.col-leg{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:40px 16px;height:100vh}
+.logo-name2{font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+  color:#1e4db7;margin-top:14px;opacity:0;animation:fadein .6s ease 1.2s forwards}
+[data-theme="dark"] .logo-name2{color:#93c5fd}
+.logo-sub2{font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--sub);margin-top:3px;opacity:0;animation:fadein .6s ease 1.35s forwards}
+@keyframes fadein{to{opacity:1}}
+
+/* ── Puzzle logo wrappers ── */
+.lion-wrap{
+  position:relative;width:360px;height:360px;
+  animation:flt 5.5s ease-in-out 1.4s infinite alternate;
+}
+/* Dark mode: white card behind logo for contrast */
+[data-theme="dark"] .lion-wrap::before{
+  content:'';position:absolute;inset:0;
+  background:#fff;border-radius:14px;
+  box-shadow:0 2px 12px rgba(0,0,0,.2);
+  z-index:0;
+}
+.leg-wrap{
+  position:relative;width:360px;height:360px;
+  animation:flt 6s ease-in-out 1.6s infinite alternate;
+}
+@keyframes flt{0%{transform:translateY(0)}100%{transform:translateY(-12px)}}
+
+.lion-pieces,.leg-pieces{
+  display:grid;
+  width:100%;height:100%;
+  overflow:visible;
+}
+.lion-pieces{grid-template-columns:repeat(2,180px);grid-template-rows:repeat(3,1fr)}
+.leg-pieces {grid-template-columns:repeat(2,180px);grid-template-rows:repeat(3,1fr)}
+
+/* Full seamless logo (shown after puzzle assembles) */
+.full-logo{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  opacity:0;pointer-events:none;transition:opacity .35s ease;
+  object-fit:contain;
+}
+.leg-full-logo{
+  object-fit:contain;border-radius:14px;
+  background:transparent;
+}
+[data-theme="dark"] .leg-full-logo{background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+/* Lion logo: fill white card same as LEG */
+#lion-full{object-fit:contain;border-radius:0;background:transparent;}
+.logo-piece{overflow:hidden;background-repeat:no-repeat;background-size:200% 300%}
+
+/* ── Lion puzzle scatter animations ── */
+.lp0{opacity:0;background-position:0% 0%;animation:lp0a 1.15s cubic-bezier(.34,1.45,.64,1) .04s forwards}
+.lp1{opacity:0;background-position:100% 0%;animation:lp1a 1.15s cubic-bezier(.34,1.45,.64,1) .13s forwards}
+.lp2{opacity:0;background-position:0% 50%;animation:lp2a 1.15s cubic-bezier(.34,1.45,.64,1) .21s forwards}
+.lp3{opacity:0;background-position:100% 50%;animation:lp3a 1.15s cubic-bezier(.34,1.45,.64,1) .29s forwards}
+.lp4{opacity:0;background-position:0% 100%;animation:lp4a 1.15s cubic-bezier(.34,1.45,.64,1) .37s forwards}
+.lp5{opacity:0;background-position:100% 100%;animation:lp5a 1.15s cubic-bezier(.34,1.45,.64,1) .45s forwards}
+@keyframes lp0a{0%{opacity:0;transform:translate(-430px,-320px) rotate(-38deg) scale(.58)}52%{opacity:.9}77%{transform:translate(22px,16px) rotate(4.6deg) scale(1.05)}100%{opacity:1;transform:none}}
+@keyframes lp1a{0%{opacity:0;transform:translate(500px,-280px) rotate(42deg) scale(.55)}54%{opacity:.9}78%{transform:translate(-18px,14px) rotate(-5.2deg) scale(1.06)}100%{opacity:1;transform:none}}
+@keyframes lp2a{0%{opacity:0;transform:translate(-480px,100px) rotate(-28deg) scale(.62)}50%{opacity:.9}76%{transform:translate(16px,-12px) rotate(3.8deg) scale(1.04)}100%{opacity:1;transform:none}}
+@keyframes lp3a{0%{opacity:0;transform:translate(460px,120px) rotate(35deg) scale(.60)}51%{opacity:.9}77%{transform:translate(-20px,-16px) rotate(-4.4deg) scale(1.05)}100%{opacity:1;transform:none}}
+@keyframes lp4a{0%{opacity:0;transform:translate(-400px,380px) rotate(-45deg) scale(.56)}53%{opacity:.9}77%{transform:translate(18px,-18px) rotate(5.1deg) scale(1.07)}100%{opacity:1;transform:none}}
+@keyframes lp5a{0%{opacity:0;transform:translate(420px,360px) rotate(40deg) scale(.58)}52%{opacity:.9}76%{transform:translate(-16px,20px) rotate(-4.8deg) scale(1.06)}100%{opacity:1;transform:none}}
+
+/* ── LEG puzzle scatter animations ── */
+.ep0{opacity:0;background-position:0% 0%;animation:ep0a 1.15s cubic-bezier(.34,1.45,.64,1) .06s forwards}
+.ep1{opacity:0;background-position:100% 0%;animation:ep1a 1.15s cubic-bezier(.34,1.45,.64,1) .15s forwards}
+.ep2{opacity:0;background-position:0% 50%;animation:ep2a 1.15s cubic-bezier(.34,1.45,.64,1) .23s forwards}
+.ep3{opacity:0;background-position:100% 50%;animation:ep3a 1.15s cubic-bezier(.34,1.45,.64,1) .31s forwards}
+.ep4{opacity:0;background-position:0% 100%;animation:ep4a 1.15s cubic-bezier(.34,1.45,.64,1) .39s forwards}
+.ep5{opacity:0;background-position:100% 100%;animation:ep5a 1.15s cubic-bezier(.34,1.45,.64,1) .47s forwards}
+@keyframes ep0a{0%{opacity:0;transform:translate(-500px,-350px) rotate(52deg) scale(.52)}52%{opacity:.9}78%{transform:translate(20px,18px) rotate(-5deg) scale(1.06)}100%{opacity:1;transform:none}}
+@keyframes ep1a{0%{opacity:0;transform:translate(470px,-320px) rotate(-48deg) scale(.55)}54%{opacity:.9}79%{transform:translate(-18px,14px) rotate(4.8deg) scale(1.05)}100%{opacity:1;transform:none}}
+@keyframes ep2a{0%{opacity:0;transform:translate(-460px,80px) rotate(38deg) scale(.60)}50%{opacity:.9}76%{transform:translate(16px,-14px) rotate(-3.6deg) scale(1.04)}100%{opacity:1;transform:none}}
+@keyframes ep3a{0%{opacity:0;transform:translate(490px,90px) rotate(-42deg) scale(.58)}51%{opacity:.9}77%{transform:translate(-22px,-18px) rotate(4.2deg) scale(1.06)}100%{opacity:1;transform:none}}
+@keyframes ep4a{0%{opacity:0;transform:translate(-380px,400px) rotate(55deg) scale(.54)}53%{opacity:.9}78%{transform:translate(14px,-20px) rotate(-5.4deg) scale(1.07)}100%{opacity:1;transform:none}}
+@keyframes ep5a{0%{opacity:0;transform:translate(440px,380px) rotate(-50deg) scale(.56)}52%{opacity:.9}76%{transform:translate(-18px,22px) rotate(4.6deg) scale(1.05)}100%{opacity:1;transform:none}}
+
+/* ── Form column ── */
+.col-form{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;width:370px;height:100vh}
+.pz{width:100%;position:relative}
+.replay-btn{position:absolute;top:18px;left:50%;transform:translateX(-50%);
+  background:none;border:none;cursor:pointer;color:var(--sub);
+  font-size:13px;opacity:.4;padding:4px 8px;border-radius:6px;
+  transition:.2s;font-family:inherit}
+.replay-btn:hover{opacity:.8;background:var(--sep)}
+.pz::after{content:'';position:absolute;inset:-1px;border-radius:20px;
+  pointer-events:none;animation:pzglow .7s ease 2.1s forwards}
+@keyframes pzglow{
+  0%{box-shadow:none}
+  55%{box-shadow:0 0 0 2px rgba(37,99,235,.22),0 0 60px 12px rgba(37,99,235,.1)}
+  100%{box-shadow:0 0 0 1px rgba(37,99,235,.07),0 14px 50px rgba(37,99,235,.08)}}
+.pc{padding:0 24px;opacity:0;background:var(--card);
+  border-left:1.5px solid var(--border);border-right:1.5px solid var(--border);
+  transition:background .35s,border-color .35s}
+.p1{padding-top:20px;padding-bottom:14px;border-top:1.5px solid var(--border);
+  border-radius:18px 18px 0 0;animation:pA .78s cubic-bezier(.34,1.56,.64,1) .32s forwards}
+.p2{padding-top:14px;padding-bottom:14px;
+  animation:pB .72s cubic-bezier(.34,1.56,.64,1) .50s forwards}
+.p3{padding-top:14px;padding-bottom:14px;
+  animation:pC .72s cubic-bezier(.34,1.56,.64,1) .66s forwards}
+.p4{padding-top:11px;padding-bottom:9px;
+  animation:pD .75s cubic-bezier(.34,1.56,.64,1) .80s forwards}
+.p5{padding-top:11px;padding-bottom:22px;
+  border-bottom:1.5px solid var(--border);border-radius:0 0 18px 18px;
+  animation:pE .78s cubic-bezier(.34,1.56,.64,1) .94s forwards}
+@keyframes pA{from{opacity:0;transform:translate(-180px,150px) rotate(-16deg) scale(.78)} to{opacity:1;transform:none}}
+@keyframes pB{from{opacity:0;transform:translate(200px,-140px) rotate(14deg) scale(.80)} to{opacity:1;transform:none}}
+@keyframes pC{from{opacity:0;transform:translate(-190px,-120px) rotate(-12deg) scale(.78)} to{opacity:1;transform:none}}
+@keyframes pD{from{opacity:0;transform:translate(160px,160px) rotate(11deg) scale(.80)} to{opacity:1;transform:none}}
+@keyframes pE{from{opacity:0;transform:translate(-140px,180px) rotate(-10deg) scale(.82)} to{opacity:1;transform:none}}
+
+/* ── Form elements ── */
+.hdr-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.ht{font-size:12px;font-weight:700;letter-spacing:.22em;color:var(--sub);
+  text-transform:uppercase;white-space:nowrap}
+.ftitle{font-size:26px;font-weight:900;color:var(--text);letter-spacing:-.02em;text-align:center}
+.fsub{font-size:15px;color:var(--text);margin-top:5px;text-align:center;font-weight:500;opacity:.75}
+.err-box{background:rgba(248,81,73,.09);border:1px solid rgba(248,81,73,.25);
+  color:#dc2626;border-radius:8px;padding:9px 12px;font-size:14px;margin-bottom:10px}
+[data-theme="dark"] .err-box{color:#f87171}
+.lbl{display:block;font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+.inp{width:100%;background:transparent;border:none;
+  color:var(--text);padding:12px 0;font-size:15px;
+  font-family:inherit;outline:none}
+.inp::placeholder{color:var(--sub);opacity:.7}
+.inp-wrap{display:flex;align-items:center;gap:8px;
+  background:var(--ibg);border:1.5px solid var(--iborder);
+  border-radius:10px;padding:0 14px;transition:border-color .2s,box-shadow .2s,background .35s}
+.inp-wrap:focus-within{border-color:var(--ifocus);box-shadow:0 0 0 3px rgba(59,130,246,.14)}
+.rem{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;
+  color:var(--text);cursor:pointer}
+.rem input{accent-color:var(--b1);width:16px;height:16px;cursor:pointer}
+.btn{width:100%;background:linear-gradient(135deg,var(--b1),var(--b2));
+  border:none;color:#fff;font-weight:800;font-size:16px;padding:14px;
+  border-radius:10px;cursor:pointer;font-family:inherit;letter-spacing:.04em;
+  box-shadow:0 4px 22px rgba(37,99,235,.3);transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(37,99,235,.4)}
+.nt{text-align:center;font-size:12px;color:var(--sub);margin-top:8px}
+
+/* ── Bottom button ── */
+.bottom-btns{position:absolute;bottom:28px;left:50%;transform:translateX(-50%)}
+.meet-btn{display:flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;
+  font-size:13px;font-weight:600;letter-spacing:.03em;border-radius:28px;
+  padding:10px 24px;cursor:pointer;box-shadow:0 5px 22px rgba(37,99,235,.35);
+  border:none;font-family:inherit;white-space:nowrap;text-decoration:none;
+  transition:transform .15s,box-shadow .15s}
+.meet-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,.45)}
+
+/* ── Flash messages ── */
+.flash-list{list-style:none;margin-bottom:10px}
+.flash-list li{padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:6px;font-weight:500}
+.flash-danger{background:rgba(248,81,73,.09);border:1px solid rgba(248,81,73,.25);color:#dc2626}
+.flash-success{background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.25);color:#16a34a}
+[data-theme="dark"] .flash-danger{color:#f87171}
+[data-theme="dark"] .flash-success{color:#4ade80}
+
+/* ═══════════════════════════════════════════════════
+   DECORATIVE SIDE IMAGES — 3 left, 3 right
+═══════════════════════════════════════════════════ */
+@keyframes fonin{from{opacity:0;transform:scale(.93) translateY(10px)}to{opacity:1;transform:none}}
+
+/* Base: all 6 fon images */
+.dec-fon{
+  position:fixed;pointer-events:none;user-select:none;
+  z-index:20;height:auto;object-fit:contain;
+  opacity:0;animation:fonin .85s ease forwards;
+}
+
+/* Light-bg images (fon1, fon2, fon3): multiply removes white */
+.fon-lt{mix-blend-mode:multiply;}
+[data-theme="dark"] .fon-lt{mix-blend-mode:screen;filter:invert(1) brightness(.5);}
+
+/* Dark-bg images: transparent PNGs (bg removed via PIL), shown at natural opacity */
+.fon-dk{mix-blend-mode:normal;opacity:.82;}
+[data-theme="dark"] .fon-dk{opacity:.65;filter:brightness(.7);}
+
+/* LEFT column — top / mid / bottom */
+.fl1{left:10px;top:6%;    width:150px;animation-delay:.30s;}
+.fl2{left:10px;top:43%;   width:142px;animation-delay:.55s;}
+.fl3{left:10px;bottom:12px;width:152px;animation-delay:.80s;}
+
+/* RIGHT column — top / mid / bottom */
+.fr1{right:10px;top:6%;    width:148px;animation-delay:.40s;}
+.fr2{right:10px;top:43%;   width:145px;animation-delay:.65s;}
+.fr3{right:10px;bottom:12px;width:148px;animation-delay:.90s;}
+
+/* ── Language switcher ── */
+.lang-bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:200;
+  display:flex;background:var(--card);border:1.5px solid var(--border);
+  border-radius:32px;padding:4px;box-shadow:0 2px 14px var(--shadow);gap:2px;
+  transition:background .35s,border-color .35s}
+.lbtn{display:flex;align-items:center;padding:7px 15px;border-radius:24px;
+  font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);background:transparent;
+  border:none;font-family:inherit;letter-spacing:.05em;transition:all .22s}
+.lbtn.on{background:linear-gradient(135deg,var(--b1),var(--b2));
+  color:#fff;box-shadow:0 2px 12px rgba(37,99,235,.35)}
+</style>
+</head>
+<body>
+
+<!-- ── Contact support modal ── -->
+<div class="cm-overlay cm-rel" id="cm-overlay" onclick="if(event.target===this)closeContact()">
+  <div class="cm-card cm-rel">
+    <button class="cm-close" onclick="closeContact()">✕</button>
+    <div class="cm-title">📞 Контакты поддержки</div>
+    <div class="cm-list">
+      <a class="cm-item cm-ph" href="tel:0552531882">
+        <div class="cm-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498A1 1 0 0121 16.72V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="cm-label">055 253 18 82</div><div class="cm-val">Короткий номер IT-поддержки</div></div>
+      </a>
+      <a class="cm-item cm-tg" href="https://t.me/kamran19910101" target="_blank">
+        <div class="cm-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="#29b6f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2L15 22 11 13 2 9l20-7z" stroke="#29b6f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="cm-label">Telegram</div><div class="cm-val">@kamran19910101</div></div>
+      </a>
+      <a class="cm-item cm-wa" href="https://wa.me/994702900000" target="_blank">
+        <div class="cm-icon"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" fill="#25d366"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.09.54 4.05 1.482 5.76L0 24l6.37-1.46A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.37l-.36-.214-3.724.977.994-3.634-.235-.373A9.818 9.818 0 112 12c0 5.42 4.398 9.818 9.818 9.818h.182z" fill="#25d366"/></svg></div>
+        <div><div class="cm-label">WhatsApp</div><div class="cm-val">Написать в WhatsApp</div></div>
+      </a>
+      <a class="cm-item cm-gm" href="mailto:kamran19910101@gmail.com">
+        <div class="cm-icon"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg></div>
+        <div><div class="cm-label">Gmail</div><div class="cm-val">kamran19910101@gmail.com</div></div>
+      </a>
+      <a class="cm-item cm-ol" href="mailto:k.abumislimov@leg.edu.az">
+        <div class="cm-icon"><svg width="20" height="20" viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#0078D4"/><path d="M12 7l-7 4v6l7 4 7-4v-6z" fill="#fff" opacity=".2"/><path d="M5 11l7-4 7 4-7 4z" fill="#fff"/></svg></div>
+        <div><div class="cm-label">Рабочий Email</div><div class="cm-val">k.abumislimov@leg.edu.az</div></div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Theme toggle ── -->
+<div class="theme-bar">
+  <button class="tbtn on" id="tl" onclick="setTheme('light')">☀ Светлый</button>
+  <button class="tbtn" id="td" onclick="setTheme('dark')">☾ Тёмный</button>
+</div>
+
+<!-- ── Language switcher ── -->
+<div class="lang-bar">
+  <button class="lbtn on" id="ll-ru" onclick="setLang('ru')">RU</button>
+  <button class="lbtn" id="ll-az" onclick="setLang('az')">AZ</button>
+  <button class="lbtn" id="ll-en" onclick="setLang('en')">EN</button>
+</div>
+
+<!-- ── Contact bar ── -->
+<div class="contact-bar">
+  <button class="contact-trigger" onclick="openContact()">
+    <div class="ct-dot"></div>
+    <span data-i18n="support">Поддержка</span>
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     DECORATIVE SIDE IMAGES — 3 left, 3 right (all 6 from folder)
+     LEFT:  fon1 (light), fon3 (light), fon5 (dark-DJ)
+     RIGHT: fon2 (light), fon4 (dark-LED), fon6 (dark-setup)
+═══════════════════════════════════════════════════ -->
+<img class="dec-fon fon-lt fl1" src="{{ url_for('static', filename='dec_fon1.jpg') }}" alt="">
+<img class="dec-fon fon-lt fl2" src="{{ url_for('static', filename='dec_fon3.jpg') }}" alt="">
+
+<img class="dec-fon fon-lt fr1" src="{{ url_for('static', filename='dec_fon2.jpg') }}" alt="">
+
+<!-- ── Main 3-column grid ── -->
+<div class="page">
+
+  <!-- LEFT: Lion logo -->
+  <div class="col-lion">
+    <div class="lion-wrap">
+      <div class="lion-pieces" id="lion-pieces">
+        <div class="logo-piece lp0"></div>
+        <div class="logo-piece lp1"></div>
+        <div class="logo-piece lp2"></div>
+        <div class="logo-piece lp3"></div>
+        <div class="logo-piece lp4"></div>
+        <div class="logo-piece lp5"></div>
+      </div>
+      <img id="lion-full" class="full-logo" src="{{ url_for('static', filename='landau.logo.t.png') }}" alt="Landau">
+    </div>
+  </div>
+
+  <!-- CENTER: Login form -->
+  <div class="col-form">
+    <div class="pz">
+      <button class="replay-btn" onclick="replayAnim()" title="Повторить анимацию">↺</button>
+
+      <!-- Block 1: Header -->
+      <div class="pc p1">
+        <div class="hdr-row"><div class="ht" data-i18n="welcome">Добро пожаловать</div></div>
+        <div class="ftitle" data-i18n="title">Вход в систему</div>
+        <div class="fsub" data-i18n="sub">Landau Audio Control</div>
+      </div>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="pc" style="opacity:1;padding-top:0;padding-bottom:0">
+        <ul class="flash-list">
+          {% for cat, msg in messages %}
+          <li class="flash-{{ cat }}">{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <!-- Block 2: Username -->
+      <div class="pc p2">
+        <label class="lbl" for="username" data-i18n="lbl_user">Имя пользователя</label>
+        <div class="inp-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;opacity:.4">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <input class="inp" id="username" name="username" type="text" placeholder="Введите логин" data-i18n-ph="ph_user" autocomplete="username" required form="loginform">
+        </div>
+      </div>
+
+      <!-- Block 3: Password -->
+      <div class="pc p3">
+        <label class="lbl" for="password" data-i18n="lbl_pass">Пароль</label>
+        <div class="inp-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;opacity:.4">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input class="inp" id="password" name="password" type="password" placeholder="Введите пароль" data-i18n-ph="ph_pass" autocomplete="current-password" required form="loginform">
+        </div>
+      </div>
+
+      <!-- Block 4: Remember me -->
+      <div class="pc p4">
+        <label class="rem">
+          <input type="checkbox" name="remember" form="loginform">
+          <span data-i18n="remember">Запомнить меня</span>
+        </label>
+      </div>
+
+      <!-- Block 5: Submit -->
+      <div class="pc p5">
+        <form id="loginform" method="post" action="{{ url_for('login') }}">
+          <button class="btn" type="submit" data-i18n="submit">Войти</button>
+        </form>
+        <p class="nt" data-i18n="note">Доступ только для сотрудников · Landau School</p>
+      </div>
+    </div>
+
+    <!-- Presentation button -->
+    <div class="bottom-btns">
+      <a class="meet-btn" id="meet-btn"
+         href="{{ url_for('static', filename='presentation.html') }}"
+         target="_blank"
+         style="opacity:0;animation:fadein .6s ease 3s forwards">
+        🎬 Ознакомьтесь с системой
+      </a>
+    </div>
+  </div>
+
+  <!-- RIGHT: LEG logo -->
+  <div class="col-leg">
+    <div class="leg-wrap">
+      <div class="leg-pieces" id="leg-pieces">
+        <div class="logo-piece ep0"></div>
+        <div class="logo-piece ep1"></div>
+        <div class="logo-piece ep2"></div>
+        <div class="logo-piece ep3"></div>
+        <div class="logo-piece ep4"></div>
+        <div class="logo-piece ep5"></div>
+      </div>
+      <img id="leg-full" class="full-logo leg-full-logo" src="{{ url_for('static', filename='leg.logo.t.png') }}" alt="LEG">
+    </div>
+    <div class="logo-name2">Landau Education Group</div>
+    <div class="logo-sub2">LEG · Азербайджан</div>
+  </div>
+</div>
+
+<script>
+// ── FORM: nothing extra needed — inputs use form="loginform" attr ──
+
+// ── THEME ──
+document.documentElement.setAttribute('data-theme','light');
+var LND_URL = "{{ url_for('static', filename='landau.logo.t.png') }}";
+var LEG_URL = "{{ url_for('static', filename='leg.logo.t.png') }}";
+
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('tl').classList.toggle('on', t === 'light');
+  document.getElementById('td').classList.toggle('on', t === 'dark');
+}
+
+// ── LOGOS: set background images on pieces ──
+var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+document.querySelectorAll('.col-lion .logo-piece').forEach(function(el) {
+  el.style.backgroundImage = 'url(' + LND_URL + ')';
+  if (isDark) el.style.backgroundColor = '#fff';
+});
+document.querySelectorAll('.col-leg .logo-piece').forEach(function(el) {
+  el.style.backgroundImage = 'url(' + LEG_URL + ')';
+  if (isDark) el.style.backgroundColor = '#fff';
+});
+
+// ── SWAP LOGOS to seamless full image after assembly ──
+setTimeout(function() {
+  var lf = document.getElementById('lion-full');
+  var ef = document.getElementById('leg-full');
+  lf.style.opacity = '1'; ef.style.opacity = '1';
+  setTimeout(function() {
+    document.getElementById('lion-pieces').style.display = 'none';
+    document.getElementById('leg-pieces').style.display = 'none';
+  }, 400);
+}, 2200);
+
+// ── LANGUAGE SWITCHER ──
+var LANG_DATA = {
+  ru: {
+    welcome:'Добро пожаловать', title:'Вход в систему', sub:'Landau Audio Control',
+    lbl_user:'Имя пользователя', ph_user:'Введите логин',
+    lbl_pass:'Пароль', ph_pass:'Введите пароль',
+    remember:'Запомнить меня', submit:'Войти',
+    note:'Доступ только для сотрудников · Landau School',
+    support:'Поддержка'
+  },
+  az: {
+    welcome:'Xoş gəldiniz', title:'Sistemə giriş', sub:'Landau Audio İdarəetmə',
+    lbl_user:'İstifadəçi adı', ph_user:'Loginizi daxil edin',
+    lbl_pass:'Şifrə', ph_pass:'Şifrəni daxil edin',
+    remember:'Məni yadda saxla', submit:'Daxil ol',
+    note:'Yalnız işçilər üçün · Landau School',
+    support:'Dəstək'
+  },
+  en: {
+    welcome:'Welcome', title:'System Login', sub:'Landau Audio Control',
+    lbl_user:'Username', ph_user:'Enter login',
+    lbl_pass:'Password', ph_pass:'Enter password',
+    remember:'Remember me', submit:'Sign in',
+    note:'Staff access only · Landau School',
+    support:'Support'
+  }
+};
+function setLang(l) {
+  var d = LANG_DATA[l] || LANG_DATA.ru;
+  localStorage.setItem('lang', l);
+  ['ll-ru','ll-az','ll-en'].forEach(function(id){ document.getElementById(id).classList.remove('on'); });
+  var btn = document.getElementById('ll-' + l);
+  if(btn) btn.classList.add('on');
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var key = el.getAttribute('data-i18n');
+    if(d[key] !== undefined) el.textContent = d[key];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el){
+    var key = el.getAttribute('data-i18n-ph');
+    if(d[key] !== undefined) el.placeholder = d[key];
+  });
+}
+// Apply saved or default language
+setLang(localStorage.getItem('lang') || 'ru');
+
+// ── REPLAY animation ──
+function replayAnim() {
+  location.reload();
+}
+
+// ── CONTACT modal ──
+function openContact() { document.getElementById('cm-overlay').classList.add('open'); }
+function closeContact() { document.getElementById('cm-overlay').classList.remove('open'); }
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeContact(); });
+
+// ── AUTO-LOGOUT 5 min ──
+(function(){
+  var _idle;
+  function resetIdle(){
+    clearTimeout(_idle);
+    _idle = setTimeout(function(){ window.location.href = "{{ url_for('logout') }}"; }, 5*60*1000);
+  }
+  ['mousemove','keydown','click','touchstart'].forEach(function(ev){
+    document.addEventListener(ev, resetIdle, true);
+  });
+  resetIdle();
+})();
+
+// ── Bug Report ──
+var _bugCatLogin = 'bug';
+function selBugCatL(btn, cat) {
+  _bugCatLogin = cat;
+  document.querySelectorAll('.bug-cat-l').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel');
+}
+function openBugReport() { document.getElementById('bug-mo-login').classList.add('open'); document.getElementById('bug-ta-l').focus(); }
+function closeBugReport() { document.getElementById('bug-mo-login').classList.remove('open'); }
+document.getElementById('bug-ta-l').addEventListener('input', function(){ document.getElementById('bcc-l').textContent = this.value.length; });
+function submitBugLogin() {
+  var msg = document.getElementById('bug-ta-l').value.trim();
+  if (!msg) { document.getElementById('bug-ta-l').focus(); return; }
+  var btn = document.getElementById('bug-send-l');
+  btn.disabled = true;
+  fetch('/api/bug_report', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({message:msg, category:_bugCatLogin})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){ document.getElementById('bug-ok-l').style.display='block'; document.getElementById('bug-form-l').style.display='none'; setTimeout(closeBugReport,2800); }
+    btn.disabled=false;
+  }).catch(function(){btn.disabled=false;});
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') { closeContact(); closeBugReport(); } });
+</script>
+
+<!-- Bug Report FAB (login page) -->
+<style>
+.bug-fab-l{position:fixed;bottom:22px;right:22px;z-index:300;display:flex;align-items:center;gap:8px;
+  background:rgba(20,20,40,.85);border:1.5px solid rgba(255,107,107,.4);color:rgba(255,160,160,.9);
+  border-radius:32px;padding:9px 18px 9px 13px;cursor:pointer;font-size:13px;font-weight:700;
+  box-shadow:0 4px 20px rgba(255,80,80,.2);transition:all .22s;font-family:inherit;
+  animation:fabpl 3.5s ease-in-out infinite;backdrop-filter:blur(8px)}
+.bug-fab-l:hover{border-color:rgba(255,107,107,.8);color:#ff8888;transform:translateY(-2px);animation:none}
+@keyframes fabpl{0%,100%{box-shadow:0 4px 20px rgba(255,80,80,.2),0 0 0 0 rgba(255,80,80,.3)}50%{box-shadow:0 4px 20px rgba(255,80,80,.2),0 0 0 7px rgba(255,80,80,.0)}}
+.bug-fab-l i{font-size:17px}
+/* Bug modal for login */
+.bug-mo-login{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.55);
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.bug-mo-login.open{display:flex}
+.bug-mc-l{background:var(--card);border:1px solid var(--border);border-radius:22px;
+  padding:26px 24px 20px;width:400px;max-width:96vw;position:relative;
+  box-shadow:0 24px 80px rgba(0,0,0,.4)}
+.bug-mc-l h3{font-size:16px;font-weight:800;color:var(--text);margin:0 0 4px;display:flex;align-items:center;gap:9px}
+.bug-mc-l p{font-size:12px;color:var(--sub);margin:0 0 16px}
+.bug-cat-l{padding:5px 13px;border-radius:20px;border:1px solid var(--border);
+  background:transparent;color:var(--sub);font-size:12px;font-weight:600;cursor:pointer;
+  transition:.15s;font-family:inherit;margin-right:5px;margin-bottom:8px}
+.bug-cat-l:hover,.bug-cat-l.sel{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.5);color:#ff8888}
+.bug-ta-l{width:100%;min-height:110px;resize:vertical;
+  background:var(--ibg);border:1.5px solid var(--iborder);color:var(--text);
+  border-radius:10px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none;
+  transition:border-color .2s;margin-top:8px}
+.bug-ta-l:focus{border-color:rgba(255,107,107,.5)}
+.bug-send-l{width:100%;margin-top:12px;padding:11px;
+  background:linear-gradient(135deg,rgba(220,50,50,.85),rgba(255,100,100,.75));
+  border:1.5px solid rgba(255,100,100,.5);color:#fff;border-radius:10px;
+  font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s}
+.bug-send-l:hover{transform:translateY(-1px)}
+.bug-send-l:disabled{opacity:.5;cursor:default;transform:none}
+.bug-close-l{position:absolute;top:12px;right:14px;background:none;border:1px solid var(--border);
+  color:var(--sub);border-radius:7px;padding:4px 9px;cursor:pointer;font-size:16px;font-family:inherit;line-height:1}
+</style>
+
+<button class="bug-fab-l" onclick="openBugReport()">
+  <i class="bi bi-lightbulb-fill"></i>
+  Нашли баг или неисправность?
+</button>
+
+<div class="bug-mo-login" id="bug-mo-login" onclick="if(event.target===this)closeBugReport()">
+  <div class="bug-mc-l">
+    <button class="bug-close-l" onclick="closeBugReport()">×</button>
+    <h3><span style="font-size:22px">💡</span> Нашли баг или неисправность?</h3>
+    <p>Ваша помощь колоссальна — расскажите что случилось!</p>
+    <div id="bug-form-l">
+      <div>
+        <button class="bug-cat-l sel" onclick="selBugCatL(this,'bug')">🐛 Баг</button>
+        <button class="bug-cat-l" onclick="selBugCatL(this,'equipment')">🔧 Оборудование</button>
+        <button class="bug-cat-l" onclick="selBugCatL(this,'idea')">💡 Идея</button>
+        <button class="bug-cat-l" onclick="selBugCatL(this,'other')">📝 Другое</button>
+      </div>
+      <textarea class="bug-ta-l" id="bug-ta-l" placeholder="Опишите проблему — что случилось, где, когда..." maxlength="2000"></textarea>
+      <div style="font-size:11px;color:var(--sub);text-align:right;margin-top:4px"><span id="bcc-l">0</span>/2000</div>
+      <button class="bug-send-l" id="bug-send-l" onclick="submitBugLogin()">
+        <i class="bi bi-send-fill"></i> Отправить сообщение
+      </button>
+    </div>
+    <div id="bug-ok-l" style="display:none;text-align:center;padding:18px 0;color:#22c55e;font-size:15px;font-weight:700">
+      <span style="font-size:40px;display:block;margin-bottom:10px">✅</span>
+      Спасибо! Отчёт отправлен и летит в Telegram ✈️
+    </div>
+  </div>
+</div>
+</body>
+</html>

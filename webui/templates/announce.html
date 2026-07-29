@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+{% block title %}Объявление — LANDAU{% endblock %}
+
+{% block extra_head %}
+<style>
+.ann-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px 0 60px;
+}
+
+.ann-hero {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.ann-hero h1 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.ann-hero p {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Campus selector */
+.campus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 36px;
+}
+.campus-btn {
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: .15s;
+  color: var(--text);
+}
+.campus-btn:hover {
+  border-color: var(--blue);
+}
+.campus-btn.active {
+  border-color: var(--blue);
+  background: rgba(88,166,255,.1);
+}
+.campus-btn i {
+  font-size: 26px;
+  display: block;
+  margin-bottom: 8px;
+}
+.campus-btn .cb-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.campus-btn .cb-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* Big mic button */
+.mic-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.mic-ring {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+.mic-ring-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--red);
+  opacity: 0;
+  transform: scale(1);
+  pointer-events: none;
+}
+.mic-ring-pulse.active {
+  animation: micPulse 1.4s ease-out infinite;
+}
+@keyframes micPulse {
+  0%   { transform: scale(1);    opacity: .7; }
+  100% { transform: scale(1.55); opacity: 0;  }
+}
+.mic-btn {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  transition: background .2s, transform .12s, box-shadow .2s;
+}
+.mic-btn.idle {
+  background: var(--bg2);
+  border: 3px solid var(--border);
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.mic-btn.idle:hover {
+  background: var(--bg3);
+  border-color: var(--blue);
+  transform: scale(1.04);
+  box-shadow: 0 12px 40px rgba(88,166,255,.2);
+}
+.mic-btn.recording {
+  background: var(--red);
+  border: 3px solid rgba(255,255,255,.2);
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(248,81,73,.5);
+}
+.mic-btn.recording:hover {
+  background: #e03d36;
+}
+.mic-btn.sending {
+  background: var(--bg3);
+  border: 3px solid var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.mic-btn i {
+  font-size: 52px;
+  line-height: 1;
+}
+.mic-btn .mic-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.mic-timer {
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--red);
+  letter-spacing: .05em;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+.mic-timer.hidden { visibility: hidden; }
+
+/* Waveform */
+#ann-wave {
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity .3s;
+}
+#ann-wave.visible { opacity: 1; }
+
+/* Status bar */
+.ann-status {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 13px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+.ann-status.ok    { border-color: rgba(63,185,80,.4);   color: var(--green); background: rgba(63,185,80,.06); }
+.ann-status.error { border-color: rgba(248,81,73,.4);   color: var(--red);   background: rgba(248,81,73,.06); }
+.ann-status.busy  { border-color: rgba(88,166,255,.3);  color: var(--blue);  background: rgba(88,166,255,.06); }
+
+.ann-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.ann-hint a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+/* Volume knob */
+.vol-section {
+  margin-top: 28px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+.vol-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.vol-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.vol-icon { font-size: 20px; color: var(--muted); flex-shrink: 0; }
+.vol-icon.loud { color: var(--orange); }
+.vol-slider-wrap { flex: 1; position: relative; }
+input[type=range].vol-range {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  background: linear-gradient(to right, var(--orange) 0%, var(--orange) var(--pct,47%), var(--bg3) var(--pct,47%));
+  transition: background .05s;
+}
+input[type=range].vol-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--orange);
+  border: 3px solid var(--bg);
+  box-shadow: 0 2px 12px rgba(255,166,87,.5);
+  cursor: grab;
+  transition: transform .1s, box-shadow .1s;
+}
+input[type=range].vol-range::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+  box-shadow: 0 4px 20px rgba(255,166,87,.7);
+}
+input[type=range].vol-range::-moz-range-thumb {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--orange);
+  border: 3px solid var(--bg);
+  box-shadow: 0 2px 12px rgba(255,166,87,.5);
+  cursor: grab;
+}
+.vol-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--orange);
+  min-width: 60px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+}
+
+.https-warn {
+  background: rgba(255,166,87,.08);
+  border: 1px solid rgba(255,166,87,.35);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--orange);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.https-warn a {
+  color: var(--orange);
+  font-weight: 700;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ann-wrap">
+
+  <div class="ann-hero">
+    <h1><i class="bi bi-megaphone-fill" style="color:var(--orange)"></i> Объявление по радио</h1>
+    <p>Выберите кампус — нажмите кнопку — говорите — объявление прозвучит на динамиках</p>
+  </div>
+
+  <!-- HTTPS warning (hidden when already on HTTPS) -->
+  <div class="https-warn" id="https-warn" style="display:none">
+    <i class="bi bi-shield-exclamation" style="font-size:20px"></i>
+    <div>
+      Микрофон работает только по <strong>HTTPS</strong>.
+      Откройте сайт по адресу:
+      <a id="https-link" href="#"></a>
+    </div>
+  </div>
+
+  <!-- Campus selector -->
+  <div class="campus-grid">
+    <button class="campus-btn" data-campus="nctk" onclick="selectCampus('nctk',this)">
+      <i class="bi bi-building"></i>
+      <div class="cb-name">Narimanov</div>
+      <div class="cb-sub">Нариманов кампус</div>
+    </button>
+    <button class="campus-btn active" data-campus="all" onclick="selectCampus('all',this)">
+      <i class="bi bi-broadcast" style="color:var(--blue)"></i>
+      <div class="cb-name">Все кампусы</div>
+      <div class="cb-sub">Narimanov + Gənclik</div>
+    </button>
+    <button class="campus-btn" data-campus="vm1" onclick="selectCampus('vm1',this)">
+      <i class="bi bi-building"></i>
+      <div class="cb-name">Gənclik</div>
+      <div class="cb-sub">Гянджлик кампус</div>
+    </button>
+  </div>
+
+  <!-- Big mic button -->
+  <div class="mic-stage">
+    <div class="mic-ring">
+      <div class="mic-ring-pulse" id="ann-pulse"></div>
+      <button class="mic-btn idle" id="ann-mic" onclick="annToggle()">
+        <i class="bi bi-mic-fill" id="ann-mic-icon"></i>
+        <span class="mic-label" id="ann-mic-label">Нажмите</span>
+      </button>
+    </div>
+
+    <div class="mic-timer hidden" id="ann-timer">0:00</div>
+
+    <canvas id="ann-wave" width="320" height="48"></canvas>
+  </div>
+
+  <!-- Status -->
+  <div class="ann-status" id="ann-status">
+    <i class="bi bi-info-circle"></i>
+    <span>Выберите кампус и нажмите кнопку микрофона</span>
+  </div>
+
+  <div class="ann-hint">
+    Максимальная длительность — 3 минуты.<br>
+    Объявление воспроизведётся немедленно после отправки.
+  </div>
+
+  <!-- Volume control -->
+  <div class="vol-section">
+    <div class="vol-title">
+      <i class="bi bi-volume-up-fill" style="color:var(--orange)"></i>
+      Громкость объявления
+    </div>
+    <div class="vol-row">
+      <i class="bi bi-volume-down vol-icon"></i>
+      <div class="vol-slider-wrap">
+        <input type="range" class="vol-range" id="ann-vol-slider"
+               min="50" max="160" value="120"
+               oninput="annVolChange(this.value)">
+      </div>
+      <i class="bi bi-volume-up vol-icon loud"></i>
+      <div class="vol-value" id="ann-vol-val">120</div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var annCampus = 'all';
+var annVolume = 120;
+var annRec = null, annChunks = [], annTimer = null, annSecs = 0;
+var annWaveAnim = null, annWaveCtx = null, annAnalyser = null, annStream = null;
+
+function annVolChange(v) {
+  annVolume = parseInt(v);
+  document.getElementById('ann-vol-val').textContent = annVolume;
+  var pct = ((annVolume - 50) / 110 * 100).toFixed(1) + '%';
+  document.getElementById('ann-vol-slider').style.setProperty('--pct', pct);
+}
+// Init slider fill
+(function(){ annVolChange(120); })();
+
+// Check HTTPS
+(function(){
+  if(location.protocol !== 'https:'){
+    var warn = document.getElementById('https-warn');
+    var link = document.getElementById('https-link');
+    var httpsUrl = 'https://' + location.hostname + ':' + location.port + location.pathname;
+    link.href = httpsUrl;
+    link.textContent = httpsUrl;
+    warn.style.display = 'flex';
+  }
+})();
+
+function selectCampus(campus, btn) {
+  annCampus = campus;
+  document.querySelectorAll('.campus-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function annSetStatus(msg, type) {
+  var el = document.getElementById('ann-status');
+  el.className = 'ann-status' + (type ? ' ' + type : '');
+  var icons = {ok:'bi-check-circle-fill', error:'bi-exclamation-triangle-fill', busy:'bi-hourglass-split', '':'bi-info-circle'};
+  var icon = icons[type||''] || 'bi-info-circle';
+  el.innerHTML = '<i class="bi ' + icon + '"></i><span>' + msg + '</span>';
+}
+
+function annToggle() {
+  if(annRec && annRec.state === 'recording') {
+    annStop();
+    return;
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    annSetStatus('Микрофон недоступен: откройте сайт по HTTPS (ссылка выше)', 'error');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream){
+    annStream = stream;
+    var mime = ['audio/webm','audio/ogg','audio/mp4'].find(function(t){
+      try{return MediaRecorder.isTypeSupported(t);}catch(e){return false;}
+    }) || '';
+    annRec = new MediaRecorder(stream, mime ? {mimeType: mime} : {});
+    annChunks = [];
+    annRec.ondataavailable = function(e){ if(e.data.size > 0) annChunks.push(e.data); };
+    annRec.start(200);
+
+    // UI → recording
+    var btn = document.getElementById('ann-mic');
+    btn.className = 'mic-btn recording';
+    document.getElementById('ann-mic-icon').className = 'bi bi-stop-fill';
+    document.getElementById('ann-mic-label').textContent = 'Стоп';
+    document.getElementById('ann-pulse').classList.add('active');
+    document.getElementById('ann-timer').classList.remove('hidden');
+    annSetStatus('Идёт запись… Нажмите ещё раз чтобы отправить', 'busy');
+
+    // Timer
+    annSecs = 0;
+    annTimer = setInterval(function(){
+      annSecs++;
+      var m = Math.floor(annSecs/60), s = annSecs % 60;
+      document.getElementById('ann-timer').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+      if(annSecs >= 180) annStop();
+    }, 1000);
+
+    // Waveform
+    var ac = new (window.AudioContext || window.webkitAudioContext)();
+    annAnalyser = ac.createAnalyser();
+    annAnalyser.fftSize = 64;
+    ac.createMediaStreamSource(stream).connect(annAnalyser);
+    var canvas = document.getElementById('ann-wave');
+    canvas.classList.add('visible');
+    annWaveCtx = canvas.getContext('2d');
+    var buf = new Uint8Array(annAnalyser.frequencyBinCount);
+    function draw(){
+      if(!annAnalyser) return;
+      annWaveAnim = requestAnimationFrame(draw);
+      annAnalyser.getByteFrequencyData(buf);
+      var W = canvas.width, H = canvas.height;
+      annWaveCtx.clearRect(0,0,W,H);
+      var barW = Math.floor(W / buf.length) - 1;
+      buf.forEach(function(v, i){
+        var h = Math.max(4, (v / 255) * H);
+        annWaveCtx.fillStyle = 'rgba(248,81,73,' + (0.4 + v/255*0.6) + ')';
+        annWaveCtx.beginPath();
+        annWaveCtx.roundRect(i*(barW+1), H/2-h/2, barW, h, 2);
+        annWaveCtx.fill();
+      });
+    }
+    draw();
+
+  }).catch(function(err){
+    annSetStatus('Нет доступа к микрофону: ' + (err.message || err), 'error');
+  });
+}
+
+function annStop() {
+  if(!annRec || annRec.state !== 'recording') return;
+
+  // UI → sending
+  var btn = document.getElementById('ann-mic');
+  btn.className = 'mic-btn sending';
+  document.getElementById('ann-mic-icon').className = 'bi bi-cloud-upload';
+  document.getElementById('ann-mic-label').textContent = 'Отправка…';
+  document.getElementById('ann-pulse').classList.remove('active');
+  clearInterval(annTimer);
+  cancelAnimationFrame(annWaveAnim);
+  annAnalyser = null;
+  document.getElementById('ann-wave').classList.remove('visible');
+  if(annWaveCtx) annWaveCtx.clearRect(0,0,320,48);
+  if(annStream) annStream.getTracks().forEach(function(t){ t.stop(); });
+  annSetStatus('Отправляем на кампус…', 'busy');
+
+  annRec.onstop = function(){
+    var mime = annRec.mimeType || 'audio/webm';
+    var blob = new Blob(annChunks, {type: mime});
+    var fd = new FormData();
+    fd.append('audio', blob, 'announce.webm');
+    fd.append('campuses', annCampus);
+    fd.append('volume', annVolume);
+    fetch('/api/announce', {method:'POST', body:fd})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        annRec = null; annChunks = [];
+        var btn2 = document.getElementById('ann-mic');
+        btn2.className = 'mic-btn idle';
+        document.getElementById('ann-mic-icon').className = 'bi bi-mic-fill';
+        document.getElementById('ann-mic-label').textContent = 'Нажмите';
+        document.getElementById('ann-timer').classList.add('hidden');
+        document.getElementById('ann-timer').textContent = '0:00';
+        if(d.ok){
+          var campus = {'nctk':'Narimanov','vm1':'Gənclik','all':'Narimanov + Gənclik'}[annCampus] || annCampus;
+          annSetStatus('✓ Объявление отправлено на ' + campus, 'ok');
+        } else {
+          var errMsg = d.results ? Object.values(d.results).filter(function(v){return v!==true;}).join(', ') : 'Ошибка';
+          annSetStatus('Ошибка: ' + errMsg, 'error');
+        }
+      })
+      .catch(function(e){
+        annRec = null;
+        var btn3 = document.getElementById('ann-mic');
+        btn3.className = 'mic-btn idle';
+        document.getElementById('ann-mic-icon').className = 'bi bi-mic-fill';
+        document.getElementById('ann-mic-label').textContent = 'Нажмите';
+        document.getElementById('ann-timer').classList.add('hidden');
+        annSetStatus('Сетевая ошибка: ' + e, 'error');
+      });
+  };
+  annRec.stop();
+}
+</script>
+{% endblock %}

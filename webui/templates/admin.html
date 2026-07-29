@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+{% block title %}Пользователи — Campus Audio{% endblock %}
+
+{% block extra_head %}
+<style>
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);
+  display:none;align-items:center;justify-content:center;z-index:500;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:flex}
+.modal-box{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:16px;padding:32px 36px;width:100%;max-width:420px;
+  box-shadow:0 0 60px rgba(0,0,0,.5);
+}
+.modal-box h3{font-size:18px;font-weight:800;margin:0 0 24px}
+.input-group-row{display:flex;gap:10px}
+.input-group-row .form-control{flex:1}
+
+.role-pill{
+  display:inline-flex;padding:3px 12px;border-radius:20px;
+  font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;
+  cursor:default;
+}
+.role-admin {background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.35)}
+.role-user  {background:rgba(88,166,255,.1);color:var(--blue);border:1px solid rgba(88,166,255,.25)}
+.role-viewer{background:rgba(88,166,255,.1);color:var(--blue);border:1px solid rgba(88,166,255,.25)}
+.role-guest {background:rgba(139,148,158,.1);color:var(--muted);border:1px solid rgba(139,148,158,.25)}
+
+.action-form{display:inline}
+.pass-row{display:flex;align-items:center;gap:8px}
+.pass-row .form-control{width:140px;padding:5px 10px;font-size:13px}
+.role-row{display:flex;align-items:center;gap:6px}
+
+/* Silence mode toggle */
+.silence-banner{
+  background:linear-gradient(135deg,rgba(248,81,73,.12),rgba(248,81,73,.05));
+  border:1px solid rgba(248,81,73,.4);border-radius:14px;
+  padding:14px 20px;display:flex;align-items:center;gap:14px;
+  margin-bottom:20px;
+}
+.silence-banner.off{
+  background:rgba(63,185,80,.05);border-color:rgba(63,185,80,.25);
+}
+
+/* Machines table */
+.machine-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:13px}
+.machine-row:last-child{border-bottom:none}
+.machine-host{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+.machine-name{font-weight:600;flex:1;min-width:0}
+.machine-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* Online sessions */
+.session-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.session-row:last-child{border-bottom:none}
+.page-chip{
+  font-size:10px;font-family:'JetBrains Mono',monospace;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:4px;padding:1px 6px;color:var(--muted);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Silence mode ──────────────────────────────── -->
+<div id="silence-banner" class="silence-banner off">
+  <div style="font-size:22px" id="silence-icon">🔊</div>
+  <div style="flex:1">
+    <div style="font-weight:700;font-size:14px" id="silence-label">Режим тишины выключен</div>
+    <div class="text-muted" style="font-size:12px" id="silence-desc">Музыка доступна для всех пользователей</div>
+  </div>
+  <button class="btn btn-sm" id="silence-btn" onclick="toggleSilence()">
+    <i class="bi bi-volume-mute-fill"></i> Включить тишину
+  </button>
+</div>
+
+<!-- ── Header ──────────────────────────────────────── -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">Пользователи</h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">
+      Управление доступом к веб-интерфейсу
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a href="{{ url_for('admin_activity') }}" class="btn btn-ghost">
+      <i class="bi bi-journal-text"></i> Лог активности
+    </a>
+    <button class="btn btn-primary" onclick="openModal()">
+      <i class="bi bi-person-plus-fill"></i> Добавить
+    </button>
+  </div>
+</div>
+
+<!-- ── Online sessions ──────────────────────────────── -->
+<div class="card mb-4" id="online-card">
+  <div class="card-hd">
+    <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px var(--green)"></span>
+    <span class="card-hd-title">Онлайн сейчас</span>
+    <span class="text-muted" style="margin-left:auto;font-size:12px" id="online-count">загрузка…</span>
+    <button class="btn btn-ghost btn-sm" onclick="loadOnline()" style="margin-left:8px" title="Обновить">
+      <i class="bi bi-arrow-clockwise"></i>
+    </button>
+  </div>
+  <div id="online-list" style="padding:8px 16px;min-height:40px">
+    <div class="text-muted" style="font-size:13px;padding:8px 0">Загрузка…</div>
+  </div>
+</div>
+
+<!-- ── Users table ──────────────────────────────────── -->
+<div class="card">
+  <div class="card-hd">
+    <i class="bi bi-people-fill text-blue"></i>
+    <span class="card-hd-title">Все пользователи</span>
+    <span class="text-muted" style="margin-left:auto;font-size:12px">{{ users|length }} пользователей</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>Логин</th>
+          <th style="width:180px">Роль</th>
+          <th style="width:90px;text-align:center">Гимн</th>
+          <th style="width:80px;text-align:center">Блок</th>
+          <th>Создан</th>
+          <th style="width:230px">Сменить пароль</th>
+          <th style="width:60px;text-align:center">Удалить</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr {% if u.is_blocked %}style="opacity:.55"{% endif %}>
+          <td class="text-muted mono">{{ u.id }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              {% if u.is_blocked %}
+                <i class="bi bi-person-x-fill" style="font-size:20px;color:var(--red)"></i>
+              {% else %}
+                <i class="bi bi-person-circle" style="font-size:20px;color:var(--muted)"></i>
+              {% endif %}
+              <span style="font-weight:600">{{ u.username }}</span>
+              {% if u.id == current_user.id %}
+                <span style="font-size:11px;color:var(--muted)">(вы)</span>
+              {% endif %}
+              {% if u.is_blocked %}
+                <span style="font-size:11px;color:var(--red);font-weight:700">ЗАБЛОКИРОВАН</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if u.id == current_user.id %}
+              <span class="role-pill role-{{ u.role }}">{{ u.role }}</span>
+            {% else %}
+            <form class="action-form" method="POST"
+                  action="{{ url_for('set_role', uid=u.id) }}">
+              <div class="role-row">
+                <select name="role" class="form-select"
+                        style="padding:4px 8px;font-size:12px;font-family:'JetBrains Mono',monospace;width:90px">
+                  <option value="guest"  {% if u.role=='guest'  %}selected{% endif %}>guest</option>
+                  <option value="user"   {% if u.role in ('user','viewer') %}selected{% endif %}>user</option>
+                  <option value="staff"  {% if u.role=='staff'  %}selected{% endif %}>staff</option>
+                  <option value="admin"  {% if u.role=='admin'  %}selected{% endif %}>admin</option>
+                </select>
+                <button type="submit" class="btn btn-ghost btn-sm" title="Сохранить роль">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </div>
+            </form>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if u.role == 'admin' %}
+              <span title="Администратор — всегда может включать гимн"
+                    style="color:var(--purple);font-size:18px"><i class="bi bi-shield-fill-check"></i></span>
+            {% else %}
+            <form class="action-form" method="POST"
+                  action="{{ url_for('toggle_himn', uid=u.id) }}">
+              <button type="submit"
+                      title="{% if u.can_himn %}Отозвать право на гимн{% else %}Выдать право на гимн{% endif %}"
+                      style="background:{% if u.can_himn %}rgba(188,130,255,.15){% else %}var(--bg3){% endif %};
+                             border:1px solid {% if u.can_himn %}rgba(188,130,255,.5){% else %}var(--border){% endif %};
+                             border-radius:8px;padding:4px 10px;cursor:pointer;
+                             color:{% if u.can_himn %}#bc82ff{% else %}var(--muted){% endif %};font-size:12px;
+                             display:inline-flex;align-items:center;gap:4px">
+                <i class="bi {% if u.can_himn %}bi-music-note-beamed{% else %}bi-music-note{% endif %}"></i>
+                {% if u.can_himn %}вкл{% else %}выкл{% endif %}
+              </button>
+            </form>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if u.id != current_user.id %}
+            <form class="action-form" method="POST"
+                  action="{{ url_for('toggle_block', uid=u.id) }}"
+                  onsubmit="return confirm('{% if u.is_blocked %}Разблокировать{% else %}Заблокировать{% endif %} {{ u.username }}?')">
+              <button type="submit"
+                      title="{% if u.is_blocked %}Разблокировать{% else %}Заблокировать{% endif %}"
+                      style="background:{% if u.is_blocked %}rgba(63,185,80,.12){% else %}rgba(248,81,73,.08){% endif %};
+                             border:1px solid {% if u.is_blocked %}rgba(63,185,80,.3){% else %}rgba(248,81,73,.25){% endif %};
+                             border-radius:8px;padding:4px 10px;cursor:pointer;
+                             color:{% if u.is_blocked %}var(--green){% else %}var(--red){% endif %};font-size:12px;
+                             display:inline-flex;align-items:center;gap:4px">
+                <i class="bi {% if u.is_blocked %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}"></i>
+                {% if u.is_blocked %}разблок{% else %}блок{% endif %}
+              </button>
+            </form>
+            {% else %}
+            <span class="text-muted" style="font-size:12px">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted mono" style="font-size:12px">{{ u.created_at }}</td>
+          <td>
+            <form class="action-form" method="POST"
+                  action="{{ url_for('reset_passwd', uid=u.id) }}">
+              <div class="pass-row">
+                <input type="password" name="password" class="form-control"
+                       placeholder="новый пароль" autocomplete="new-password" minlength="4">
+                <button type="submit" class="btn btn-ghost btn-sm">
+                  <i class="bi bi-key"></i>
+                </button>
+              </div>
+            </form>
+          </td>
+          <td style="text-align:center">
+            {% if u.id != current_user.id %}
+            <form class="action-form" method="POST"
+                  action="{{ url_for('delete_user', uid=u.id) }}"
+                  onsubmit="return confirm('Удалить пользователя {{ u.username }}?')">
+              <button type="submit" class="btn btn-danger btn-sm">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+            {% else %}
+            <span class="text-muted" style="font-size:12px">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Roles info ──────────────────────────────────── -->
+<div class="card mt-4" style="background:rgba(88,166,255,.03)">
+  <div class="card-body" style="padding:16px 20px">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">Уровни доступа</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="role-pill role-guest" style="min-width:58px;justify-content:center">guest</span>
+        <span class="text-muted">Только просмотр — кнопки плеера, гимна и громкости недоступны</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="role-pill role-user" style="min-width:58px;justify-content:center">user</span>
+        <span class="text-muted">Музыка: включать/выключать треки, громкость, мут — гимн недоступен</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="role-pill" style="min-width:58px;justify-content:center;background:rgba(255,166,87,.12);color:var(--orange);border:1px solid rgba(255,166,87,.35)">staff</span>
+        <span class="text-muted">Музыка + гимн: все функции плеера включая национальный гимн</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="role-pill role-admin" style="min-width:58px;justify-content:center">admin</span>
+        <span class="text-muted">Полный доступ: всё включая управление пользователями и веб-терминал</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Telegram settings ──────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-hd">
+    <i class="bi bi-telegram" style="color:#29a0d3"></i>
+    <span class="card-hd-title">Telegram уведомления</span>
+    <span class="text-muted" style="margin-left:auto;font-size:12px" id="tg-save-status"></span>
+  </div>
+  <div class="card-body" style="padding:16px 20px">
+    <div class="mb-3">
+      <label class="form-label" style="font-size:12px">
+        Chat ID(s) для уведомлений
+        <span class="text-muted">(через запятую; пусто = из config.env)</span>
+      </label>
+      <input type="text" id="tg-chat-ids" class="form-control"
+             placeholder="-100xxxxxxxxxx, -100yyyyyyyyyy"
+             style="font-family:'JetBrains Mono',monospace;font-size:13px">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      {% for key, label, desc in [
+        ('tg_notify_himn',   '🎼 Гимн',          'Уведомление когда кто-то запускает государственный гимн'),
+        ('tg_notify_upload', '📤 Загрузка трека', 'Новый файл добавлен в библиотеку'),
+        ('tg_notify_users',  '👥 Пользователи',  'Создан или удалён пользователь'),
+        ('tg_notify_play',   '▶️ Музыка',         'Каждое включение трека (может быть много)'),
+      ] %}
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <input type="checkbox" class="tg-toggle" data-key="{{ key }}" style="width:16px;height:16px">
+        <span><strong>{{ label }}</strong> — {{ desc }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveTgSettings()">
+        <i class="bi bi-save"></i> Сохранить
+      </button>
+      <button class="btn btn-ghost" onclick="testTgNotify()">
+        <i class="bi bi-send"></i> Тест уведомление
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add user modal ─────────────────────────────── -->
+<div class="modal-overlay" id="add-modal" onclick="maybeClose(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3><i class="bi bi-person-plus-fill text-blue" style="margin-right:8px"></i>Новый пользователь</h3>
+    <form method="POST" action="{{ url_for('add_user') }}">
+      <div class="mb-3">
+        <label class="form-label">Логин</label>
+        <input type="text" name="username" class="form-control" required
+               placeholder="например: director" autocomplete="off">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Пароль</label>
+        <input type="password" name="password" class="form-control" required
+               placeholder="минимум 4 символа" autocomplete="new-password" minlength="4">
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Роль</label>
+        <select name="role" class="form-select">
+          <option value="guest">guest — только просмотр</option>
+          <option value="user" selected>user — управление плеером</option>
+          <option value="staff">staff — музыка + гимн</option>
+          <option value="admin">admin — полный доступ</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-person-check-fill"></i> Создать
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal()  { document.getElementById('add-modal').classList.add('open') }
+function closeModal() { document.getElementById('add-modal').classList.remove('open') }
+function maybeClose(e) { if(e.target===e.currentTarget) closeModal() }
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal() });
+
+// ── Silence mode ──────────────────────────────────
+let _silenceActive = false;
+
+function loadSilence() {
+  fetch('/api/settings/silence').then(r=>r.json()).then(d=>{
+    if (d.ok) applySilenceUI(d.active);
+  }).catch(()=>{});
+}
+
+function applySilenceUI(active) {
+  _silenceActive = active;
+  const banner = document.getElementById('silence-banner');
+  const icon   = document.getElementById('silence-icon');
+  const label  = document.getElementById('silence-label');
+  const desc   = document.getElementById('silence-desc');
+  const btn    = document.getElementById('silence-btn');
+  if (active) {
+    banner.classList.remove('off');
+    icon.textContent  = '🔇';
+    label.textContent = 'Режим тишины ВКЛЮЧЁН';
+    desc.textContent  = 'Музыка заблокирована для всех кроме администраторов';
+    btn.innerHTML = '<i class="bi bi-volume-up-fill"></i> Выключить тишину';
+    btn.style.background = 'rgba(248,81,73,.15)';
+    btn.style.color = 'var(--red)';
+    btn.style.border = '1px solid rgba(248,81,73,.4)';
+  } else {
+    banner.classList.add('off');
+    icon.textContent  = '🔊';
+    label.textContent = 'Режим тишины выключен';
+    desc.textContent  = 'Музыка доступна для всех пользователей';
+    btn.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Включить тишину';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.border = '';
+  }
+}
+
+function toggleSilence() {
+  fetch('/api/settings/silence', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({active: !_silenceActive})
+  }).then(r=>r.json()).then(d=>{
+    if (d.ok) applySilenceUI(d.active);
+  }).catch(()=>alert('Ошибка'));
+}
+
+loadSilence();
+
+// ── Online sessions ───────────────────────────────
+function loadOnline() {
+  fetch('/api/online').then(r=>r.json()).then(d=>{
+    if (!d.ok) return;
+    const list = document.getElementById('online-list');
+    const cnt  = document.getElementById('online-count');
+    cnt.textContent = d.users.length + ' активных';
+    if (!d.users.length) {
+      list.innerHTML = '<div class="text-muted" style="font-size:13px;padding:8px 0">Нет активных сессий за последние 15 минут</div>';
+      return;
+    }
+    list.innerHTML = d.users.map(s => {
+      const ago = _timeAgo(s.last_seen);
+      const pageChip = `<span class="page-chip">${escHtml(s.page)}</span>`;
+      const kickBtn = s.id != {{ current_user.id }} ?
+        `<button class="btn btn-ghost btn-sm" onclick="kickUser(${s.id},'${escHtml(s.username)}')"
+                 style="padding:3px 8px;font-size:11px;color:var(--red)" title="Выкинуть сессию">
+           <i class="bi bi-box-arrow-right"></i> выкинуть
+         </button>` : '';
+      return `<div class="session-row">
+        <i class="bi bi-circle-fill" style="font-size:8px;color:var(--green)"></i>
+        <span style="font-weight:600;font-size:13px;min-width:100px">${escHtml(s.username)}</span>
+        <span class="role-pill role-${s.role}" style="font-size:10px;padding:1px 8px">${s.role}</span>
+        ${pageChip}
+        <span class="text-muted" style="font-size:11px;margin-left:auto">${ago}</span>
+        ${kickBtn}
+      </div>`;
+    }).join('');
+  }).catch(()=>{});
+}
+
+function kickUser(uid, name) {
+  if (!confirm(`Выкинуть ${name} из системы?`)) return;
+  fetch(`/admin/users/kick/${uid}`, {method:'POST'})
+    .then(r=>r.json()).then(d=>{
+      if (d.ok) { loadOnline(); }
+      else alert('Ошибка: ' + (d.error||'?'));
+    });
+}
+
+function _timeAgo(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts.replace(' ','T'))) / 1000);
+  if (diff < 60) return `${diff}с назад`;
+  if (diff < 3600) return `${Math.floor(diff/60)}м назад`;
+  return `${Math.floor(diff/3600)}ч назад`;
+}
+
+loadOnline();
+setInterval(loadOnline, 30000);
+
+// ── Telegram settings ──────────────────────────────
+fetch('/api/settings/tg').then(r=>r.json()).then(d=>{
+  if(!d.ok) return;
+  const s = d.settings;
+  document.getElementById('tg-chat-ids').value = s.tg_chat_ids || '';
+  document.querySelectorAll('.tg-toggle').forEach(cb=>{
+    cb.checked = (s[cb.dataset.key] === '1');
+  });
+});
+
+function saveTgSettings(){
+  const data = {tg_chat_ids: document.getElementById('tg-chat-ids').value.trim()};
+  document.querySelectorAll('.tg-toggle').forEach(cb=>{
+    data[cb.dataset.key] = cb.checked ? '1' : '0';
+  });
+  fetch('/api/settings/tg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(d=>{
+      const st=document.getElementById('tg-save-status');
+      st.textContent = d.ok ? '✓ Сохранено' : '✗ Ошибка';
+      st.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+      setTimeout(()=>st.textContent='', 3000);
+    });
+}
+
+function testTgNotify(){
+  fetch('/api/tg/test',{method:'POST'}).then(r=>r.json()).then(d=>{
+    alert(d.ok ? '✅ Тест отправлен' : '❌ ' + (d.error||'Ошибка'));
+  }).catch(()=>alert('Нет связи'));
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+</script>
+{% endblock %}

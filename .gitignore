@@ -1,0 +1,30 @@
+# Секреты — никогда не коммитить
+.env
+bots/*/config.env
+machines/nctk/bot/config.env
+**/cron_notify.env
+
+# Логи и данные
+remote-logs/
+*.log
+*.xlsx
+
+# Временные файлы
+*.tmp
+__pycache__/
+*.pyc
+projects/campus-secrets/
+*.zip
+
+# Данные БД и загрузки (на сервере, бэкапятся отдельно)
+data/webui/webui.db
+data/webui/avatars/
+data/webui/voices/
+data/webui/announces/
+data/helpdesk/helpdesk.db
+data/helpdesk/uploads/
+
+# Бэкапы и временные файлы
+*.bak
+*.bak2
+*_t.tmp.png

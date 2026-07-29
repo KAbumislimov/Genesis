@@ -1,0 +1,17 @@
+[Unit]
+Description=Telegram campus bot — nctk
+After=network-online.target campus-mpv.service
+Wants=network-online.target campus-mpv.service
+
+[Service]
+User=nctk
+Group=nctk
+WorkingDirectory=/home/nctk/telegram-campus-bot
+ExecStart=/usr/bin/python3 -u /home/nctk/telegram-campus-bot/bot.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

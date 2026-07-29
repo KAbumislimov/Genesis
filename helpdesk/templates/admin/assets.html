@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Активы — LANDAU Admin{% endblock %}
+{% block header_nav %}
+<a href="/admin/dashboard" class="btn btn-ghost btn-sm"><i class="bi bi-list-ul"></i> Заявки</a>
+<a href="/admin/logout" class="btn btn-ghost btn-sm"><i class="bi bi-box-arrow-right"></i> Выход</a>
+{% endblock %}
+{% block content %}
+<div class="container-wide">
+
+  <h1 style="font-size:22px;font-weight:800;margin-bottom:20px">🗂 База IT-активов</h1>
+
+  <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
+
+    <!-- Категории -->
+    <div>
+      <div class="card">
+        <div class="card-title">Категории</div>
+        <ul style="list-style:none;margin-bottom:16px" id="catList">
+          {% for c in cats %}
+          <li style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="cursor:pointer;color:var(--text)" onclick="filterByCat('{{ c.id }}','{{ c.name }}')" id="cat-{{ c.id }}">
+              <i class="bi bi-folder2" style="color:var(--accent);margin-right:6px"></i>{{ c.name }}
+            </span>
+            <button class="btn btn-ghost btn-sm" style="color:var(--red);border:none;padding:2px 6px" onclick="delCat({{ c.id }})">✕</button>
+          </li>
+          {% endfor %}
+        </ul>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="newCatName" placeholder="Новая категория" style="flex:1">
+          <button class="btn btn-primary btn-sm" onclick="addCat()"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Активы -->
+    <div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+          <div class="card-title" style="margin:0" id="assetTitle">Все активы</div>
+          <button class="btn btn-primary btn-sm" onclick="showAddAsset()"><i class="bi bi-plus-lg"></i> Добавить</button>
+        </div>
+
+        <!-- Форма добавления -->
+        <div id="addForm" style="display:none;padding:20px;border-bottom:1px solid var(--border);background:var(--bg3)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label>Категория *</label>
+              <select id="f_cat">
+                <option value="">— выбрать —</option>
+                {% for group_label, items in cat_groups %}
+                <optgroup label="{{ group_label }}">
+                  {% for az_name, full_name in items %}
+                  {% set cat = cats|selectattr('name','equalto',full_name)|first %}
+                  {% if cat %}<option value="{{ cat.id }}">{{ az_name }}</option>{% endif %}
+                  {% endfor %}
+                </optgroup>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Кампус (если фиксирован)</label>
+              <select id="f_campus">
+                <option value="">Любой</option>
+                {% for c in campuses %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Наименование *</label>
+              <input type="text" id="f_name" placeholder="HP ProBook 450">
+            </div>
+            <div class="form-group">
+              <label>Модель</label>
+              <input type="text" id="f_model" placeholder="G8, v3, E5-575…">
+            </div>
+            <div class="form-group">
+              <label>Инвентарный №</label>
+              <input type="text" id="f_inv" placeholder="INV-2024-001">
+            </div>
+            <div class="form-group">
+              <label>Серийный №</label>
+              <input type="text" id="f_serial" placeholder="SN12345678">
+            </div>
+            <div class="form-group">
+              <label>Part Number</label>
+              <input type="text" id="f_part" placeholder="5CD123ABCD">
+            </div>
+            <div class="form-group">
+              <label>Примечание</label>
+              <input type="text" id="f_notes" placeholder="Например: кабинет 204">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-success" onclick="addAsset()"><i class="bi bi-check"></i> Сохранить</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('addForm').style.display='none'">Отмена</button>
+          </div>
+        </div>
+
+        <!-- Список -->
+        <div class="table-wrap">
+          <table id="assetTable">
+            <thead>
+              <tr>
+                <th>Категория</th>
+                <th>Наименование</th>
+                <th>Модель</th>
+                <th>Инв. №</th>
+                <th>Серийный №</th>
+                <th>Part №</th>
+                <th>Кампус</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="assetBody">
+              {% for a in assets %}
+              <tr data-cat="{{ a.cat_id }}">
+                <td style="color:var(--muted);font-size:12px">{{ a.cat_name }}</td>
+                <td><strong>{{ a.name }}</strong>{% if a.notes %}<div style="font-size:11px;color:var(--muted)">{{ a.notes }}</div>{% endif %}</td>
+                <td style="font-size:13px;color:var(--muted)">{{ a.model or '—' }}</td>
+                <td style="font-family:monospace;font-size:13px">{{ a.inv_code or '—' }}</td>
+                <td style="font-family:monospace;font-size:13px">{{ a.serial or '—' }}</td>
+                <td style="font-family:monospace;font-size:13px">{{ a.part_num or '—' }}</td>
+                <td style="font-size:13px">{{ a.campus or '—' }}</td>
+                <td>
+                  <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="delAsset({{ a.id }},this)">✕</button>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Активы не добавлены</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let activeCat = null;
+
+function filterByCat(id, name) {
+  activeCat = id;
+  document.getElementById('assetTitle').textContent = '📁 ' + name;
+  document.querySelectorAll('#assetBody tr').forEach(tr => {
+    tr.style.display = (tr.dataset.cat == id) ? '' : 'none';
+  });
+}
+
+function showAddAsset() {
+  const f = document.getElementById('addForm');
+  f.style.display = f.style.display === 'none' ? '' : 'none';
+  if (activeCat) document.getElementById('f_cat').value = activeCat;
+}
+
+function addCat() {
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) return;
+  fetch('/admin/api/categories', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name})
+  }).then(r=>r.json()).then(d => {
+    if (d.ok) location.reload();
+    else alert(d.error);
+  });
+}
+
+function delCat(id) {
+  if (!confirm('Удалить категорию и все её активы?')) return;
+  fetch('/admin/api/categories/'+id, {method:'DELETE'})
+    .then(()=>location.reload());
+}
+
+function addAsset() {
+  const d = {
+    cat_id:   document.getElementById('f_cat').value,
+    name:     document.getElementById('f_name').value.trim(),
+    model:    document.getElementById('f_model').value.trim(),
+    inv_code: document.getElementById('f_inv').value.trim(),
+    serial:   document.getElementById('f_serial').value.trim(),
+    part_num: document.getElementById('f_part').value.trim(),
+    campus:   document.getElementById('f_campus').value,
+    notes:    document.getElementById('f_notes').value.trim(),
+  };
+  if (!d.cat_id || !d.name) { alert('Укажите категорию и наименование'); return; }
+  fetch('/admin/api/assets', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(d)
+  }).then(r=>r.json()).then(r => {
+    if (r.ok) location.reload();
+    else alert(r.error);
+  });
+}
+
+function delAsset(id, btn) {
+  if (!confirm('Удалить актив?')) return;
+  fetch('/admin/api/assets/'+id, {method:'DELETE'})
+    .then(()=>btn.closest('tr').remove());
+}
+</script>
+{% endblock %}

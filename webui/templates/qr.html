@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}<span data-i18n="qr.title">QR-код для входа</span> — LANDAU{% endblock %}
+
+{% block content %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+            min-height:70vh;gap:24px;text-align:center">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0" data-i18n="qr.title">QR-код для входа</h2>
+    <div class="text-muted" style="font-size:13px;margin-top:6px" data-i18n="qr.desc">
+      Отсканируйте камерой телефона для быстрого доступа к сайту
+    </div>
+  </div>
+
+  <div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+    <img src="{{ url_for('qr_image') }}" alt="QR Code"
+         style="width:280px;height:280px;display:block;border-radius:4px">
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+              padding:14px 24px;font-family:'JetBrains Mono',monospace;font-size:14px;
+              color:var(--blue);max-width:480px;word-break:break-all">
+    {{ site_url }}
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+    <button onclick="window.print()" class="btn btn-ghost">
+      <i class="bi bi-printer-fill"></i> <span data-i18n="qr.print">Распечатать</span>
+    </button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">
+      <i class="bi bi-arrow-left"></i> <span data-i18n="qr.home">На главную</span>
+    </a>
+  </div>
+
+  <div class="text-muted" style="font-size:12px">
+    <i class="bi bi-shield-check"></i> <span data-i18n="qr.secure">Ссылка ведёт напрямую на ваш сервер — никаких внешних сервисов</span>
+  </div>
+</div>
+
+<style>
+@media print{
+  .top-nav,.contact-float,.cm-bg,#chat-widget{display:none!important}
+  body{background:#fff!important}
+  img{width:300px!important;height:300px!important}
+}
+</style>
+{% endblock %}

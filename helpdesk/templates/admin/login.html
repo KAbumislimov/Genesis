@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Вход — LANDAU Helpdesk Admin{% endblock %}
+{% block header_nav %}{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:center;padding:80px 20px">
+  <div class="card" style="width:360px">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:36px">🛡️</div>
+      <div class="card-title" style="text-align:center">Панель администратора</div>
+    </div>
+    {% if err %}
+    <div class="alert alert-err"><i class="bi bi-exclamation-circle"></i> {{ err }}</div>
+    {% endif %}
+    <form method="POST">
+      <div class="form-group">
+        <label>Логин</label>
+        <input type="text" name="username" autofocus required>
+      </div>
+      <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" name="password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:12px">
+        <i class="bi bi-box-arrow-in-right"></i> Войти
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

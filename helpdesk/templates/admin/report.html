@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Заявка #{{ report.id }} — LANDAU Admin{% endblock %}
+{% block header_nav %}
+<a href="/admin/dashboard" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Назад</a>
+<a href="/admin/logout" class="btn btn-ghost btn-sm"><i class="bi bi-box-arrow-right"></i> Выход</a>
+{% endblock %}
+{% block content %}
+<div class="container">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <h1 style="font-size:22px;font-weight:800">Заявка #{{ report.id }}</h1>
+    <span class="badge badge-{{ report.status }}">
+      {{ statuses[report.status][0] if report.status in statuses else '' }}
+      {{ statuses[report.status][1] if report.status in statuses else report.status }}
+    </span>
+  </div>
+
+  <!-- Инфо -->
+  <div class="card">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Кампус</div>
+        <div style="font-size:17px;font-weight:700">{{ report.campus }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Дата</div>
+        <div>{{ report.created_at }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Кто подал</div>
+        <div>{{ report.reporter or '—' }}</div>
+        {% if report.contact %}<div style="color:var(--muted);font-size:13px">{{ report.contact }}</div>{% endif %}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Обновлено</div>
+        <div>{{ report.updated_at or '—' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Актив -->
+  <div class="card">
+    <div class="card-title">IT-актив</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">
+      {% for label, val in [('Категория',report.cat_name),('Наименование',report.asset_name),('Модель',report.model),('Инвентарный №',report.inv_code),('Серийный №',report.serial),('Part Number',report.part_num)] %}
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">{{ label }}</div>
+        <div style="font-size:14px">{{ val or '—' }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Проблема -->
+  <div class="card">
+    <div class="card-title">Описание проблемы</div>
+    <div style="margin-bottom:12px">
+      <span style="background:rgba(218,54,51,.15);color:#f85149;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:600">
+        ⚠️ {{ report.problem_type }}
+      </span>
+    </div>
+    <div style="color:var(--text);line-height:1.6;white-space:pre-wrap">{{ report.description or '—' }}</div>
+  </div>
+
+  <!-- Вложения -->
+  {% if files %}
+  <div class="card">
+    <div class="card-title">Вложения ({{ files|length }})</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+      {% for f in files %}
+      {% set ext = f.filename.rsplit('.',1)[-1].lower() %}
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg3)">
+        {% if ext in ['png','jpg','jpeg','gif','webp'] %}
+        <a href="/uploads/{{ f.filename }}" target="_blank">
+          <img src="/uploads/{{ f.filename }}" style="max-width:200px;max-height:150px;display:block">
+        </a>
+        {% elif ext in ['mp4','mov','avi','mkv'] %}
+        <video src="/uploads/{{ f.filename }}" controls style="max-width:280px;max-height:180px;display:block"></video>
+        {% else %}
+        <a href="/uploads/{{ f.filename }}" target="_blank" style="display:block;padding:16px 20px;color:var(--text)">
+          <i class="bi bi-file-earmark-text" style="font-size:24px"></i><br>
+          <span style="font-size:12px">{{ f.orig_name }}</span>
+        </a>
+        {% endif %}
+        <div style="padding:6px 10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)">{{ f.orig_name }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Обновить статус -->
+  <div class="card">
+    <div class="card-title">Обновить статус</div>
+    <form method="POST" action="/admin/report/{{ report.id }}/update">
+      <div class="form-group">
+        <label>Статус</label>
+        <select name="status">
+          {% for k,(icon,label) in statuses.items() %}
+          <option value="{{ k }}" {% if report.status==k %}selected{% endif %}>{{ icon }} {{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Комментарий (внутренний)</label>
+        <textarea name="admin_note" placeholder="Что сделано, кто занимается…">{{ report.admin_note or '' }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Сохранить</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

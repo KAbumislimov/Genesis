@@ -1,0 +1,153 @@
+{
+  "uid": "campus-backup-status",
+  "title": "Campus — Бэкапы",
+  "tags": ["campus", "backup"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-7d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"background:linear-gradient(135deg,#1a3a1a 0%,#1e5c1e 60%,#2d7a2d 100%);border-radius:12px;padding:18px 28px;display:flex;align-items:center;gap:20px;box-shadow:0 4px 20px rgba(0,80,0,.4)\"><div style=\"font-size:42px;line-height:1\">💾</div><div><div style=\"color:#fff;font-size:20px;font-weight:700;letter-spacing:.04em\">Campus Backup Monitor</div><div style=\"color:rgba(255,255,255,.55);font-size:13px;margin-top:4px\">Еженедельные резервные копии всех машин → Proxmox (10.20.1.106)</div></div><div style=\"margin-left:auto;text-align:right\"><div style=\"color:rgba(255,255,255,.4);font-size:11px;text-transform:uppercase;letter-spacing:.08em\">Расписание</div><div style=\"color:#73BF69;font-size:18px;font-weight:700\">ВС 02:00</div></div></div>"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "✅ Успешных за 30 дней",
+      "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 3 }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Успешных"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "count_over_time({job=\"backup\"} |= \"BACKUP DONE\" [30d])",
+          "legendFormat": "",
+          "refId": "A",
+          "queryType": "range",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "❌ Ошибок за 30 дней",
+      "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Ошибок"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "count_over_time({job=\"backup\"} |= \"ОШИБКА\" [30d])",
+          "legendFormat": "",
+          "refId": "A",
+          "queryType": "range",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "📋 Последний бэкап — только итог",
+      "gridPos": { "x": 12, "y": 3, "w": 12, "h": 4 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": false,
+        "sortOrder": "Descending",
+        "enableLogDetails": false,
+        "dedupStrategy": "none"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{job=\"backup\"} |~ \"(BACKUP START|BACKUP DONE|ОШИБКА)\"",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "logs",
+      "title": "📜 Полный лог бэкапов",
+      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 16 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{job=\"backup\"}",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "annotations": { "list": [] },
+  "graphTooltip": 1,
+  "style": "dark"
+}

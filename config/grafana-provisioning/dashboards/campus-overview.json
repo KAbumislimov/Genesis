@@ -1,0 +1,194 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "options": {"content": "**Время:** ${__from:date:YYYY-MM-DD HH:mm} — ${__to:date:YYYY-MM-DD HH:mm}  |  Обновление: 30 сек", "mode": "markdown"},
+      "title": "",
+      "type": "text"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 1},
+      "id": 1,
+      "options": {"dedupStrategy": "none", "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{job=~\"varlogs|messages|secure\"} |~ \"(?i)(error|ОШИБКА|exception|failed|denied|timeout|timed out|fatal|critical)\" !~ \"snap.rocketchat-server\"", "refId": "A"}],
+      "title": "Логи: ошибки и предупреждения (все хосты)",
+      "type": "logs"
+    },
+    {
+      "gridPos": {"h": 2, "w": 24, "x": 0, "y": 6},
+      "id": 10,
+      "options": {"content": "## campus-server", "mode": "markdown"},
+      "title": "",
+      "type": "text"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 8},
+      "id": 2,
+      "options": {"dedupStrategy": "none", "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{host=\"campus-server\"}", "refId": "A"}],
+      "title": "Логи: campus-server",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"campus-server\"}[5m])) * 100)", "refId": "A"}],
+      "title": "CPU % campus-server",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 16, "y": 8},
+      "id": 5,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"campus-server\"} / node_memory_MemTotal_bytes{instance=\"campus-server\"})) * 100", "refId": "A"}],
+      "title": "RAM % campus-server",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 20, "y": 8},
+      "id": 6,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{instance=\"campus-server\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"campus-server\", mountpoint=\"/\"})", "refId": "A"}],
+      "title": "Диск % campus-server",
+      "type": "gauge"
+    },
+    {
+      "gridPos": {"h": 2, "w": 24, "x": 0, "y": 14},
+      "id": 11,
+      "options": {"content": "## nctk", "mode": "markdown"},
+      "title": "",
+      "type": "text"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 16},
+      "id": 7,
+      "options": {"dedupStrategy": "none", "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{host=\"nctk\"}", "refId": "A"}],
+      "title": "Логи: nctk",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 12, "y": 16},
+      "id": 12,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"nctk\"}[5m])) * 100)", "refId": "A"}],
+      "title": "CPU % nctk",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 16, "y": 16},
+      "id": 13,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"nctk\"} / node_memory_MemTotal_bytes{instance=\"nctk\"})) * 100", "refId": "A"}],
+      "title": "RAM % nctk",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 20, "y": 16},
+      "id": 14,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{instance=\"nctk\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"nctk\", mountpoint=\"/\"})", "refId": "A"}],
+      "title": "Диск % nctk",
+      "type": "gauge"
+    },
+    {
+      "gridPos": {"h": 2, "w": 24, "x": 0, "y": 22},
+      "id": 15,
+      "options": {"content": "## vm1", "mode": "markdown"},
+      "title": "",
+      "type": "text"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 24},
+      "id": 8,
+      "options": {"dedupStrategy": "none", "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{host=\"vm1\"}", "refId": "A"}],
+      "title": "Логи: vm1",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 12, "y": 24},
+      "id": 16,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=\"vm1\"}[5m])) * 100)", "refId": "A"}],
+      "title": "CPU % vm1",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 16, "y": 24},
+      "id": 17,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes{instance=\"vm1\"} / node_memory_MemTotal_bytes{instance=\"vm1\"})) * 100", "refId": "A"}],
+      "title": "RAM % vm1",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 4, "x": 20, "y": 24},
+      "id": 18,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{instance=\"vm1\", mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"vm1\", mountpoint=\"/\"})", "refId": "A"}],
+      "title": "Диск % vm1",
+      "type": "gauge"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 30},
+      "id": 20,
+      "panels": [],
+      "title": "AppArmor snap (некритичные)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 31},
+      "id": 21,
+      "options": {"dedupStrategy": "none", "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{job=~\"varlogs|messages|secure\"} |~ \"apparmor=\\\"DENIED\\\"\" |~ \"snap.rocketchat\"", "refId": "A"}],
+      "title": "Логи: AppArmor Rocket.Chat (информационно)",
+      "type": "logs"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["campus"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Campus Overview",
+  "uid": "campus-overview",
+  "version": 1,
+  "weekStart": ""
+}

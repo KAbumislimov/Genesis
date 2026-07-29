@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% block title %}Профиль — LANDAU{% endblock %}
+
+{% block extra_head %}
+<style>
+.profile-wrap{display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
+@media(max-width:900px){.profile-wrap{grid-template-columns:1fr}}
+
+/* ── Avatar ── */
+.avatar-block{display:flex;flex-direction:column;align-items:center;padding:24px 20px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:16px;margin-bottom:14px;gap:14px}
+.avatar-img{
+  width:110px;height:110px;border-radius:50%;object-fit:cover;
+  border:3px solid var(--border);background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.avatar-placeholder{
+  width:110px;height:110px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-size:40px;font-weight:800;color:#fff;
+  border:3px solid var(--border);flex-shrink:0;
+}
+.avatar-name{font-size:18px;font-weight:800;text-align:center;line-height:1.2}
+.avatar-username{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.avatar-upload-btn{
+  background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+  padding:6px 16px;border-radius:8px;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;transition:.15s;
+}
+.avatar-upload-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── Info fields ── */
+.info-row{display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);min-width:110px}
+.info-val{font-size:13px;font-weight:600;color:var(--text)}
+.info-val.empty{color:var(--muted);font-style:italic}
+
+/* ── Edit form ── */
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.edit-grid{grid-template-columns:1fr}}
+.edit-full{grid-column:1/-1}
+.field-group{display:flex;flex-direction:column;gap:4px}
+.field-label{font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted)}
+.field-input{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:9px 12px;font-size:14px;transition:.15s;
+}
+.field-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(88,166,255,.1)}
+.field-input::placeholder{color:var(--muted)}
+select.field-input option{background:var(--bg2)}
+
+/* ── History ── */
+.hist-row{display:flex;align-items:center;gap:14px;padding:9px 16px;
+  border-bottom:1px solid var(--border);font-size:13px}
+.hist-row:last-child{border-bottom:none}
+.hist-row:hover{background:rgba(88,166,255,.03)}
+.hist-user{font-weight:700;color:var(--blue);min-width:90px;flex-shrink:0}
+.hist-track{flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;word-break:break-all}
+.hist-time{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;
+  min-width:120px;text-align:right;flex-shrink:0}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--muted)}
+
+.pw-form .field-group{margin-bottom:12px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">Мой профиль</h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">{{ current_user.username }}</div>
+  </div>
+</div>
+
+<div class="profile-wrap">
+
+  <!-- ── LEFT COLUMN ── -->
+  <div>
+
+    <!-- Avatar card -->
+    <div class="avatar-block">
+      {% if current_user.avatar %}
+        <img class="avatar-img" id="avatar-preview"
+             src="/avatars/{{ current_user.avatar }}?v={{ range(1,9999)|random }}"
+             alt="avatar" onclick="showAvatarFull(this.src)"
+             style="cursor:zoom-in" title="Нажмите для увеличения">
+      {% else %}
+        <div class="avatar-placeholder" id="avatar-preview">
+          {{ (current_user.display_name[0] or current_user.username[0])|upper }}
+        </div>
+      {% endif %}
+      <div>
+        <div class="avatar-name">{{ current_user.display_name }}</div>
+        <div class="avatar-username">@{{ current_user.username }}</div>
+      </div>
+      <label class="avatar-upload-btn">
+        <i class="bi bi-camera-fill"></i> Изменить фото
+        <input type="file" id="avatar-file" accept=".jpg,.jpeg,.png,.gif,.webp" style="display:none">
+      </label>
+      <div id="avatar-msg" style="font-size:12px;min-height:16px"></div>
+    </div>
+
+    <!-- Account info -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hd">
+        <i class="bi bi-person-vcard text-blue"></i>
+        <span class="card-hd-title">Аккаунт</span>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-lbl">Логин</span>
+          <span class="info-val mono">{{ current_user.username }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">Роль</span>
+          <span class="info-val">
+            {% if current_user.role == 'admin' %}
+              <span class="bdg bdg-admin">admin</span>
+            {% elif current_user.role == 'guest' %}
+              <span class="bdg" style="background:rgba(139,148,158,.1);color:var(--muted);border:1px solid rgba(139,148,158,.25)">guest</span>
+            {% else %}
+              <span class="bdg bdg-viewer">user</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">Кампус</span>
+          <span class="info-val {% if not current_user.campus %}empty{% endif %}">
+            {{ current_user.campus or '—' }}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">Должность</span>
+          <span class="info-val {% if not current_user.position %}empty{% endif %}">
+            {{ current_user.position or '—' }}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">Телефон</span>
+          <span class="info-val {% if not current_user.phone %}empty{% endif %}">
+            {{ current_user.phone or '—' }}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">Email</span>
+          <span class="info-val {% if not current_user.email %}empty{% endif %}">
+            {{ current_user.email or '—' }}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-lbl">Год рожд.</span>
+          <span class="info-val {% if not current_user.birth_year %}empty{% endif %}">
+            {{ current_user.birth_year or '—' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change password -->
+    <div class="card">
+      <div class="card-hd">
+        <i class="bi bi-shield-lock-fill text-orange"></i>
+        <span class="card-hd-title">Смена пароля</span>
+      </div>
+      <div class="card-body pw-form">
+        <form method="post" action="{{ url_for('profile') }}">
+          <div class="field-group">
+            <label class="field-label">Текущий пароль</label>
+            <input type="password" name="old_password" class="field-input"
+                   placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Новый пароль</label>
+            <input type="password" name="new_password" class="field-input" id="new-pw"
+                   placeholder="••••••••" minlength="4" required autocomplete="new-password">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Подтвердить пароль</label>
+            <input type="password" name="confirm_password" class="field-input" id="confirm-pw"
+                   placeholder="••••••••" minlength="4" required autocomplete="new-password">
+          </div>
+          <div id="pw-mismatch" class="alert alert-danger" style="display:none">
+            <i class="bi bi-exclamation-circle"></i> Пароли не совпадают
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:4px">
+            <i class="bi bi-check-lg"></i> Сохранить пароль
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── RIGHT COLUMN ── -->
+  <div>
+
+    <!-- Edit profile -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">
+        <i class="bi bi-pencil-square text-green"></i>
+        <span class="card-hd-title">Редактировать анкету</span>
+      </div>
+      <div class="card-body">
+        <div class="edit-grid">
+          <div class="field-group">
+            <label class="field-label">Имя</label>
+            <input type="text" class="field-input" id="ef-first" maxlength="80"
+                   placeholder="Введите имя" value="{{ current_user.first_name }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Фамилия</label>
+            <input type="text" class="field-input" id="ef-last" maxlength="80"
+                   placeholder="Введите фамилию" value="{{ current_user.last_name }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Должность</label>
+            <input type="text" class="field-input" id="ef-position" maxlength="100"
+                   placeholder="Учитель, директор..." value="{{ current_user.position }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Кампус</label>
+            <select class="field-input" id="ef-campus">
+              <option value="">— выбрать —</option>
+              {% set campuses = ['Narimanov','Bayıl','Ağ-Şəhər','Xatai BCR','Seabreeze','Simurq Gənclik','West Town','Simurq Xaqlar','Simurq Xırdalan','Simurq Zabrat','Gəncə Bani','City Garden'] %}
+              {% for c in campuses %}
+              <option value="{{ c }}" {% if current_user.campus==c %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Телефон</label>
+            <input type="text" class="field-input" id="ef-phone" maxlength="30"
+                   placeholder="+994 xx xxx xx xx" value="{{ current_user.phone }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Email</label>
+            <input type="email" class="field-input" id="ef-email" maxlength="120"
+                   placeholder="name@leg.edu.az" value="{{ current_user.email }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Год рождения</label>
+            <input type="number" class="field-input" id="ef-birth" min="1950" max="2010"
+                   placeholder="1990" value="{{ current_user.birth_year }}">
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+          <button class="btn btn-primary" onclick="saveProfile()">
+            <i class="bi bi-check-lg"></i> Сохранить анкету
+          </button>
+          <span id="profile-save-msg" style="font-size:13px;min-height:18px"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Play history -->
+    <div class="card">
+      <div class="card-hd">
+        <i class="bi bi-clock-history text-purple"></i>
+        <span class="card-hd-title">История воспроизведения</span>
+        <span class="text-muted" style="font-size:12px;margin-left:6px">
+          (<span id="hist-count">{{ history|length }}</span>)
+        </span>
+        <span id="hist-live" style="margin-left:auto;font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 1.5s infinite"></span>
+          live
+        </span>
+      </div>
+      <div style="display:flex;gap:14px;padding:8px 16px;background:var(--bg3);
+                  border-bottom:1px solid var(--border);font-size:11px;font-weight:700;
+                  text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">
+        <span style="min-width:90px">Пользователь</span>
+        <span style="flex:1">Трек</span>
+        <span style="min-width:120px;text-align:right">Время</span>
+      </div>
+      <div id="hist-body">
+        {% if history %}
+          {% for h in history %}
+          <div class="hist-row">
+            <span class="hist-user"><i class="bi bi-person-fill" style="font-size:11px"></i> {{ h.username }}</span>
+            <span class="hist-track" title="{{ h.track_name }}">{{ h.track_name | truncate(60) }}</span>
+            <span class="hist-time">{{ h.played_at }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="hist-empty" id="hist-empty">
+            <i class="bi bi-music-note" style="font-size:36px;display:block;margin-bottom:10px"></i>
+            История пуста
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Password match ──
+const newPw = document.getElementById('new-pw');
+const confPw = document.getElementById('confirm-pw');
+const mismatch = document.getElementById('pw-mismatch');
+function checkMatch() {
+  mismatch.style.display = (confPw.value && newPw.value !== confPw.value) ? 'flex' : 'none';
+}
+if (newPw)  newPw.addEventListener('input', checkMatch);
+if (confPw) confPw.addEventListener('input', checkMatch);
+
+// ── Save profile ──
+function saveProfile() {
+  const msg = document.getElementById('profile-save-msg');
+  msg.style.color = 'var(--muted)'; msg.textContent = '...';
+  fetch('/api/profile/update', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      first_name: document.getElementById('ef-first').value.trim(),
+      last_name:  document.getElementById('ef-last').value.trim(),
+      position:   document.getElementById('ef-position').value.trim(),
+      campus:     document.getElementById('ef-campus').value,
+      phone:      document.getElementById('ef-phone').value.trim(),
+      email:      document.getElementById('ef-email').value.trim(),
+      birth_year: document.getElementById('ef-birth').value.trim(),
+    })
+  }).then(r=>r.json()).then(d=>{
+    msg.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+    msg.textContent = d.ok ? '✓ Сохранено' : (d.error || 'Ошибка');
+    if (d.ok) {
+      // update displayed name in avatar block
+      const fn = document.getElementById('ef-first').value.trim();
+      const ln = document.getElementById('ef-last').value.trim();
+      const dn = (fn + ' ' + ln).trim();
+      const nameEl = document.querySelector('.avatar-name');
+      if (nameEl) nameEl.textContent = dn || '{{ current_user.username }}';
+    }
+  });
+}
+
+// ── Avatar upload ──
+document.getElementById('avatar-file').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  const fd = new FormData();
+  fd.append('avatar', this.files[0]);
+  const msg = document.getElementById('avatar-msg');
+  msg.style.color = 'var(--muted)'; msg.textContent = 'Загружаю...';
+  fetch('/api/profile/avatar', {method:'POST', body:fd})
+    .then(r=>r.json()).then(d=>{
+      if (d.ok) {
+        msg.style.color = 'var(--green)'; msg.textContent = '✓ Фото обновлено';
+        const prev = document.getElementById('avatar-preview');
+        if (prev) {
+          const img = document.createElement('img');
+          img.className = 'avatar-img'; img.id = 'avatar-preview';
+          img.src = d.url + '?v=' + Date.now(); img.alt = 'avatar';
+          prev.parentNode.replaceChild(img, prev);
+        }
+      } else {
+        msg.style.color = 'var(--red)'; msg.textContent = d.error || 'Ошибка';
+      }
+    });
+});
+
+// ── Live history ──
+function escH(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function truncate(s,n){ return s.length>n ? s.slice(0,n)+'…' : s; }
+
+function loadHistory() {
+  fetch('/api/history').then(r=>r.json()).then(d=>{
+    if (!d.ok) return;
+    const body = document.getElementById('hist-body');
+    const cnt  = document.getElementById('hist-count');
+    if (!body) return;
+    if (!d.history.length) {
+      body.innerHTML = '<div class="hist-empty"><i class="bi bi-music-note" style="font-size:36px;display:block;margin-bottom:10px"></i>История пуста</div>';
+      if (cnt) cnt.textContent = '0';
+      return;
+    }
+    if (cnt) cnt.textContent = d.history.length;
+    body.innerHTML = d.history.map(h=>`
+      <div class="hist-row">
+        <span class="hist-user"><i class="bi bi-person-fill" style="font-size:11px"></i> ${escH(h.username)}</span>
+        <span class="hist-track" title="${escH(h.track_name)}">${escH(truncate(h.track_name,60))}</span>
+        <span class="hist-time">${escH(h.played_at)}</span>
+      </div>`).join('');
+  }).catch(()=>{});
+}
+loadHistory();
+setInterval(loadHistory, 10000);
+
+// Avatar lightbox
+window.showAvatarFull = function(src){
+  var lb = document.getElementById('avatar-lb');
+  if(!lb){
+    lb = document.createElement('div');
+    lb.id = 'avatar-lb';
+    lb.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;backdrop-filter:blur(6px)';
+    lb.onclick = function(){ lb.remove(); };
+    var img = document.createElement('img');
+    img.style.cssText='max-width:90vw;max-height:90vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.7);object-fit:contain';
+    img.src = src;
+    lb.appendChild(img);
+    document.body.appendChild(lb);
+  }
+};
+</script>
+{% endblock %}

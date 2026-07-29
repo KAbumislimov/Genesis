@@ -1,0 +1,48 @@
+# Машины кампуса — для мониторинга и восстановления
+# Пароли — из .env (RECOVERY_*), не хранить здесь
+
+hosts:
+  server:
+    name: campus-server
+    host: 10.10.4.120
+    user: kamran
+    role: master   # управляет всеми
+    backup_paths:
+      - /etc
+      - /home/kamran
+      - /root
+      - /var/spool/cron
+    services:
+      - docker
+    critical_dirs:
+      - /home/kamran/campus-infra
+
+  nctk:
+    name: nctk
+    host: 10.20.0.41
+    user: nctk
+    role: client
+    backup_paths:
+      - /etc
+      - /home/nctk
+      - /root
+      - /var/spool/cron
+    services:
+      - node_exporter
+      - promtail
+      - cron
+
+  vm1:
+    name: vm1
+    host: 10.70.0.41
+    user: vm1
+    role: client
+    backup_paths:
+      - /etc
+      - /home/vm1
+      - /root
+      - /var/spool/cron
+    services:
+      - node_exporter
+      - promtail
+      - cron

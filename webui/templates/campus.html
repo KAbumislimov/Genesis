@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}{{ cfg.label }} — LANDAU{% endblock %}
+
+{% block extra_head %}
+<style>
+.campus-header{
+  background:linear-gradient(135deg,
+    rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.08),
+    rgba({% if cfg.color=='blue' %}63,185,80{% else %}88,166,255{% endif %},.04));
+  border:1px solid rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.3);
+  border-radius:14px;padding:20px 26px;margin-bottom:18px;
+  display:flex;align-items:center;gap:18px;
+}
+.campus-icon{
+  width:56px;height:56px;border-radius:12px;flex-shrink:0;
+  background:rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.12);
+  border:1px solid rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.3);
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+}
+.campus-title{font-size:20px;font-weight:800;letter-spacing:.03em}
+.campus-sub{font-size:12px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.status-dot{
+  width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;
+  background:{% if online %}var(--green){% else %}var(--red){% endif %};
+  box-shadow:0 0 6px {% if online %}rgba(63,185,80,.6){% else %}rgba(248,81,73,.5){% endif %};
+}
+.section-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:16px;overflow:hidden;
+}
+.section-head{
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:11px 18px;display:flex;align-items:center;gap:9px;
+  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+}
+.section-body{padding:16px 18px}
+.cron-line{
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  padding:6px 10px;border-radius:6px;margin-bottom:4px;
+  background:var(--bg3);border:1px solid var(--border);
+  word-break:break-all;
+}
+.cron-sched{color:var(--orange);margin-right:10px}
+.cron-cmd{color:var(--text)}
+.log-entry{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:12px;
+}
+.log-entry:last-child{border-bottom:none}
+.log-time{font-family:'JetBrains Mono',monospace;color:var(--muted);flex-shrink:0;width:135px}
+.log-who{font-weight:700;flex-shrink:0;width:70px;
+  color:{% if cfg.color=='blue' %}var(--blue){% else %}#bc82ff{% endif %}}
+.log-action{flex-shrink:0;width:60px}
+.log-detail{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.action-badge{
+  display:inline-block;font-size:10px;font-weight:700;
+  padding:1px 7px;border-radius:5px;letter-spacing:.05em;
+}
+.action-play  {background:rgba(63,185,80,.15);color:var(--green)}
+.action-stop  {background:rgba(248,81,73,.15);color:var(--red)}
+.action-next  {background:rgba(88,166,255,.12);color:var(--blue)}
+.action-prev  {background:rgba(88,166,255,.12);color:var(--blue)}
+.action-himn  {background:rgba(188,130,255,.15);color:#bc82ff}
+.action-other {background:rgba(255,255,255,.06);color:var(--muted)}
+.raw-log{
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+  padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  word-break:break-all;
+}
+.raw-log:last-child{border-bottom:none}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab-btn{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;
+  cursor:pointer;color:var(--muted);transition:.15s;
+}
+.tab-btn.active{border-color:rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.5);
+  color:{% if cfg.color=='blue' %}var(--blue){% else %}#bc82ff{% endif %};
+  background:rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.08)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="campus-header">
+  <div class="campus-icon">
+    <i class="bi bi-{{ cfg.icon }}"></i>
+  </div>
+  <div style="flex:1">
+    <div class="campus-title">{{ cfg.label }}</div>
+    <div class="campus-sub">
+      <span class="status-dot"></span>
+      {% if online %}онлайн{% else %}офлайн{% endif %}
+      &nbsp;·&nbsp; {{ cfg.host }}
+    </div>
+  </div>
+  <a href="/" class="btn-secondary" style="
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:9px;padding:8px 18px;font-size:13px;
+    color:var(--muted);text-decoration:none;
+    display:flex;align-items:center;gap:6px">
+    <i class="bi bi-arrow-left"></i> Плеер
+  </a>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('cron',this)">
+    <i class="bi bi-calendar-week"></i> Расписание
+  </button>
+  <button class="tab-btn" onclick="showTab('activity',this)">
+    <i class="bi bi-clock-history"></i> Действия
+  </button>
+  <button class="tab-btn" onclick="showTab('rawlog',this)">
+    <i class="bi bi-terminal"></i> Лог машины
+  </button>
+</div>
+
+<!-- ── Cron schedule ── -->
+<div id="tab-cron">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="bi bi-calendar-week"></i> Расписание — {{ cfg.label }}
+      {% if not online %}<span style="color:var(--red);margin-left:auto">Нет связи с машиной</span>{% endif %}
+    </div>
+    <div class="section-body" style="padding:0">
+      {% if cron_entries %}
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--bg3);font-size:11px;font-weight:700;text-transform:uppercase;
+                     letter-spacing:.08em;color:var(--muted)">
+            <th style="padding:9px 16px;text-align:left;width:80px">Время</th>
+            <th style="padding:9px 8px;text-align:left;width:100px">Дни</th>
+            <th style="padding:9px 8px;text-align:left">Событие</th>
+            <th style="padding:9px 16px;text-align:right;width:70px">Громкость</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for e in cron_entries %}
+          <tr style="border-top:1px solid rgba(255,255,255,.04);
+            {% if e.is_stop %}opacity:.45{% endif %}">
+            <td style="padding:9px 16px">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+                color:{% if e.is_stop %}var(--muted){% else %}var(--text){% endif %}">
+                {{ e.time }}
+              </span>
+            </td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--muted)">{{ e.days }}</td>
+            <td style="padding:9px 8px">
+              {% if not e.is_stop %}
+              <span style="display:inline-flex;align-items:center;gap:7px;
+                background:rgba({% if e.color=='orange' %}255,166,87{% elif e.color=='purple' %}188,130,255{% elif e.color=='blue' %}88,166,255{% else %}255,255,255{% endif %},.1);
+                border:1px solid rgba({% if e.color=='orange' %}255,166,87{% elif e.color=='purple' %}188,130,255{% elif e.color=='blue' %}88,166,255{% else %}255,255,255{% endif %},.25);
+                border-radius:8px;padding:4px 12px;font-size:13px;font-weight:600;
+                color:{% if e.color=='orange' %}var(--orange){% elif e.color=='purple' %}#bc82ff{% elif e.color=='blue' %}var(--blue){% else %}var(--text){% endif %}">
+                <i class="bi {{ e.icon }}"></i>
+                {{ e.label }}
+              </span>
+              {% else %}
+              <span style="font-size:12px;color:var(--muted)">
+                <i class="bi bi-stop-circle"></i> остановить
+              </span>
+              {% endif %}
+            </td>
+            <td style="padding:9px 16px;text-align:right">
+              {% if e.vol %}
+              <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+                color:{% if e.vol|int >= 150 %}var(--orange){% else %}var(--muted){% endif %}">
+                {{ e.vol }}
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div style="color:var(--muted);font-size:13px;padding:16px">
+          {% if online %}Crontab пустой{% else %}Машина недоступна{% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Activity log (DB) ── -->
+<div id="tab-activity" style="display:none">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="bi bi-clock-history"></i> Действия пользователей
+      <span style="margin-left:auto;font-size:11px;font-weight:400;color:var(--muted)">
+        последние {{ activity|length }} записей
+      </span>
+    </div>
+    <div class="section-body">
+      {% if activity %}
+        {% for a in activity %}
+          <div class="log-entry">
+            <span class="log-time">{{ a.happened_at }}</span>
+            <span class="log-who">{{ a.username }}</span>
+            <span class="log-action">
+              <span class="action-badge action-{{ a.action if a.action in ['play','stop','next','prev','himn'] else 'other' }}">
+                {{ a.action }}
+              </span>
+            </span>
+            <span class="log-detail" title="{{ a.detail or '' }}">{{ a.detail or '—' }}</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="color:var(--muted);font-size:13px;padding:10px 0">Пока нет записей</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Raw machine log ── -->
+<div id="tab-rawlog" style="display:none">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="bi bi-terminal"></i> action.log — {{ cfg.log }}
+      <button onclick="refreshLog()" style="margin-left:auto;background:var(--bg2);border:1px solid var(--border);
+        color:var(--muted);border-radius:6px;padding:3px 12px;font-size:11px;cursor:pointer">
+        <i class="bi bi-arrow-clockwise"></i> Обновить
+      </button>
+    </div>
+    <div class="section-body" id="rawlog-body">
+      {% if action_log %}
+        {% for line in action_log %}
+          <div class="raw-log">{{ line }}</div>
+        {% endfor %}
+      {% else %}
+        <div style="color:var(--muted);font-size:13px;padding:10px 0">
+          {% if online %}Лог пустой{% else %}Машина недоступна{% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTab(name, btn) {
+  ['cron','activity','rawlog'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function refreshLog() {
+  fetch('/campus/{{ machine }}?raw=1')
+    .then(r => r.text())
+    .then(() => location.reload());
+}
+</script>
+{% endblock %}

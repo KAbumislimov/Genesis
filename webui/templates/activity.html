@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Лог активности — Campus Audio{% endblock %}
+
+{% block extra_head %}
+<style>
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end}
+.filter-bar .form-control,.filter-bar .form-select{
+  max-width:180px;padding:7px 12px;font-size:13px
+}
+.log-tbl td{font-size:13px;padding:7px 12px;vertical-align:middle}
+.log-tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;padding:8px 12px}
+.action-pill{
+  display:inline-block;padding:2px 9px;border-radius:4px;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace
+}
+.a-play    {background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.a-himn    {background:rgba(188,140,255,.12);color:var(--purple);border:1px solid rgba(188,140,255,.3)}
+.a-upload  {background:rgba(88,166,255,.12);color:var(--blue);border:1px solid rgba(88,166,255,.3)}
+.a-login   {background:rgba(255,166,87,.12);color:var(--orange);border:1px solid rgba(255,166,87,.3)}
+.a-block   {background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.3)}
+.a-other   {background:rgba(139,148,158,.1);color:var(--muted);border:1px solid rgba(139,148,158,.25)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">Лог активности</h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">
+      Последние 500 записей · фильтр по пользователю, действию, дате
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a href="http://10.10.4.120:3000" target="_blank" rel="noopener"
+       class="btn btn-ghost btn-sm" style="border-color:rgba(255,111,0,.4);color:#ff8c00">
+      <i class="bi bi-bar-chart-fill"></i> Grafana
+    </a>
+    <a href="{{ url_for('admin_activity', user=filter_user, action=filter_action, date=filter_date, export='csv') }}"
+       class="btn btn-ghost btn-sm">
+      <i class="bi bi-download"></i> CSV
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="filter-bar">
+  <div>
+    <label class="form-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.07em">Пользователь</label>
+    <select name="user" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for u in users %}
+      <option value="{{ u }}" {% if filter_user==u %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.07em">Действие</label>
+    <input type="text" name="action" class="form-control" placeholder="play, himn, upload…"
+           value="{{ filter_action }}" onchange="this.form.submit()">
+  </div>
+  <div>
+    <label class="form-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.07em">Дата</label>
+    <input type="date" name="date" class="form-control" value="{{ filter_date }}" onchange="this.form.submit()">
+  </div>
+  {% if filter_user or filter_action or filter_date %}
+  <a href="{{ url_for('admin_activity') }}" class="btn btn-ghost btn-sm" style="align-self:flex-end">
+    <i class="bi bi-x-lg"></i> Сбросить
+  </a>
+  {% endif %}
+</form>
+
+<div class="card">
+  <div class="card-hd">
+    <i class="bi bi-journal-text text-blue"></i>
+    <span class="card-hd-title">Записи</span>
+    <span class="text-muted" style="margin-left:auto;font-size:12px">{{ logs|length }} записей</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="tbl log-tbl">
+      <thead>
+        <tr>
+          <th style="width:50px">#</th>
+          <th style="width:140px">Время</th>
+          <th style="width:120px">Пользователь</th>
+          <th style="width:110px">Действие</th>
+          <th style="width:80px">Машина</th>
+          <th>Детали</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in logs %}
+        <tr>
+          <td class="text-muted mono" style="font-size:11px">{{ r.id }}</td>
+          <td class="mono text-muted" style="font-size:12px">{{ r.happened_at }}</td>
+          <td>
+            <span style="font-weight:600;font-size:13px">{{ r.username }}</span>
+          </td>
+          <td>
+            {% set ac = r.action %}
+            {% if 'play' in ac %}
+              <span class="action-pill a-play">{{ ac }}</span>
+            {% elif 'himn' in ac %}
+              <span class="action-pill a-himn">{{ ac }}</span>
+            {% elif 'upload' in ac %}
+              <span class="action-pill a-upload">{{ ac }}</span>
+            {% elif ac in ('login','logout','kick') %}
+              <span class="action-pill a-login">{{ ac }}</span>
+            {% elif ac in ('block','unblock','silence_mode') %}
+              <span class="action-pill a-block">{{ ac }}</span>
+            {% else %}
+              <span class="action-pill a-other">{{ ac }}</span>
+            {% endif %}
+          </td>
+          <td class="mono text-muted" style="font-size:12px">{{ r.machine }}</td>
+          <td class="text-muted" style="font-size:12px">{{ r.detail or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:32px;color:var(--muted)">
+            <i class="bi bi-inbox" style="font-size:24px;display:block;margin-bottom:8px"></i>
+            Нет записей
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Cron-расписание — Campus Audio{% endblock %}
+
+{% block extra_head %}
+<style>
+.cron-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:900px){.cron-grid{grid-template-columns:1fr}}
+
+.live-bar{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.3);
+  border-radius:12px;padding:14px 20px;
+}
+.live-dot{width:10px;height:10px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.idle-bar{
+  display:flex;align-items:center;gap:12px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:14px 20px;color:var(--muted);
+}
+
+.log-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.log-tbl th{
+  padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted);background:var(--bg3);
+  border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;
+}
+.log-tbl td{
+  padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;
+}
+.log-tbl tr:hover td{background:rgba(88,166,255,.03)}
+.log-tbl tr.stop-row td{color:var(--muted);font-size:12px}
+.log-tbl tr.stop-row td:first-child{opacity:.5}
+
+.slot-pill{
+  display:inline-block;padding:2px 9px;border-radius:10px;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;
+  background:rgba(88,166,255,.12);color:var(--blue);border:1px solid rgba(88,166,255,.3);
+}
+.slot-himn{background:rgba(188,140,255,.12);color:var(--purple);border-color:rgba(188,140,255,.3)}
+.slot-utro{background:rgba(63,185,80,.1);color:var(--green);border-color:rgba(63,185,80,.3)}
+.ok-badge{color:var(--green);font-size:15px}
+.err-badge{color:var(--red);font-size:15px}
+
+.meta-mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+.fname{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);max-width:200px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.refresh-info{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.spin{animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.vol-badge{
+  display:inline-block;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;
+  background:rgba(255,166,87,.1);color:var(--orange);border:1px solid rgba(255,166,87,.3);
+}
+.folder-badge{
+  display:inline-block;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;
+  background:rgba(139,148,158,.1);color:var(--muted);border:1px solid rgba(139,148,158,.25);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">
+      <i class="bi bi-clock-history text-blue"></i> Cron-расписание
+    </h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">
+      Логи воспроизведения · метаданные файлов · только для администраторов
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <!-- Переключатель машин -->
+    <div style="display:flex;gap:6px">
+      <button id="btn-nctk" class="btn btn-sm" onclick="switchMachine('nctk')"
+              style="font-size:12px;font-weight:700">
+        <i class="bi bi-pc-display"></i> nctk
+      </button>
+      <button id="btn-vm1" class="btn btn-ghost btn-sm" onclick="switchMachine('vm1')"
+              style="font-size:12px;font-weight:700">
+        <i class="bi bi-pc-display"></i> vm1
+      </button>
+    </div>
+    <div class="refresh-info">
+      <span id="refresh-spin" style="display:none"><i class="bi bi-arrow-repeat spin"></i></span>
+      <span id="refresh-ts">—</span>
+      <button class="btn btn-ghost btn-sm" onclick="loadLog()" title="Обновить сейчас">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Status banner — обновляется через JS -->
+<div id="status-bar" style="margin-bottom:16px">
+  <div class="idle-bar" id="status-idle">
+    <i class="bi bi-hourglass-split" style="font-size:20px"></i>
+    <div><div style="font-weight:600">Проверяем mpv на nctk…</div></div>
+  </div>
+</div>
+
+<div class="cron-grid">
+  <!-- Schedule card -->
+  <div class="card">
+    <div class="card-hd">
+      <i class="bi bi-calendar-week text-blue"></i>
+      <span class="card-hd-title">Сегодняшнее расписание</span>
+      <span class="text-muted" style="margin-left:auto;font-size:11px;font-family:'JetBrains Mono',monospace">
+        Папка {{ now.weekday() + 1 if now.weekday() < 5 else 1 }}
+        · {{ ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][now.weekday()] }}
+      </span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="log-tbl">
+        <thead><tr>
+          <th>Время</th><th>Событие</th><th>Файл</th><th>Громк.</th>
+        </tr></thead>
+        <tbody>
+          {% set cur_t = now.strftime('%H:%M') %}
+          {% for ev in schedule %}
+          <tr style="{% if ev.time == cur_t %}background:rgba(63,185,80,.07){% elif ev.time < cur_t %}opacity:.45{% endif %}">
+            <td class="meta-mono">{{ ev.time }}</td>
+            <td>
+              {% if ev.play %}
+                <span class="slot-pill {% if ev.slot is defined and ev.get('special') %}slot-himn{% elif 'утро' in ev.event.lower() %}slot-utro{% endif %}">
+                  {{ ev.event | replace('▶ ', '') }}
+                </span>
+              {% else %}
+                <span style="color:var(--muted);font-size:12px">{{ ev.event }}</span>
+              {% endif %}
+            </td>
+            <td class="fname">{{ ev.file if ev.file != '—' else '' }}</td>
+            <td class="meta-mono">{% if ev.vol %}{{ ev.vol }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- File metadata card -->
+  <div class="card">
+    <div class="card-hd">
+      <i class="bi bi-file-earmark-music text-purple"></i>
+      <span class="card-hd-title">Файлы текущей папки</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto"
+              onclick="refreshMeta()" title="Перечитать с nctk">
+        <i class="bi bi-arrow-repeat" id="meta-spin-icon"></i>
+      </button>
+    </div>
+    <div id="meta-table">
+      <div style="padding:20px;text-align:center;color:var(--muted)">
+        <i class="bi bi-hourglass-split"></i> Загрузка метаданных…
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cron log table -->
+<div class="card">
+  <div class="card-hd">
+    <i class="bi bi-journal-text text-green"></i>
+    <span class="card-hd-title">Лог cron</span>
+    <span class="text-muted" style="font-size:12px;margin-left:6px" id="log-count"></span>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <select id="log-lines" class="form-select" style="width:auto;padding:3px 8px;font-size:12px"
+              onchange="loadLog()">
+        <option value="50">50 строк</option>
+        <option value="100" selected>100 строк</option>
+        <option value="200">200 строк</option>
+      </select>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="log-tbl">
+      <thead><tr>
+        <th>Дата</th>
+        <th>Время</th>
+        <th>Слот</th>
+        <th>Папка</th>
+        <th>Файл</th>
+        <th>Формат</th>
+        <th>Размер</th>
+        <th>Длит.</th>
+        <th>Громк.</th>
+        <th>Статус</th>
+      </tr></thead>
+      <tbody id="log-body">
+        <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">
+          <i class="bi bi-hourglass-split"></i> Загрузка…
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let MACHINE = 'nctk';
+
+function switchMachine(m) {
+  MACHINE = m;
+  document.getElementById('btn-nctk').className = m === 'nctk'
+    ? 'btn btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('btn-vm1').className = m === 'vm1'
+    ? 'btn btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('btn-nctk').style.fontSize = '12px';
+  document.getElementById('btn-nctk').style.fontWeight = '700';
+  document.getElementById('btn-vm1').style.fontSize = '12px';
+  document.getElementById('btn-vm1').style.fontWeight = '700';
+  // Сброс таблиц
+  document.getElementById('log-body').innerHTML =
+    '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)"><i class="bi bi-hourglass-split"></i> Загрузка…</td></tr>';
+  document.getElementById('meta-table').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--muted)"><i class="bi bi-hourglass-split"></i> Загрузка…</div>';
+  loadStatus(); loadLog(); loadMeta();
+}
+
+const DAY_NAMES = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function slotClass(slot) {
+  if (!slot) return '';
+  if (slot === 'himn') return 'slot-himn';
+  if (slot === 'utro') return 'slot-utro';
+  return '';
+}
+
+function loadLog() {
+  const lines = document.getElementById('log-lines').value;
+  document.getElementById('refresh-spin').style.display = '';
+  fetch('/api/admin/cron-log?lines=' + lines + '&machine=' + MACHINE)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('refresh-spin').style.display = 'none';
+      document.getElementById('refresh-ts').textContent = new Date().toLocaleTimeString('ru');
+      if (!d.ok) return;
+
+      const plays = d.entries.filter(e => e.type === 'play');
+      document.getElementById('log-count').textContent = plays.length + ' запусков';
+
+      const tbody = document.getElementById('log-body');
+      if (!d.entries.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">Лог пуст</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = d.entries.map(e => {
+        if (e.type === 'stop') {
+          return `<tr class="stop-row">
+            <td class="meta-mono">${escH(e.date)}</td>
+            <td class="meta-mono">${escH(e.time)}</td>
+            <td colspan="8" style="color:var(--muted);font-size:12px">⏹ стоп</td>
+          </tr>`;
+        }
+        return `<tr>
+          <td class="meta-mono">${escH(e.date)}</td>
+          <td class="meta-mono">${escH(e.time)}</td>
+          <td><span class="slot-pill ${slotClass(e.slot)}">${escH(e.slot)}</span></td>
+          <td><span class="folder-badge">📁 ${escH(e.folder)}</span></td>
+          <td class="fname" title="${escH(e.file)}">${escH(e.file)}</td>
+          <td class="meta-mono">${escH(e.format)}</td>
+          <td class="meta-mono">${escH(e.size)}</td>
+          <td class="meta-mono">${escH(e.duration)}</td>
+          <td><span class="vol-badge">${escH(e.vol)}</span></td>
+          <td>${e.status === '✅' ? '<span class="ok-badge">✅</span>' : '<span class="err-badge">❌</span>'}</td>
+        </tr>`;
+      }).join('');
+    })
+    .catch(() => {
+      document.getElementById('refresh-spin').style.display = 'none';
+    });
+}
+
+const CURRENT_FOLDER = {{ now.weekday() + 1 if now.weekday() < 5 else 1 }};
+
+function loadMeta() {
+  fetch('/api/admin/cron-files?folder=' + CURRENT_FOLDER + '&machine=' + MACHINE)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      const el = document.getElementById('meta-table');
+      if (!d.files.length) {
+        el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Нет файлов</div>';
+        return;
+      }
+      el.innerHTML = `<table class="log-tbl">
+        <thead><tr><th>Файл</th><th>Формат</th><th>Размер</th><th>Длит.</th></tr></thead>
+        <tbody>${d.files.map(f => `<tr>
+          <td class="fname" title="${escH(f.file)}">${escH(f.file)}</td>
+          <td class="meta-mono">${escH(f.format)}</td>
+          <td class="meta-mono">${escH(f.size)}</td>
+          <td class="meta-mono">${escH(f.duration)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+    })
+    .catch(() => {});
+}
+
+function refreshMeta() {
+  const icon = document.getElementById('meta-spin-icon');
+  icon.classList.add('spin');
+  fetch('/api/admin/cron-meta/refresh?folder=' + CURRENT_FOLDER + '&machine=' + MACHINE, {method:'POST'})
+    .then(r => r.json())
+    .then(() => { icon.classList.remove('spin'); loadMeta(); })
+    .catch(() => { icon.classList.remove('spin'); });
+}
+
+function loadStatus() {
+  fetch('/api/admin/cron-status?machine=' + MACHINE)
+    .then(r => r.json())
+    .then(d => {
+      const bar = document.getElementById('status-bar');
+      if (!d.ok) return;
+      if (d.playing) {
+        bar.innerHTML = `<div class="live-bar">
+          <div class="live-dot"></div>
+          <div>
+            <div style="font-weight:700;font-size:15px">🎵 Сейчас играет на nctk</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">
+              Файл: <code>${escH(d.file)}</code>
+            </div>
+          </div>
+        </div>`;
+      } else {
+        bar.innerHTML = `<div class="idle-bar">
+          <i class="bi bi-pause-circle" style="font-size:20px"></i>
+          <div>
+            <div style="font-weight:600">mpv не воспроизводит</div>
+            <div style="font-size:12px;margin-top:2px">Сейчас перерыв между переменами</div>
+          </div>
+        </div>`;
+      }
+    })
+    .catch(() => {});
+}
+
+loadStatus();
+loadLog();
+loadMeta();
+setInterval(loadStatus, 15000);
+setInterval(loadLog, 15000);
+</script>
+{% endblock %}

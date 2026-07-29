@@ -1,0 +1,334 @@
+# Алерты Campus: логи + метрики
+# Contact point Telegram — provisioning/alerting/contactpoints.yaml
+apiVersion: 1
+groups:
+  # === ЛОГИ (Loki) ===
+  - orgId: 1
+    name: campus-logs
+    folder: Campus
+    interval: 1m
+    rules:
+      - uid: campus-logs-errors
+        title: Ошибки в логах
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job=~"varlogs|messages|secure"} |~ "(?i)(error|ОШИБКА|exception|failed)" [5m])'
+              refId: A
+              datasource: {type: loki, uid: loki}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations: {summary: Обнаружены ошибки в логах}
+        labels: {severity: warning}
+
+      - uid: campus-logs-oom
+        title: Память заполнена / OOM
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job=~"varlogs|messages|secure"} |~ "(?i)(oom|out of memory|killed|memory full|недостаточно памяти)" [5m])'
+              refId: A
+              datasource: {type: loki, uid: loki}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations: {summary: Память заполнена или OOM в логах}
+        labels: {severity: critical}
+
+      - uid: campus-logs-thermal
+        title: Перегрев
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job=~"varlogs|messages|secure"} |~ "(?i)(thermal|throttl|overheat|temperature|перегрев)" [5m])'
+              refId: A
+              datasource: {type: loki, uid: loki}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations: {summary: Перегрев в логах}
+        labels: {severity: warning}
+
+      - uid: campus-logs-network
+        title: Нет интернета / сеть
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job=~"varlogs|messages|secure"} |~ "(?i)(network unreachable|connection refused|timeout|no route|host unreachable|connection timed out)" [5m])'
+              refId: A
+              datasource: {type: loki, uid: loki}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations: {summary: Проблемы с сетью в логах}
+        labels: {severity: warning}
+
+      - uid: campus-logs-shutdown
+        title: Выключение / перезагрузка
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job=~"varlogs|messages|secure"} |~ "(?i)(shutdown|poweroff|reboot|halted|Power down|Shutting down)" [5m])'
+              refId: A
+              datasource: {type: loki, uid: loki}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations: {summary: Выключение или перезагрузка в логах}
+        labels: {severity: info}
+
+      - uid: campus-logs-disk
+        title: Диск заполнен (в логах)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job=~"varlogs|messages|secure"} |~ "(?i)(no space left|disk full|filesystem full|ENOSPC)" [5m])'
+              refId: A
+              datasource: {type: loki, uid: loki}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations: {summary: Диск заполнен (в логах)}
+        labels: {severity: critical}
+
+      - uid: campus-logs-critical
+        title: Критичные ошибки (panic, segfault)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job=~"varlogs|messages|secure"} |~ "(?i)(kernel panic|segfault|segmentation fault|fatal|critical)" [5m])'
+              refId: A
+              datasource: {type: loki, uid: loki}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations: {summary: Критичная ошибка в логах (panic, segfault)}
+        labels: {severity: critical}
+
+  # === МЕТРИКИ (Prometheus) ===
+  - orgId: 1
+    name: campus-metrics
+    folder: Campus
+    interval: 1m
+    rules:
+      - uid: campus-cpu-high
+        title: CPU перегрузка (>90%)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: '100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
+              refId: A
+              datasource: {type: prometheus, uid: prometheus}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [90], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations: {summary: CPU загрузка > 90%}
+        labels: {severity: warning}
+
+      - uid: campus-ram-high
+        title: Память заполнена (>90%)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100'
+              refId: A
+              datasource: {type: prometheus, uid: prometheus}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [90], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations: {summary: Память занята > 90%}
+        labels: {severity: warning}
+
+      - uid: campus-disk-high
+        title: Диск заполнен (>90%)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: '100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / node_filesystem_size_bytes{mountpoint="/"})'
+              refId: A
+              datasource: {type: prometheus, uid: prometheus}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [90], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations: {summary: Диск / заполнен > 90%}
+        labels: {severity: warning}
+
+      - uid: campus-node-down
+        title: Node Exporter недоступен
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 120, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: 'count(up{job="node"} == 0) > 0'
+              refId: A
+              datasource: {type: prometheus, uid: prometheus}
+          - refId: B
+            datasourceUid: __expr__
+            model: {expression: A, reducer: last, type: reduce}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C], reducer: {params: [], type: last}, type: query}
+              expression: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations: {summary: Node Exporter не отвечает — возможен даун хоста}
+        labels: {severity: critical}

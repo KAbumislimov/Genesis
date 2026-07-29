@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+{% block title %}Настройки{% endblock %}
+
+{% block extra_head %}
+<style>
+.st-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+@media(max-width:900px){.st-grid{grid-template-columns:1fr}}
+
+.st-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:16px;overflow:hidden}
+.st-head{background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:11px 18px;display:flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.st-body{padding:14px 18px}
+
+.st-row{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:10px 0;border-bottom:1px solid var(--border)}
+.st-row:last-child{border-bottom:none}
+.st-lbl{font-size:13px;font-weight:600;color:var(--text);flex-shrink:0}
+.st-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.st-ctrl{flex-shrink:0;display:flex;align-items:center;gap:6px}
+
+/* Toggle switch */
+.tgl{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.tgl input{opacity:0;width:0;height:0;position:absolute}
+.tgl-sl{position:absolute;inset:0;background:var(--bg3);border:1px solid var(--border);
+  border-radius:12px;cursor:pointer;transition:.25s}
+.tgl-sl:before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;
+  background:var(--muted);border-radius:50%;transition:.25s}
+.tgl input:checked + .tgl-sl{background:rgba(63,185,80,.18);border-color:var(--green)}
+.tgl input:checked + .tgl-sl:before{transform:translateX(20px);background:var(--green)}
+
+/* Theme swatches */
+.st-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px 0 4px}
+.st-sw{height:52px;border-radius:10px;border:2px solid transparent;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  transition:.15s;outline:2px solid transparent}
+.st-sw:hover{transform:scale(1.05)}
+.st-sw-dot{width:12px;height:12px;border-radius:50%;display:block}
+.st-sw-lbl{font-size:9px;font-weight:700;letter-spacing:.04em;color:inherit}
+.st-sw.active{outline:3px solid var(--blue)!important}
+
+/* Slider row */
+.sl-row{display:flex;align-items:center;gap:8px}
+.sl-row input[type=range]{flex:1;accent-color:var(--blue);cursor:pointer}
+.sl-val{font-size:12px;font-weight:700;color:var(--text);min-width:34px;text-align:right}
+
+/* Contrast / color buttons */
+.ct-btn{background:var(--bg3);border:2px solid var(--border);color:var(--text);
+  border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;
+  transition:.15s;white-space:nowrap}
+.ct-btn.active{border-color:var(--blue);color:var(--blue)}
+
+/* Session badge */
+.sess-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+  border-radius:6px;background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);
+  font-size:12px;color:var(--green)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+  <i class="bi bi-gear-fill" style="font-size:22px;color:var(--blue)"></i>
+  <div>
+    <h2 style="font-size:20px;font-weight:800;margin:0">Настройки</h2>
+    <div style="font-size:12px;color:var(--muted)">Внешний вид, уведомления, безопасность</div>
+  </div>
+  <a href="{{ url_for('profile') }}" class="btn btn-ghost btn-sm" style="margin-left:auto">
+    <i class="bi bi-person-circle"></i> Профиль
+  </a>
+</div>
+
+<div class="st-grid">
+
+<!-- ═══ LEFT COLUMN ═══════════════════════════════════════════════ -->
+<div>
+
+  <!-- ── Appearance ── -->
+  <div class="st-card">
+    <div class="st-head"><i class="bi bi-palette-fill" style="color:var(--blue)"></i> Внешний вид</div>
+    <div class="st-body">
+
+      <!-- Dark / Light toggle -->
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Тёмная / Светлая тема</div>
+          <div class="st-sub">Быстрое переключение базовой темы</div>
+        </div>
+        <div class="st-ctrl">
+          <button onclick="setTheme('dark')"
+                  style="background:var(--bg);border:2px solid var(--border);color:var(--text);
+                         border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;
+                         display:flex;align-items:center;gap:5px">
+            <i class="bi bi-moon-stars-fill" style="color:var(--blue)"></i> Тёмная
+          </button>
+          <button onclick="setTheme('light')"
+                  style="background:#f0f4f8;border:2px solid #cdd4df;color:#1c2333;
+                         border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;
+                         display:flex;align-items:center;gap:5px">
+            <i class="bi bi-sun-fill" style="color:#e3b341"></i> Светлая
+          </button>
+        </div>
+      </div>
+
+      <!-- All themes -->
+      <div style="padding:8px 0 4px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+                    color:var(--muted);margin-bottom:6px">Все темы оформления</div>
+        <div class="st-swatches">
+          <button class="tp-swatch st-sw" data-theme="dark" onclick="setTheme('dark')"
+                  style="background:#0d1117;color:#8b949e">
+            <span class="st-sw-dot" style="background:#58a6ff"></span>
+            <span class="st-sw-lbl">ТЁМНАЯ</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="light" onclick="setTheme('light')"
+                  style="background:#f0f4f8;color:#57606a">
+            <span class="st-sw-dot" style="background:#0969da"></span>
+            <span class="st-sw-lbl">СВЕТЛАЯ</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="ocean" onclick="setTheme('ocean')"
+                  style="background:#060e1e;color:#607d8b">
+            <span class="st-sw-dot" style="background:#4fc3f7"></span>
+            <span class="st-sw-lbl">ОКЕАН</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="nord" onclick="setTheme('nord')"
+                  style="background:#2e3440;color:#7a8899">
+            <span class="st-sw-dot" style="background:#88c0d0"></span>
+            <span class="st-sw-lbl">НОРД</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="forest" onclick="setTheme('forest')"
+                  style="background:#060f06;color:#6a9b6a">
+            <span class="st-sw-dot" style="background:#66bb6a"></span>
+            <span class="st-sw-lbl">ЛЕС</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="sunset" onclick="setTheme('sunset')"
+                  style="background:#120600;color:#8d6e63">
+            <span class="st-sw-dot" style="background:#ffa726"></span>
+            <span class="st-sw-lbl">ЗАКАТ</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="purple" onclick="setTheme('purple')"
+                  style="background:#08050f;color:#9575cd">
+            <span class="st-sw-dot" style="background:#ce93d8"></span>
+            <span class="st-sw-lbl">ФИОЛЕТ</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="dracula" onclick="setTheme('dracula')"
+                  style="background:#1e1f2b;color:#6272a4">
+            <span class="st-sw-dot" style="background:#ff79c6"></span>
+            <span class="st-sw-lbl">ДРАКУЛА</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="cyber" onclick="setTheme('cyber')"
+                  style="background:linear-gradient(135deg,#04001a,#10005a);color:#7040c0">
+            <span class="st-sw-dot" style="background:#ff0099;box-shadow:0 0 6px #ff0099"></span>
+            <span class="st-sw-lbl">КИБЕР</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="matrix" onclick="setTheme('matrix')"
+                  style="background:#000900;color:#2e7d2e">
+            <span class="st-sw-dot" style="background:#00ff41;box-shadow:0 0 6px #00ff41"></span>
+            <span class="st-sw-lbl">МАТРИЦА</span>
+          </button>
+          <button class="tp-swatch st-sw" data-theme="campus" onclick="setTheme('campus')"
+                  style="background:#000;color:#00698a;border:1px solid #1a1a1a">
+            <span class="st-sw-dot" style="background:#00d4ff;box-shadow:0 0 7px #00d4ff"></span>
+            <span class="st-sw-lbl">КАМПУС</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Language -->
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Язык интерфейса</div>
+          <div class="st-sub">Язык меток и кнопок</div>
+        </div>
+        <div class="lang-group st-ctrl">
+          <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+          <button class="lang-btn" data-lang="az" onclick="setLang('az')">AZ</button>
+          <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+      </div>
+
+      <!-- Font family -->
+      <div class="st-row" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="st-lbl">Шрифт интерфейса</div>
+          <div class="st-sub">Гарнитура текста по всему сайту</div>
+        </div>
+        <div class="st-ctrl" style="flex-wrap:wrap;gap:6px">
+          <button class="font-btn" data-font="Roboto" onclick="setFont('Roboto')" style="font-family:'Roboto',sans-serif">Roboto</button>
+          <button class="font-btn" data-font="Nunito" onclick="setFont('Nunito')" style="font-family:'Nunito',sans-serif">Nunito</button>
+          <button class="font-btn" data-font="Ubuntu" onclick="setFont('Ubuntu')" style="font-family:'Ubuntu',sans-serif">Ubuntu</button>
+          <button class="font-btn" data-font="Open Sans" onclick="setFont('Open Sans')" style="font-family:'Open Sans',sans-serif">Open Sans</button>
+          <button class="font-btn" data-font="Montserrat" onclick="setFont('Montserrat')" style="font-family:'Montserrat',sans-serif">Montserrat</button>
+          <button class="font-btn" data-font="Exo 2" onclick="setFont('Exo 2')" style="font-family:'Exo 2',sans-serif">Exo 2</button>
+        </div>
+      </div>
+
+      <!-- Font size -->
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Размер шрифта</div>
+          <div class="st-sub">Размер текста по всему сайту</div>
+        </div>
+        <div class="st-ctrl" style="min-width:180px">
+          <span style="font-size:12px;color:var(--muted)">A−</span>
+          <input type="range" id="st-size-slider" min="13" max="18" step="1" value="15"
+                 oninput="setTextSize(this.value)"
+                 style="width:110px;accent-color:var(--blue);cursor:pointer">
+          <span style="font-size:12px;color:var(--muted)">A+</span>
+          <span id="st-size-val" class="sl-val">15px</span>
+        </div>
+      </div>
+
+      <!-- Line height -->
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Межстрочный интервал</div>
+          <div class="st-sub">Расстояние между строками текста</div>
+        </div>
+        <div class="st-ctrl" style="min-width:180px">
+          <input type="range" id="st-lh-slider" min="1.2" max="2.0" step="0.1" value="1.5"
+                 oninput="setLineHeight(this.value)"
+                 style="width:130px;accent-color:var(--blue);cursor:pointer">
+          <span id="st-lh-val" class="sl-val">1.5</span>
+        </div>
+      </div>
+
+      <!-- Text color / contrast -->
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Цвет и контраст текста</div>
+          <div class="st-sub">Яркость и цвет основного текста</div>
+        </div>
+        <div class="st-ctrl">
+          <input type="color" id="st-text-color" value="#f0f6fc"
+                 oninput="setTextColor(this.value)"
+                 title="Выбрать цвет текста"
+                 style="width:32px;height:30px;border:1px solid var(--border);
+                        border-radius:7px;background:var(--bg3);cursor:pointer;padding:2px">
+          <button class="ct-btn" id="ct-normal" onclick="setTextContrast('normal')">Норм</button>
+          <button class="ct-btn" id="ct-bright" onclick="setTextContrast('bright')">Ярче</button>
+          <button class="ct-btn" id="ct-max" onclick="setTextContrast('max')">Макс</button>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div style="padding-top:10px;display:flex;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="resetAppearance()">
+          <i class="bi bi-arrow-counterclockwise"></i> Сбросить оформление
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Security ── -->
+  <div class="st-card">
+    <div class="st-head"><i class="bi bi-shield-lock-fill" style="color:var(--orange)"></i> Безопасность</div>
+    <div class="st-body">
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Пароль аккаунта</div>
+          <div class="st-sub">Изменить текущий пароль</div>
+        </div>
+        <a href="{{ url_for('profile') }}#password" class="btn btn-ghost btn-sm">
+          <i class="bi bi-lock-fill"></i> Изменить
+        </a>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Текущая сессия</div>
+          <div class="st-sub">Вы вошли как <strong>{{ current_user.username }}</strong></div>
+        </div>
+        <span class="sess-badge">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--green)"></span>
+          Активна
+        </span>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Профиль</div>
+          <div class="st-sub">Аватар, имя, контакты, история</div>
+        </div>
+        <a href="{{ url_for('profile') }}" class="btn btn-ghost btn-sm">
+          <i class="bi bi-person-circle"></i> Открыть
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /left -->
+
+<!-- ═══ RIGHT COLUMN ═══════════════════════════════════════════════ -->
+<div>
+
+  {% if current_user.role == 'admin' %}
+
+  <!-- ── Telegram Notifications ── -->
+  <div class="st-card">
+    <div class="st-head"><i class="bi bi-telegram" style="color:#2AABEE"></i> Telegram уведомления</div>
+    <div class="st-body">
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Вход в систему</div>
+          <div class="st-sub">Кто и когда зашёл на сайт</div>
+        </div>
+        <label class="tgl">
+          <input type="checkbox" id="tgl-login"
+                 onchange="saveTg('tg_notify_login', this.checked)">
+          <span class="tgl-sl"></span>
+        </label>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Бэкап</div>
+          <div class="st-sub">Результат еженедельного бэкапа</div>
+        </div>
+        <label class="tgl">
+          <input type="checkbox" id="tgl-backup"
+                 onchange="saveTg('tg_notify_backup', this.checked)">
+          <span class="tgl-sl"></span>
+        </label>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Гимн</div>
+          <div class="st-sub">Запуск гимна на кампусе</div>
+        </div>
+        <label class="tgl">
+          <input type="checkbox" id="tgl-himn"
+                 onchange="saveTg('tg_notify_himn', this.checked)">
+          <span class="tgl-sl"></span>
+        </label>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Загрузка треков</div>
+          <div class="st-sub">Кто загрузил музыку</div>
+        </div>
+        <label class="tgl">
+          <input type="checkbox" id="tgl-upload"
+                 onchange="saveTg('tg_notify_upload', this.checked)">
+          <span class="tgl-sl"></span>
+        </label>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Воспроизведение</div>
+          <div class="st-sub">Каждый запуск трека на плеере</div>
+        </div>
+        <label class="tgl">
+          <input type="checkbox" id="tgl-play"
+                 onchange="saveTg('tg_notify_play', this.checked)">
+          <span class="tgl-sl"></span>
+        </label>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Управление пользователями</div>
+          <div class="st-sub">Создание / удаление / блокировка</div>
+        </div>
+        <label class="tgl">
+          <input type="checkbox" id="tgl-users"
+                 onchange="saveTg('tg_notify_users', this.checked)">
+          <span class="tgl-sl"></span>
+        </label>
+      </div>
+
+      <div id="tg-save-msg" style="font-size:11px;color:var(--green);min-height:14px;
+           text-align:right;padding-top:4px"></div>
+
+    </div>
+  </div>
+
+  <!-- ── App settings ── -->
+  <div class="st-card">
+    <div class="st-head"><i class="bi bi-sliders" style="color:var(--green)"></i> Приложение</div>
+    <div class="st-body">
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Режим тишины</div>
+          <div class="st-sub">Отключить все звуки и воспроизведение</div>
+        </div>
+        <label class="tgl">
+          <input type="checkbox" id="tgl-silence"
+                 onchange="saveSilence(this.checked)">
+          <span class="tgl-sl"></span>
+        </label>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Фоновые обои</div>
+          <div class="st-sub">Управление обоями и слайд-шоу</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="toggleBgPicker(event)">
+          <i class="bi bi-image"></i> Обои
+        </button>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Резервные копии</div>
+          <div class="st-sub">Просмотр и скачивание бэкапов</div>
+        </div>
+        <a href="{{ url_for('backups_page') }}" class="btn btn-ghost btn-sm">
+          <i class="bi bi-archive-fill"></i> Бэкапы
+        </a>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Пользователи</div>
+          <div class="st-sub">Управление аккаунтами</div>
+        </div>
+        <a href="{{ url_for('admin') }}" class="btn btn-ghost btn-sm">
+          <i class="bi bi-people-fill"></i> Открыть
+        </a>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">GitHub — Исходный код</div>
+          <div class="st-sub">campus-infra · репозиторий проекта</div>
+        </div>
+        <a href="https://github.com/LandauAudioserver/campus-infra" target="_blank" rel="noopener"
+           class="btn btn-ghost btn-sm" style="border-color:rgba(139,148,158,.4);color:var(--text)">
+          <i class="bi bi-github"></i> GitHub
+        </a>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Grafana — Логи и метрики</div>
+          <div class="st-sub">Loki · Prometheus · дашборды сервера</div>
+        </div>
+        <a href="http://10.10.4.120:3000" target="_blank" rel="noopener" class="btn btn-ghost btn-sm"
+           style="border-color:rgba(255,111,0,.4);color:#ff6f00">
+          <i class="bi bi-bar-chart-fill"></i> Grafana
+        </a>
+      </div>
+
+      <div class="st-row">
+        <div>
+          <div class="st-lbl">Лог активности</div>
+          <div class="st-sub">История действий пользователей</div>
+        </div>
+        <a href="{{ url_for('admin_activity') }}" class="btn btn-ghost btn-sm">
+          <i class="bi bi-journal-text"></i> Открыть
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  {% else %}
+
+  <!-- Non-admin: minimal right column -->
+  <div class="st-card">
+    <div class="st-head"><i class="bi bi-info-circle" style="color:var(--blue)"></i> О системе</div>
+    <div class="st-body">
+      <div class="st-row">
+        <div><div class="st-lbl">Версия</div></div>
+        <span style="font-size:12px;color:var(--muted);font-family:monospace">campus-webui 2.0</span>
+      </div>
+      <div class="st-row">
+        <div><div class="st-lbl">Ваша роль</div></div>
+        <span class="bdg {% if current_user.role == 'admin' %}bdg-admin{% else %}bdg-viewer{% endif %}">
+          {{ current_user.role }}
+        </span>
+      </div>
+      <div class="st-row">
+        <div><div class="st-lbl">Поддержка</div></div>
+        <button class="btn btn-ghost btn-sm"
+                onclick="document.getElementById('cm').classList.add('show')">
+          <i class="bi bi-headset"></i> Связаться
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+
+</div><!-- /right -->
+
+</div><!-- /st-grid -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Init all appearance controls from localStorage ──
+(function() {
+  var size = parseInt(localStorage.getItem('textSize'), 10) || 15;
+  var sl = document.getElementById('st-size-slider');
+  var slv = document.getElementById('st-size-val');
+  if (sl) sl.value = size;
+  if (slv) slv.textContent = size + 'px';
+
+  var lh = parseFloat(localStorage.getItem('lineHeight')) || 1.5;
+  var lhs = document.getElementById('st-lh-slider');
+  var lhv = document.getElementById('st-lh-val');
+  if (lhs) lhs.value = lh;
+  if (lhv) lhv.textContent = lh.toFixed(1);
+
+  var col = localStorage.getItem('textColor');
+  var cp = document.getElementById('st-text-color');
+  if (cp && col) cp.value = col;
+
+  syncContrastBtns(localStorage.getItem('textContrast') || 'normal');
+
+  var ff = localStorage.getItem('fontFamily') || 'Roboto';
+  document.querySelectorAll('.font-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.font === ff);
+  });
+
+  // mark active theme swatch
+  syncThemeSwatches();
+})();
+
+function syncThemeSwatches() {
+  var cur = localStorage.getItem('theme') || 'dark';
+  document.querySelectorAll('.st-sw').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.theme === cur);
+  });
+}
+
+function syncContrastBtns(level) {
+  ['normal','bright','max'].forEach(function(l) {
+    var btn = document.getElementById('ct-' + l);
+    if (btn) btn.classList.toggle('active', l === level);
+  });
+}
+
+// Wrap setTheme to also sync swatches on this page
+var _stOrigSetTheme = window.setTheme;
+if (_stOrigSetTheme) {
+  window.setTheme = function(th) {
+    _stOrigSetTheme(th);
+    syncThemeSwatches();
+  };
+}
+
+window.resetAppearance = function() {
+  ['theme','textSize','textContrast','textColor','lineHeight','fontFamily','chatSize','chatCustomW','chatCustomH'].forEach(function(k) {
+    localStorage.removeItem(k);
+  });
+  location.reload();
+};
+
+// ── Admin-only: save Telegram notification toggle ──
+{% if current_user.role == 'admin' %}
+function saveTg(key, val) {
+  var obj = {}; obj[key] = val ? '1' : '0';
+  fetch('/api/settings/tg', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(obj)
+  }).then(function(r){return r.json();}).then(function(d){
+    var msg = document.getElementById('tg-save-msg');
+    if (msg) { msg.textContent = d.ok ? '✓ Сохранено' : '✗ Ошибка'; }
+    setTimeout(function(){ if (msg) msg.textContent = ''; }, 2000);
+  });
+}
+
+function saveSilence(val) {
+  fetch('/api/settings/silence', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({silence: val})
+  });
+}
+
+// Load current settings from server
+fetch('/api/settings/tg').then(function(r){return r.json();}).then(function(d){
+  if (!d.ok) return;
+  var s = d.settings;
+  function setTgl(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.checked = (val === '1' || val === true);
+  }
+  setTgl('tgl-login',  s.tg_notify_login);
+  setTgl('tgl-backup', s.tg_notify_backup);
+  setTgl('tgl-himn',   s.tg_notify_himn);
+  setTgl('tgl-upload', s.tg_notify_upload);
+  setTgl('tgl-play',   s.tg_notify_play);
+  setTgl('tgl-users',  s.tg_notify_users);
+});
+
+fetch('/api/settings/silence').then(function(r){return r.json();}).then(function(d){
+  var el = document.getElementById('tgl-silence');
+  if (el) el.checked = !!d.silence;
+});
+{% endif %}
+</script>
+{% endblock %}

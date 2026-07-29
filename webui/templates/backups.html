@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Бэкапы{% endblock %}
+{% block content %}
+<style>
+.bk{max-width:520px;margin:20px auto;padding:0 14px}
+.bk-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+.bk-head{padding:11px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
+.bk-body{padding:12px 14px}
+.bk-row{display:flex;justify-content:space-between;align-items:center;
+  padding:7px 10px;background:var(--bg3);border-radius:7px;margin-bottom:6px;
+  border:1px solid var(--border)}
+.bk-row:last-child{margin-bottom:0}
+.bk-lbl{font-size:12px;color:var(--text2)}
+.bk-val{font-size:13px;font-weight:700;color:var(--text)}
+.bk-ok{color:var(--green)}
+.bk-no{color:var(--text2)}
+.bk-blue{color:var(--blue)}
+.bk-mono{font-family:monospace;font-size:11px}
+/* файлы */
+.bk-file{display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;border-bottom:1px solid var(--border)}
+.bk-file:last-child{border-bottom:none}
+.bk-fname{font-size:12px;color:var(--text);display:flex;align-items:center;gap:5px}
+.bk-fsz{font-size:11px;color:var(--text2);font-family:monospace;flex-shrink:0;margin-right:6px}
+.bk-btn{font-size:11px;padding:3px 9px;border:1px solid var(--border);
+  border-radius:6px;background:var(--bg3);color:var(--text);cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.bk-btn:hover{border-color:var(--blue);color:var(--blue)}
+/* замок */
+.bk-lock{text-align:center;padding:18px 14px}
+.bk-lock input{width:100%;max-width:260px;padding:9px 12px;margin:10px 0 6px;
+  border:1px solid var(--border);border-radius:8px;background:var(--bg3);
+  color:var(--text);font-size:14px;display:block;margin-left:auto;margin-right:auto}
+.bk-lock button{padding:9px 24px;background:var(--blue);color:#fff;
+  border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+.bk-err{color:#f85149;font-size:12px;margin-top:4px;display:none}
+pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;font-size:11px;color:var(--text2);overflow-x:auto;
+  margin:0;line-height:1.7;white-space:pre-wrap}
+.bk-empty{text-align:center;padding:24px;color:var(--text2);font-size:13px}
+.bk-badge{font-size:10px;padding:1px 7px;background:var(--blue);
+  color:#fff;border-radius:10px;font-weight:700;margin-left:4px}
+.bk-date-toggle{display:flex;align-items:center;gap:8px;padding:8px 0;
+  cursor:pointer;border-bottom:1px solid var(--border)}
+.bk-date-toggle:hover .bk-dt-label{color:var(--blue)}
+</style>
+
+<div class="bk">
+
+  <!-- Заголовок -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <i class="bi bi-archive-fill" style="font-size:20px;color:var(--blue)"></i>
+    <div>
+      <div style="font-size:16px;font-weight:700;color:var(--text)">Резервные копии</div>
+      <div style="font-size:11px;color:var(--text2)">Каждый понедельник 07:00 — все машины</div>
+    </div>
+    {% if unlocked %}
+    <button onclick="lockVault()" class="bk-btn" style="margin-left:auto">
+      <i class="bi bi-lock-fill" style="color:#f0883e"></i> Заблокировать
+    </button>
+    {% endif %}
+  </div>
+
+  {% if not backup_dir %}
+  <div class="bk-card"><div class="bk-empty">
+    <i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:6px;opacity:.4"></i>
+    Папка бэкапов не настроена
+  </div></div>
+
+  {% else %}
+
+  <!-- Статус последнего бэкапа по машинам -->
+  <div class="bk-card">
+    <div class="bk-head">
+      <i class="bi bi-hdd-stack" style="color:var(--blue)"></i>
+      Последний бэкап —
+      {% if entries %}<span style="color:var(--blue);margin-left:4px">{{ entries[0].date }}</span>
+      {% else %}<span style="color:var(--text2);margin-left:4px">ещё не было</span>{% endif %}
+    </div>
+    <div class="bk-body">
+
+      <!-- Narimanov Campus -->
+      <div class="bk-row">
+        <span class="bk-lbl">
+          <i class="bi bi-pc-display" style="margin-right:4px"></i>Narimanov Campus
+        </span>
+        <span class="bk-val {% if machines.get('nctk',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
+          {% if machines.get('nctk') %}
+            {% if machines.nctk.ok %}✅ {{ machines.nctk.size_h }}{% else %}—{% endif %}
+          {% else %}—{% endif %}
+        </span>
+      </div>
+
+      <!-- Gənclik Campus -->
+      <div class="bk-row">
+        <span class="bk-lbl">
+          <i class="bi bi-pc-display" style="margin-right:4px"></i>Gənclik Campus
+        </span>
+        <span class="bk-val {% if machines.get('vm1',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
+          {% if machines.get('vm1') %}
+            {% if machines.vm1.ok %}✅ {{ machines.vm1.size_h }}{% else %}—{% endif %}
+          {% else %}—{% endif %}
+        </span>
+      </div>
+
+      <!-- Сервер CentOS -->
+      <div class="bk-row">
+        <span class="bk-lbl">
+          <i class="bi bi-server" style="margin-right:4px"></i>Сервер (CentOS)
+        </span>
+        <span class="bk-val {% if machines.get('centos',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
+          {% if machines.get('centos') %}
+            {% if machines.centos.ok %}✅ {{ machines.centos.size_h }}{% else %}—{% endif %}
+          {% else %}—{% endif %}
+        </span>
+      </div>
+
+      <!-- Музыка -->
+      <div class="bk-row">
+        <span class="bk-lbl">
+          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Narimanov
+        </span>
+        <span class="bk-val bk-ok">
+          {{ music.get('music-nctk', {}).get('size_h', '—') }}
+        </span>
+      </div>
+      <div class="bk-row">
+        <span class="bk-lbl">
+          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Gənclik
+        </span>
+        <span class="bk-val bk-ok">
+          {{ music.get('music-vm1', {}).get('size_h', '—') }}
+        </span>
+      </div>
+
+      <!-- Папка -->
+      <div class="bk-row">
+        <span class="bk-lbl"><i class="bi bi-folder2" style="margin-right:4px"></i>Папка</span>
+        <span class="bk-val bk-mono bk-blue">{{ backup_dir }}</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Разблокировка файлов -->
+  {% if not unlocked %}
+  <div class="bk-card">
+    <div class="bk-head">
+      <i class="bi bi-shield-lock" style="color:var(--orange)"></i> Доступ к файлам
+    </div>
+    <div class="bk-lock">
+      {% if not has_vault %}
+      <div style="color:#f0883e;font-size:12px">⚠️ BACKUP_VAULT_PASS не задан в .env</div>
+      {% else %}
+      <div style="font-size:12px;color:var(--text2)">Введите пароль для скачивания файлов</div>
+      <input id="vault-pass" type="password" placeholder="Пароль"
+             onkeydown="if(event.key==='Enter')unlockVault()">
+      <button onclick="unlockVault()">Войти</button>
+      <div id="vault-err" class="bk-err"></div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Архивы -->
+  {% if entries %}
+  <div class="bk-card">
+    <div class="bk-head">
+      <i class="bi bi-folder2-open" style="color:var(--blue)"></i> Архивы конфигураций
+    </div>
+    <div class="bk-body" style="padding-top:6px">
+      {% for entry in entries %}
+      <!-- Дата-заголовок -->
+      <div class="bk-date-toggle" onclick="toggleBackup('bp-{{ entry.date }}','chev-{{ entry.date }}')">
+        <i class="bi bi-calendar3" style="color:var(--blue);font-size:11px;flex-shrink:0"></i>
+        <span class="bk-dt-label" style="font-size:13px;font-weight:600;color:var(--text)">
+          {{ entry.date }}
+        </span>
+        <span style="font-size:11px;color:var(--text2)">{{ entry.total_h }}</span>
+        {% if loop.first %}<span class="bk-badge">актуальный</span>{% endif %}
+        <i class="bi bi-chevron-down" id="chev-{{ entry.date }}"
+           style="margin-left:auto;font-size:10px;color:var(--text2);transition:transform .2s;
+           {% if loop.first %}transform:rotate(180deg){% endif %}"></i>
+      </div>
+
+      <!-- Список файлов -->
+      <div id="bp-{{ entry.date }}" style="display:{% if loop.first %}block{% else %}none{% endif %};
+           padding:4px 0 6px">
+        {% for f in entry.files %}
+        <div class="bk-file">
+          <span class="bk-fname">
+            <i class="bi bi-file-earmark-zip" style="color:var(--text2);font-size:11px"></i>
+            {{ f.name }}
+          </span>
+          <div style="display:flex;align-items:center;flex-shrink:0">
+            <span class="bk-fsz">{{ f.size_h }}</span>
+            {% if f.name == 'report.txt' %}
+            <button class="bk-btn" onclick="showReport('{{ entry.date }}')">
+              <i class="bi bi-eye"></i> Отчёт
+            </button>
+            {% elif unlocked %}
+            <a class="bk-btn" href="/api/backup/download/{{ entry.date }}/{{ f.name }}">
+              <i class="bi bi-download"></i> Скачать
+            </a>
+            {% else %}
+            <span style="font-size:11px;color:var(--text2)">
+              <i class="bi bi-lock"></i>
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="bk-card">
+    <div class="bk-empty">
+      <i class="bi bi-calendar-x" style="font-size:26px;display:block;margin-bottom:6px;opacity:.4"></i>
+      <span style="color:var(--text)">Бэкапов ещё нет</span><br>
+      <span style="font-size:11px">Первый запустится в понедельник в 07:00</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Восстановление -->
+  <div class="bk-card">
+    <div class="bk-head">
+      <i class="bi bi-arrow-repeat" style="color:var(--blue)"></i> Восстановление из GitHub
+    </div>
+    <div class="bk-body">
+      <pre class="bk-code">git clone https://github.com/LandauAudioserver/campus-infra.git
+cd campus-infra && GH_TOKEN=ghp_xxx bash bootstrap.sh all</pre>
+    </div>
+  </div>
+
+  <!-- Администратор -->
+  {% if admin_emails %}
+  <div class="bk-card">
+    <div class="bk-head">
+      <i class="bi bi-person-circle" style="color:var(--blue)"></i> Администратор
+    </div>
+    <div class="bk-body">
+      {% for em in admin_emails.split(',') %}
+      <div class="bk-row" style="margin-bottom:{% if not loop.last %}6px{% else %}0{% endif %}">
+        <span class="bk-lbl"><i class="bi bi-envelope" style="margin-right:4px"></i>Email</span>
+        <a href="mailto:{{ em.strip() }}" class="bk-val bk-blue"
+           style="text-decoration:none;font-size:12px">{{ em.strip() }}</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+</div>
+
+<!-- Модал отчёта -->
+<div id="report-modal" style="display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.65);z-index:9000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+    max-width:620px;width:92%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:11px 16px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:600;color:var(--text)">Отчёт о бэкапе</span>
+      <button onclick="document.getElementById('report-modal').style.display='none'"
+        style="background:none;border:none;color:var(--text2);cursor:pointer;
+               font-size:22px;line-height:1;padding:0">&times;</button>
+    </div>
+    <pre id="report-body" style="padding:14px 16px;font-size:12px;overflow-y:auto;
+      color:var(--text);margin:0;line-height:1.6;white-space:pre-wrap;word-break:break-word"></pre>
+  </div>
+</div>
+
+<script>
+function toggleBackup(id, chevId) {
+  var el = document.getElementById(id);
+  var ch = document.getElementById(chevId);
+  var open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if(ch) ch.style.transform = open ? '' : 'rotate(180deg)';
+}
+function unlockVault() {
+  var pw = document.getElementById('vault-pass').value;
+  fetch('/api/backup/unlock',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({password:pw})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){ location.reload(); }
+    else {
+      var e=document.getElementById('vault-err');
+      e.textContent=d.error||'Неверный пароль';
+      e.style.display='block';
+      document.getElementById('vault-pass').value='';
+    }
+  });
+}
+function lockVault(){
+  fetch('/api/backup/lock',{method:'POST'}).then(()=>location.reload());
+}
+function showReport(date){
+  fetch('/api/backup/report/'+date)
+    .then(r=>r.text())
+    .then(t=>{
+      document.getElementById('report-body').textContent=t;
+      document.getElementById('report-modal').style.display='flex';
+    });
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') document.getElementById('report-modal').style.display='none';
+});
+</script>
+{% endblock %}

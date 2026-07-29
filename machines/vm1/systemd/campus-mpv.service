@@ -1,0 +1,14 @@
+# ~/.config/systemd/user/campus-mpv.service
+# User-сервис (запускать через: systemctl --user enable --now campus-mpv)
+[Unit]
+Description=Campus MPV daemon (with IPC, ALSA)
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mpv --idle=yes --no-video --ao=alsa --audio-device=alsa/hw:1,0 --input-ipc-server=/run/campus-player/mpv.sock --volume=100
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

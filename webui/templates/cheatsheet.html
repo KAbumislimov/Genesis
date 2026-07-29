@@ -1,0 +1,850 @@
+{% extends "base.html" %}
+{% block title %}Шпаргалка команд{% endblock %}
+{% block content %}
+<style>
+.cs-wrap { max-width: 1400px; margin: 0 auto; padding: 20px 16px 40px; }
+.cs-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+.cs-title { font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.cs-search {
+  flex: 1; min-width: 200px; max-width: 360px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 14px 8px 36px;
+  color: var(--text); font-size: 13px; outline: none;
+  position: relative;
+}
+.cs-search:focus { border-color: var(--blue); }
+.cs-search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 360px; }
+.cs-search-wrap i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+                     color: var(--muted); font-size: 14px; pointer-events: none; }
+
+.cs-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.cs-tab {
+  padding: 7px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+  background: var(--bg2); border: 1px solid var(--border); color: var(--muted);
+  transition: all .15s; display: flex; align-items: center; gap: 7px;
+}
+.cs-tab:hover { background: var(--bg3); color: var(--text); }
+.cs-tab.active { background: rgba(88,166,255,.15); border-color: var(--blue); color: var(--blue); }
+.cs-tab.active.linux { background: rgba(63,185,80,.15); border-color: var(--green); color: var(--green); }
+
+.cs-panel { display: none; }
+.cs-panel.active { display: block; }
+
+.cs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+
+.cs-cat {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.cs-cat-head {
+  padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  border-bottom: 1px solid var(--border);
+}
+.cs-cat-body { padding: 8px 0; }
+
+.cs-cmd {
+  display: flex; align-items: flex-start; gap: 0; padding: 5px 14px;
+  border-radius: 0; transition: background .12s; cursor: default;
+}
+.cs-cmd:hover { background: var(--bg3); }
+.cs-cmd-code {
+  font-family: 'Courier New', monospace; font-size: 12px; color: var(--text);
+  flex: 1; min-width: 0; word-break: break-all; line-height: 1.5;
+  padding-top: 1px;
+}
+.cs-cmd-desc {
+  font-size: 11px; color: var(--muted); margin-top: 1px;
+}
+.cs-copy {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  padding: 3px 6px; border-radius: 6px; font-size: 13px; flex-shrink: 0;
+  transition: all .15s; margin-left: 6px; margin-top: 1px;
+}
+.cs-copy:hover { background: rgba(88,166,255,.15); color: var(--blue); }
+.cs-copy.copied { color: var(--green); }
+
+.no-results {
+  text-align: center; color: var(--muted); padding: 60px 20px;
+  font-size: 15px; grid-column: 1/-1;
+}
+
+/* color accents per category */
+.acc-net   { color: #58a6ff; }
+.acc-sys   { color: #bc8cff; }
+.acc-disk  { color: #ffa657; }
+.acc-user  { color: #3fb950; }
+.acc-proc  { color: #f85149; }
+.acc-svc   { color: #79c0ff; }
+.acc-log   { color: #e3b341; }
+.acc-ssh   { color: #ff7b72; }
+.acc-pkg   { color: #56d364; }
+.acc-docker{ color: #2ea5e0; }
+.acc-file  { color: #d2a8ff; }
+.acc-remote{ color: #ffa657; }
+.acc-reg   { color: #ff7b72; }
+.acc-print { color: #79c0ff; }
+.acc-gpo   { color: #bc8cff; }
+.acc-diag  { color: #56d364; }
+.acc-cisco { color: #ffa657; }
+.acc-ap    { color: #4fc3f7; }
+.acc-vlan  { color: #bc8cff; }
+.acc-span  { color: #56d364; }
+.acc-sec   { color: #f85149; }
+
+.cs-cat[data-hidden="true"] { display: none; }
+</style>
+
+<div class="cs-wrap">
+  <div class="cs-header">
+    <div class="cs-title">
+      <i class="bi bi-journal-code" style="color:var(--blue)"></i>
+      Шпаргалка команд
+    </div>
+    <div class="cs-search-wrap">
+      <i class="bi bi-search"></i>
+      <input class="cs-search" id="cs-search" type="text"
+             placeholder="Поиск команды или описания..." autocomplete="off">
+    </div>
+    <div id="cs-count" style="font-size:12px;color:var(--muted)"></div>
+  </div>
+
+  <div class="cs-tabs">
+    <button class="cs-tab active" onclick="switchTab('win',this)">
+      <i class="bi bi-windows"></i> Windows
+    </button>
+    <button class="cs-tab linux" onclick="switchTab('linux',this)">
+      <i class="bi bi-terminal-fill"></i> Linux / CentOS
+    </button>
+    <button class="cs-tab" onclick="switchTab('cisco',this)">
+      <i class="bi bi-router-fill"></i> Cisco / AP
+    </button>
+  </div>
+
+  <!-- ══════════════ WINDOWS ══════════════ -->
+  <div class="cs-panel active" id="panel-win">
+    <div class="cs-grid" id="grid-win">
+
+      {% set win_cats = [
+        ('net', 'bi-wifi', 'acc-net', 'Сеть', [
+          ('ipconfig', 'Показать IP-адрес и основной шлюз'),
+          ('ipconfig /all', 'Полная информация по всем адаптерам (MAC, DNS, DHCP)'),
+          ('ipconfig /flushdns', 'Очистить кэш DNS'),
+          ('ipconfig /release && ipconfig /renew', 'Освободить и получить новый IP от DHCP'),
+          ('ping 8.8.8.8 -t', 'Бесконечный пинг (проверка интернета)'),
+          ('ping 8.8.8.8 -n 10', 'Пинг 10 пакетами'),
+          ('tracert 8.8.8.8', 'Трассировка маршрута до хоста'),
+          ('nslookup google.com', 'DNS-запрос — узнать IP по имени'),
+          ('nslookup google.com 8.8.8.8', 'DNS через конкретный сервер'),
+          ('netstat -an', 'Все активные соединения и порты'),
+          ('netstat -b', 'Соединения с именами процессов'),
+          ('arp -a', 'Таблица ARP (IP ↔ MAC)'),
+          ('route print', 'Таблица маршрутизации'),
+          ('netsh winsock reset', 'Сброс сети (нужна перезагрузка)'),
+          ('netsh int ip reset', 'Сброс TCP/IP стека'),
+          ('netsh wlan show profiles', 'Список сохранённых Wi-Fi сетей'),
+          ('netsh wlan show profile name="WIFI" key=clear', 'Пароль от сохранённой Wi-Fi сети'),
+          ('net view', 'Компьютеры в сети'),
+        ]),
+        ('sys', 'bi-cpu', 'acc-sys', 'Система и информация', [
+          ('systeminfo', 'Полная информация о системе (ОС, RAM, сеть)'),
+          ('winver', 'Версия Windows (графическое окно)'),
+          ('hostname', 'Имя компьютера'),
+          ('msinfo32', 'Системная информация (GUI)'),
+          ('dxdiag', 'DiagX — видеокарта, звук, система'),
+          ('wmic cpu get name', 'Модель процессора'),
+          ('wmic memorychip get capacity', 'Объём каждой планки RAM (байты)'),
+          ('wmic os get totalvisiblememorysize', 'Общий объём RAM'),
+          ('wmic bios get serialnumber', 'Серийный номер BIOS/материнской платы'),
+          ('wmic computersystem get model', 'Модель компьютера'),
+          ('msconfig', 'Конфигурация автозагрузки и служб'),
+          ('devmgmt.msc', 'Диспетчер устройств'),
+          ('compmgmt.msc', 'Управление компьютером'),
+          ('mmc', 'Консоль управления Microsoft'),
+          ('control panel', 'Панель управления'),
+          ('powercfg /batteryreport', 'Отчёт о состоянии батареи'),
+          ('powercfg /sleepstudy', 'История сна/пробуждения ноутбука'),
+        ]),
+        ('disk', 'bi-hdd', 'acc-disk', 'Диск и файловая система', [
+          ('wmic logicaldisk get deviceid,size,freespace', 'Диски и свободное место (байты)'),
+          ('chkdsk C: /f', 'Проверка и исправление ошибок диска (нужна перезагрузка)'),
+          ('chkdsk C: /r', 'Проверка + восстановление повреждённых секторов'),
+          ('diskpart', 'Управление дисками и разделами (интерактивно)'),
+          ('diskmgmt.msc', 'Управление дисками (GUI)'),
+          ('cleanmgr', 'Очистка диска от временных файлов'),
+          ('defrag C: /u /v', 'Дефрагментация диска C:'),
+          ('sfc /scannow', 'Проверка и восстановление системных файлов'),
+          ('DISM /Online /Cleanup-Image /RestoreHealth', 'Восстановление образа Windows'),
+          ('dir C:\\ /s /ah', 'Список всех файлов включая скрытые'),
+          ('robocopy src dst /e /z /log:log.txt', 'Надёжное копирование с логом'),
+          ('xcopy /e /i /h src dst', 'Копирование с подпапками и скрытыми файлами'),
+          ('mklink /d link target', 'Создать символическую ссылку на папку'),
+          ('attrib +h file', 'Скрыть файл'),
+          ('attrib -h -r -s file', 'Снять атрибуты скрытый/только чтение/системный'),
+        ]),
+        ('user', 'bi-person', 'acc-user', 'Пользователи и группы', [
+          ('net user', 'Список всех локальных пользователей'),
+          ('net user USERNAME', 'Информация о конкретном пользователе'),
+          ('net user USERNAME * /domain', 'Сменить пароль пользователя в домене'),
+          ('net user USERNAME /active:yes', 'Включить учётную запись'),
+          ('net user USERNAME /active:no', 'Отключить учётную запись'),
+          ('net user USERNAME /add', 'Создать нового локального пользователя'),
+          ('net user USERNAME /delete', 'Удалить пользователя'),
+          ('net localgroup administrators', 'Список локальных администраторов'),
+          ('net localgroup administrators USERNAME /add', 'Добавить в администраторы'),
+          ('whoami', 'Имя текущего пользователя'),
+          ('whoami /priv', 'Привилегии текущего пользователя'),
+          ('query session', 'Активные сессии RDP и консоль'),
+          ('logoff SESSION_ID', 'Завершить сессию по ID'),
+          ('gpresult /r', 'Применённые групповые политики'),
+          ('gpupdate /force', 'Принудительное обновление групповых политик'),
+        ]),
+        ('proc', 'bi-activity', 'acc-proc', 'Процессы', [
+          ('tasklist', 'Список всех запущенных процессов'),
+          ('tasklist | findstr "chrome"', 'Найти процесс по имени'),
+          ('taskkill /f /im notepad.exe', 'Завершить процесс по имени принудительно'),
+          ('taskkill /f /pid 1234', 'Завершить процесс по PID'),
+          ('taskmgr', 'Диспетчер задач (GUI)'),
+          ('wmic process get name,pid,commandline', 'Процессы с командной строкой запуска'),
+          ('wmic process where name="chrome.exe" delete', 'Убить все процессы chrome'),
+          ('start "" /b program.exe', 'Запустить программу в фоне'),
+        ]),
+        ('svc', 'bi-gear', 'acc-svc', 'Службы', [
+          ('services.msc', 'Менеджер служб (GUI)'),
+          ('net start "Service Name"', 'Запустить службу'),
+          ('net stop "Service Name"', 'Остановить службу'),
+          ('sc query "Service Name"', 'Статус службы'),
+          ('sc start/stop/restart "Service Name"', 'Управление службой через sc'),
+          ('sc qc "Service Name"', 'Конфигурация службы (тип запуска, путь)'),
+          ('sc config "Service Name" start= auto', 'Установить автозапуск службы'),
+          ('sc config "Service Name" start= disabled', 'Отключить службу'),
+          ('Get-Service | Where Status -eq Running', 'PowerShell: список запущенных служб'),
+          ('Restart-Service -Name "Spooler"', 'PowerShell: перезапустить службу'),
+        ]),
+        ('remote', 'bi-display', 'acc-remote', 'Удалённый доступ', [
+          ('mstsc /v:IP_ADDRESS', 'Подключиться по RDP'),
+          ('mstsc /v:IP:3389 /admin', 'RDP в консольную сессию'),
+          ('mstsc /v:IP /f', 'RDP в полноэкранном режиме'),
+          ('shutdown /r /m \\\\COMPUTER /t 0', 'Перезагрузить удалённый ПК'),
+          ('shutdown /s /m \\\\COMPUTER /t 0', 'Выключить удалённый ПК'),
+          ('net use \\\\server\\share', 'Подключить сетевую папку'),
+          ('net use Z: \\\\server\\share', 'Подключить как диск Z:'),
+          ('net use * /delete', 'Отключить все сетевые диски'),
+          ('psexec \\\\COMPUTER cmd', 'Удалённая командная строка (PsExec)'),
+          ('wmic /node:IP process call create "cmd.exe"', 'Запустить процесс удалённо'),
+        ]),
+        ('diag', 'bi-bug', 'acc-diag', 'Диагностика и журналы', [
+          ('eventvwr', 'Просмотр событий (GUI)'),
+          ('wevtutil qe System /c:20 /rd:true /f:text', 'Последние 20 системных событий'),
+          ('wevtutil qe Application /c:20 /rd:true /f:text', 'Последние 20 событий приложений'),
+          ('wevtutil cl System', 'Очистить системный журнал'),
+          ('msdt.exe /id NetworkDiagnosticsNetworkAdapter', 'Диагностика сетевого адаптера'),
+          ('mdsched.exe', 'Проверка памяти (RAM) при следующей загрузке'),
+          ('perfmon', 'Монитор производительности'),
+          ('resmon', 'Монитор ресурсов (CPU, RAM, диск, сеть)'),
+          ('driverquery', 'Список установленных драйверов'),
+          ('driverquery | findstr "RUNNING"', 'Только активные драйверы'),
+          ('pnputil /enum-drivers', 'Перечислить сторонние драйверы'),
+          ('verifier', 'Проверка драйверов (для диагностики BSOD)'),
+        ]),
+        ('print', 'bi-printer', 'acc-print', 'Принтеры', [
+          ('printui /s /t2', 'Свойства сервера печати (все принтеры)'),
+          ('printui /dl /n "Printer Name"', 'Удалить принтер'),
+          ('print /d:\\\\server\\printer file.txt', 'Печать файла на сетевой принтер'),
+          ('net stop spooler && net start spooler', 'Перезапустить службу печати'),
+          ('del /Q /F /S "%systemroot%\\System32\\spool\\PRINTERS\\*.*"', 'Очистить очередь печати'),
+          ('Get-Printer', 'PowerShell: список принтеров'),
+          ('Add-Printer -Name "NAME" -PortName "IP_PORT" -DriverName "DRIVER"', 'Добавить принтер PowerShell'),
+        ]),
+        ('reg', 'bi-sliders', 'acc-reg', 'Реестр и политики', [
+          ('regedit', 'Редактор реестра (GUI)'),
+          ('reg query HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion', 'Запросить раздел реестра'),
+          ('reg add HKCU\\Software\\Test /v Key /t REG_SZ /d Value', 'Добавить значение в реестр'),
+          ('reg delete HKCU\\Software\\Test /v Key /f', 'Удалить значение из реестра'),
+          ('reg export HKLM\\SOFTWARE\\App backup.reg', 'Экспортировать ветку реестра'),
+          ('reg import backup.reg', 'Импортировать реестр из файла'),
+          ('gpedit.msc', 'Редактор групповых политик'),
+          ('rsop.msc', 'Результирующие политики (GUI)'),
+          ('secedit /configure /cfg template.inf /db db.sdb', 'Применить шаблон безопасности'),
+        ]),
+      ] %}
+
+      {% for id, icon, acc, title, cmds in win_cats %}
+      <div class="cs-cat" data-cat="{{ id }}">
+        <div class="cs-cat-head">
+          <i class="bi {{ icon }} {{ acc }}"></i>
+          <span class="{{ acc }}">{{ title }}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--muted)">{{ cmds|length }} команд</span>
+        </div>
+        <div class="cs-cat-body">
+          {% for cmd, desc in cmds %}
+          <div class="cs-cmd" data-cmd="{{ cmd }}" data-desc="{{ desc }}">
+            <div>
+              <div class="cs-cmd-code">{{ cmd }}</div>
+              <div class="cs-cmd-desc">{{ desc }}</div>
+            </div>
+            <button class="cs-copy" onclick="copyCmd(this, '{{ cmd|replace("'", "\\'") }}')"
+                    title="Скопировать">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="no-results" id="no-win" style="display:none">
+        <i class="bi bi-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:.3"></i>
+        Команды не найдены
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ LINUX ══════════════ -->
+  <div class="cs-panel" id="panel-linux">
+    <div class="cs-grid" id="grid-linux">
+
+      {% set linux_cats = [
+        ('net', 'bi-wifi', 'acc-net', 'Сеть', [
+          ('ip a', 'Показать все IP-адреса и интерфейсы'),
+          ('ip addr show eth0', 'IP конкретного интерфейса'),
+          ('ip route', 'Таблица маршрутизации'),
+          ('ip route add default via 10.10.4.1', 'Добавить шлюз по умолчанию'),
+          ('ping -c 4 8.8.8.8', 'Пинг 4 пакетами'),
+          ('ping -c 4 -I eth0 8.8.8.8', 'Пинг через конкретный интерфейс'),
+          ('traceroute 8.8.8.8', 'Трассировка маршрута'),
+          ('mtr 8.8.8.8', 'Интерактивный traceroute + ping'),
+          ('nslookup google.com', 'DNS-запрос'),
+          ('dig google.com', 'Детальный DNS-запрос'),
+          ('dig @8.8.8.8 google.com', 'DNS через конкретный сервер'),
+          ('ss -tuln', 'Открытые TCP/UDP порты (без процессов)'),
+          ('ss -tulnp', 'Открытые порты с именами процессов'),
+          ('netstat -tuln', 'Открытые порты (устаревший аналог ss)'),
+          ('curl -I https://google.com', 'HTTP-запрос заголовков (проверка доступности)'),
+          ('curl -o /dev/null -w "%{http_code}" URL', 'HTTP-код ответа сайта'),
+          ('wget -q --spider URL && echo OK', 'Проверить доступность URL'),
+          ('nmcli d', 'Список сетевых устройств и статус'),
+          ('nmcli con show', 'Список сетевых подключений'),
+          ('nmcli con up "Connection"', 'Активировать подключение'),
+          ('nmtui', 'Настройка сети в TUI (удобно без GUI)'),
+          ('cat /etc/resolv.conf', 'DNS-серверы системы'),
+          ('ip link set eth0 up', 'Включить сетевой интерфейс'),
+          ('ip link set eth0 down', 'Отключить сетевой интерфейс'),
+          ('arp -n', 'ARP-таблица (IP ↔ MAC)'),
+          ('tcpdump -i eth0 -n', 'Захват пакетов на интерфейсе'),
+          ('nmap -sn 10.10.4.0/24', 'Сканирование хостов в подсети'),
+          ('nc -zv host 80', 'Проверить открытость порта'),
+        ]),
+        ('sys', 'bi-cpu', 'acc-sys', 'Система и ресурсы', [
+          ('uname -a', 'Версия ядра и архитектура'),
+          ('cat /etc/os-release', 'Версия дистрибутива Linux'),
+          ('hostnamectl', 'Имя хоста, ОС, ядро'),
+          ('uptime', 'Время работы системы и нагрузка'),
+          ('top', 'Мониторинг процессов в реальном времени'),
+          ('htop', 'Улучшенный top (нужно установить)'),
+          ('free -h', 'Использование памяти (RAM/swap)'),
+          ('vmstat 1 5', 'Статистика VM: память, CPU, I/O каждую секунду'),
+          ('iostat -x 1', 'I/O статистика дисков'),
+          ('lscpu', 'Информация о процессоре'),
+          ('lsmem', 'Информация об оперативной памяти'),
+          ('lshw -short', 'Краткий список оборудования'),
+          ('dmidecode -t memory', 'Детали модулей RAM'),
+          ('cat /proc/cpuinfo', 'Подробная информация о CPU'),
+          ('cat /proc/meminfo', 'Подробная информация о памяти'),
+          ('dmesg | tail -20', 'Последние сообщения ядра'),
+          ('dmesg | grep -i error', 'Ошибки в журнале ядра'),
+          ('timedatectl', 'Время, часовой пояс, синхронизация NTP'),
+          ('timedatectl set-timezone Asia/Baku', 'Установить часовой пояс Баку'),
+          ('date', 'Текущая дата и время'),
+          ('hwclock', 'Аппаратные часы'),
+          ('reboot', 'Перезагрузить систему'),
+          ('shutdown -h now', 'Выключить немедленно'),
+          ('shutdown -r +5 "Reboot in 5 min"', 'Перезагрузить через 5 минут с сообщением'),
+        ]),
+        ('disk', 'bi-hdd', 'acc-disk', 'Диск и файловая система', [
+          ('df -h', 'Свободное место на разделах'),
+          ('df -h /home', 'Свободное место конкретного раздела'),
+          ('du -sh /var/*', 'Размер каждой подпапки в /var'),
+          ('du -sh * | sort -h', 'Папки отсортированные по размеру'),
+          ('lsblk', 'Дерево дисков и разделов'),
+          ('lsblk -f', 'Диски с типом файловой системы и UUID'),
+          ('fdisk -l', 'Таблицы разделов всех дисков'),
+          ('fdisk /dev/sdb', 'Управление разделами диска /dev/sdb'),
+          ('parted /dev/sdb print', 'Разделы через parted'),
+          ('mkfs.ext4 /dev/sdb1', 'Форматировать раздел в ext4'),
+          ('mount /dev/sdb1 /mnt/data', 'Монтировать раздел'),
+          ('umount /mnt/data', 'Отмонтировать'),
+          ('mount -a', 'Смонтировать всё из /etc/fstab'),
+          ('cat /etc/fstab', 'Автомонтирование при загрузке'),
+          ('blkid', 'UUID и тип ФС всех дисков'),
+          ('fsck /dev/sdb1', 'Проверка файловой системы'),
+          ('dd if=/dev/zero of=test bs=1M count=512 conv=fdatasync', 'Тест скорости записи'),
+          ('hdparm -Tt /dev/sda', 'Тест скорости чтения диска'),
+          ('smartctl -a /dev/sda', 'SMART-статус диска (здоровье)'),
+          ('smartctl -t short /dev/sda', 'Запустить короткий SMART-тест'),
+          ('lvdisplay', 'Логические тома LVM'),
+          ('vgdisplay', 'Группы томов LVM'),
+          ('pvdisplay', 'Физические тома LVM'),
+        ]),
+        ('svc', 'bi-gear', 'acc-svc', 'Службы (systemctl)', [
+          ('systemctl status SERVICE', 'Статус службы'),
+          ('systemctl start SERVICE', 'Запустить службу'),
+          ('systemctl stop SERVICE', 'Остановить службу'),
+          ('systemctl restart SERVICE', 'Перезапустить службу'),
+          ('systemctl reload SERVICE', 'Перечитать конфигурацию без остановки'),
+          ('systemctl enable SERVICE', 'Включить автозапуск при загрузке'),
+          ('systemctl disable SERVICE', 'Отключить автозапуск'),
+          ('systemctl is-active SERVICE', 'Проверить: запущена ли служба'),
+          ('systemctl list-units --type=service', 'Список всех служб и их статус'),
+          ('systemctl list-units --failed', 'Только упавшие службы'),
+          ('systemctl daemon-reload', 'Перечитать unit-файлы после изменений'),
+          ('systemctl list-timers --all', 'Все таймеры (аналог cron)'),
+          ('systemctl cat SERVICE', 'Показать unit-файл службы'),
+          ('systemctl edit SERVICE', 'Редактировать override для службы'),
+        ]),
+        ('pkg', 'bi-box', 'acc-pkg', 'Пакеты (YUM / DNF)', [
+          ('yum install PACKAGE', 'Установить пакет'),
+          ('yum remove PACKAGE', 'Удалить пакет'),
+          ('yum update', 'Обновить все пакеты'),
+          ('yum update PACKAGE', 'Обновить конкретный пакет'),
+          ('yum list installed', 'Список установленных пакетов'),
+          ('yum list installed | grep NAME', 'Найти установленный пакет'),
+          ('yum search PACKAGE', 'Поиск пакета в репозитории'),
+          ('yum info PACKAGE', 'Информация о пакете'),
+          ('yum check-update', 'Доступные обновления'),
+          ('yum history', 'История установок/удалений'),
+          ('yum history undo 5', 'Откатить операцию #5'),
+          ('yum clean all', 'Очистить кэш пакетов'),
+          ('rpm -qa | grep NAME', 'Найти установленный RPM'),
+          ('rpm -qi PACKAGE', 'Информация об установленном пакете'),
+          ('rpm -ql PACKAGE', 'Файлы пакета'),
+          ('rpm -qf /usr/bin/curl', 'Какому пакету принадлежит файл'),
+          ('rpm -ivh package.rpm', 'Установить RPM-файл'),
+          ('dnf install PACKAGE', 'DNF (новый менеджер пакетов CentOS 8+)'),
+        ]),
+        ('user', 'bi-person', 'acc-user', 'Пользователи', [
+          ('who', 'Кто сейчас в системе'),
+          ('w', 'Что делают залогиненные пользователи'),
+          ('last', 'История входов/выходов'),
+          ('last -n 20', 'Последние 20 входов'),
+          ('id USERNAME', 'UID, GID и группы пользователя'),
+          ('whoami', 'Текущий пользователь'),
+          ('useradd -m USERNAME', 'Создать пользователя с домашней папкой'),
+          ('useradd -m -G wheel USERNAME', 'Создать с правами sudo'),
+          ('passwd USERNAME', 'Установить пароль пользователю'),
+          ('usermod -aG wheel USERNAME', 'Добавить в группу wheel (sudo)'),
+          ('usermod -aG GROUP USERNAME', 'Добавить в группу'),
+          ('userdel -r USERNAME', 'Удалить пользователя и его файлы'),
+          ('chage -l USERNAME', 'Информация о сроке действия пароля'),
+          ('chage -E 2025-12-31 USERNAME', 'Установить дату истечения учётки'),
+          ('groups USERNAME', 'Группы пользователя'),
+          ('cat /etc/passwd | grep USERNAME', 'Запись пользователя в passwd'),
+          ('su - USERNAME', 'Переключиться на пользователя'),
+          ('sudo -l', 'Разрешённые sudo-команды текущего пользователя'),
+        ]),
+        ('file', 'bi-folder', 'acc-file', 'Файлы и права', [
+          ('ls -la', 'Список файлов с правами, размером, датой'),
+          ('ls -lh --sort=size', 'Отсортировать по размеру'),
+          ('find / -name "*.log" 2>/dev/null', 'Найти файлы по маске'),
+          ('find /var -mtime -1', 'Файлы изменённые за последние 24ч'),
+          ('find / -size +100M', 'Файлы больше 100 МБ'),
+          ('grep -r "error" /var/log/', 'Поиск текста рекурсивно'),
+          ('grep -i "failed" /var/log/messages', 'Без учёта регистра'),
+          ('grep -n "pattern" file', 'С номерами строк'),
+          ('chmod 755 file', 'rwxr-xr-x — владелец всё, остальные читают/запускают'),
+          ('chmod 644 file', 'rw-r--r-- — типичные права для файлов'),
+          ('chmod +x script.sh', 'Сделать файл исполняемым'),
+          ('chown user:group file', 'Сменить владельца'),
+          ('chown -R user:group dir/', 'Сменить владельца рекурсивно'),
+          ('cp -a src/ dst/', 'Копировать с сохранением прав и атрибутов'),
+          ('rsync -avz src/ user@host:/dst/', 'Синхронизация через rsync'),
+          ('tar -czf archive.tar.gz dir/', 'Создать сжатый архив'),
+          ('tar -xzf archive.tar.gz', 'Распаковать архив'),
+          ('tar -tzf archive.tar.gz', 'Просмотр содержимого без распаковки'),
+          ('zip -r archive.zip dir/', 'Создать ZIP'),
+          ('unzip archive.zip -d /path', 'Распаковать ZIP'),
+          ('ln -s /path/to/file link', 'Создать символическую ссылку'),
+          ('stat file', 'Подробная информация о файле'),
+          ('file filename', 'Определить тип файла'),
+          ('wc -l file.txt', 'Количество строк в файле'),
+          ('diff file1 file2', 'Сравнить два файла'),
+        ]),
+        ('log', 'bi-journal-text', 'acc-log', 'Логи и журналы', [
+          ('journalctl -xe', 'Системный журнал с деталями ошибок'),
+          ('journalctl -f', 'Следить за журналом в реальном времени'),
+          ('journalctl -u SERVICE', 'Журнал конкретной службы'),
+          ('journalctl -u SERVICE -n 50', 'Последние 50 строк службы'),
+          ('journalctl -u SERVICE --since "1 hour ago"', 'Журнал за последний час'),
+          ('journalctl --since "2024-01-01" --until "2024-01-02"', 'Журнал за период'),
+          ('journalctl -b', 'Журнал с последней загрузки'),
+          ('journalctl -b -1', 'Журнал предыдущей загрузки'),
+          ('journalctl --disk-usage', 'Размер журнала на диске'),
+          ('journalctl --vacuum-time=7d', 'Удалить записи старше 7 дней'),
+          ('tail -f /var/log/messages', 'Следить за системным логом'),
+          ('tail -f /var/log/secure', 'Журнал безопасности (SSH, su, sudo)'),
+          ('grep -i "error\\|warn\\|fail" /var/log/messages | tail -30', 'Последние ошибки'),
+          ('less /var/log/messages', 'Просмотр лога с навигацией'),
+          ('cat /var/log/cron | tail -20', 'Последние задачи cron'),
+          ('ausearch -m avc -ts today', 'Нарушения SELinux за сегодня'),
+        ]),
+        ('docker', 'bi-boxes', 'acc-docker', 'Docker', [
+          ('docker ps', 'Запущенные контейнеры'),
+          ('docker ps -a', 'Все контейнеры включая остановленные'),
+          ('docker ps -a --format "table {{.Names}}\\t{{.Status}}"', 'Имена и статусы'),
+          ('docker logs CONTAINER', 'Логи контейнера'),
+          ('docker logs -f CONTAINER', 'Следить за логами контейнера'),
+          ('docker logs --tail 50 CONTAINER', 'Последние 50 строк логов'),
+          ('docker exec -it CONTAINER bash', 'Shell внутри контейнера'),
+          ('docker exec -it CONTAINER sh', 'Если bash недоступен'),
+          ('docker restart CONTAINER', 'Перезапустить контейнер'),
+          ('docker stop CONTAINER', 'Остановить контейнер'),
+          ('docker start CONTAINER', 'Запустить контейнер'),
+          ('docker stats', 'CPU/RAM контейнеров в реальном времени'),
+          ('docker stats --no-stream', 'Снимок метрик (без обновления)'),
+          ('docker images', 'Список образов'),
+          ('docker pull IMAGE:TAG', 'Скачать образ'),
+          ('docker rm CONTAINER', 'Удалить остановленный контейнер'),
+          ('docker rmi IMAGE', 'Удалить образ'),
+          ('docker system prune -a', 'Очистить всё неиспользуемое'),
+          ('docker inspect CONTAINER', 'Детальная информация о контейнере'),
+          ('docker cp file CONTAINER:/path', 'Скопировать файл в контейнер'),
+          ('docker cp CONTAINER:/path/file .', 'Скопировать файл из контейнера'),
+          ('docker-compose up -d', 'Запустить сервисы из docker-compose.yml'),
+          ('docker-compose down', 'Остановить и удалить контейнеры'),
+          ('docker-compose restart SERVICE', 'Перезапустить конкретный сервис'),
+          ('docker-compose logs -f SERVICE', 'Логи сервиса в реальном времени'),
+          ('docker-compose pull', 'Обновить образы'),
+          ('docker network ls', 'Docker сети'),
+          ('docker volume ls', 'Docker тома'),
+        ]),
+        ('ssh', 'bi-shield-lock', 'acc-ssh', 'SSH и удалённый доступ', [
+          ('ssh user@host', 'Подключиться по SSH'),
+          ('ssh -p 2222 user@host', 'SSH на нестандартный порт'),
+          ('ssh -i key.pem user@host', 'Подключиться с ключом'),
+          ('ssh user@host "df -h"', 'Выполнить команду на удалённом хосте'),
+          ('scp file user@host:/path/', 'Копировать файл на удалённый хост'),
+          ('scp user@host:/path/file .', 'Копировать с удалённого хоста'),
+          ('scp -r dir/ user@host:/path/', 'Копировать папку рекурсивно'),
+          ('rsync -avz dir/ user@host:/dst/', 'Синхронизировать папку по SSH'),
+          ('ssh-keygen -t rsa -b 4096', 'Сгенерировать SSH-ключ RSA 4096'),
+          ('ssh-copy-id user@host', 'Скопировать публичный ключ на хост'),
+          ('ssh-add ~/.ssh/id_rsa', 'Добавить ключ в ssh-agent'),
+          ('cat ~/.ssh/authorized_keys', 'Разрешённые ключи для входа'),
+          ('ssh -L 8080:localhost:80 user@host', 'Туннель: локальный 8080 → удалённый 80'),
+          ('ssh -N -f -L 5432:db:5432 user@host', 'Фоновый туннель к БД'),
+          ('sftp user@host', 'SFTP-сессия для передачи файлов'),
+          ('cat /etc/ssh/sshd_config', 'Конфигурация SSH-сервера'),
+          ('systemctl restart sshd', 'Перезапустить SSH-сервер'),
+          ('ss -tlnp | grep ssh', 'На каком порту слушает SSH'),
+        ]),
+        ('proc', 'bi-activity', 'acc-proc', 'Процессы', [
+          ('ps aux', 'Все процессы с CPU и RAM'),
+          ('ps aux | grep NAME', 'Найти процесс по имени'),
+          ('ps aux --sort=-%mem | head -10', 'Топ 10 по потреблению RAM'),
+          ('ps aux --sort=-%cpu | head -10', 'Топ 10 по потреблению CPU'),
+          ('kill PID', 'Завершить процесс по PID (SIGTERM)'),
+          ('kill -9 PID', 'Принудительно завершить (SIGKILL)'),
+          ('killall process_name', 'Завершить все процессы с именем'),
+          ('pkill -f "pattern"', 'Завершить процессы по паттерну командной строки'),
+          ('pgrep -l nginx', 'Найти PID процессов по имени'),
+          ('nice -n 10 command', 'Запустить с низким приоритетом'),
+          ('renice -n 5 -p PID', 'Изменить приоритет запущенного процесса'),
+          ('nohup command &', 'Запустить в фоне, не прерывать при выходе'),
+          ('command &', 'Запустить в фоне'),
+          ('jobs', 'Список фоновых задач текущей сессии'),
+          ('fg 1', 'Перевести задачу 1 на передний план'),
+          ('bg 1', 'Продолжить задачу 1 в фоне'),
+          ('screen -S session', 'Создать именованную screen-сессию'),
+          ('screen -r session', 'Подключиться к screen-сессии'),
+          ('tmux new -s session', 'Создать tmux-сессию'),
+          ('tmux attach -t session', 'Подключиться к tmux-сессии'),
+          ('strace -p PID', 'Системные вызовы процесса (для отладки)'),
+          ('lsof -p PID', 'Открытые файлы процесса'),
+          ('lsof -i :80', 'Какой процесс использует порт 80'),
+        ]),
+      ] %}
+
+      {% for id, icon, acc, title, cmds in linux_cats %}
+      <div class="cs-cat" data-cat="{{ id }}">
+        <div class="cs-cat-head">
+          <i class="bi {{ icon }} {{ acc }}"></i>
+          <span class="{{ acc }}">{{ title }}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--muted)">{{ cmds|length }} команд</span>
+        </div>
+        <div class="cs-cat-body">
+          {% for cmd, desc in cmds %}
+          <div class="cs-cmd" data-cmd="{{ cmd }}" data-desc="{{ desc }}">
+            <div>
+              <div class="cs-cmd-code">{{ cmd }}</div>
+              <div class="cs-cmd-desc">{{ desc }}</div>
+            </div>
+            <button class="cs-copy" onclick="copyCmd(this, '{{ cmd|replace("'", "\\'") }}')"
+                    title="Скопировать">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="no-results" id="no-linux" style="display:none">
+        <i class="bi bi-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:.3"></i>
+        Команды не найдены
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ CISCO / AP ══════════════ -->
+  <div class="cs-panel" id="panel-cisco">
+    <div class="cs-grid" id="grid-cisco">
+
+      {% set cisco_cats = [
+        ('cisco-basic', 'bi-terminal', 'acc-cisco', 'Cisco — Базовые режимы', [
+          ('enable', 'Войти в привилегированный режим (Privileged EXEC)'),
+          ('configure terminal', 'Войти в режим глобальной конфигурации'),
+          ('exit', 'Выйти из текущего режима на уровень выше'),
+          ('end', 'Вернуться сразу в Privileged EXEC из любого режима конфигурации'),
+          ('do show ...', 'Выполнить show-команду из режима конфигурации'),
+          ('show version', 'Версия IOS, время работы, модель, RAM/Flash'),
+          ('show running-config', 'Текущая конфигурация (в RAM)'),
+          ('show startup-config', 'Конфигурация в NVRAM (сохранённая)'),
+          ('copy running-config startup-config', 'Сохранить текущую конфигурацию'),
+          ('write memory', 'Альтернатива copy run start — сохранить конфиг'),
+          ('reload', 'Перезагрузить устройство'),
+          ('erase startup-config', 'Сбросить сохранённую конфигурацию'),
+          ('hostname SW1', 'Задать имя устройства'),
+          ('no shutdown', 'Поднять интерфейс (убрать административный shutdown)'),
+          ('shutdown', 'Административно отключить интерфейс'),
+        ]),
+        ('cisco-info', 'bi-info-circle', 'acc-cisco', 'Cisco — Диагностика и статус', [
+          ('show interfaces', 'Состояние всех интерфейсов'),
+          ('show interfaces fa0/1', 'Статус конкретного интерфейса (скорость, дуплекс, ошибки)'),
+          ('show interfaces trunk', 'Транковые интерфейсы и VLANы'),
+          ('show ip interface brief', 'Краткий список интерфейсов с IP и состоянием'),
+          ('show mac address-table', 'Таблица MAC-адресов коммутатора'),
+          ('show mac address-table vlan 10', 'MAC-таблица для конкретного VLAN'),
+          ('show arp', 'ARP-таблица маршрутизатора'),
+          ('show spanning-tree', 'Состояние STP на всех VLANах'),
+          ('show spanning-tree vlan 10', 'STP для конкретного VLAN'),
+          ('show cdp neighbors', 'Соседние устройства Cisco (CDP)'),
+          ('show cdp neighbors detail', 'Детальная информация о соседях CDP'),
+          ('show lldp neighbors', 'Соседи по LLDP (для совместимости с non-Cisco)'),
+          ('show etherchannel summary', 'Статус LAG/EtherChannel'),
+          ('show logging', 'Системные логи устройства'),
+          ('show clock', 'Текущее время устройства'),
+          ('show inventory', 'Серийный номер и модель модулей'),
+          ('show power inline', 'Статус PoE на портах'),
+          ('ping 8.8.8.8', 'Проверить доступность хоста'),
+          ('traceroute 10.0.0.1', 'Трассировка маршрута'),
+        ]),
+        ('cisco-vlan', 'bi-diagram-3', 'acc-vlan', 'Cisco — VLAN', [
+          ('show vlan brief', 'Список всех VLANов и их портов'),
+          ('show vlan id 10', 'Информация о конкретном VLAN'),
+          ('vlan 10', 'Создать VLAN 10 (в global config)'),
+          ('name STAFF', 'Задать имя VLAN'),
+          ('interface fa0/1', 'Войти в конфигурацию интерфейса'),
+          ('switchport mode access', 'Назначить порт в режим доступа'),
+          ('switchport access vlan 10', 'Привязать порт к VLAN 10'),
+          ('switchport mode trunk', 'Настроить порт в транковый режим'),
+          ('switchport trunk allowed vlan 10,20,30', 'Разрешить указанные VLANы на транке'),
+          ('switchport trunk native vlan 1', 'Установить native VLAN для транка'),
+          ('switchport trunk encapsulation dot1q', 'Задать инкапсуляцию 802.1Q (если требуется)'),
+          ('no vlan 10', 'Удалить VLAN'),
+          ('interface vlan 10', 'Войти в SVI (Switch Virtual Interface) для VLAN 10'),
+          ('ip address 192.168.10.1 255.255.255.0', 'Назначить IP на SVI'),
+        ]),
+        ('cisco-port', 'bi-plug', 'acc-cisco', 'Cisco — Порты и скорость', [
+          ('speed 100', 'Установить скорость порта 100 Мбит/с'),
+          ('speed auto', 'Автоопределение скорости'),
+          ('duplex full', 'Полный дуплекс'),
+          ('duplex auto', 'Автоопределение дуплекса'),
+          ('description PC-1', 'Добавить описание к интерфейсу'),
+          ('spanning-tree portfast', 'PortFast — мгновенное включение порта (для конечных устройств)'),
+          ('spanning-tree bpduguard enable', 'BPDU Guard — защита от STP-атак на access-порт'),
+          ('storm-control broadcast level 20', 'Ограничить broadcast-шторм до 20% пропускной способности'),
+          ('storm-control action shutdown', 'Отключить порт при шторме'),
+          ('interface range fa0/1 - 24', 'Настроить несколько портов одновременно'),
+          ('interface range gi1/0/1 - 48', 'Диапазон для Gigabit Ethernet'),
+          ('channel-group 1 mode active', 'Добавить порт в LAG (LACP active)'),
+          ('channel-group 1 mode on', 'Добавить порт в LAG (без LACP)'),
+        ]),
+        ('cisco-sec', 'bi-shield-lock', 'acc-sec', 'Cisco — Безопасность', [
+          ('enable secret MyPassword', 'Задать пароль на привилегированный режим (MD5)'),
+          ('service password-encryption', 'Зашифровать все plaintext-пароли в конфиге'),
+          ('username admin privilege 15 secret Pwd123', 'Создать локального пользователя с привилегией 15'),
+          ('line vty 0 15', 'Настроить SSH/Telnet доступ (VTY линии)'),
+          ('login local', 'Использовать локальных пользователей для входа'),
+          ('transport input ssh', 'Разрешить только SSH на VTY'),
+          ('crypto key generate rsa modulus 2048', 'Сгенерировать RSA-ключ для SSH'),
+          ('ip ssh version 2', 'Принудительно использовать SSH v2'),
+          ('no ip domain-lookup', 'Отключить DNS-lookup для ускорения работы CLI'),
+          ('ip domain-name campus.local', 'Задать домен (нужен для генерации RSA)'),
+          ('port-security maximum 2', 'Максимум 2 MAC-адреса на порту'),
+          ('port-security violation restrict', 'Действие при нарушении: restrict (счётчик, без shutdown)'),
+          ('port-security violation shutdown', 'Действие при нарушении: выключить порт'),
+          ('port-security mac-address sticky', 'Запоминать MAC автоматически (sticky)'),
+          ('show port-security interface fa0/1', 'Статус port-security на порту'),
+          ('ip dhcp snooping', 'Включить DHCP Snooping (глобально)'),
+          ('ip dhcp snooping vlan 10', 'Включить DHCP Snooping для VLAN 10'),
+          ('ip dhcp snooping trust', 'Пометить порт как доверенный (uplink к DHCP-серверу)'),
+        ]),
+        ('cisco-mgmt', 'bi-gear', 'acc-cisco', 'Cisco — Управление и NTP', [
+          ('ip default-gateway 192.168.1.1', 'Шлюз по умолчанию для свитча (Layer 2)'),
+          ('ip routing', 'Включить маршрутизацию (на L3 свитчах)'),
+          ('ntp server 10.10.0.1', 'Синхронизировать время с NTP-сервером'),
+          ('clock timezone AZT 4', 'Установить часовой пояс UTC+4 (Баку)'),
+          ('logging host 10.10.0.5', 'Отправлять логи на syslog-сервер'),
+          ('logging trap informational', 'Уровень логирования — informational'),
+          ('snmp-server community public RO', 'Настроить SNMP community (RO)'),
+          ('snmp-server host 10.10.0.5 version 2c public', 'SNMP трапы на сервер мониторинга'),
+          ('banner motd # Authorized access only #', 'Баннер приветствия при входе'),
+          ('ip http server', 'Включить веб-интерфейс (HTTP)'),
+          ('ip http secure-server', 'Включить HTTPS веб-интерфейс'),
+          ('no ip http server', 'Отключить веб-интерфейс (безопаснее)'),
+          ('archive log config', 'Включить архивирование изменений конфигурации'),
+        ]),
+        ('ap-ubnt', 'bi-wifi', 'acc-ap', 'Ubiquiti UniFi — Точки доступа', [
+          ('ssh admin@192.168.1.x', 'SSH подключение к точке доступа'),
+          ('info', 'Показать информацию об устройстве (в Ubiquiti CLI)'),
+          ('syswrapper.sh restore-default', 'Сброс к заводским настройкам'),
+          ('set-inform http://CONTROLLER_IP:8080/inform', 'Привязать к UniFi Controller'),
+          ('mca-dump | python -mjson.tool', 'Полный JSON-статус устройства'),
+          ('cat /proc/net/wireless', 'Статистика Wi-Fi (сигнал, шум)'),
+          ('iwconfig', 'Состояние беспроводных интерфейсов'),
+          ('ifconfig', 'IP-адреса и состояние интерфейсов'),
+          ('ping -c 4 8.8.8.8', 'Проверка интернет-доступа с AP'),
+          ('arp -n', 'ARP-таблица точки доступа'),
+          ('cat /tmp/system.cfg | grep ssid', 'Найти SSID в конфиге'),
+          ('ps', 'Список запущенных процессов'),
+          ('dmesg | tail', 'Системные сообщения ядра'),
+          ('reboot', 'Перезагрузить точку доступа'),
+          ('upgrade http://URL/firmware.bin', 'Обновить прошивку через URL'),
+        ]),
+        ('ap-cisco', 'bi-router-fill', 'acc-ap', 'Cisco AP (Lightweight / IOS)', [
+          ('show version', 'Версия прошивки и модель AP'),
+          ('show dot11 associations', 'Список подключённых клиентов'),
+          ('show dot11 network-map', 'Карта сети Wi-Fi'),
+          ('show interfaces dot11radio 0', 'Состояние радиоинтерфейса 2.4 GHz'),
+          ('show interfaces dot11radio 1', 'Состояние радиоинтерфейса 5 GHz'),
+          ('show controllers dot11radio 0', 'Детальная статистика радиоканала'),
+          ('show ip interface brief', 'IP-адреса интерфейсов AP'),
+          ('debug dot11 aaa authenticator all', 'Отладка аутентификации 802.1X/WPA'),
+          ('no debug all', 'Отключить все дебаги'),
+          ('clear dot11 statistics dot11radio 0', 'Сбросить счётчики радиоинтерфейса'),
+          ('interface dot11radio 0', 'Войти в конфигурацию 2.4 GHz'),
+          ('ssid CAMPUS_WIFI', 'Выбрать SSID для настройки'),
+          ('authentication open', 'Открытая аутентификация (no password)'),
+          ('encryption mode ciphers aes-ccm', 'Шифрование AES'),
+          ('channel 6', 'Установить Wi-Fi канал'),
+          ('power local maximum', 'Максимальная мощность передачи'),
+          ('shutdown', 'Отключить радиоинтерфейс'),
+          ('no shutdown', 'Включить радиоинтерфейс'),
+        ]),
+        ('ap-general', 'bi-broadcast', 'acc-ap', 'Wi-Fi — Общая диагностика', [
+          ('iw dev', 'Список беспроводных интерфейсов (Linux)'),
+          ('iw dev wlan0 scan | grep SSID', 'Сканирование Wi-Fi сетей (Linux)'),
+          ('iw dev wlan0 link', 'Информация о текущем подключении (Linux)'),
+          ('nmcli dev wifi list', 'Список Wi-Fi сетей через NetworkManager'),
+          ('nmcli con up wifi-profile', 'Подключиться к сохранённой Wi-Fi сети'),
+          ('airmon-ng start wlan0', 'Перевести адаптер в monitor mode'),
+          ('airodump-ng wlan0mon', 'Сканировать сети в monitor mode'),
+          ('netsh wlan show profiles', 'Список сохранённых Wi-Fi профилей (Windows)'),
+          ('netsh wlan show profile "WIFI" key=clear', 'Показать пароль Wi-Fi (Windows)'),
+          ('netsh wlan connect name="WIFI"', 'Подключиться к Wi-Fi сети (Windows)'),
+          ('netsh wlan disconnect', 'Отключиться от Wi-Fi (Windows)'),
+        ]),
+      ] %}
+
+      {% for id, icon, acc, title, cmds in cisco_cats %}
+      <div class="cs-cat" data-cat="{{ id }}">
+        <div class="cs-cat-head">
+          <i class="bi {{ icon }} {{ acc }}"></i>
+          <span class="{{ acc }}">{{ title }}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--muted)">{{ cmds|length }} команд</span>
+        </div>
+        <div class="cs-cat-body">
+          {% for cmd, desc in cmds %}
+          <div class="cs-cmd" data-cmd="{{ cmd }}" data-desc="{{ desc }}">
+            <div>
+              <div class="cs-cmd-code">{{ cmd }}</div>
+              <div class="cs-cmd-desc">{{ desc }}</div>
+            </div>
+            <button class="cs-copy" onclick="copyCmd(this, '{{ cmd|replace("'", "\\'") }}')"
+                    title="Скопировать">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="no-results" id="no-cisco" style="display:none">
+        <i class="bi bi-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:.3"></i>
+        Команды не найдены
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let activeTab = 'win';
+
+function switchTab(tab, btn) {
+  activeTab = tab;
+  document.querySelectorAll('.cs-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.cs-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  doSearch(document.getElementById('cs-search').value);
+}
+
+function copyCmd(btn, cmd) {
+  navigator.clipboard.writeText(cmd).then(() => {
+    btn.innerHTML = '<i class="bi bi-check2"></i>';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+function doSearch(q) {
+  q = q.toLowerCase().trim();
+  const grid = document.getElementById('grid-' + activeTab);
+  const cats = grid.querySelectorAll('.cs-cat');
+  let total = 0;
+
+  cats.forEach(cat => {
+    const cmds = cat.querySelectorAll('.cs-cmd');
+    let visible = 0;
+    cmds.forEach(row => {
+      const cmd  = (row.dataset.cmd  || '').toLowerCase();
+      const desc = (row.dataset.desc || '').toLowerCase();
+      const match = !q || cmd.includes(q) || desc.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    cat.dataset.hidden = (visible === 0) ? 'true' : 'false';
+    total += visible;
+  });
+
+  const noRes = document.getElementById('no-' + activeTab);
+  noRes.style.display = (total === 0 && q) ? 'block' : 'none';
+
+  const cnt = document.getElementById('cs-count');
+  cnt.textContent = q ? `Найдено: ${total}` : '';
+}
+
+document.getElementById('cs-search').addEventListener('input', e => doSearch(e.target.value));
+
+// Clear search on tab switch
+document.querySelectorAll('.cs-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('cs-search').value = '';
+  });
+});
+</script>
+{% endblock %}

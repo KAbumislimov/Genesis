@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campus Audio Infrastructure</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --green:#3fb950;--blue:#58a6ff;--purple:#bc8cff;--orange:#ffa657;
+  --red:#f85149;--yellow:#e3b341;--text:#e6edf3;--muted:#8b949e;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:18px}
+.deck{width:100vw;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;
+  padding:36px 60px 72px;}
+.slide.active{display:flex}
+
+/* ── Slide transitions ── */
+.slide.enter-from-right{display:flex;animation:enterR .45s cubic-bezier(.22,.68,0,1.2) forwards}
+.slide.enter-from-left {display:flex;animation:enterL .45s cubic-bezier(.22,.68,0,1.2) forwards}
+.slide.exit-to-left    {display:flex;animation:exitL  .3s  cubic-bezier(.55,0,.7,.4)   forwards}
+.slide.exit-to-right   {display:flex;animation:exitR  .3s  cubic-bezier(.55,0,.7,.4)   forwards}
+
+@keyframes enterR{from{opacity:0;transform:translateX(60px)  scale(.97)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes enterL{from{opacity:0;transform:translateX(-60px) scale(.97)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes exitL {from{opacity:1;transform:translateX(0)     scale(1)}  to{opacity:0;transform:translateX(-50px) scale(.97)}}
+@keyframes exitR {from{opacity:1;transform:translateX(0)     scale(1)}  to{opacity:0;transform:translateX(50px)  scale(.97)}}
+
+/* ── Tour button ── */
+#tour-btn{
+  position:fixed;top:18px;right:20px;z-index:400;
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  border:none;color:#fff;padding:10px 18px;border-radius:30px;
+  font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
+  cursor:pointer;box-shadow:0 0 20px rgba(88,166,255,.4);
+  transition:.2s;letter-spacing:.03em;
+}
+#tour-btn:hover{transform:scale(1.05);box-shadow:0 0 28px rgba(88,166,255,.6)}
+#tour-btn .ticon{font-size:18px;animation:botBob 2s ease-in-out infinite}
+
+#tour-stop{
+  position:fixed;top:18px;right:20px;z-index:400;
+  display:none;align-items:center;gap:8px;
+  background:rgba(248,81,73,.15);border:1px solid var(--red);
+  color:var(--red);padding:9px 16px;border-radius:30px;
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+  cursor:pointer;backdrop-filter:blur(8px);
+}
+#tour-stop:hover{background:rgba(248,81,73,.25)}
+
+#tour-progress{
+  position:fixed;top:64px;right:20px;z-index:400;
+  display:none;flex-direction:column;gap:5px;align-items:flex-end;
+}
+#tour-prog-bar{
+  width:160px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;
+}
+#tour-prog-fill{
+  height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));
+  border-radius:2px;transition:width .5s ease;width:0%;
+}
+#tour-prog-label{
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+}
+
+/* ── Transition flash overlay ── */
+#tx-flash{
+  position:fixed;inset:0;z-index:999;pointer-events:none;
+  opacity:0;display:flex;flex-direction:column;
+}
+#tx-flash.fire{animation:txFire .38s ease forwards}
+@keyframes txFire{
+  0%  {opacity:0}
+  20% {opacity:1}
+  80% {opacity:1}
+  100%{opacity:0}
+}
+.tx-scan{
+  position:absolute;left:0;right:0;height:2px;
+  background:var(--blue);box-shadow:0 0 18px 4px var(--blue);
+  animation:txScan .38s ease forwards;
+}
+@keyframes txScan{from{top:0;opacity:1}to{top:100%;opacity:0}}
+.tx-glitch{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,transparent 3px,
+    rgba(88,166,255,.03) 3px,rgba(88,166,255,.03) 4px
+  );
+  animation:txGlitch .38s steps(3) forwards;
+}
+@keyframes txGlitch{
+  0%,100%{clip-path:inset(0 0 100% 0)}
+  30%{clip-path:inset(20% 0 60% 0);transform:translateX(-3px)}
+  60%{clip-path:inset(60% 0 10% 0);transform:translateX(3px)}
+}
+.tx-bar{
+  position:absolute;left:0;right:0;height:1px;
+  background:rgba(88,166,255,.5);
+  animation:txBar .38s ease forwards;
+}
+@keyframes txBar{from{top:50%;opacity:.8}to{top:50%;opacity:0;transform:scaleX(1.3)}}
+
+/* NAV */
+.nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;align-items:center;
+  background:rgba(22,27,34,.97);border:1px solid var(--border);
+  padding:7px 18px;border-radius:40px;backdrop-filter:blur(10px);z-index:500}
+.nav button{background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:20px;padding:3px 10px;border-radius:6px;transition:.2s}
+.nav button:hover{color:var(--text);background:var(--bg3)}
+.nav-info{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);
+  min-width:52px;text-align:center}
+.dots{display:flex;gap:5px;flex-wrap:wrap;max-width:340px;justify-content:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--border);
+  cursor:pointer;transition:.25s;flex-shrink:0}
+.dot.active{background:var(--blue);width:22px;border-radius:4px}
+
+/* TYPOGRAPHY */
+.H1{font-size:58px;font-weight:900;line-height:1.05}
+.H2{font-size:40px;font-weight:800;line-height:1.15;margin-bottom:20px}
+.GRAD{background:linear-gradient(135deg,var(--blue) 30%,var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.g{color:var(--green)}.b{color:var(--blue)}.p{color:var(--purple)}
+.o{color:var(--orange)}.r{color:var(--red)}.m{color:var(--muted)}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:7px;
+  font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);
+  background:var(--bg3);border:1px solid var(--border);
+  padding:4px 14px;border-radius:20px;margin-bottom:14px}
+.live{width:8px;height:8px;border-radius:50%;background:var(--green);
+  animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,.5)}
+  50%{box-shadow:0 0 0 7px rgba(63,185,80,0)}}
+
+/* BADGES */
+.bdg{display:inline-flex;align-items:center;font-size:12px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;
+  padding:3px 10px;border-radius:8px}
+.bdg.bg{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.4)}
+.bdg.bb{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.4)}
+.bdg.bp{background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.4)}
+.bdg.br{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.4)}
+.bdg.bo{background:rgba(255,166,87,.15);color:var(--orange);border:1px solid rgba(255,166,87,.4)}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 22px}
+.card.cb{border-color:var(--blue);background:rgba(88,166,255,.05)}
+.card.cg{border-color:var(--green);background:rgba(63,185,80,.05)}
+.card.cp{border-color:var(--purple);background:rgba(188,140,255,.05)}
+.card.co{border-color:var(--orange);background:rgba(255,166,87,.05)}
+.card.cr{border-color:var(--red);background:rgba(248,81,73,.05)}
+.card-h{font-size:12px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:12px}
+
+/* LIST */
+.litem{display:flex;align-items:flex-start;gap:14px;
+  padding:10px 0;border-bottom:1px solid var(--border);font-size:17px;line-height:1.5}
+.litem:last-child{border-bottom:none}
+.litem .ico{font-size:24px;flex-shrink:0;margin-top:1px;width:34px;text-align:center}
+.litem .main b{font-size:18px;display:block;margin-bottom:2px}
+.litem .main span{color:var(--muted);font-size:15px}
+
+/* STATS */
+.stats{display:flex;gap:14px;flex-wrap:wrap}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:18px 22px;flex:1;min-width:100px}
+.stat .num{font-size:44px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1}
+.stat .lbl{font-size:15px;color:var(--muted);margin-top:6px;line-height:1.4}
+
+/* CODE */
+code{font-family:'JetBrains Mono',monospace;background:var(--bg3);
+  border:1px solid var(--border);padding:2px 8px;border-radius:5px;
+  font-size:.85em;color:var(--green)}
+.codeblk{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.codeblk-h{background:var(--bg3);padding:8px 16px;font-size:13px;color:var(--muted);
+  border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;
+  display:flex;align-items:center;gap:8px}
+.wd span{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:3px}
+.wd .dr{background:#f85149}.wd .dy{background:#ffa657}.wd .dg{background:#3fb950}
+.codeblk-body{padding:14px 18px;font-family:'JetBrains Mono',monospace;
+  font-size:14px;line-height:1.9;color:var(--muted)}
+.kw{color:var(--purple)}.cm{color:#484f58;font-style:italic}
+.str{color:var(--yellow)}.fn{color:var(--blue)}.vr{color:var(--orange)}
+.ok{color:var(--green)}.err2{color:var(--red)}
+
+/* TABLE */
+.bigtbl{border-collapse:collapse;width:100%}
+.bigtbl th{background:var(--bg3);padding:10px 14px;text-align:left;
+  font-size:14px;font-weight:700;color:var(--muted);border:1px solid var(--border)}
+.bigtbl td{padding:9px 14px;border:1px solid var(--border);font-size:16px;line-height:1.4}
+.bigtbl td.mono{font-family:'JetBrains Mono',monospace;font-size:14px}
+.bigtbl tr:hover td{background:rgba(88,166,255,.04)}
+
+/* FLOW LINES */
+.fl{position:relative;overflow:hidden;background:var(--border)}
+.fl::after{content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;
+  animation:fh 2s linear infinite}
+.fl.fb::after{background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+.fl.fg::after{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.fl.fp::after{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+.fl.fo::after{background:linear-gradient(90deg,transparent,var(--orange),transparent)}
+@keyframes fh{to{left:200%}}
+
+.flv{position:relative;overflow:hidden;background:var(--border)}
+.flv::after{content:'';position:absolute;left:0;top:-100%;width:100%;height:40%;
+  animation:fv 1.8s linear infinite}
+.flv.fb::after{background:linear-gradient(180deg,transparent,var(--blue),transparent)}
+.flv.fg::after{background:linear-gradient(180deg,transparent,var(--green),transparent)}
+.flv.fp::after{background:linear-gradient(180deg,transparent,var(--purple),transparent)}
+.flv.fo::after{background:linear-gradient(180deg,transparent,var(--orange),transparent)}
+@keyframes fv{to{top:150%}}
+
+/* NODES */
+.dnode{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;text-align:center;transition:.3s}
+.dnode .di{font-size:28px;margin-bottom:6px}
+.dnode .dn{font-size:15px;font-weight:700}
+.dnode .ds{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.dnode.nb{border-color:var(--blue);background:rgba(88,166,255,.07)}
+.dnode.ng{border-color:var(--green);background:rgba(63,185,80,.07)}
+.dnode.np{border-color:var(--purple);background:rgba(188,140,255,.07)}
+.dnode.no{border-color:var(--orange);background:rgba(255,166,87,.07)}
+
+/* BOT FLOW STEPS */
+.bot-step{display:flex;align-items:flex-start;gap:14px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 18px;transition:.4s;opacity:.35}
+.bot-step.lit{opacity:1;border-color:var(--blue);
+  background:rgba(88,166,255,.08);box-shadow:0 0 14px rgba(88,166,255,.2)}
+.bot-step .sn{background:var(--border);color:var(--muted);font-weight:900;
+  font-size:13px;min-width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;flex-shrink:0;transition:.4s}
+.bot-step.lit .sn{background:var(--blue);color:#000}
+.bot-step h4{font-size:16px;font-weight:700;margin-bottom:3px}
+.bot-step p{font-size:14px;color:var(--muted);line-height:1.5}
+
+/* FOOTER */
+.foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--border);
+  display:flex;gap:14px;flex-wrap:wrap}
+.foot span{font-size:13px;color:var(--muted)}
+
+/* ═══════════════════════════════
+   SYSBOT MASCOT
+═══════════════════════════════ */
+#mascot{
+  position:fixed;z-index:400;
+  display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+  /* default position — overridden by JS */
+  bottom:62px;right:24px;
+  transition:bottom .7s cubic-bezier(.34,1.3,.64,1),
+             right .7s cubic-bezier(.34,1.3,.64,1),
+             left .7s cubic-bezier(.34,1.3,.64,1),
+             top .7s cubic-bezier(.34,1.3,.64,1);
+}
+#mascot.pos-br{bottom:62px;right:24px;left:auto;top:auto;align-items:flex-end}
+#mascot.pos-bl{bottom:62px;left:24px;right:auto;top:auto;align-items:flex-start}
+#mascot.pos-tr{top:20px;right:24px;left:auto;bottom:auto;align-items:flex-end;flex-direction:column-reverse}
+#mascot.pos-tl{top:20px;left:24px;right:auto;bottom:auto;align-items:flex-start;flex-direction:column-reverse}
+#mascot.pos-mr{top:50%;right:24px;left:auto;bottom:auto;transform:translateY(-50%);align-items:flex-end}
+#mascot.pos-ml{top:50%;left:24px;right:auto;bottom:auto;transform:translateY(-50%);align-items:flex-start}
+
+/* Speech bubble */
+#bubble{
+  background:var(--bg2);border:2px solid var(--blue);border-radius:14px;
+  padding:13px 16px;max-width:220px;min-width:150px;
+  font-size:14px;line-height:1.6;color:var(--text);
+  box-shadow:0 0 24px rgba(88,166,255,.3);
+  animation:bubPop .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes bubPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+
+/* Bot character */
+#bot-char{
+  width:64px;height:84px;position:relative;cursor:pointer;
+  animation:botBob 2.4s ease-in-out infinite;flex-shrink:0;
+  filter:drop-shadow(0 0 8px rgba(88,166,255,.4));
+}
+@keyframes botBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+/* Bot body parts */
+.bot-head{
+  width:46px;height:36px;background:var(--bg3);border:2px solid var(--blue);
+  border-radius:8px;position:absolute;top:10px;left:9px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  box-shadow:0 0 14px rgba(88,166,255,.5);overflow:hidden;
+}
+.bot-eye{width:9px;height:9px;background:var(--green);border-radius:50%;
+  animation:blink 4s infinite;box-shadow:0 0 7px var(--green);position:relative}
+@keyframes blink{0%,88%,100%{transform:scaleY(1)}94%{transform:scaleY(.08)}}
+.bot-mouth{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  width:18px;height:5px;border:2px solid var(--green);border-top:none;
+  border-radius:0 0 9px 9px}
+.bot-screen{position:absolute;top:4px;right:3px;
+  font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--green);
+  line-height:1.3;opacity:.7}
+
+.bot-antenna{width:2px;height:12px;background:var(--blue);
+  position:absolute;top:0px;left:22px;border-radius:1px}
+.bot-antenna::after{content:'';position:absolute;top:-5px;left:-4px;
+  width:10px;height:10px;background:var(--blue);border-radius:50%;
+  animation:ant 1.4s ease-in-out infinite;box-shadow:0 0 10px var(--blue)}
+@keyframes ant{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
+
+.bot-body{
+  width:40px;height:28px;background:var(--bg3);border:2px solid var(--border);
+  border-radius:6px;position:absolute;top:48px;left:12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.bot-badge{font-size:9px;font-family:'JetBrains Mono',monospace;
+  color:var(--green);font-weight:700;letter-spacing:.05em}
+.bot-belly{position:absolute;top:52px;left:20px;
+  width:4px;height:4px;border-radius:50%;background:var(--green);
+  animation:belly 1.5s ease-in-out infinite;box-shadow:0 0 6px var(--green)}
+@keyframes belly{0%,100%{opacity:1}50%{opacity:.2}}
+
+.bot-arm-l,.bot-arm-r{
+  width:7px;height:20px;background:var(--bg3);border:2px solid var(--border);
+  border-radius:4px;position:absolute;top:50px;
+}
+.bot-arm-l{left:3px;transform-origin:top center}
+.bot-arm-r{right:3px;transform-origin:top center}
+
+/* Arm animations per pose */
+#bot-char.pose-wave .bot-arm-r{animation:waveArm .6s ease-in-out infinite alternate}
+@keyframes waveArm{from{transform:rotate(-30deg)}to{transform:rotate(-70deg)}}
+#bot-char.pose-point-l .bot-arm-l{animation:pointL .8s ease-in-out infinite alternate;border-color:var(--orange)}
+@keyframes pointL{from{transform:rotate(30deg)}to{transform:rotate(50deg)}}
+#bot-char.pose-point-r .bot-arm-r{animation:pointR .8s ease-in-out infinite alternate;border-color:var(--orange)}
+@keyframes pointR{from{transform:rotate(-30deg)}to{transform:rotate(-50deg)}}
+#bot-char.pose-think .bot-arm-r{animation:think .9s ease-in-out infinite alternate}
+@keyframes think{from{transform:rotate(-60deg) translateY(-4px)}to{transform:rotate(-80deg) translateY(-6px)}}
+#bot-char.pose-idle .bot-arm-l{animation:idleL 2s ease-in-out infinite}
+#bot-char.pose-idle .bot-arm-r{animation:idleR 2s ease-in-out infinite}
+@keyframes idleL{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@keyframes idleR{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-8deg)}}
+
+.bot-leg-l,.bot-leg-r{
+  width:9px;height:15px;background:var(--bg3);border:2px solid var(--border);
+  border-radius:3px;position:absolute;top:76px;
+}
+.bot-leg-l{left:15px}.bot-leg-r{right:15px}
+
+/* Walk animation when teleporting */
+#bot-char.walking .bot-leg-l{animation:walkL .3s ease-in-out infinite alternate}
+#bot-char.walking .bot-leg-r{animation:walkR .3s ease-in-out infinite alternate}
+@keyframes walkL{from{transform:rotate(-15deg)}to{transform:rotate(15deg)}}
+@keyframes walkR{from{transform:rotate(15deg)}to{transform:rotate(-15deg)}}
+
+/* Lang tabs */
+.btabs{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.btab{font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;
+  color:var(--muted);border:1px solid transparent;transition:.2s;user-select:none}
+.btab.active{color:var(--blue);border-color:var(--blue);background:rgba(88,166,255,.1)}
+.btext{display:none;font-size:13px;line-height:1.65;white-space:pre-line}
+.btext.active{display:block}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ══════════ 1. TITLE ══════════ -->
+<div class="slide active">
+  <div class="pill"><span class="live"></span> PRODUCTION · 24/7 · v3.0</div>
+  <div class="H1" style="margin-bottom:18px"><span class="GRAD">Campus Audio</span><br>Infrastructure</div>
+  <p style="font-size:21px;color:var(--muted);max-width:680px;line-height:1.7;margin-bottom:24px"
+     data-az="Avtomatik zənglər, fasilə musiqisi, bazar ertəsi himni.<br>Telegram idarəetmə · tam monitorinq · GitHub yedəyi."
+     data-ru="Автоматические звонки, музыка перемен, гимн по понедельникам.<br>Telegram-управление · полный мониторинг · GitHub-бэкап."
+     data-en="Automatic bells, break music, anthem on Mondays.<br>Telegram control · full monitoring · GitHub backup.">
+    Автоматические звонки, музыка перемен, гимн по понедельникам.<br>
+    Telegram-управление · полный мониторинг · GitHub-бэкап.
+  </p>
+  <div class="stats">
+    <div class="stat"><div class="num b">11</div><div class="lbl" data-az="zəng<br>gündə" data-ru="звонков<br>в день" data-en="bells<br>per day">звонков<br>в день</div></div>
+    <div class="stat"><div class="num g">5</div><div class="lbl" data-az="musiqi<br>qovluğu" data-ru="папок музыки<br>Пн–Пт" data-en="music<br>folders Mon–Fri">папок музыки<br>Пн–Пт</div></div>
+    <div class="stat"><div class="num p">8</div><div class="lbl" data-az="Docker<br>konteyner" data-ru="Docker<br>контейнеров" data-en="Docker<br>containers">Docker<br>контейнеров</div></div>
+    <div class="stat"><div class="num o">5</div><div class="lbl" data-az="systemd<br>xidmət" data-ru="systemd<br>сервисов" data-en="systemd<br>services">systemd<br>сервисов</div></div>
+    <div class="stat"><div class="num" style="color:var(--red)">2</div><div class="lbl" data-az="GitHub<br>repo" data-ru="GitHub<br>репозитория" data-en="GitHub<br>repos">GitHub<br>репозитория</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">2</div><div class="lbl" data-az="bərpa<br>əmri" data-ru="команды<br>восстановления" data-en="recovery<br>commands">команды<br>восстановления</div></div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Kampus Audio Sistemi — tam avtomatik · GitHub yedəyi · Telegram idarəetmə</span>
+    <span>·</span>
+    <span>🇷🇺 Полностью автоматично · бэкап в GitHub · управление из Telegram</span>
+    <span>·</span>
+    <span>🇬🇧 Fully automated bell system · GitHub backup · Telegram control worldwide</span>
+  </div>
+</div>
+
+<!-- ══════════ 2. SYSTEM MAP ══════════ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> Arxitektura · Canlı Axın' data-ru='<span class="live"></span> Архитектура · Live Flow' data-en='<span class="live"></span> Architecture · Live Flow'><span class="live"></span> Архитектура · Live Flow</div>
+  <div class="H2" data-az='Xəritə <span class="GRAD">bütün komponentlərin</span>' data-ru='Карта <span class="GRAD">всех компонентов</span>' data-en='Map of <span class="GRAD">all components</span>'>Карта <span class="GRAD">всех компонентов</span></div>
+  <div style="display:flex;gap:12px;flex:1;align-items:center">
+    <div class="dnode np" style="width:140px;flex-shrink:0">
+      <div class="di">🐙</div>
+      <div class="dn p">GitHub</div>
+      <div class="ds">campus-infra<br><span style="color:var(--green)">● public</span><br>campus-secrets<br><span style="color:var(--red)">● private</span><br><br>Вся инфра<br>в коде</div>
+    </div>
+    <div style="flex:0 0 70px;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <span style="font-size:11px;color:var(--purple);font-family:'JetBrains Mono',monospace">git pull/push</span>
+      <div class="fl fp" style="width:100%;height:2px;border-radius:1px"></div>
+      <span style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">bootstrap.sh</span>
+    </div>
+    <div class="dnode nb" style="flex:1;align-self:stretch;display:flex;flex-direction:column">
+      <div class="di">🖥️</div>
+      <div class="dn b" style="font-size:16px">Master Server</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px;text-align:left">
+        <div style="font-size:13px;color:var(--muted);line-height:2">
+          🐳 <b style="color:var(--text)">Grafana</b> :3000<br>
+          🐳 <b style="color:var(--text)">Prometheus</b> :9090<br>
+          🐳 <b style="color:var(--text)">Loki</b> :3100<br>
+          🐳 <b style="color:var(--text)">Promtail</b> :9080
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:2">
+          🤖 <b style="color:var(--text)">Bot Narimanov</b><br>
+          🤖 <b style="color:var(--text)">Bot Genclik</b><br>
+          🐕 <b style="color:var(--text)">Watchdog</b><br>
+          🔄 <b style="color:var(--text)">Recovery</b><br>
+          🌐 <b style="color:var(--blue)">Web UI</b> :8090
+        </div>
+      </div>
+    </div>
+    <div style="flex:0 0 80px;display:flex;flex-direction:column;align-items:center;gap:5px">
+      <span style="font-size:11px;color:var(--green);font-family:'JetBrains Mono',monospace">SSH deploy</span>
+      <div class="fl fg" style="width:100%;height:2px;border-radius:1px"></div>
+      <span style="font-size:11px;color:var(--blue);font-family:'JetBrains Mono',monospace">metrics :9100</span>
+      <div class="fl fb" style="width:100%;height:2px;border-radius:1px;animation-delay:.7s"></div>
+      <span style="font-size:11px;color:var(--purple);font-family:'JetBrains Mono',monospace">logs :3101↑</span>
+      <div class="fl fp" style="width:100%;height:2px;border-radius:1px;animation-delay:1.2s"></div>
+    </div>
+    <div class="dnode ng" style="flex:1;align-self:stretch;display:flex;flex-direction:column">
+      <div class="di">🔊</div>
+      <div class="dn g" style="font-size:16px">Audio Client (nctk)</div>
+      <div style="text-align:left;margin-top:10px;font-size:13px;color:var(--muted);line-height:2">
+        🎵 <b style="color:var(--text)">campus-mpv</b> — демон + IPC сокет<br>
+        🤖 <b style="color:var(--text)">Telegram bot</b> — Python stdlib<br>
+        ⏰ <b style="color:var(--text)">cron</b> — 22 задания Пн–Пт<br>
+        📊 <b style="color:var(--text)">node_exporter</b> — метрики CPU/RAM<br>
+        📋 <b style="color:var(--text)">promtail</b> — логи → SSH → Loki<br>
+        🐕 <b style="color:var(--text)">watchdog.timer</b> — каждые 5 мин
+      </div>
+    </div>
+    <div style="flex:0 0 70px;display:flex;flex-direction:column;align-items:center;gap:5px">
+      <span style="font-size:11px;color:var(--orange);font-family:'JetBrains Mono',monospace">API long-poll</span>
+      <div class="fl fo" style="width:100%;height:2px;border-radius:1px"></div>
+      <span style="font-size:11px;color:var(--orange);font-family:'JetBrains Mono',monospace">commands ↓</span>
+      <div class="fl fo" style="width:100%;height:2px;border-radius:1px;animation-delay:.5s"></div>
+    </div>
+    <div class="dnode no" style="width:140px;flex-shrink:0">
+      <div class="di">📱</div>
+      <div class="dn o">Telegram</div>
+      <div class="ds" style="margin-top:6px">play · stop · vol<br>list · /server<br>аудио из чата<br><br>из любой точки<br>мира</div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 4 komponent canlı bağlantılar ilə · GitHub yedəyi · tam avtomatik idarəetmə</span>
+    <span>·</span>
+    <span>🇷🇺 4 компонента с живыми потоками: GitHub → Сервер → Клиент → Telegram</span>
+    <span>·</span>
+    <span>🇬🇧 4 components with live flows: GitHub → Server → Client → Telegram</span>
+  </div>
+</div>
+
+<!-- ══════════ 3. MPV DAEMON ══════════ -->
+<div class="slide">
+  <div class="pill"><span class="live"></span> systemd · mpv · IPC Unix Socket</div>
+  <div class="H2" data-az='campus-mpv — <span class="GRAD">səs oxutma necə işləyir</span>' data-ru='campus-mpv — <span class="GRAD">как работает воспроизведение</span>' data-en='campus-mpv — <span class="GRAD">how audio playback works</span>'>campus-mpv — <span class="GRAD">как работает воспроизведение</span></div>
+  <div style="display:flex;gap:18px;flex:1">
+    <div style="flex:1.3;display:flex;flex-direction:column;gap:12px">
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>campus-mpv.service — конфиг systemd</div>
+        <div class="codeblk-body">
+[Unit] Description=<span class="str">Campus MP3 player</span><br>
+After=<span class="str">sound.target network.target</span><br><br>
+[Service]<br>
+Type=<span class="str">simple</span>&nbsp; User=<span class="str">nctk</span>&nbsp; Group=<span class="str">audio</span><br>
+ExecStartPre=<span class="fn">mkdir -p</span> <span class="str">/run/campus-player</span> &amp;&amp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">chown</span> nctk:audio /run/campus-player<br>
+ExecStart=<span class="fn">/usr/bin/mpv</span><br>
+&nbsp;&nbsp;<span class="vr">--no-video</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># только аудио</span><br>
+&nbsp;&nbsp;<span class="vr">--idle=yes</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># не выходить после трека</span><br>
+&nbsp;&nbsp;<span class="vr">--volume-max=160</span> <span class="cm"># >100% для гимна</span><br>
+&nbsp;&nbsp;<span class="vr">--input-ipc-server=</span><span class="str">/run/campus-player/mpv.sock</span><br>
+&nbsp;&nbsp;<span class="vr">--audio-device=</span><span class="str">alsa/default</span><br>
+Restart=<span class="str">always</span>&nbsp; RestartSec=<span class="str">3</span><br>
+StartLimitIntervalSec=<span class="str">0</span>&nbsp;<span class="cm"># перезапуск всегда</span>
+        </div>
+      </div>
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>campus-playerctl — отправка JSON команд</div>
+        <div class="codeblk-body">
+<span class="cm"># Воспроизвести (replace = вытеснить текущий)</span><br>
+<span class="fn">echo</span> <span class="str">'{"command":["loadfile","utro.mp3","replace"]}'</span><br>
+&nbsp;&nbsp;| <span class="fn">socat</span> - <span class="str">/run/campus-player/mpv.sock</span><br><br>
+<span class="cm"># Громкость: mpv 0–160, ALSA = mpv*100/160</span><br>
+<span class="fn">echo</span> <span class="str">'{"command":["set_property","volume",110]}'</span><br>
+&nbsp;&nbsp;| <span class="fn">socat</span> - <span class="str">/run/campus-player/mpv.sock</span><br><br>
+<span class="cm"># Стоп · Статус · Volup (+10%) · Voldown</span><br>
+<span class="fn">echo</span> <span class="str">'{"command":["stop"]}'</span> | <span class="fn">socat</span> - <span class="vr">$SOCK</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0">
+      <div style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.1em">Цепочка вызова</div>
+      <div class="dnode no" style="width:200px"><div class="di">⏰</div><div class="dn o">cron / Telegram</div><div class="ds">вызывает campus-playerctl</div></div>
+      <div style="height:32px;width:2px;margin:4px 0" class="flv fo"></div>
+      <div class="dnode nb" style="width:200px"><div class="di">⚙️</div><div class="dn b">campus-playerctl</div><div class="ds">формирует JSON<br>вычисляет ALSA vol</div></div>
+      <div style="height:32px;width:2px;margin:4px 0" class="flv fb"></div>
+      <div class="dnode" style="width:200px;border-color:var(--yellow)"><div class="di">🔌</div><div class="dn" style="color:var(--yellow)">socat → Unix socket</div><div class="ds">/run/campus-player/mpv.sock</div></div>
+      <div style="height:32px;width:2px;margin:4px 0" class="flv" style="background:var(--border);position:relative;overflow:hidden"><div style="position:absolute;top:-100%;width:100%;height:40%;background:linear-gradient(180deg,transparent,var(--yellow),transparent);animation:fv 1.8s linear infinite .6s"></div></div>
+      <div class="dnode ng" style="width:200px"><div class="di">🎵</div><div class="dn g">mpv → ALSA → Колонки</div><div class="ds">vol 110 перемены<br>vol 160 гимн<br>vol 70 Telegram</div></div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 mpv daim işləyir · JSON socat vasitəsilə socket-ə · ALSA çıxışı</span>
+    <span>·</span>
+    <span>🇷🇺 mpv как демон всегда запущен · JSON через socat в сокет · вывод через ALSA</span>
+    <span>·</span>
+    <span>🇬🇧 mpv runs as persistent daemon · JSON via socat to socket · ALSA audio output</span>
+  </div>
+</div>
+
+<!-- ══════════ 4. CRON ══════════ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> cron · 22 tapşırıq · campus-cron-landau-local.sh' data-ru='<span class="live"></span> cron · 22 задания · campus-cron-landau-local.sh' data-en='<span class="live"></span> cron · 22 jobs · campus-cron-landau-local.sh'><span class="live"></span> cron · 22 задания · campus-cron-landau-local.sh</div>
+  <div class="H2" data-az='Cədvəl və <span class="GRAD">musiqi seçim alqoritmi</span>' data-ru='Расписание и <span class="GRAD">алгоритм выбора музыки</span>' data-en='Schedule and <span class="GRAD">music selection algorithm</span>'>Расписание и <span class="GRAD">алгоритм выбора музыки</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div style="flex:1;overflow:auto">
+      <table class="bigtbl">
+        <thead><tr><th>Время</th><th>Событие</th><th>Файл</th><th>VOL</th><th>Дни</th></tr></thead>
+        <tbody>
+          <tr><td class="mono g">07:45</td><td>▶ Утро</td><td class="mono">utro.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">07:59</td><td>⏹ Стоп</td><td class="mono">—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr style="background:rgba(188,140,255,.07)"><td class="mono p">08:00</td><td><b>▶ Гос. гимн</b></td><td class="mono p">himn.mp3</td><td class="mono p"><b>160</b></td><td class="p"><b>Только ПН</b></td></tr>
+          <tr style="background:rgba(188,140,255,.07)"><td class="mono r">08:03</td><td>⏹ Стоп (гимн)</td><td>—</td><td>—</td><td class="p">Только ПН</td></tr>
+          <tr><td class="mono g">08:40</td><td>▶ 1 перемена</td><td class="mono">1peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">08:45</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">09:25</td><td>▶ 2 перемена</td><td class="mono">2peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">09:35</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">10:15</td><td>▶ 3 перемена</td><td class="mono">3peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">10:20</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">11:00</td><td>▶ 4 перемена</td><td class="mono">4peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">11:05</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">11:45</td><td>▶ 5 перемена</td><td class="mono">5peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">11:55</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">12:35</td><td>▶ 6 перемена</td><td class="mono">6peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">12:40</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">13:20</td><td>▶ 7 перемена</td><td class="mono">7peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">13:30</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">14:10</td><td>▶ 8 перемена</td><td class="mono">8peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">14:15</td><td>⏹ Стоп</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono g">14:55</td><td>▶ 9 перемена</td><td class="mono">9peremena.mp3</td><td class="mono">110</td><td>Пн–Пт</td></tr>
+          <tr><td class="mono r">15:10</td><td>⏹ Финал</td><td>—</td><td>—</td><td>Пн–Пт</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="width:240px;flex-shrink:0;display:flex;flex-direction:column;gap:11px">
+      <div class="codeblk">
+        <div class="codeblk-h" data-az='<div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>Fayl seçim alqoritmi' data-ru='<div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>Алгоритм выбора файла' data-en='<div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>File selection algorithm'><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>Алгоритм выбора файла</div>
+        <div class="codeblk-body" style="font-size:13px">
+<span class="cm"># 1. День недели</span><br>
+<span class="vr">DAY</span>=$(<span class="fn">date</span> +%u)<span class="cm"> # 1=Пн…7=Вс</span><br><br>
+<span class="cm"># 2. Сб/Вс → папка 1</span><br>
+[ $DAY -gt 5 ] && <span class="vr">DAY</span>=1<br><br>
+<span class="cm"># 3. Путь к файлу</span><br>
+<span class="vr">FILE</span>=<span class="str">"/mnt/music/Landau/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">$DAY/$SLOT.mp3"</span><br><br>
+<span class="cm"># 4. flock — один запуск</span><br>
+<span class="fn">flock</span> -n /tmp/cron.lock<br>&nbsp;&nbsp;campus-playerctl play $FILE<br><br>
+<span class="cm"># 5. 3 попытки с sleep 2</span><br>
+<span class="kw">for</span> i <span class="kw">in</span> 1 2 3; <span class="kw">do</span><br>
+&nbsp;&nbsp;play && <span class="kw">break</span>; sleep 2<br>
+<span class="kw">done</span>
+        </div>
+      </div>
+      <div class="card cp"><div class="card-h" data-az="📂 Qovluqlar B.E.–C." data-ru="📂 Папки Пн–Пт" data-en="📂 Folders Mon–Fri">📂 Папки Пн–Пт</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2;color:var(--muted)">
+          <span class="ok">1</span> → Landau/<b class="b">1</b>/ (Пн)<br>
+          <span class="ok">2</span> → Landau/<b class="b">2</b>/ (Вт)<br>
+          <span class="ok">3</span> → Landau/<b class="b">3</b>/ (Ср)<br>
+          <span class="ok">4</span> → Landau/<b class="b">4</b>/ (Чт)<br>
+          <span class="ok">5</span> → Landau/<b class="b">5</b>/ (Пт)
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 22 cron tapşırığı · gün → qovluq → fayl → 3 cəhd · flock qoruma</span>
+    <span>·</span>
+    <span>🇷🇺 22 задания cron · алгоритм: день→папка→файл → 3 попытки → flock-защита</span>
+    <span>·</span>
+    <span>🇬🇧 22 cron jobs · algorithm: weekday→folder→file → 3 retries → flock protection</span>
+  </div>
+</div>
+
+<!-- ══════════ 5. TELEGRAM BOT ══════════ -->
+<div class="slide">
+  <div class="pill"><span class="live"></span> bot.py · Pure Python · Long-Polling</div>
+  <div class="H2" data-az='Telegram bot — <span class="GRAD">daxili arxitektura</span>' data-ru='Telegram бот — <span class="GRAD">архитектура изнутри</span>' data-en='Telegram bot — <span class="GRAD">internal architecture</span>'>Telegram бот — <span class="GRAD">архитектура изнутри</span></div>
+  <div style="display:flex;gap:18px;flex:1">
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>bot.py — главный цикл</div>
+        <div class="codeblk-body">
+<span class="cm"># Только стандартная библиотека Python!</span><br>
+<span class="kw">import</span> <span class="fn">urllib.request</span>, <span class="fn">json</span>, <span class="fn">subprocess</span>, <span class="fn">os</span><br><br>
+<span class="vr">offset</span> = 0<br>
+<span class="kw">while True</span>:<br>
+&nbsp;&nbsp;<span class="cm"># Держим соединение до 50с — 0 трафика в ожидании</span><br>
+&nbsp;&nbsp;<span class="vr">url</span> = <span class="str">f"/getUpdates?offset={offset}&amp;timeout=50"</span><br>
+&nbsp;&nbsp;<span class="vr">data</span> = <span class="fn">api_call</span>(url)<br>
+&nbsp;&nbsp;<span class="kw">for</span> upd <span class="kw">in</span> data[<span class="str">'result'</span>]:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="vr">offset</span> = upd[<span class="str">'update_id'</span>] + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">handle</span>(upd)<span class="cm"># парсинг → действие → ответ</span>
+        </div>
+      </div>
+      <div class="card co"><div class="card-h" data-az="Xüsusi imkanlar" data-ru="Особые возможности" data-en="Special features">Особые возможности</div>
+        <div class="litem" style="font-size:16px"><div class="ico">🎤</div><div class="main"><b>Аудио из чата</b><span>MP3/OGG/голосовое → bot скачивает через API → сразу играет через mpv</span></div></div>
+        <div class="litem" style="font-size:16px"><div class="ico">🔢</div><div class="main"><b>Просто число</b><span>Напишите "42" → играет трек Kamran Music/42.mp3 немедленно</span></div></div>
+        <div class="litem" style="font-size:16px;border:none"><div class="ico">🖥</div><div class="main"><b>/server</b><span>SSH на каждую машину → вернёт RAM, CPU Load, Disk, Temp в одном сообщении</span></div></div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <div class="card cb"><div class="card-h" data-az="İdarəetmə düymələri (ReplyKeyboard)" data-ru="Кнопки управления (ReplyKeyboard)" data-en="Control buttons (ReplyKeyboard)">Кнопки управления (ReplyKeyboard)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:16px">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>🔊 Громче</b><span class="m" style="display:block;font-size:13px">vol +10% через mpv</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>🔉 Тише</b><span class="m" style="display:block;font-size:13px">vol -10% через mpv</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>⏹ Стоп</b><span class="m" style="display:block;font-size:13px">playerctl stop</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>▶ Play</b><span class="m" style="display:block;font-size:13px">последний трек</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>▶ След.</b><span class="m" style="display:block;font-size:13px">трек N+1</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>◀ Пред.</b><span class="m" style="display:block;font-size:13px">трек N-1</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>📋 История</b><span class="m" style="display:block;font-size:13px">30 последних</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>📂 Список</b><span class="m" style="display:block;font-size:13px">inline кнопки</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>🕐 Время</b><span class="m" style="display:block;font-size:13px">время на машинах</span></div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px"><b>🖥 Сервер</b><span class="m" style="display:block;font-size:13px">SSH все машины</span></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-h" data-az="Texniki faktlar" data-ru="Технические факты" data-en="Technical facts">Технические факты</div>
+        <div style="font-size:16px;line-height:2.1;color:var(--muted)">
+          <span class="ok">✓</span> Ноль зависимостей — только Python stdlib<br>
+          <span class="ok">✓</span> Long-polling — работает без белого IP<br>
+          <span class="ok">✓</span> systemd <code>Restart=always RestartSec=10</code><br>
+          <span class="ok">✓</span> Admin-check в группах через getChatMember<br>
+          <span class="ok">✓</span> Дедупликация: 1 событие / 15 секунд
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Xalis stdlib · Long-polling · Admin yoxlaması · Audio upload · /server SSH</span>
+    <span>·</span>
+    <span>🇷🇺 Чистый Python без зависимостей · Long-polling · авторестарт · аудио из чата</span>
+    <span>·</span>
+    <span>🇬🇧 Pure stdlib · long-polling behind NAT · audio upload feature · /server SSH report</span>
+  </div>
+</div>
+
+<!-- ══════════ 6. BOT FLOW ANIMATION ══════════ -->
+<div class="slide" id="slide-botflow">
+  <div class="pill" data-az='<span class="live"></span> Canlı Axın · 6 addım · &lt; 1 saniyə' data-ru='<span class="live"></span> Live Flow · 6 шагов · &lt; 1 секунды' data-en='<span class="live"></span> Live Flow · 6 steps · &lt; 1 second'><span class="live"></span> Live Flow · 6 шагов · &lt; 1 секунды</div>
+  <div class="H2" data-az='"play 42" <span class="GRAD">yazdı — nə baş verir?</span>' data-ru='Написал <span class="GRAD">"play 42"</span> — что происходит?' data-en='Typed <span class="GRAD">"play 42"</span> — what happens?'>Написал <span class="GRAD">"play 42"</span> — что происходит?</div>
+  <div style="display:flex;gap:20px;flex:1">
+    <div style="width:165px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:13px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:11px;color:var(--muted);text-align:center;padding-bottom:7px;border-bottom:1px solid var(--border)">📱 Telegram Chat</div>
+        <div style="background:#1a3a6e;border-radius:10px 10px 2px 10px;padding:7px 10px;align-self:flex-end;font-size:13px">play 42<div style="font-size:10px;color:rgba(255,255,255,.4);text-align:right;margin-top:2px">✓✓</div></div>
+        <div id="bf-reply" style="opacity:0;transition:.5s">
+          <div style="background:var(--bg3);border-radius:2px 10px 10px 10px;padding:7px 10px;font-size:13px">
+            <div style="font-size:10px;color:var(--blue);font-weight:700;margin-bottom:3px">🤖 Campus Bot</div>
+            ▶ Играет: 42.mp3
+          </div>
+        </div>
+      </div>
+      <button onclick="restartBotFlow()" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:7px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'JetBrains Mono',monospace">↺ Повторить</button>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:7px;justify-content:center">
+      <div class="bot-step" id="bf1"><div class="sn">1</div><div>
+        <h4 data-az="📱 Telegram API → bot" data-ru="📱 Telegram API → бот" data-en="📱 Telegram API → bot">📱 Telegram API → бот</h4>
+        <p data-az='"play 42" → Telegram serverləri → bot <code>getUpdates?offset=N&timeout=50</code> ilə alır' data-ru='"play 42" → серверы Telegram → бот получает через <code>getUpdates?offset=N&timeout=50</code>' data-en='"play 42" → Telegram servers → bot receives via <code>getUpdates?offset=N&timeout=50</code>'>"play 42" → серверы Telegram → бот получает через <code>getUpdates?offset=N&timeout=50</code></p>
+      </div></div>
+      <div class="bot-step" id="bf2"><div class="sn">2</div><div>
+        <h4 data-az="🤖 bot.py — əmrin analizi" data-ru="🤖 bot.py — парсинг команды" data-en="🤖 bot.py — command parsing">🤖 bot.py — парсинг команды</h4>
+        <p data-az='<code>text.startswith("play ")</code> → <code>num=42</code> → <code>get_track_path(42)</code> → yol <code>Kamran Music/42.mp3</code>' data-ru='<code>text.startswith("play ")</code> → <code>num=42</code> → <code>get_track_path(42)</code> → путь <code>Kamran Music/42.mp3</code>' data-en='<code>text.startswith("play ")</code> → <code>num=42</code> → <code>get_track_path(42)</code> → path <code>Kamran Music/42.mp3</code>'><code>text.startswith('play ')</code> → <code>num=42</code> → <code>get_track_path(42)</code> → путь <code>Kamran Music/42.mp3</code></p>
+      </div></div>
+      <div class="bot-step" id="bf3"><div class="sn">3</div><div>
+        <h4 data-az="⚙️ play_track() → subprocess" data-ru="⚙️ play_track() → subprocess" data-en="⚙️ play_track() → subprocess">⚙️ play_track() → subprocess</h4>
+        <p data-az='<code>campus-playerctl vol 70</code> (Telegram üçün sakit) → <code>campus-playerctl play "/path/42.mp3"</code>' data-ru='<code>campus-playerctl vol 70</code> (тихо для Telegram) → <code>campus-playerctl play "/path/42.mp3"</code>' data-en='<code>campus-playerctl vol 70</code> (quiet for Telegram) → <code>campus-playerctl play "/path/42.mp3"</code>'><code>campus-playerctl vol 70</code> (тихо для Telegram) → <code>campus-playerctl play "/path/42.mp3"</code></p>
+      </div></div>
+      <div class="bot-step" id="bf4"><div class="sn">4</div><div>
+        <h4 data-az="🔌 playerctl → socat → mpv.sock" data-ru="🔌 playerctl → socat → mpv.sock" data-en="🔌 playerctl → socat → mpv.sock">🔌 playerctl → socat → mpv.sock</h4>
+        <p data-az='JSON <code>{"command":["loadfile","42.mp3","replace"]}</code> Unix soketinə gedir → mpv qəbul edir' data-ru='JSON <code>{"command":["loadfile","42.mp3","replace"]}</code> уходит в Unix сокет → mpv принимает' data-en='JSON <code>{"command":["loadfile","42.mp3","replace"]}</code> goes to Unix socket → mpv receives it'>JSON <code>{"command":["loadfile","42.mp3","replace"]}</code> уходит в Unix сокет → mpv принимает</p>
+      </div></div>
+      <div class="bot-step" id="bf5"><div class="sn">5</div><div>
+        <h4 data-az="🎵 mpv dekodlayır → ALSA → Dinamiklər" data-ru="🎵 mpv декодирует → ALSA → Колонки" data-en="🎵 mpv decodes → ALSA → Speakers">🎵 mpv декодирует → ALSA → Колонки</h4>
+        <p data-az='mpv MP3 yükləyir, dekodlayır, ALSA-ya göndərir. <code>add_to_history("42.mp3", "@user")</code>' data-ru='mpv загружает MP3, декодирует, отправляет в ALSA. <code>add_to_history("42.mp3", "@user")</code>' data-en='mpv loads MP3, decodes, sends to ALSA. <code>add_to_history("42.mp3", "@user")</code>'>mpv загружает MP3, декодирует, отправляет в ALSA. <code>add_to_history("42.mp3", "@user")</code></p>
+      </div></div>
+      <div class="bot-step" id="bf6"><div class="sn">6</div><div>
+        <h4 data-az="📤 Cavab + action.log + log-qrupu" data-ru="📤 Ответ + action.log + лог-группа" data-en="📤 Reply + action.log + log-group">📤 Ответ + action.log + лог-группа</h4>
+        <p data-az='İstifadəçiyə → "▶ Oxuyur: 42.mp3" · fayla log · Telegram log-qrupuna bildiriş' data-ru='Пользователю → "▶ Играет: 42.mp3" · лог в файл · уведомление в Telegram лог-группу' data-en='To user → "▶ Playing: 42.mp3" · log to file · notification to Telegram log-group'>Пользователю → "▶ Играет: 42.mp3" · лог в файл · уведомление в Telegram лог-группу</p>
+      </div></div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 6 addım &lt; 1 saniyə · mesaj → API → parse → playerctl → socat → mpv → cavab</span>
+    <span>·</span>
+    <span>🇷🇺 6 шагов менее чем за 1 секунду — от сообщения до звука из колонок</span>
+    <span>·</span>
+    <span>🇬🇧 6 steps in under 1 second — from message received to sound from speakers</span>
+  </div>
+</div>
+
+<!-- ══════════ 7. PROMETHEUS ══════════ -->
+<div class="slide">
+  <div class="pill"><span class="live"></span> Prometheus · scrape 15s · node_exporter :9100</div>
+  <div class="H2" data-az='Metriklər — <span class="GRAD">konfiqurasiya və nə toplanır</span>' data-ru='Метрики — <span class="GRAD">конфиг и что собирается</span>' data-en='Metrics — <span class="GRAD">config and what gets scraped</span>'>Метрики — <span class="GRAD">конфиг и что собирается</span></div>
+  <div style="display:flex;gap:18px;flex:1">
+    <div style="flex:1.2;display:flex;flex-direction:column;gap:12px">
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>config/prometheus.yml — реальный конфиг</div>
+        <div class="codeblk-body">
+global:<br>
+&nbsp;&nbsp;scrape_interval: <span class="str">15s</span><br>
+&nbsp;&nbsp;evaluation_interval: <span class="str">15s</span><br><br>
+scrape_configs:<br>
+&nbsp;&nbsp;- job_name: <span class="str">node</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;static_configs:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># server — через docker host network</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'127.0.0.1:9100'</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">campus-server</span>}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># audio client</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'&lt;nctk-ip&gt;:9100'</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">nctk</span>}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># secondary client</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- targets: [<span class="str">'&lt;vm1-ip&gt;:9100'</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;labels: {nodename: <span class="ok">vm1</span>}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;relabel_configs:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># instance = nodename (читаемо в Grafana)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- source_labels: [nodename]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;target_label: <span class="vr">instance</span>
+        </div>
+      </div>
+      <div class="card"><div class="card-h" data-az="Niyə relabel_configs vacibdir" data-ru="Почему relabel_configs важен" data-en="Why relabel_configs matters">Почему relabel_configs важен</div>
+        <div style="font-size:15px;line-height:1.8;color:var(--muted)">Без него instance = <code>192.168.x.x:9100</code> — непонятно.<br>С ним instance = <code>nctk</code> — Grafana переменная <code>$node</code> работает корректно и дашборды показывают читаемые имена.</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <div class="card cg"><div class="card-h" data-az="node_exporter :9100 nə toplayır" data-ru="Что собирает node_exporter :9100" data-en="What node_exporter :9100 collects">Что собирает node_exporter :9100</div>
+        <div style="font-size:16px;line-height:2.1;color:var(--muted)">
+          📈 <b style="color:var(--text)">CPU</b> — user/sys/idle/iowait %<br>
+          🧠 <b style="color:var(--text)">RAM</b> — used/buffers/cache/free<br>
+          💾 <b style="color:var(--text)">Disk I/O</b> — IOPS, latency, await<br>
+          📁 <b style="color:var(--text)">Filesystem</b> — used%, inodes<br>
+          🌐 <b style="color:var(--text)">Network</b> — rx/tx bytes/sec<br>
+          ⏱️ <b style="color:var(--text)">Uptime</b> — boot time unix<br>
+          🌡️ <b style="color:var(--text)">Temperature</b> — CPU тепловые датчики<br>
+          ⚙️ <b style="color:var(--text)">Load avg</b> — 1/5/15 минут
+        </div>
+      </div>
+      <div class="card cb"><div class="card-h" data-az="Necə baxmaq" data-ru="Как смотреть" data-en="How to view">Как смотреть</div>
+        <div style="font-size:16px;line-height:2;color:var(--muted)">
+          Grafana: <b class="o">http://&lt;server&gt;:3000</b><br>
+          Prometheus UI: <b class="b">:9090/graph</b><br>
+          Raw metrics: <b class="g">:9100/metrics</b><br><br>
+          Dashboard: <b style="color:var(--text)">Node Exporter Full</b><br>
+          <span style="font-size:14px">Переменная <code>$node</code> → выбрать машину</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Prometheus 15s-da bir çəkir · 3 hədəf · relabel_configs instance adları düzəldir</span>
+    <span>·</span>
+    <span>🇷🇺 Prometheus scrape каждые 15с · 3 цели · relabel — читаемые имена instance</span>
+    <span>·</span>
+    <span>🇬🇧 Prometheus 15s scrape · 3 targets · relabel_configs for readable instance names</span>
+  </div>
+</div>
+
+<!-- ══════════ 8. LOKI + PROMTAIL ══════════ -->
+<div class="slide">
+  <div class="pill"><span class="live"></span> Promtail → SSH tunnel → Loki :3100</div>
+  <div class="H2" data-az='Loglar — <span class="GRAD">nə toplanır və necə axtarmaq</span>' data-ru='Логи — <span class="GRAD">что собирается и как искать</span>' data-en='Logs — <span class="GRAD">what gets collected and how to search</span>'>Логи — <span class="GRAD">что собирается и как искать</span></div>
+  <div style="display:flex;gap:18px;flex:1">
+    <div style="flex:1.2;display:flex;flex-direction:column;gap:12px">
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>promtail-nctk.yaml — конфиг агента</div>
+        <div class="codeblk-body">
+clients:<br>
+&nbsp;&nbsp;<span class="cm"># SSH tunnel: nctk:3101 → server:3100</span><br>
+&nbsp;&nbsp;- url: <span class="str">http://localhost:3101/loki/api/v1/push</span><br><br>
+scrape_configs:<br>
+&nbsp;&nbsp;- job_name: <span class="ok">campus_landau</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;labels: {job: campus_landau, host: nctk}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;paths:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="str">/home/nctk/action.log</span><span class="cm"> # cron события</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="str">/tmp/landau-cron.log</span><br><br>
+&nbsp;&nbsp;- job_name: <span class="ok">campus_bot</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;path: <span class="str">/var/log/campus-bot*.log</span><br><br>
+&nbsp;&nbsp;- job_name: <span class="ok">system</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;path: <span class="str">/var/log/*.log</span><br>
+&nbsp;&nbsp;<span class="cm"># + syslog · auth · kern · apt · cron</span>
+        </div>
+      </div>
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>LogQL запросы в Grafana Explore</div>
+        <div class="codeblk-body">
+<span class="cm"># Все звонки:</span><br>
+{job=<span class="str">"campus_landau"</span>} |= <span class="str">"peremena"</span><br><br>
+<span class="cm"># Только ошибки:</span><br>
+{host=<span class="str">"nctk"</span>} |= <span class="str">"❌"</span><br><br>
+<span class="cm"># Действия Telegram бота:</span><br>
+{job=<span class="str">"campus_bot"</span>} | <span class="fn">line_format</span> <span class="str">"{{.line}}"</span><br><br>
+<span class="cm"># SSH входы:</span><br>
+{job=<span class="str">"varlogs"</span>} |= <span class="str">"Accepted publickey"</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <div class="card co"><div class="card-h" data-az="Logları necə açmaq" data-ru="Как открыть логи" data-en="How to open logs">Как открыть логи</div>
+        <div style="font-size:16px;line-height:2.3;color:var(--muted)">
+          1. <b class="o">http://&lt;server&gt;:3000</b><br>
+          2. Меню слева → <b style="color:var(--text)">Explore</b> 🔭<br>
+          3. Источник вверху → <b class="p">Loki</b><br>
+          4. Вбить LogQL запрос<br>
+          5. <b style="color:var(--text)">Run query</b> →
+        </div>
+      </div>
+      <div class="card cp"><div class="card-h" data-az="Loglarda nə görünür" data-ru="Что видно в логах" data-en="What&apos;s in the logs">Что видно в логах</div>
+        <div style="font-size:16px;line-height:2;color:var(--muted)">
+          🔔 Все звонки — время, файл, статус ✅/❌<br>
+          🎵 Telegram — кто запустил, какой трек<br>
+          🔐 auth.log — SSH входы и попытки<br>
+          📦 apt — обновления пакетов<br>
+          🐕 Watchdog — рестарты контейнеров<br>
+          ⚙️ kern.log — события ядра
+        </div>
+      </div>
+      <div class="card cr"><div class="card-h" data-az="SSH tunel — niyə localhost:3101" data-ru="SSH tunnel — почему localhost:3101" data-en="SSH tunnel — why localhost:3101">SSH tunnel — почему localhost:3101</div>
+        <div style="font-size:15px;line-height:1.8;color:var(--muted)">nctk и сервер в разных подсетях. Туннель пробрасывает порт Loki локально:<br><code style="font-size:12px">ssh -L 3101:localhost:3100 campus-server</code></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Promtail faylları izləyir → SSH tunel :3101 → Loki → Grafana Explore-da axtarış</span>
+    <span>·</span>
+    <span>🇷🇺 Promtail следит за логами → SSH туннель → Loki → искать в Grafana Explore</span>
+    <span>·</span>
+    <span>🇬🇧 Promtail tails logs → SSH tunnel → Loki → search with LogQL in Grafana Explore</span>
+  </div>
+</div>
+
+<!-- ══════════ 9. GRAFANA ══════════ -->
+<div class="slide">
+  <div class="pill"><span class="live"></span> Grafana :3000 · Provisioning · Dashboards</div>
+  <div class="H2" data-az='Grafana — <span class="GRAD">hara girməli, nəyə baxmaq</span>' data-ru='Grafana — <span class="GRAD">куда заходить, что смотреть</span>' data-en='Grafana — <span class="GRAD">where to go, what to look at</span>'>Grafana — <span class="GRAD">куда заходить, что смотреть</span></div>
+  <div style="display:flex;gap:18px;flex:1">
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--bg);border:2px solid var(--orange);border-radius:14px;padding:20px 24px;text-align:center">
+        <div style="font-size:15px;color:var(--muted);margin-bottom:8px" data-az="Brauzerdə açmaq:" data-ru="Открыть в браузере:" data-en="Open in browser:">Открыть в браузере:</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:28px;color:var(--orange);font-weight:900">http://&lt;server&gt;:3000</div>
+        <div style="font-size:15px;color:var(--muted);margin-top:6px" data-az="admin / <em>.env-dən şifrə</em>" data-ru="admin / <em>пароль из .env</em>" data-en="admin / <em>password from .env</em>">admin / <em>пароль из .env</em></div>
+      </div>
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>Provisioning — автонастройка при старте</div>
+        <div class="codeblk-body">
+config/grafana-provisioning/<br>
+&nbsp;&nbsp;datasources/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ok">loki.yaml</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># url: http://loki:3100</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ok">prometheus.yaml</span> <span class="cm"># host.docker.internal:9090</span><br>
+&nbsp;&nbsp;dashboards/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="b">dashboards.yaml</span> <span class="cm"># путь к JSON</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="b">node-exporter.json</span><span class="cm"> # дашборд</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="b">campus-logs.json</span> <span class="cm"># лог-дашборд</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <div class="card cg"><div class="card-h" data-az="Grafana-da naviqasiya" data-ru="Навигация по Grafana" data-en="Navigating Grafana">Навигация по Grafana</div>
+        <div style="font-size:16px;line-height:2.2;color:var(--muted)">
+          🏠 <b style="color:var(--text)">Home</b> → Dashboards → список всех<br>
+          📊 <b style="color:var(--text)">Node Exporter Full</b> → метрики машин<br>
+          📋 <b style="color:var(--text)">Campus Logs</b> → звонки и бот<br>
+          🔭 <b style="color:var(--text)">Explore → Loki</b> → поиск логов<br>
+          🔭 <b style="color:var(--text)">Explore → Prometheus</b> → PromQL<br>
+          ⚙️ <b style="color:var(--text)">Connections</b> → Data sources
+        </div>
+      </div>
+      <div class="card co"><div class="card-h" data-az="Grafana Docker konfiqurasiyası" data-ru="Docker конфиг Grafana" data-en="Grafana Docker config">Docker конфиг Grafana</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2;color:var(--muted)">
+          image: <span class="ok">grafana/grafana:10.4.2</span><br>
+          GF_SECURITY_ADMIN_USER=<span class="ok">admin</span><br>
+          GF_USERS_ALLOW_SIGN_UP=<span class="err2">false</span><br>
+          GF_SERVER_ROOT_URL=http://&lt;server&gt;:3000<br>
+          GF_ALERTING_ENABLED=<span class="err2">false</span><span class="cm"> # баг в 10.x</span><br>
+          volumes: grafana_data:/var/lib/grafana
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Grafana :3000 · Provisioning avtomatik konfiqurasiya edir · Node Exporter Full</span>
+    <span>·</span>
+    <span>🇷🇺 Grafana :3000 · datasources и дашборды через provisioning · Explore для запросов</span>
+    <span>·</span>
+    <span>🇬🇧 Grafana :3000 · datasources and dashboards auto-provisioned · Explore for queries</span>
+  </div>
+</div>
+
+<!-- ══════════ 10. DOCKER STACK ══════════ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> Docker Compose · 8 konteyner · 5 profil' data-ru='<span class="live"></span> Docker Compose · 8 контейнеров · 5 профилей' data-en='<span class="live"></span> Docker Compose · 8 containers · 5 profiles'><span class="live"></span> Docker Compose · 8 контейнеров · 5 профилей</div>
+  <div class="H2" data-az='Docker Stack — <span class="GRAD">hər konteyner və onun rolu</span>' data-ru='Docker стек — <span class="GRAD">каждый контейнер и его роль</span>' data-en='Docker stack — <span class="GRAD">every container and its role</span>'>Docker стек — <span class="GRAD">каждый контейнер и его роль</span></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11px;flex:1">
+    <div class="card cg"><div class="card-h">📊 grafana :3000</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Дашборды и алерты.<br><code style="font-size:12px">grafana/grafana:10.4.2</code><br>volume: grafana_data<br>depends_on: loki<br><span class="bdg bg">profile: logs</span></div>
+    </div>
+    <div class="card cb"><div class="card-h">📈 prometheus :9090</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Сбор метрик, хранение.<br><code style="font-size:12px">prom/prometheus</code><br><b style="color:var(--text)">network_mode: host</b><br>scrape 15s · 3 машины<br><span class="bdg bb">profile: logs</span></div>
+    </div>
+    <div class="card cp"><div class="card-h">📋 loki :3100</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Хранение логов.<br><code style="font-size:12px">grafana/loki:2.9.5</code><br>storage: filesystem tsdb<br>volume: loki_data<br><span class="bdg bp">profile: logs</span></div>
+    </div>
+    <div class="card"><div class="card-h" style="color:var(--orange)">🔍 promtail (server)</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Логи Docker контейнеров.<br><code style="font-size:12px">grafana/promtail:2.9.5</code><br>/var/lib/docker mounted<br>docker.sock → labels<br><span class="bdg bo">profile: logs</span></div>
+    </div>
+    <div class="card co"><div class="card-h">🤖 tg-campus-narimanov</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Telegram бот.<br>build: ./bots/narimanov<br>SSH ключи: /root/.ssh<br>музыка: /music volume<br><span class="bdg bo">profile: bot</span></div>
+    </div>
+    <div class="card co"><div class="card-h">🤖 tg-campus-genclik</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Тот же Dockerfile.<br>Другой config.env<br>target: vm1 клиент<br>Landau volume<br><span class="bdg bo">profile: bot</span></div>
+    </div>
+    <div class="card cr"><div class="card-h">🐕 campus-watchdog</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Проверяет контейнеры.<br>Каждые 5 минут.<br>Упал → рестарт →<br>Telegram уведомление<br><span class="bdg br">profile: watchdog</span></div>
+    </div>
+    <div class="card cr"><div class="card-h">🔄 campus-recovery</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Бэкапы конфигов.<br>network_mode: host<br>/etc /home /root маунт<br>каждые 5 мин проверка<br><span class="bdg br">profile: recovery</span></div>
+    </div>
+    <div class="card cb"><div class="card-h">🌐 campus-webui :8090</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">Веб-интерфейс.<br>Flask · SQLite · port 8090<br>SSH/SFTP → nctk<br>Роли: guest/user/admin<br><span class="bdg bb">profile: webui</span></div>
+    </div>
+    <div class="card"><div class="card-h" data-az="▶ Bütün steki işə salmaq" data-ru="▶ Запуск всего стека" data-en="▶ Launch full stack">▶ Запуск всего стека</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2;color:var(--muted)">
+        <span class="fn">docker compose</span><br>
+        &nbsp;--profile logs<br>
+        &nbsp;--profile bot<br>
+        &nbsp;--profile watchdog<br>
+        &nbsp;--profile recovery<br>
+        &nbsp;--profile webui<br>
+        &nbsp;<span class="ok">up -d</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 8 konteyner · 5 profil: logs/bot/watchdog/recovery/webui · watchdog avtomatik bərpa edir</span>
+    <span>·</span>
+    <span>🇷🇺 8 контейнеров · 5 профилей · watchdog авторестарт упавших контейнеров</span>
+    <span>·</span>
+    <span>🇬🇧 8 containers · 5 profiles · watchdog auto-restarts any crashed container</span>
+  </div>
+</div>
+
+<!-- ══════════ 11. SYSTEMD нa nctk ══════════ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> systemd · 5 xidmət · Audio Client' data-ru='<span class="live"></span> systemd · 5 сервисов · Audio Client' data-en='<span class="live"></span> systemd · 5 services · Audio Client'><span class="live"></span> systemd · 5 сервисов · Audio Client</div>
+  <div class="H2" data-az='nctk klient — <span class="GRAD">bütün xidmətlər və necə işləyir</span>' data-ru='Клиент nctk — <span class="GRAD">все сервисы и как работают</span>' data-en='Client nctk — <span class="GRAD">all services and how they work</span>'>Клиент nctk — <span class="GRAD">все сервисы и как работают</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1">
+    <div class="card cg">
+      <div class="card-h">🎵 campus-mpv.service</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+        mpv демон — всегда запущен.<br>
+        User=nctk Group=audio<br>
+        IPC: <code>/run/campus-player/mpv.sock</code><br>
+        volume-max=160 · audio-device=alsa/default<br>
+        <span class="bdg bg">Restart=always RestartSec=3</span>
+        <span class="bdg bg" style="margin-left:4px">StartLimitIntervalSec=0</span>
+      </div>
+    </div>
+    <div class="card cb">
+      <div class="card-h">🤖 campus-telegram-bot.service</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+        Telegram бот Python.<br>
+        WorkDir: <code>~/telegram-campus-bot/</code><br>
+        After: campus-mpv.service<br>
+        Wants: network-online.target<br>
+        <span class="bdg bb">Restart=always RestartSec=10</span>
+      </div>
+    </div>
+    <div class="card cr">
+      <div class="card-h">🐕 campus-player-watchdog.service + .timer</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+        <b>.timer:</b> OnCalendar=*:0/5 — каждые 5 минут<br>
+        <b>.service:</b> Type=oneshot<br>
+        Логика: <code>systemctl is-active campus-mpv</code><br>
+        Не активен → <code>systemctl start campus-mpv</code><br>
+        Защита от тихой смерти mpv
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--yellow)">
+      <div class="card-h" style="color:var(--yellow)">📊 node_exporter.service</div>
+      <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+        Метрики для Prometheus.<br>
+        Порт: <b class="g">:9100</b> · доступен снаружи<br>
+        Prometheus scrape каждые 15 секунд<br>
+        Raw metrics: <code>curl nctk:9100/metrics</code><br>
+        <span class="bdg bg">Restart=always</span>
+      </div>
+    </div>
+    <div class="card cp" style="grid-column:span 2">
+      <div class="card-h" data-az="📋 promtail.service — log agenti" data-ru="📋 promtail.service — агент логов" data-en="📋 promtail.service — log agent">📋 promtail.service — агент логов</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+          Логи → Loki через SSH туннель.<br>
+          Push в: <code>localhost:3101</code><br>
+          Туннель: <code>ssh -L 3101:localhost:3100 server</code><br>
+          Позиции хранит в: <code>/tmp/positions-nctk.yaml</code><br>
+          (не теряет прочитанное при рестарте)
+        </div>
+        <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+          Файлы на nctk:<br>
+          📁 <code>~/action.log</code> — cron события<br>
+          📁 <code>/var/log/campus-bot*.log</code><br>
+          📁 <code>/var/log/*.log</code> — системные<br>
+          📁 syslog · auth.log · kern.log · cron
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 5 systemd xidməti nctk-da · Hamısı Restart=always · watchdog timer hər 5 dəqiqə</span>
+    <span>·</span>
+    <span>🇷🇺 5 systemd сервисов на nctk · Все Restart=always · watchdog проверяет каждые 5 мин</span>
+    <span>·</span>
+    <span>🇬🇧 5 systemd services on nctk · All Restart=always · watchdog checks every 5 minutes</span>
+  </div>
+</div>
+
+<!-- ══════════ 12. GITHUB ══════════ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> GitHub · 2 repo · Sirlər ayrıca' data-ru='<span class="live"></span> GitHub · 2 репозитория · Секреты отдельно' data-en='<span class="live"></span> GitHub · 2 repositories · Secrets separate'><span class="live"></span> GitHub · 2 репозитория · Секреты отдельно</div>
+  <div class="H2" data-az='Kod açıq — <span class="GRAD">sirlər gizli</span>' data-ru='Код публично — <span class="GRAD">секреты приватно</span>' data-en='Code public — <span class="GRAD">secrets private</span>'>Код публично — <span class="GRAD">секреты приватно</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:var(--bg3);padding:14px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+        <span style="font-size:22px">📁</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700">campus-infra</span>
+        <span class="bdg bg">public</span>
+      </div>
+      <div style="padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2.2;color:var(--muted);flex:1">
+        <span class="ok">🚀</span> bootstrap.sh &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># восстановление всего</span><br>
+        <span style="color:var(--orange)">🐳</span> docker-compose.yaml<br>
+        <span class="b">📂</span> config/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># grafana/loki/prometheus</span><br>
+        <span class="b">📂</span> machines/nctk/<br>
+        &nbsp;&nbsp;<span class="ok">install.sh</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># полная установка</span><br>
+        &nbsp;&nbsp;<span style="color:var(--text)">crontab</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># расписание</span><br>
+        &nbsp;&nbsp;<span class="b">scripts/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># playerctl, cron-landau</span><br>
+        &nbsp;&nbsp;<span class="b">systemd/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># все .service файлы</span><br>
+        &nbsp;&nbsp;<span class="b">bot/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># bot.py</span><br>
+        <span class="b">📂</span> bots/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># narimanov, genclik</span><br>
+        <span class="b">📂</span> promtail-clients/ <span class="cm"># yaml для каждой машины</span>
+      </div>
+    </div>
+    <div style="width:60px;display:flex;align-items:center;justify-content:center">
+      <div class="flv fp" style="width:2px;height:130px;border-radius:1px"></div>
+    </div>
+    <div style="flex:1;background:rgba(248,81,73,.03);border:1px solid var(--red);border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:var(--bg3);padding:14px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+        <span style="font-size:22px">🔐</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700">campus-secrets</span>
+        <span class="bdg br">private</span>
+      </div>
+      <div style="padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2.2;color:var(--muted);flex:1">
+        <span class="b">📂</span> server/<br>
+        &nbsp;&nbsp;<span class="r">🔑</span> .env<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · GRAFANA_PASS · NCTK_HOST · …</span><br>
+        &nbsp;&nbsp;<span class="r">🔑</span> narimanov.config.env<br>
+        &nbsp;&nbsp;<span class="r">🔑</span> genclik.config.env<br>
+        <span class="b">📂</span> nctk/<br>
+        &nbsp;&nbsp;<span class="r">🔑</span> telegram-bot.config.env<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · LOG_GROUP_IDS · VM1_HOST · …</span><br>
+        &nbsp;&nbsp;<span class="r">🔑</span> cron_notify.env<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm" style="font-size:12px">BOT_TOKEN · LOG_GROUP_ID · …</span><br><br>
+        <span class="r">⚠ НИКОГДА публично · только SSH-ключ</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Açıq konfig + gizli sirlər ayrı repo · bootstrap.sh avtomatik birləşdirir</span>
+    <span>·</span>
+    <span>🇷🇺 Публичные конфиги + приватные секреты · bootstrap.sh объединяет при восстановлении</span>
+    <span>·</span>
+    <span>🇬🇧 Public configs + private secrets in separate repos · bootstrap.sh merges on restore</span>
+  </div>
+</div>
+
+<!-- ══════════ 13. RECOVERY ══════════ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> bootstrap.sh · Disaster Recovery · 2 əmr' data-ru='<span class="live"></span> bootstrap.sh · Disaster Recovery · 2 команды' data-en='<span class="live"></span> bootstrap.sh · Disaster Recovery · 2 commands'><span class="live"></span> bootstrap.sh · Disaster Recovery · 2 команды</div>
+  <div class="H2" data-az='Hər şey düşdü — <span class="GRAD">2 əmr sistemi qaytarır</span>' data-ru='Всё упало — <span class="GRAD">2 команды возвращают систему</span>' data-en='Everything crashed — <span class="GRAD">2 commands bring it back</span>'>Всё упало — <span class="GRAD">2 команды возвращают систему</span></div>
+  <div style="display:flex;gap:18px;flex:1">
+    <div style="flex:1.2;display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--bg);border:2px solid var(--green);border-radius:14px;padding:20px 24px">
+        <div class="codeblk">
+          <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>С нуля — две команды</div>
+          <div class="codeblk-body">
+<span class="fn">git</span> clone git@github.com:org/<span class="ok">campus-infra</span>.git<br><br>
+<span class="fn">cd</span> campus-infra && <span class="fn">./bootstrap.sh</span> <span class="ok">all</span>
+          </div>
+        </div>
+      </div>
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>bootstrap.sh — что происходит внутри</div>
+        <div class="codeblk-body">
+<span class="cm"># 1. Клонирует campus-secrets</span><br>
+<span class="fn">git clone</span> <span class="vr">$SECRETS_REPO</span> ~/projects/campus-secrets<br><br>
+<span class="cm"># 2. Раскладывает секреты (.env, config.env)</span><br>
+<span class="fn">cp</span> secrets/server/.env .<br>
+<span class="fn">cp</span> secrets/*/config.env bots/*/config.env<br><br>
+<span class="cm"># 3. Docker стек на сервере</span><br>
+bash machines/server/install.sh<br><br>
+<span class="cm"># 4. По SSH разворачивает audio client</span><br>
+<span class="fn">scp</span> -r machines/nctk/ nctk@CLIENT:/tmp/<br>
+<span class="fn">ssh</span> nctk@CLIENT <span class="str">"bash /tmp/nctk/install.sh"</span><br>
+<span class="fn">scp</span> secrets/nctk/*.env nctk@CLIENT:~/
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center">
+      <div style="font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px" data-az="Nə quraşdırılır:" data-ru="Что разворачивается:" data-en="What gets deployed:">Что разворачивается:</div>
+      <div class="litem" style="font-size:17px"><div class="ico" style="width:28px;height:28px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000">1</div><div class="main"><b data-az="Gizli məlumat private repo-dan" data-ru="Секреты из private repo" data-en="Secrets from private repo">Секреты из private repo</b><span data-az="Telegram tokenləri, Grafana şifrəsi, maşın ünvanları" data-ru="Telegram токены, Grafana пароль, адреса машин" data-en="Telegram tokens, Grafana password, machine addresses">Telegram токены, Grafana пароль, адреса машин</span></div></div>
+      <div class="litem" style="font-size:17px"><div class="ico" style="width:28px;height:28px;background:var(--blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000">2</div><div class="main"><b data-az="Docker Stack — 7 konteyner" data-ru="Docker стек — 7 контейнеров" data-en="Docker stack — 7 containers">Docker стек — 7 контейнеров</b><span data-az="Grafana, Loki, Prometheus, Promtail, 2 bot, Watchdog, Recovery" data-ru="Grafana, Loki, Prometheus, Promtail, 2 бота, Watchdog, Recovery" data-en="Grafana, Loki, Prometheus, Promtail, 2 bots, Watchdog, Recovery">Grafana, Loki, Prometheus, Promtail, 2 бота, Watchdog, Recovery</span></div></div>
+      <div class="litem" style="font-size:17px"><div class="ico" style="width:28px;height:28px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000">3</div><div class="main"><b data-az="SSH ilə Audio Client" data-ru="Audio Client по SSH" data-en="Audio Client via SSH">Audio Client по SSH</b><span data-az="mpv, bot, cron, node_exporter, promtail install.sh ilə" data-ru="mpv, бот, cron, node_exporter, promtail через install.sh" data-en="mpv, bot, cron, node_exporter, promtail via install.sh">mpv, бот, cron, node_exporter, promtail через install.sh</span></div></div>
+      <div class="litem" style="font-size:17px;border:none"><div class="ico">✅</div><div class="main"><b style="color:var(--green)" data-az="Bütün sistem onlayndır" data-ru="Вся система онлайн" data-en="Full system online">Вся система онлайн</b><span data-az="Grafana · monitorinq · botlar · cədvəl — tam işləyir" data-ru="Grafana · мониторинг · боты · расписание — полностью работает" data-en="Grafana · monitoring · bots · schedule — fully operational">Grafana · мониторинг · боты · расписание — полностью работает</span></div></div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 2 əmr → hər şey sıfırdan: sirlər + Docker + audio client + monitorinq</span>
+    <span>·</span>
+    <span>🇷🇺 2 команды → с нуля: секреты + Docker стек + audio client + мониторинг</span>
+    <span>·</span>
+    <span>🇬🇧 2 commands → from scratch: secrets + Docker stack + audio client + monitoring</span>
+  </div>
+</div>
+
+
+<!-- ══════════ 14. WEB UI ══════════ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> Flask · Bootstrap 5 · Port 8090 · SQLite' data-ru='<span class="live"></span> Flask · Bootstrap 5 · Port 8090 · SQLite' data-en='<span class="live"></span> Flask · Bootstrap 5 · Port 8090 · SQLite'><span class="live"></span> Flask · Bootstrap 5 · Port 8090 · SQLite</div>
+  <div class="H2" data-az='Web interfeys — <span class="GRAD">brauzerdən idarəetmə</span>' data-ru='Web-интерфейс — <span class="GRAD">управление из браузера</span>' data-en='Web interface — <span class="GRAD">control from the browser</span>'>Web-интерфейс — <span class="GRAD">управление из браузера</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+      <div class="card cg"><div class="card-h">🎵 Управление плеером</div>
+        <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+          ▶ Play · ⏸ Pause · ⏹ Stop<br>
+          ⏮ Prev · ⏭ Next · 🔊 Volume · 🔇 Mute<br>
+          SSH → socat → mpv IPC socket<br>
+          SFTP: загрузка и смена треков<br>
+          <span class="bdg bg">paramiko SSH/SFTP</span>
+        </div>
+      </div>
+      <div class="card cb"><div class="card-h">🔐 Система ролей</div>
+        <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+          <b style="color:var(--muted)">guest</b> — только просмотр, кнопки неактивны<br>
+          <b style="color:var(--blue)">user</b> — play · stop · volume · mute · next/prev<br>
+          <b style="color:var(--purple)">admin</b> — полный доступ + управление юзерами<br>
+          Проверка на сервере: <code>has_perm('play')</code><br>
+          <span class="bdg bb">Flask-Login + SQLite</span>
+        </div>
+      </div>
+      <div class="card cp"><div class="card-h">🟢 Онлайн и чат</div>
+        <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+          Кто онлайн: heartbeat каждые 30 сек<br>
+          Не активен 90 сек → офлайн<br>
+          Групповой чат: polling каждые 5 сек<br>
+          Непрочитанные: красный счётчик 🔴<br>
+          <span class="bdg bp">real-time без WebSocket</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+      <div class="card co"><div class="card-h">🎨 UI / UX</div>
+        <div style="font-size:15px;line-height:1.9;color:var(--muted)">
+          🌙 Тёмная / ☀️ светлая тема (localStorage)<br>
+          🌐 Язык: AZ / RU / EN (data-i18n)<br>
+          👤 Профиль: смена пароля + история треков<br>
+          Без FOUC — тема грузится до рендера<br>
+          Bootstrap Icons CDN · JetBrains Mono
+        </div>
+      </div>
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>docker-compose.yml</div>
+        <div class="codeblk-body">
+campus-webui:<br>
+&nbsp;build: ./webui<br>
+&nbsp;ports: <span class="str">"8090:8090"</span><br>
+&nbsp;volumes:<br>
+&nbsp;&nbsp;- ./data/webui.db:/app/webui.db<br>
+&nbsp;&nbsp;- ~/.ssh:/root/.ssh:ro<br>
+&nbsp;profiles: [<span class="str">webui</span>]<br>
+<br>
+<span class="cm"># запуск:</span><br>
+<span class="fn">docker compose</span> --profile webui up -d
+        </div>
+      </div>
+      <div class="card"><div class="card-h">🔌 API эндпоинты</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2;color:var(--muted)">
+          POST <span class="fn">/api/play</span> · <span class="fn">/api/stop</span><br>
+          POST <span class="fn">/api/volume</span> · <span class="fn">/api/mute</span><br>
+          POST <span class="fn">/api/next</span> · <span class="fn">/api/prev</span><br>
+          GET &nbsp;<span class="fn">/api/online</span> · POST <span class="fn">/api/heartbeat</span><br>
+          GET &nbsp;<span class="fn">/api/chat/messages</span> · POST <span class="fn">/api/chat/send</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Flask · Bootstrap 5 · SSH/SFTP → nctk · Rollər: guest/user/admin · Real-time çat</span>
+    <span>·</span>
+    <span>🇷🇺 Flask · Bootstrap 5 · SSH/SFTP → nctk · Роли: guest/user/admin · Real-time чат</span>
+    <span>·</span>
+    <span>🇬🇧 Flask · Bootstrap 5 · SSH/SFTP → nctk · Roles: guest/user/admin · Real-time chat</span>
+  </div>
+</div>
+
+
+<!-- ══ WEBUI: NEW FEATURES OVERVIEW ══ -->
+<div class="slide">
+  <div class="pill" data-az='<span class="live"></span> Campus Web Panel · Yeni funksiyalar' data-ru='<span class="live"></span> Campus Web Panel · Новые функции' data-en='<span class="live"></span> Campus Web Panel · New features'><span class="live"></span> Campus Web Panel · Новые функции</div>
+  <div class="H2" data-az='Veb paneldə <span class="GRAD">nə yarandı</span>' data-ru='Что появилось в <span class="GRAD">веб-панели</span>' data-en='What was added to the <span class="GRAD">web panel</span>'>Что появилось в <span class="GRAD">веб-панели</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;flex:1;align-content:start;margin-top:8px">
+    <div class="card cg"><div class="card-h">🎵 Плеер · Два кампуса</div>
+      <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+        Narimanov + Gənclik независимо<br>
+        Сейчас играет — в реальном времени<br>
+        Громкость, мут, стоп, гимн<br>
+        <span class="bdg bg">mpv IPC → paramiko SSH</span>
+      </div>
+    </div>
+    <div class="card cb"><div class="card-h">📤 Загрузка треков</div>
+      <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+        Drag&drop + несколько файлов<br>
+        Прогресс-бар на каждый файл<br>
+        Защита от перезаписи (confirm)<br>
+        <span class="bdg bb">SFTP → werkzeug secure_filename</span>
+      </div>
+    </div>
+    <div class="card cp"><div class="card-h">🔄 Синхронизация треков</div>
+      <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+        Narimanov ↔ Gənclik через SFTP<br>
+        Показывает diff: что только у кого<br>
+        Направление: туда / сюда<br>
+        <span class="bdg bp">paramiko SFTP put/get</span>
+      </div>
+    </div>
+    <div class="card co"><div class="card-h">📊 Монитор серверов</div>
+      <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+        RAM / Диск / CPU — все 3 машины<br>
+        Цветовые пороги 60% / 85%<br>
+        Авторефреш каждые 30 сек<br>
+        <span class="bdg bo">threading.Thread параллельный SSH</span>
+      </div>
+    </div>
+    <div class="card cb"><div class="card-h">📅 Редактор расписания</div>
+      <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+        Таблица: время, файл, VOL, дни<br>
+        CRUD: добавить / изменить / удалить<br>
+        Дни недели — чекбоксы<br>
+        <span class="bdg bb">JSON persistence · сброс к умолчанию</span>
+      </div>
+    </div>
+    <div class="card cg"><div class="card-h">🕐 Синхронизация времени</div>
+      <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+        Эталон — CentOS сервер<br>
+        sudo date -s → nctk, vm1<br>
+        Тикающие часы на дашборде<br>
+        <span class="bdg bg">offset-based JS · re-sync 30s</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Yeni: yükləmə, monitor, cədvəl, sinxronizasiya, Telegram, admin panel</span>
+    <span>·</span>
+    <span>🇷🇺 Новое: загрузка, монитор, расписание, синхронизация, Telegram, admin-панель</span>
+    <span>·</span>
+    <span>🇬🇧 New: upload, monitor, schedule, sync, Telegram notifications, admin panel</span>
+  </div>
+</div>
+
+<!-- ══ WEBUI: ROLES & PERMISSIONS ══ -->
+<div class="slide">
+  <div class="pill" data-az='Flask-Login · SQLite · Role-based access' data-ru='Flask-Login · SQLite · Права по ролям' data-en='Flask-Login · SQLite · Role-based access'>Flask-Login · SQLite · Права по ролям</div>
+  <div class="H2" data-az='Rollər: <span class="GRAD">kim nə edə bilər</span>' data-ru='Роли: <span class="GRAD">кто что может</span>' data-en='Roles: <span class="GRAD">who can do what</span>'>Роли: <span class="GRAD">кто что может</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+      <div class="card" style="border-color:var(--muted)">
+        <div class="card-h" style="color:var(--muted)">👤 guest — только просмотр</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.8">
+          Видит дашборд и расписание<br>
+          Все кнопки плеера отключены<br>
+          Нет доступа к загрузке / монитору
+        </div>
+      </div>
+      <div class="card cb">
+        <div class="card-h">🎵 user — музыка</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.8">
+          ▶ Play · ⏹ Stop · ⏭/⏮ Prev/Next<br>
+          🔊 Громкость · 🔇 Мут<br>
+          Гимн — недоступен
+        </div>
+      </div>
+      <div class="card co">
+        <div class="card-h" style="color:var(--orange)">🎼 staff — музыка + гимн</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.8">
+          Всё что user +<br>
+          🎼 Государственный гимн<br>
+          Загрузка треков · Монитор · Терминал
+        </div>
+      </div>
+      <div class="card cp">
+        <div class="card-h">🛡 admin — полный доступ</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.8">
+          Всё что staff +<br>
+          Управление пользователями<br>
+          Расписание · Лог · Режим тишины
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+      <div class="card cr">
+        <div class="card-h">🔇 Режим тишины</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.8">
+          Включает admin → запрещает play для всех<br>
+          Только admin может продолжить<br>
+          Красный баннер на дашборде<br>
+          <span class="bdg br">silence_mode в DB settings</span>
+        </div>
+      </div>
+      <div class="card cg">
+        <div class="card-h">🔒 Блокировка и Kick</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.8">
+          Блок: пользователь не может войти<br>
+          Kick: сессия завершается сразу<br>
+          force_logout=1 → before_request<br>
+          <span class="bdg bg">is_blocked · force_logout в SQLite</span>
+        </div>
+      </div>
+      <div class="codeblk" style="flex:1">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>app.py — has_perm()</div>
+        <div class="codeblk-body" style="font-size:13px">
+<span class="kw">def</span> <span class="fn">has_perm</span>(perm):<br>
+&nbsp;&nbsp;role = current_user.role<br>
+&nbsp;&nbsp;<span class="kw">if</span> perm == <span class="str">'play'</span> <span class="kw">and</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;role != <span class="str">'admin'</span> <span class="kw">and</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">_silence_active</span>():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="vr">False</span><br>
+&nbsp;&nbsp;<span class="kw">return</span> perm <span class="kw">in</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;ROLE_PERMS[role]
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 4 rol: guest/user/staff/admin · susqunluq rejimi · blok · kick · before_request hook</span>
+    <span>·</span>
+    <span>🇷🇺 4 роли: guest/user/staff/admin · режим тишины · блок · kick · before_request hook</span>
+    <span>·</span>
+    <span>🇬🇧 4 roles: guest/user/staff/admin · silence mode · block · kick · before_request hook</span>
+  </div>
+</div>
+
+<!-- ══ WEBUI: ADMIN PANEL ══ -->
+<div class="slide">
+  <div class="pill" data-az='Admin Panel · Aktivlik · Telegram' data-ru='Admin Panel · Активность · Telegram' data-en='Admin Panel · Activity · Telegram'>Admin Panel · Активность · Telegram</div>
+  <div class="H2" data-az='Admin paneli: <span class="GRAD">tam nəzarət</span>' data-ru='Панель администратора: <span class="GRAD">полный контроль</span>' data-en='Admin panel: <span class="GRAD">full control</span>'>Панель администратора: <span class="GRAD">полный контроль</span></div>
+  <div style="display:flex;gap:14px;flex:1">
+    <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+      <div class="card cp"><div class="card-h">👥 Онлайн пользователи</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          Кто онлайн за последние 15 мин<br>
+          Роль · Страница · «X минут назад»<br>
+          Кнопка «Выкинуть» per user<br>
+          <span class="bdg bp">online_sessions SQLite · 30s poll</span>
+        </div>
+      </div>
+      <div class="card cb"><div class="card-h">📋 Лог активности</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          Фильтр: пользователь / действие / дата<br>
+          Цветные метки: play / himn / upload / block<br>
+          Экспорт в CSV одной кнопкой<br>
+          <span class="bdg bb">activity_log · /admin/activity · 500 записей</span>
+        </div>
+      </div>
+      <div class="card cg"><div class="card-h">📬 Telegram уведомления</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          🎼 Гимн · 📤 Загрузка · 👥 Юзеры · ▶ Музыка<br>
+          Включить/выключить каждый тип<br>
+          Chat ID через admin или config.env<br>
+          <span class="bdg bg">фоновый threading.Thread · прямой API</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+      <div class="card co"><div class="card-h">🖥️ Веб-терминал SSH</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          3 машины: Narimanov · Gənclik · CentOS<br>
+          Цвет по машине: синий · фиолетовый · оранжевый<br>
+          Шпаргалка с командами (6 блоков)<br>
+          <span class="bdg bo">paramiko SSH · banner_timeout=30</span>
+        </div>
+      </div>
+      <div class="card" style="border-color:var(--muted)"><div class="card-h">⚙️ Пользователи</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          CRUD: создать / сменить пароль / удалить<br>
+          Назначить роль: guest/user/staff/admin<br>
+          Флаг «Гимн» для user-ролей<br>
+          Блок/разблок · Kick одним кликом<br>
+          <span class="bdg bb">werkzeug password_hash · SQLite</span>
+        </div>
+      </div>
+      <div class="card cr"><div class="card-h">🔇 Режим тишины (экзамены)</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          Один переключатель → вся музыка off<br>
+          Красный баннер на дашборде<br>
+          Admin не блокируется<br>
+          <span class="bdg br">silence_mode в settings DB · TG уведомление</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Admin panel: onlayn · blok/kick · loji · Telegram · susqunluq rejimi · terminal</span>
+    <span>·</span>
+    <span>🇷🇺 Admin-панель: онлайн · блок/kick · логи · Telegram · режим тишины · терминал</span>
+    <span>·</span>
+    <span>🇬🇧 Admin panel: online users · block/kick · activity log · Telegram · silence mode · terminal</span>
+  </div>
+</div>
+
+<!-- ══ WEBUI: RELIABILITY ══ -->
+<div class="slide">
+  <div class="pill" data-az='Docker · systemd · Watchdog · GitHub' data-ru='Docker · systemd · Watchdog · GitHub' data-en='Docker · systemd · Watchdog · GitHub'>Docker · systemd · Watchdog · GitHub</div>
+  <div class="H2" data-az='Etibarlılıq: <span class="GRAD">sistem həmişə işləyir</span>' data-ru='Надёжность: <span class="GRAD">система всегда работает</span>' data-en='Reliability: <span class="GRAD">system always runs</span>'>Надёжность: <span class="GRAD">система всегда работает</span></div>
+  <div style="display:flex;gap:14px;flex:1">
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+      <div class="card cg"><div class="card-h">🔄 После перезагрузки сервера</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          docker enabled → campus-webui стартует сам<br>
+          restart: unless-stopped в docker-compose<br>
+          Данные в Docker volume webui_data<br>
+          <span class="bdg bg">SQLite + schedule.json в /data</span>
+        </div>
+      </div>
+      <div class="card cb"><div class="card-h">🎵 Музыка после перезагрузки клиентов</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          <b style="color:var(--text)">nctk:</b> campus-player.service enabled<br>
+          <b style="color:var(--text)">vm1:</b> campus-mpv (user systemd) + watchdog<br>
+          Обе машины: таймер каждые 5 мин<br>
+          <span class="bdg bb">campus-player-watchdog.timer</span>
+        </div>
+      </div>
+      <div class="card co"><div class="card-h">📅 Расписание переменов — cron</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          cron.service enabled на nctk и vm1<br>
+          Блокировка flock — параллельные запуски исключены<br>
+          3 попытки play → log ✅ или ❌<br>
+          <span class="bdg bo">campus-cron-landau-local.sh</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+      <div class="card cp"><div class="card-h">📡 Telegram боты</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          <b style="color:var(--text)">Narimanov:</b> systemd tg-campus-narimanov<br>
+          <b style="color:var(--text)">Gənclik:</b> нативно на vm1 (campus-telegram-bot)<br>
+          Docker-версии удалены — нет конфликтов<br>
+          <span class="bdg bp">Restart=always · RestartSec=10</span>
+        </div>
+      </div>
+      <div class="card cg"><div class="card-h">🐙 GitHub — резервная копия кода</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--muted)">
+          Весь код в LandauAudioserver/campus-infra<br>
+          Секреты: только в campus-secrets (private)<br>
+          Токены/пароли в .gitignore<br>
+          <span class="bdg bg">git push → история всех изменений</span>
+        </div>
+      </div>
+      <div class="codeblk">
+        <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>scripts/campus-check.sh</div>
+        <div class="codeblk-body" style="font-size:13px;line-height:1.9">
+<span class="cm"># Полная проверка системы:</span><br>
+bash scripts/campus-check.sh<br>
+<br>
+<span class="cm"># Проверяет:</span><br>
+✅ campus-webui (Docker)<br>
+✅ nctk: player, cron, watchdog<br>
+✅ vm1: mpv, cron, tg-bot, sock<br>
+✅ Telegram боты (systemd)<br>
+✅ Docker боты (должны быть off)
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>🇦🇿 Etibarlılıq: restart policy · watchdog timer · cron flock · systemd enabled · GitHub backup</span>
+    <span>·</span>
+    <span>🇷🇺 Надёжность: restart policy · watchdog timer · cron flock · systemd enabled · GitHub backup</span>
+    <span>·</span>
+    <span>🇬🇧 Reliability: restart policy · watchdog timer · cron flock · systemd enabled · GitHub backup</span>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- ══════ SYSBOT ══════ -->
+<div id="mascot" class="pos-br">
+  <div id="bubble">
+    <div class="btabs">
+      <div class="btab" onclick="setLang('az',event)">🇦🇿</div>
+      <div class="btab active" onclick="setLang('ru',event)">🇷🇺</div>
+      <div class="btab" onclick="setLang('en',event)">🇬🇧</div>
+    </div>
+    <div class="btext" id="t-az"></div>
+    <div class="btext active" id="t-ru"></div>
+    <div class="btext" id="t-en"></div>
+  </div>
+  <div id="bot-char" class="pose-wave" onclick="cycleLang()" title="Нажми — сменить язык">
+    <div class="bot-antenna"></div>
+    <div class="bot-head">
+      <div class="bot-eye"></div>
+      <div class="bot-eye" style="animation-delay:.4s"></div>
+      <div class="bot-mouth"></div>
+    </div>
+    <div class="bot-body"><span class="bot-badge">SYS</span></div>
+    <div class="bot-belly"></div>
+    <div class="bot-arm-l"></div>
+    <div class="bot-arm-r"></div>
+    <div class="bot-leg-l"></div>
+    <div class="bot-leg-r"></div>
+  </div>
+</div>
+
+<!-- Tour button -->
+<button id="tour-btn" onclick="startTour()">
+  <span class="ticon">🤖</span> <span data-az="Tura başla" data-ru="Начать тур" data-en="Start tour">Начать тур</span>
+</button>
+<button id="tour-stop" onclick="stopTour()">⏹ <span data-az="Turu dayandır" data-ru="Стоп тур" data-en="Stop tour">Стоп тур</span></button>
+<div id="tour-progress">
+  <div id="tour-prog-bar"><div id="tour-prog-fill"></div></div>
+  <div id="tour-prog-label">слайд 1 / 14</div>
+</div>
+
+<!-- Transition flash -->
+<div id="tx-flash">
+  <div class="tx-glitch"></div>
+  <div class="tx-scan"></div>
+  <div class="tx-bar"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button onclick="go(-1)">◀</button>
+  <div class="dots" id="dots"></div>
+  <span class="nav-info" id="ctr">1 / 14</span>
+  <button onclick="go(1)">▶</button>
+</div>
+
+<script>
+/* ══ AUTO-TOUR SCRIPT ══
+   Each slide has steps[]. Bot flies to each pos, shows text, waits dur ms, then next step.
+   After all steps → advance slide.
+═══════════════════════════════════ */
+const TOUR = [
+/* 0 Title */ { steps:[
+  {pos:'pos-br',pose:'pose-wave',dur:4000,
+   ru:"Привет! Я SysBot 🤖\nСейчас проведу вас по всей системе Campus Audio.\nПоехали — примерно 3 минуты!",
+   az:"Salam! Mən SysBot 🤖\nSizi Campus Audio sisteminə tanıdacağam.\nTəxminən 3 dəqiqə!",
+   en:"Hi! I'm SysBot 🤖\nLet me guide you through the Campus Audio system.\nAbout 3 minutes — let's go!"},
+]},
+/* 1 Map */ { steps:[
+  {pos:'pos-bl',pose:'pose-point-r',dur:4000,
+   ru:"👉 Смотрите на схему.\nГитHub слева — два репозитория:\ncampus-infra (public) и campus-secrets (private).",
+   az:"👉 Sxemə baxın.\nSolda GitHub — iki repo:\ncampus-infra (açıq) və campus-secrets (gizli).",
+   en:"👉 Look at the diagram.\nGitHub on the left — two repos:\ncampus-infra (public) and campus-secrets (private)."},
+  {pos:'pos-tl',pose:'pose-point-r',dur:4000,
+   ru:"В центре — Мастер-Сервер.\n7 Docker контейнеров:\nGrafana, Loki, Prometheus, боты, Watchdog...",
+   az:"Mərkəzdə — Master Server.\n7 Docker konteyner:\nGrafana, Loki, Prometheus, botlar, Watchdog...",
+   en:"Center — the Master Server.\n7 Docker containers:\nGrafana, Loki, Prometheus, bots, Watchdog..."},
+  {pos:'pos-mr',pose:'pose-point-l',dur:4000,
+   ru:"👈 Audio Client — машина nctk.\nЗдесь mpv, Telegram бот, cron,\nnode_exporter и promtail.",
+   az:"👈 Audio Client — nctk maşını.\nBurada mpv, Telegram bot, cron,\nnode_exporter və promtail.",
+   en:"👈 The Audio Client — machine nctk.\nmpv, Telegram bot, cron,\nnode_exporter and promtail live here."},
+  {pos:'pos-br',pose:'pose-idle',dur:3500,
+   ru:"Справа — Telegram.\nУправление из любой точки мира\nчерез Long-Polling API без белого IP.",
+   az:"Sağda — Telegram.\nDünyada istənilən yerdən idarəetmə\nLong-Polling API ilə.",
+   en:"Right side — Telegram.\nControl from anywhere in the world\nvia Long-Polling — no public IP needed."},
+]},
+/* 2 mpv */ { steps:[
+  {pos:'pos-mr',pose:'pose-point-l',dur:4500,
+   ru:"👈 Это конфиг systemd сервиса campus-mpv.\nКлюч — `--input-ipc-server`.\nВсе команды приходят в этот Unix сокет.",
+   az:"👈 campus-mpv systemd konfiqurasiyası.\nÄsas — `--input-ipc-server`.\nBütün əmrlər bu Unix soketinə gəlir.",
+   en:"👈 systemd config for campus-mpv.\nKey flag: `--input-ipc-server`.\nAll commands arrive at this Unix socket."},
+  {pos:'pos-bl',pose:'pose-point-r',dur:4500,
+   ru:"👉 Справа — цепочка вызова.\ncron или бот → campus-playerctl\n→ socat → сокет → mpv → ALSA → колонки.",
+   az:"👉 Sağda — çağırış zənciri.\ncron/bot → campus-playerctl\n→ socat → soket → mpv → ALSA → dinamik.",
+   en:"👉 Right — the call chain.\ncron/bot → campus-playerctl\n→ socat → socket → mpv → ALSA → speakers."},
+  {pos:'pos-tr',pose:'pose-think',dur:4000,
+   ru:"Важно: `--idle=yes` — mpv не выходит\nпосле окончания трека.\n`Restart=always` — никогда не умирает.",
+   az:"Vacib: `--idle=yes` — mpv trəkdən sonra\nçıxmır. `Restart=always` —\nheç vaxt dayanmır.",
+   en:"Key: `--idle=yes` — mpv stays running\nafter track ends.\n`Restart=always` — it never dies."},
+]},
+/* 3 Cron */ { steps:[
+  {pos:'pos-bl',pose:'pose-point-r',dur:4500,
+   ru:"👉 Полное расписание звонков!\n22 задания cron каждый будний день —\nс 07:45 утра до 15:10.",
+   az:"👉 Tam zəng cədvəli!\nHər iş günü 22 cron tapşırığı —\n07:45-dən 15:10-a qədər.",
+   en:"👉 The full bell schedule!\n22 cron jobs every weekday —\nfrom 07:45 to 15:10."},
+  {pos:'pos-tl',pose:'pose-point-r',dur:4000,
+   ru:"Понедельник 08:00 — особый!\nГосударственный гимн на volume=160.\nЭто усиление выше 100% через ALSA.",
+   az:"Bazar ertəsi 08:00 — xüsusi!\nDövlət himni volume=160 ilə.\nBu ALSA ilə 100%-dən artıq güclənmə.",
+   en:"Monday 08:00 is special!\nNational anthem at volume=160.\nThat's >100% via ALSA amplification."},
+  {pos:'pos-mr',pose:'pose-think',dur:4500,
+   ru:"Алгоритм скрипта: `date +%u` →\nномер дня → папка Landau/N/\n→ SLOT.mp3 → 3 попытки воспроизведения.",
+   az:"Skript alqoritmi: `date +%u` →\ngünün nömrəsi → Landau/N/ qovluğu\n→ SLOT.mp3 → 3 cəhd.",
+   en:"Script algorithm: `date +%u` →\nweekday number → folder Landau/N/\n→ SLOT.mp3 → 3 play retries."},
+]},
+/* 4 Bot */ { steps:[
+  {pos:'pos-tr',pose:'pose-think',dur:4000,
+   ru:"Telegram бот написан на чистом Python\nбез единой внешней библиотеки.\nРаботает на Long-Polling — не нужен белый IP.",
+   az:"Telegram bot xalis Python ilə,\nheç bir xarici kitabxana olmadan.\nLong-Polling — açıq IP lazım deyil.",
+   en:"Telegram bot is pure Python —\nzero external libraries.\nLong-Polling — no public IP required."},
+  {pos:'pos-br',pose:'pose-point-l',dur:4000,
+   ru:"👆 Слева — главный цикл бота.\ngetUpdates ждёт до 50 секунд —\nноль трафика пока нет сообщений.",
+   az:"👆 Solda — botun əsas döngüsü.\ngetUpdates 50 saniyəyə qədər gözləyir —\nmesaj olmadıqda sıfır trafik.",
+   en:"👆 Left — the bot's main loop.\ngetUpdates waits up to 50 seconds —\nzero traffic while idle."},
+  {pos:'pos-ml',pose:'pose-point-r',dur:4000,
+   ru:"👉 Справа — кнопки и особые функции.\nАудио из чата, число = трек,\n/server — SSH отчёт всех машин.",
+   az:"👉 Sağda — düymələr və xüsusi funksiyalar.\nChatdan audio, rəqəm = trək,\n/server — bütün maşınların SSH hesabatı.",
+   en:"👉 Right — buttons and special features.\nAudio from chat, number = track,\n/server — SSH report from all machines."},
+]},
+/* 5 BotFlow */ { steps:[
+  {pos:'pos-ml',pose:'pose-point-r',dur:3500,
+   ru:"👉 Это живая анимация!\nКак команда 'play 42' проходит\nвсе 6 шагов менее чем за 1 секунду.",
+   az:"👉 Bu canlı animasiyadır!\n'play 42' əmri 6 addımı\n1 saniyədən az keçir.",
+   en:"👉 This is a live animation!\nHow 'play 42' passes through\nall 6 steps in under 1 second."},
+  {pos:'pos-br',pose:'pose-idle',dur:7000,
+   ru:"Смотрите на шаги:\nMessenger → API → parse → playerctl\n→ socat → mpv → ответ пользователю.",
+   az:"Addımlara baxın:\nMessenger → API → parse → playerctl\n→ socat → mpv → istifadəçiyə cavab.",
+   en:"Watch the steps:\nMessenger → API → parse → playerctl\n→ socat → mpv → reply to user."},
+]},
+/* 6 Prometheus */ { steps:[
+  {pos:'pos-mr',pose:'pose-point-l',dur:4500,
+   ru:"👈 Реальный конфиг Prometheus.\n3 цели — campus-server, nctk, vm1.\nScrape каждые 15 секунд.",
+   az:"👈 Real Prometheus konfiqurasiyası.\n3 hədəf — campus-server, nctk, vm1.\nHər 15 saniyədə bir çəkir.",
+   en:"👈 The real Prometheus config.\n3 targets — campus-server, nctk, vm1.\nScrapes every 15 seconds."},
+  {pos:'pos-tr',pose:'pose-think',dur:4500,
+   ru:"relabel_configs — критически важно!\nБез него instance = IP-адрес:9100.\nС ним — читаемые имена: nctk, vm1...",
+   az:"relabel_configs — kritik vacibdir!\nOnsuz instance = IP:9100.\nOnunla — oxunan adlar: nctk, vm1...",
+   en:"relabel_configs is critical!\nWithout it instance = IP:9100.\nWith it — readable names: nctk, vm1..."},
+  {pos:'pos-bl',pose:'pose-point-r',dur:4000,
+   ru:"node_exporter на каждой машине\nслушает порт :9100 и отдаёт\nCPU, RAM, Disk, температуру, uptime.",
+   az:"Hər maşında node_exporter\n:9100 portunu dinləyir və\nCPU, RAM, Disk, temp, uptime verir.",
+   en:"node_exporter on each machine\nlistens on :9100 and serves\nCPU, RAM, Disk, temperature, uptime."},
+]},
+/* 7 Loki */ { steps:[
+  {pos:'pos-tl',pose:'pose-point-r',dur:4500,
+   ru:"👉 Это конфиг Promtail агента на nctk.\nСледит за action.log — там все звонки.\nИ за логами campus-bot и системными.",
+   az:"👉 Bu — nctk-da Promtail agenti konfiqurasiyası.\naction.log-u izləyir — orada bütün zənglər.\nHəmçinin campus-bot və sistem logları.",
+   en:"👉 This is Promtail agent config on nctk.\nWatches action.log — all bell events.\nAlso campus-bot and system logs."},
+  {pos:'pos-mr',pose:'pose-think',dur:4500,
+   ru:"nctk и сервер в разных подсетях!\nSSH туннель решает это:\nlocalhost:3101 → Loki на сервере :3100.",
+   az:"nctk və server fərqli şəbəkədə!\nSSH tunel həll edir:\nlocalhost:3101 → serverdə Loki :3100.",
+   en:"nctk and server are on different subnets!\nSSH tunnel solves this:\nlocalhost:3101 → Loki on server :3100."},
+  {pos:'pos-br',pose:'pose-point-l',dur:4000,
+   ru:"Поиск логов: Grafana → Explore →\nвыбрать Loki → написать запрос:\n{job='campus_landau'} → Run query.",
+   az:"Log axtarışı: Grafana → Explore →\nLoki seçin → sorğu yazın:\n{job='campus_landau'} → Run query.",
+   en:"Search logs: Grafana → Explore →\nselect Loki → write query:\n{job='campus_landau'} → Run query."},
+]},
+/* 8 Grafana */ { steps:[
+  {pos:'pos-bl',pose:'pose-point-r',dur:4500,
+   ru:"👉 Grafana — главный интерфейс мониторинга.\nОткрывается в браузере на порту 3000.\nВход: admin / пароль из .env.",
+   az:"👉 Grafana — monitorinqin əsas interfeysi.\nBrauzerdə port 3000 ilə açılır.\nGiriş: admin / .env-dən şifrə.",
+   en:"👉 Grafana — the main monitoring interface.\nOpens in browser on port 3000.\nLogin: admin / password from .env."},
+  {pos:'pos-tr',pose:'pose-idle',dur:4000,
+   ru:"Provisioning — datasources и дашборды\nнастраиваются автоматически из JSON\nпри каждом старте контейнера.",
+   az:"Provisioning — datasources və dashboardlar\nJSON fayllarından avtomatik konfiqurasiya edilir\nhər konteyner başladığında.",
+   en:"Provisioning — datasources and dashboards\nauto-configured from JSON files\nevery time the container starts."},
+  {pos:'pos-br',pose:'pose-think',dur:4000,
+   ru:"Маршрут для метрик:\nDashboards → Node Exporter Full →\n$node переменная → выбрать машину.",
+   az:"Metrik marşrutu:\nDashboards → Node Exporter Full →\n$node dəyişəni → maşın seçin.",
+   en:"Path to metrics:\nDashboards → Node Exporter Full →\n$node variable → select machine."},
+]},
+/* 9 Docker */ { steps:[
+  {pos:'pos-tl',pose:'pose-idle',dur:4500,
+   ru:"7 контейнеров разбиты по профилям.\nЗапуск: docker compose\n--profile logs --profile bot up -d",
+   az:"7 konteyner profillərə bölünüb.\nİşə salma: docker compose\n--profile logs --profile bot up -d",
+   en:"7 containers split by profiles.\nRun: docker compose\n--profile logs --profile bot up -d"},
+  {pos:'pos-mr',pose:'pose-think',dur:4000,
+   ru:"Prometheus работает с network_mode: host!\nЭто позволяет доставать метрики\nиз машин в других подсетях.",
+   az:"Prometheus network_mode: host ilə işləyir!\nBu, digər şəbəkələrdəki maşınlardan\nmetriklər almağa imkan verir.",
+   en:"Prometheus runs with network_mode: host!\nThis allows reaching metrics\nfrom machines on other subnets."},
+  {pos:'pos-br',pose:'pose-point-l',dur:4000,
+   ru:"campus-watchdog проверяет все контейнеры\nкаждые 5 минут. Упал → рестарт →\nTelegram уведомление. Автовосстановление!",
+   az:"campus-watchdog hər 5 dəqiqə\nbütün konteynerləri yoxlayır. Düşdü → restart →\nTelegram bildirişi. Avto-bərpa!",
+   en:"campus-watchdog checks all containers\nevery 5 minutes. Crashed → restart →\nTelegram alert. Auto-healing!"},
+]},
+/* 10 systemd */ { steps:[
+  {pos:'pos-mr',pose:'pose-point-l',dur:4500,
+   ru:"👈 На nctk пять systemd сервисов.\nВсе с Restart=always — самовосстановление.\nНикто не умирает тихо.",
+   az:"👈 nctk-da 5 systemd xidməti var.\nHamısı Restart=always — özünü bərpa edir.\nHeç kim səssiz ölmür.",
+   en:"👈 Five systemd services on nctk.\nAll Restart=always — self-healing.\nNothing dies silently."},
+  {pos:'pos-tl',pose:'pose-think',dur:4000,
+   ru:"campus-player-watchdog.timer —\nзапускается каждые 5 минут\nи проверяет: жив ли campus-mpv?",
+   az:"campus-player-watchdog.timer —\nhər 5 dəqiqə işə düşür\nvə yoxlayır: campus-mpv yaşayır?",
+   en:"campus-player-watchdog.timer —\nfires every 5 minutes\nand checks: is campus-mpv alive?"},
+  {pos:'pos-bl',pose:'pose-point-r',dur:4000,
+   ru:"promtail хранит позицию чтения\nв /tmp/positions-nctk.yaml.\nПри рестарте не теряет прогресс.",
+   az:"promtail oxuma mövqeyini\n/tmp/positions-nctk.yaml-da saxlayır.\nYenidən başladıqda irəliləyişini itirmir.",
+   en:"promtail stores its read position\nin /tmp/positions-nctk.yaml.\nDoesn't lose progress on restart."},
+]},
+/* 11 GitHub */ { steps:[
+  {pos:'pos-bl',pose:'pose-point-r',dur:4500,
+   ru:"👉 campus-infra — публичный репо.\nВесь код, конфиги, скрипты.\nЛюбой может клонировать и изучить.",
+   az:"👉 campus-infra — açıq repo.\nBütün kod, konfiqler, skriptlər.\nHər kəs klonlaya və öyrənə bilər.",
+   en:"👉 campus-infra — public repository.\nAll code, configs, scripts.\nAnyone can clone and study it."},
+  {pos:'pos-br',pose:'pose-think',dur:4500,
+   ru:"campus-secrets — строго приватный!\nTelegram токены, Grafana пароль,\nадреса машин. Только через SSH-ключ.",
+   az:"campus-secrets — ciddi gizli!\nTelegram tokenləri, Grafana şifrəsi,\nmaşın ünvanları. Yalnız SSH açarı ilə.",
+   en:"campus-secrets — strictly private!\nTelegram tokens, Grafana password,\nmachine addresses. SSH key access only."},
+]},
+/* 12 Recovery */ { steps:[
+  {pos:'pos-bl',pose:'pose-point-r',dur:4500,
+   ru:"👉 Финал! Если всё упало —\nвсего две команды:\ngit clone + ./bootstrap.sh all",
+   az:"👉 Final! Əgər hər şey çöksə —\nancaq iki əmr:\ngit clone + ./bootstrap.sh all",
+   en:"👉 The finale! If everything crashes —\njust two commands:\ngit clone + ./bootstrap.sh all"},
+  {pos:'pos-tr',pose:'pose-think',dur:4500,
+   ru:"bootstrap.sh сам:\n• клонирует campus-secrets\n• раскладывает .env\n• поднимает Docker\n• разворачивает nctk по SSH",
+   az:"bootstrap.sh özü:\n• campus-secrets klonlayır\n• .env-ləri yerləşdirir\n• Docker-i qaldırır\n• SSH ilə nctk-nı quraşdırır",
+   en:"bootstrap.sh automatically:\n• clones campus-secrets\n• places .env files\n• starts Docker stack\n• deploys nctk via SSH"},
+  {pos:'pos-br',pose:'pose-wave',dur:4500,
+   ru:"🎉 И последнее — Web UI!\nОткрываем браузер и управляем прямо\nс телефона или компьютера.",
+   az:"🎉 Və sonuncu — Web UI!\nBrauzeri açırıq və birbaşa\ntelefondan və ya kompüterdən idarə edirik.",
+   en:"🎉 And finally — the Web UI!\nOpen a browser and control everything\nfrom a phone or computer."},
+]},
+/* 13 Web UI */ { steps:[
+  {pos:'pos-bl',pose:'pose-point-r',dur:4500,
+   ru:"👉 Веб-интерфейс на порту 8090.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → напрямую в nctk.",
+   az:"👉 Veb interfeys 8090 portunda.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → birbaşa nctk-ya.",
+   en:"👉 Web interface on port 8090.\nFlask + Bootstrap 5 + SQLite.\nSSH/SFTP → directly to nctk."},
+  {pos:'pos-tr',pose:'pose-think',dur:4500,
+   ru:"Три роли: guest, user, admin.\nguest — только просмотр.\nuser — управление плеером. admin — всё.",
+   az:"Üç rol: guest, user, admin.\nguest — yalnız baxış.\nuser — player idarəsi. admin — hər şey.",
+   en:"Three roles: guest, user, admin.\nguest — view only.\nuser — player control. admin — everything."},
+  {pos:'pos-mr',pose:'pose-point-l',dur:4000,
+   ru:"👈 Чат + онлайн без WebSocket!\nHeartbeat каждые 30 сек — кто онлайн.\nПолинг каждые 5 сек — новые сообщения.",
+   az:"👈 Çat + onlayn WebSocket olmadan!\nHər 30 san. heartbeat — kim onlayndır.\nHər 5 san. polling — yeni mesajlar.",
+   en:"👈 Chat + online without WebSocket!\nHeartbeat every 30s — who's online.\nPolling every 5s — new messages."},
+  {pos:'pos-br',pose:'pose-wave',dur:5000,
+   ru:"🎉 Тур завершён!\nТеперь вы знаете всю систему.\nНавигация — стрелки клавиатуры или точки.",
+   az:"🎉 Tur tamamlandı!\nİndi bütün sistemi bilirsiniz.\nNaviqasiya — klaviatura oxları və ya nöqtələr.",
+   en:"🎉 Tour complete!\nYou now know the entire system.\nNavigate with keyboard arrows or dots."},
+]},
+];
+
+/* ══ SLIDE DATA (for manual navigation) ══ */
+const SLIDES = [
+  { pos:'pos-br', pose:'pose-wave',
+    az:"Salam! Mən SysBot-am 🤖\nKampus Audio Sisteminə xoş gəldiniz!\n→ düyməsi ilə davam edin.",
+    ru:"Привет! Я SysBot 🤖\nДобро пожаловать в Campus Audio!\nЖмите → чтобы начать тур.",
+    en:"Hey! I'm SysBot 🤖\nWelcome to Campus Audio System!\nPress → to start the tour." },
+
+  { pos:'pos-bl', pose:'pose-point-r',
+    az:"Bu — sistemin xəritəsi! 👉\nSağa baxın: GitHub → Server → Client → Telegram.\nAnimasiyalı xətlər canlı məlumat axınıdır.",
+    ru:"Вот карта системы! 👉\nСправа: GitHub → Сервер → Клиент → Telegram.\nЛинии с анимацией — живые потоки данных.",
+    en:"This is the system map! 👉\nRight side: GitHub → Server → Client → Telegram.\nAnimated lines = live data flows." },
+
+  { pos:'pos-mr', pose:'pose-point-l',
+    az:"👈 Solda — mpv konfiqurasiyası.\nmpv həmişə işləyir, heç vaxt dayanmır.\nJSON socat vasitəsilə socket-ə gedir.",
+    ru:"👈 Слева — конфиг mpv демона.\nmpv всегда запущен — Restart=always.\nJSON команды идут через socat в сокет.",
+    en:"👈 Left side — mpv daemon config.\nmpv runs forever — Restart=always.\nJSON commands piped via socat to socket." },
+
+  { pos:'pos-bl', pose:'pose-point-r',
+    az:"Cron cədvəli! 👉\nHər gün 22 tapşırıq: 11 play + 11 stop.\nBazar ertəsi 08:00 — himn vol=160!",
+    ru:"Расписание cron! 👉\n22 задания в день: 11 play + 11 stop.\nПонедельник 08:00 — гимн на vol=160!",
+    en:"The cron schedule! 👉\n22 jobs per day: 11 play + 11 stop.\nMonday 08:00 — anthem at vol=160!" },
+
+  { pos:'pos-tr', pose:'pose-think',
+    az:"Telegram bot barədə düşünürəm... 🤔\nXarici kitabxana yoxdur — yalnız stdlib!\nLong-polling — açıq IP lazım deyil.",
+    ru:"Думаю о Telegram боте... 🤔\nНоль зависимостей — только stdlib!\nLong-polling — белый IP не нужен.",
+    en:"Thinking about the Telegram bot... 🤔\nZero dependencies — pure stdlib!\nLong-polling — no public IP needed." },
+
+  { pos:'pos-ml', pose:'pose-point-r',
+    az:"Canlı animasiyaya baxın! 👉\nBotun 6 addımını izləyin — avtomatik gedir.\n'Yenidən' düyməsi var!",
+    ru:"Смотрите анимацию! 👉\n6 шагов бота — идут автоматически.\nЕсть кнопка 'Повторить'!",
+    en:"Watch the live animation! 👉\n6 steps of the bot — auto-plays.\nThere's a 'Restart' button!" },
+
+  { pos:'pos-tr', pose:'pose-think',
+    az:"Prometheus konfiqurasiyası! 🤔\nrelabel_configs — çox vacibdir!\nOnsuz instance = IP:9100 olur.",
+    ru:"Конфиг Prometheus! 🤔\nrelabel_configs — очень важно!\nБез него instance = IP:9100.",
+    en:"Prometheus config! 🤔\nrelabel_configs is crucial!\nWithout it instance = IP:9100." },
+
+  { pos:'pos-br', pose:'pose-point-l',
+    az:"👆 Loglar Loki-yə SSH tunel ilə gedir!\npromtail localhost:3101-ə push edir.\nGrafana Explore → Loki → LogQL.",
+    ru:"👆 Логи идут в Loki через SSH туннель!\npromtail пушит в localhost:3101.\nGrafana Explore → Loki → LogQL.",
+    en:"👆 Logs go to Loki via SSH tunnel!\npromtail pushes to localhost:3101.\nGrafana Explore → Loki → LogQL." },
+
+  { pos:'pos-bl', pose:'pose-point-r',
+    az:"Grafana açmaq üçün: 👉\nhttp://&lt;server&gt;:3000\nDashboards → Node Exporter Full!",
+    ru:"Чтобы открыть Grafana: 👉\nhttp://&lt;server&gt;:3000\nDashboards → Node Exporter Full!",
+    en:"To open Grafana: 👉\nhttp://&lt;server&gt;:3000\nDashboards → Node Exporter Full!" },
+
+  { pos:'pos-tl', pose:'pose-idle',
+    az:"7 Docker konteyner! 🐳\nHər biri öz profili var.\nwatchdog düşmüşü avtomatik yenidən başladır.",
+    ru:"7 Docker контейнеров! 🐳\nКаждый со своим профилем.\nwatchdog авторестартует упавших.",
+    en:"7 Docker containers! 🐳\nEach with its own profile.\nwatchdog auto-restarts crashed ones." },
+
+  { pos:'pos-mr', pose:'pose-point-l',
+    az:"👈 nctk-da 5 systemd xidməti.\nHamısı Restart=always.\nwatchdog timer hər 5 dəqiqə yoxlayır.",
+    ru:"👈 5 systemd сервисов на nctk.\nВсе с Restart=always.\nwatchdog timer проверяет каждые 5 мин.",
+    en:"👈 5 systemd services on nctk.\nAll with Restart=always.\nwatchdog timer checks every 5 minutes." },
+
+  { pos:'pos-br', pose:'pose-think',
+    az:"İki repo strategiyası! 🔐\ncampus-infra — açıq (public).\ncampus-secrets — gizli (private). Tokenlər orada!",
+    ru:"Стратегия двух репозиториев! 🔐\ncampus-infra — публичный.\ncampus-secrets — приватный с токенами!",
+    en:"Two-repo strategy! 🔐\ncampus-infra — public config.\ncampus-secrets — private with tokens!" },
+
+  { pos:'pos-bl', pose:'pose-wave',
+    az:"Tamamdır! Sadəcə 2 əmr! 🚀\ngit clone + ./bootstrap.sh all\nBütün sistem sıfırdan qalxır!",
+    ru:"Всё! Всего 2 команды! 🚀\ngit clone + ./bootstrap.sh all\nВся система поднимается с нуля!",
+    en:"Done! Just 2 commands! 🚀\ngit clone + ./bootstrap.sh all\nThe entire system rises from scratch!" },
+
+  { pos:'pos-mr', pose:'pose-point-l',
+    az:"🌐 Web interfeys — brauzerdən idarəetmə!\nFlask + SSH/SFTP → nctk\nRollər: guest · user · admin",
+    ru:"🌐 Web-интерфейс — управление из браузера!\nFlask + SSH/SFTP → nctk\nРоли: guest · user · admin",
+    en:"🌐 Web interface — browser control!\nFlask + SSH/SFTP → nctk\nRoles: guest · user · admin" },
+];
+
+/* ══ NAVIGATION ══ */
+const slides  = document.querySelectorAll('.slide');
+const txFlash = document.getElementById('tx-flash');
+let cur = 0;
+let transitioning = false;
+const dotsEl = document.getElementById('dots');
+const ctrEl  = document.getElementById('ctr');
+
+slides.forEach((_,i) => {
+  const d = document.createElement('div');
+  d.className = 'dot'+(i===0?' active':'');
+  d.onclick = () => show(i);
+  dotsEl.appendChild(d);
+});
+
+function triggerFlash() {
+  txFlash.classList.remove('fire');
+  void txFlash.offsetWidth;
+  txFlash.classList.add('fire');
+  setTimeout(() => txFlash.classList.remove('fire'), 400);
+}
+
+function show(n, force) {
+  if (transitioning && !force) return;
+  const next = (n + slides.length) % slides.length;
+  if (next === cur) return;
+  transitioning = true;
+  const forward = next > cur || (cur === slides.length-1 && next === 0);
+
+  const outCls = forward ? 'exit-to-left'     : 'exit-to-right';
+  const inCls  = forward ? 'enter-from-right'  : 'enter-from-left';
+
+  /* 1. Exit current */
+  const leaving = slides[cur];
+  leaving.classList.add(outCls);
+
+  /* 2. Flash */
+  triggerFlash();
+
+  setTimeout(() => {
+    /* 3. Hide exiting slide, show entering */
+    leaving.classList.remove('active', outCls);
+
+    dotsEl.children[cur].classList.remove('active');
+    cur = next;
+    dotsEl.children[cur].classList.add('active');
+    ctrEl.textContent = (cur+1)+' / '+slides.length;
+
+    const entering = slides[cur];
+    entering.classList.add('active', inCls);
+
+    setTimeout(() => {
+      entering.classList.remove(inCls);
+      transitioning = false;
+    }, 480);
+
+    moveMascot();
+    if (cur === 5) startBotFlow();
+  }, 300);
+}
+
+function go(d){ show(cur + d); }
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight' || e.key===' ') { e.preventDefault(); go(1); }
+  if (e.key==='ArrowLeft')                 { e.preventDefault(); go(-1); }
+});
+
+/* ══ MASCOT ══ */
+let activeLang = 'ru';
+const mascotEl = document.getElementById('mascot');
+const botChar  = document.getElementById('bot-char');
+const bubbleEl = document.getElementById('bubble');
+
+function setBotTo(step) {
+  botChar.classList.add('walking');
+  setTimeout(() => botChar.classList.remove('walking'), 650);
+
+  mascotEl.className = step.pos;
+  bubbleEl.style.borderRadius = step.pos.includes('-l')
+    ? '14px 14px 14px 4px' : '14px 14px 4px 14px';
+
+  botChar.className = 'walking';
+  setTimeout(() => { botChar.className = step.pose; }, 650);
+
+  document.getElementById('t-az').textContent = step.az || step.ru;
+  document.getElementById('t-ru').textContent = step.ru;
+  document.getElementById('t-en').textContent = step.en || step.ru;
+
+  bubbleEl.style.animation = 'none';
+  void bubbleEl.offsetWidth;
+  bubbleEl.style.animation = 'bubPop .35s cubic-bezier(.34,1.56,.64,1)';
+}
+
+function moveMascot() {
+  // In tour mode, tour controls the bot. In manual mode, use SLIDES data.
+  if (tourActive) return;
+  setBotTo(SLIDES[cur]);
+}
+
+function applyI18N(lang) {
+  document.querySelectorAll('[data-ru]').forEach(el => {
+    el.innerHTML = el.dataset[lang] || el.dataset.ru;
+  });
+}
+
+function setLang(lang, e) {
+  activeLang = lang;
+  document.querySelectorAll('.btab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.btext').forEach(t => t.classList.remove('active'));
+  if (e) e.target.classList.add('active');
+  document.getElementById('t-'+lang).classList.add('active');
+  applyI18N(lang);
+}
+function cycleLang() {
+  const order = ['az','ru','en'];
+  const next = order[(order.indexOf(activeLang)+1)%3];
+  document.querySelectorAll('.btab').forEach((t,i) => t.classList.toggle('active', ['az','ru','en'][i]===next));
+  setLang(next);
+}
+
+/* ══ AUTO-TOUR RUNNER ══ */
+let tourActive   = false;
+
+// Init manual mode
+moveMascot();
+applyI18N('ru');
+let tourTimer    = null;
+let tourSlideIdx = 0;
+let tourStepIdx  = 0;
+const TOTAL_STEPS = TOUR.reduce((s,sl) => s + sl.steps.length, 0);
+
+function startTour() {
+  transitioning = false;
+  tourActive   = true;
+  tourSlideIdx = 0;
+  tourStepIdx  = 0;
+  document.getElementById('tour-btn').style.display  = 'none';
+  document.getElementById('tour-stop').style.display = 'flex';
+  document.getElementById('tour-progress').style.display = 'flex';
+  // Jump to slide 0 if needed
+  const target = 0;
+  if (cur !== target) { show(target); setTimeout(runTourStep, 900); }
+  else runTourStep();
+}
+
+function stopTour() {
+  tourActive = false;
+  if (tourTimer) clearTimeout(tourTimer);
+  tourTimer = null;
+  document.getElementById('tour-btn').style.display  = 'flex';
+  document.getElementById('tour-stop').style.display = 'none';
+  document.getElementById('tour-progress').style.display = 'none';
+  moveMascot(); // restore manual position
+}
+
+function updateTourProgress() {
+  const done = TOUR.slice(0, tourSlideIdx).reduce((s,sl) => s + sl.steps.length, 0) + tourStepIdx;
+  document.getElementById('tour-prog-fill').style.width = (done / TOTAL_STEPS * 100) + '%';
+  document.getElementById('tour-prog-label').textContent =
+    'слайд ' + (tourSlideIdx + 1) + ' / ' + TOUR.length +
+    ' · шаг ' + (tourStepIdx + 1) + ' / ' + TOUR[Math.min(tourSlideIdx, TOUR.length-1)].steps.length;
+}
+
+function runTourStep() {
+  if (!tourActive) return;
+
+  // Check if current slide is exhausted
+  if (tourStepIdx >= TOUR[tourSlideIdx].steps.length) {
+    tourSlideIdx++;
+    tourStepIdx = 0;
+    if (tourSlideIdx >= TOUR.length) { stopTour(); return; }
+    // Advance slide then wait for transition
+    show(tourSlideIdx, true);
+    tourTimer = setTimeout(runTourStep, 900);
+    return;
+  }
+
+  const step = TOUR[tourSlideIdx].steps[tourStepIdx];
+  setBotTo(step);
+  updateTourProgress();
+
+  // Trigger bot flow animation on slide 5
+  if (tourSlideIdx === 5 && tourStepIdx === 0) startBotFlow();
+
+  tourStepIdx++;
+  tourTimer = setTimeout(runTourStep, step.dur);
+}
+
+/* ══ BOT FLOW ══ */
+let bfTimer=null, bfStep=0;
+const BF = ['bf1','bf2','bf3','bf4','bf5','bf6'];
+function clearBotFlow(){
+  BF.forEach(id => document.getElementById(id).classList.remove('lit'));
+  document.getElementById('bf-reply').style.opacity='0';
+}
+function startBotFlow(){
+  if(bfTimer) clearInterval(bfTimer);
+  clearBotFlow(); bfStep=0;
+  bfTimer = setInterval(()=>{
+    if(bfStep>0) document.getElementById(BF[bfStep-1]).classList.remove('lit');
+    if(bfStep<BF.length){
+      document.getElementById(BF[bfStep]).classList.add('lit');
+      if(bfStep===4) document.getElementById('bf-reply').style.opacity='1';
+      bfStep++;
+    } else { clearInterval(bfTimer); bfTimer=null; }
+  }, 1100);
+}
+function restartBotFlow(){ startBotFlow(); }
+</script>
+</body>
+</html>

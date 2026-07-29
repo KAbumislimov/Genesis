@@ -1,0 +1,11 @@
+# Маршрутизация алертов в Telegram
+# Все алерты Campus идут в contact point telegram-campus
+apiVersion: 1
+policies:
+  - orgId: 1
+    receiver: telegram-campus
+    group_by: ['alertname', 'grafana_folder']
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    matchers: []

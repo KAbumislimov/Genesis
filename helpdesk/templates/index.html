@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Hesabat — LANDAU IT Report{% endblock %}
+{% block content %}
+<div class="container">
+
+  <div style="text-align:center;padding:32px 0 20px">
+    <h1 style="font-size:28px;font-weight:800;color:#fff">Nasazlıq Hesabatı</h1>
+    <p style="color:var(--muted);margin-top:8px;font-size:15px">
+      Problemi qeyd edin — rəhbərlik və IT komandası dərhal xəbərdar ediləcək
+    </p>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="/submit" enctype="multipart/form-data" id="reportForm">
+
+      <!-- Əlaqə məlumatları -->
+      <div class="card-title" style="color:var(--accent);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:18px">
+        <i class="bi bi-person-circle"></i> Məlumatlarınız
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label>Adınız Soyadınız</label>
+          <input type="text" name="reporter" placeholder="Ad Soyad">
+        </div>
+        <div class="form-group">
+          <label>Əlaqə <span style="color:var(--muted);text-transform:none;font-size:11px">(tel. və ya e-poçt)</span></label>
+          <input type="text" name="contact" placeholder="+994 … və ya email@…">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Kampus <span style="color:var(--red)">*</span></label>
+        <select name="campus" required>
+          <option value="">— seçin —</option>
+          {% for c in campuses %}
+          <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <hr style="border-color:var(--border);margin:20px 0">
+
+      <!-- Avadanlıq -->
+      <div class="card-title" style="color:var(--accent);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:18px">
+        <i class="bi bi-pc-display-horizontal"></i> IT Avadanlıq
+      </div>
+
+      <div class="form-group">
+        <label>Kateqoriya <span style="color:var(--red)">*</span></label>
+        <select name="cat_name" id="catSel" required onchange="loadAssets()">
+          <option value="">— kateqoriya seçin —</option>
+          {% for group_label, items in cat_groups %}
+          <optgroup label="{{ group_label }}">
+            {% for az_name, full_name in items %}
+            {% set cat = cats|selectattr('name','equalto',full_name)|first %}
+            {% if cat %}
+            <option value="{{ full_name }}" data-id="{{ cat.id }}">{{ az_name }}</option>
+            {% endif %}
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Siyahıdan seçin <span style="color:var(--muted);text-transform:none;font-size:11px">(və ya aşağıda əl ilə doldurun)</span></label>
+        <select id="assetSel" onchange="fillAsset()">
+          <option value="">— əvvəlcə kateqoriya seçin —</option>
+        </select>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label>Avadanlığın adı <span style="color:var(--red)">*</span></label>
+          <input type="text" name="asset_name" id="asset_name" placeholder="məs. HP ProBook 450" required>
+        </div>
+        <div class="form-group">
+          <label>Model</label>
+          <input type="text" name="model" id="model" placeholder="məs. G8, E5-575, v3">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label>İnventar №</label>
+          <input type="text" name="inv_code" id="inv_code" placeholder="INV-2024-001">
+        </div>
+        <div class="form-group">
+          <label>Seriya №</label>
+          <input type="text" name="serial" id="serial" placeholder="SN12345678">
+        </div>
+        <div class="form-group">
+          <label>Part Number</label>
+          <input type="text" name="part_num" id="part_num" placeholder="5CD123ABCD">
+        </div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:20px 0">
+
+      <!-- Problem -->
+      <div class="card-title" style="color:var(--accent);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:18px">
+        <i class="bi bi-exclamation-triangle"></i> Problem haqqında
+      </div>
+
+      <div class="form-group">
+        <label>Nasazlığın növü <span style="color:var(--red)">*</span></label>
+        <select name="problem_type" required>
+          <option value="">— seçin —</option>
+          {% for pt in problem_types %}
+          <option value="{{ pt }}">{{ pt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Ətraflı təsvir <span style="color:var(--red)">*</span></label>
+        <textarea name="description" required placeholder="Problemi ətraflı təsvir edin: nə baş verir, nə vaxt yarandı, nə etdiniz…" style="min-height:120px"></textarea>
+      </div>
+
+      <!-- Fayl əlavə et -->
+      <div class="form-group">
+        <label>Foto / skrinşot / video</label>
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <i class="bi bi-cloud-upload"></i>
+          <div>Faylları sürüşdürün və ya <strong>seçmək üçün klikləyin</strong></div>
+          <div style="font-size:12px;margin-top:4px">PNG, JPG, GIF, MP4, MOV, PDF — maksimum 50 MB</div>
+        </div>
+        <input type="file" id="fileInput" name="attachments" multiple accept="image/*,video/*,.pdf" style="display:none" onchange="handleFiles(this.files)">
+        <div class="file-list" id="fileList"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;font-size:16px;margin-top:8px">
+        <i class="bi bi-send-check-fill"></i> Hesabat göndər
+      </button>
+
+    </form>
+  </div>
+</div>
+
+<script>
+function loadAssets() {
+  const sel = document.getElementById('catSel');
+  const opt = sel.options[sel.selectedIndex];
+  const catId = opt ? parseInt(opt.dataset.id) : 0;
+  const asel = document.getElementById('assetSel');
+  asel.innerHTML = '<option value="">— siyahıdan seçin (isteğe bağlı) —</option>';
+  if (!catId) return;
+  fetch('/api/assets_by_cat/' + catId)
+    .then(r => r.json()).then(items => {
+      items.forEach(a => {
+        const o = document.createElement('option');
+        o.value = JSON.stringify(a);
+        o.textContent = a.name + (a.model ? ' ' + a.model : '') + (a.inv_code ? '  [' + a.inv_code + ']' : '');
+        asel.appendChild(o);
+      });
+    });
+}
+
+function fillAsset() {
+  const val = document.getElementById('assetSel').value;
+  if (!val) return;
+  const a = JSON.parse(val);
+  document.getElementById('asset_name').value = a.name     || '';
+  document.getElementById('model').value      = a.model    || '';
+  document.getElementById('inv_code').value   = a.inv_code || '';
+  document.getElementById('serial').value     = a.serial   || '';
+  document.getElementById('part_num').value   = a.part_num || '';
+}
+
+const dz = document.getElementById('dropZone');
+const fl = document.getElementById('fileList');
+const fi = document.getElementById('fileInput');
+let selectedFiles = new DataTransfer();
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+});
+
+function handleFiles(files) {
+  for (const f of files) selectedFiles.items.add(f);
+  fi.files = selectedFiles.files;
+  renderFiles();
+}
+
+function renderFiles() {
+  fl.innerHTML = '';
+  for (let i = 0; i < selectedFiles.files.length; i++) {
+    const f = selectedFiles.files[i];
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.innerHTML = `<i class="bi bi-paperclip"></i>${f.name} <span class="rm" onclick="removeFile(${i})">✕</span>`;
+    fl.appendChild(chip);
+  }
+}
+
+function removeFile(idx) {
+  const dt = new DataTransfer();
+  for (let i = 0; i < selectedFiles.files.length; i++) {
+    if (i !== idx) dt.items.add(selectedFiles.files[i]);
+  }
+  selectedFiles = dt;
+  fi.files = selectedFiles.files;
+  renderFiles();
+}
+</script>
+{% endblock %}

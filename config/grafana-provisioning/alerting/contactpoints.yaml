@@ -1,0 +1,15 @@
+# Contact point для Telegram — алерты Campus
+# Токен и chat_id из .env (NOTIFICATION_BOT_TOKEN, NOTIFICATION_CHAT_ID)
+# chatid как строка — важно для отрицательных ID
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: telegram-campus
+    receivers:
+      - uid: telegram-campus-1
+        type: telegram
+        disableResolveMessage: false
+        settings:
+          bottoken: $NOTIFICATION_BOT_TOKEN
+          chatid: |-
+            $NOTIFICATION_CHAT_ID

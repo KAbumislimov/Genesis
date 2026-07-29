@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Тонкие клиенты — Campus Audio{% endblock %}
+
+{% block extra_head %}
+<style>
+.machine-row{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;border-bottom:1px solid var(--border);
+}
+.machine-row:last-child{border-bottom:none}
+.machine-name{font-weight:700;font-size:14px;flex:1;min-width:0}
+.machine-sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.machine-badge{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 9px;
+  border-radius:6px;font-size:11px;font-weight:700;
+  background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.3);
+}
+.machine-badge.env{
+  background:rgba(88,166,255,.1);color:var(--blue);border-color:rgba(88,166,255,.25);
+}
+.env-notice{
+  background:rgba(88,166,255,.05);border:1px solid rgba(88,166,255,.2);
+  border-radius:10px;padding:10px 16px;font-size:12px;color:var(--muted);
+  display:flex;align-items:center;gap:8px;margin-bottom:16px;
+}
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);
+  display:none;align-items:center;justify-content:center;z-index:500;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:flex}
+.modal-box{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:16px;padding:32px 36px;width:100%;max-width:440px;
+  box-shadow:0 0 60px rgba(0,0,0,.5);
+}
+.modal-box h3{font-size:18px;font-weight:800;margin:0 0 24px}
+.status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot-on {background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-off{background:var(--red)}
+.dot-unk{background:var(--muted)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">Тонкие клиенты</h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">
+      Управление устройствами — мониторинг, WoL, SSH
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="openModal()">
+    <i class="bi bi-plus-lg"></i> Добавить клиента
+  </button>
+</div>
+
+<div class="env-notice">
+  <i class="bi bi-info-circle"></i>
+  Клиенты из <code>.env</code> (Narimanov, Gənclik) отображаются только для просмотра. Через эту страницу можно добавлять дополнительные устройства.
+</div>
+
+<!-- Env machines (read-only) -->
+<div class="card mb-3">
+  <div class="card-hd">
+    <i class="bi bi-hdd-stack" style="color:var(--blue)"></i>
+    <span class="card-hd-title">Основные (из конфига)</span>
+  </div>
+  <div id="env-list">
+    <div class="text-muted" style="padding:14px 20px;font-size:13px">Загрузка...</div>
+  </div>
+</div>
+
+<!-- DB machines (editable) -->
+<div class="card">
+  <div class="card-hd">
+    <i class="bi bi-pc-display" style="color:var(--green)"></i>
+    <span class="card-hd-title">Добавленные вручную</span>
+    <span id="db-count" class="text-muted" style="margin-left:8px;font-size:12px"></span>
+  </div>
+  <div id="db-list">
+    <div class="text-muted" style="padding:14px 20px;font-size:13px">Загрузка...</div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="m-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <h3 id="modal-title">
+      <i class="bi bi-pc-display" style="color:var(--green);margin-right:8px"></i>Добавить клиента
+    </h3>
+    <input type="hidden" id="edit-id">
+    <div class="mb-3">
+      <label class="form-label">IP-адрес <span class="text-muted">*</span></label>
+      <input type="text" id="f-host" class="form-control" placeholder="10.20.0.55" autocomplete="off">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Отображаемое имя <span class="text-muted">*</span></label>
+      <input type="text" id="f-name" class="form-control" placeholder="Кабинет 301" autocomplete="off">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">MAC-адрес <span class="text-muted">(для Wake-on-LAN)</span></label>
+      <input type="text" id="f-mac" class="form-control" placeholder="aa:bb:cc:dd:ee:ff" autocomplete="off">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">SSH-пользователь</label>
+      <input type="text" id="f-user" class="form-control" placeholder="nctk" value="nctk" autocomplete="off">
+    </div>
+    <div class="mb-4">
+      <label class="form-label">Cockpit URL <span class="text-muted">(авто: http://IP:1991)</span></label>
+      <input type="text" id="f-cockpit" class="form-control" placeholder="http://10.20.0.55:1991" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" onclick="save()">
+        <i class="bi bi-save"></i> Сохранить
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <span id="save-msg" style="font-size:13px;margin-left:auto"></span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function escHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function load(){
+  fetch('/api/machines').then(r=>r.json()).then(d=>{
+    const envEl = document.getElementById('env-list');
+    const dbEl  = document.getElementById('db-list');
+    const envMs = (d.machines||[]).filter(m=>!m.id.startsWith('db_'));
+    const dbMs  = (d.machines||[]).filter(m=> m.id.startsWith('db_'));
+    document.getElementById('db-count').textContent = dbMs.length ? `(${dbMs.length})` : '';
+
+    if (!envMs.length) {
+      envEl.innerHTML = '<div class="text-muted" style="padding:14px 20px;font-size:13px">Нет</div>';
+    } else {
+      envEl.innerHTML = envMs.map(m=>`
+        <div class="machine-row">
+          <span class="status-dot ${m.online?'dot-on':'dot-off'}"></span>
+          <i class="bi ${m.id==='nctk'?'bi-building':'bi-pc-display'}" style="color:var(--blue);font-size:16px;flex-shrink:0"></i>
+          <div style="flex:1;min-width:0">
+            <div class="machine-name">${escHtml(m.name)}</div>
+            <div class="machine-sub">${escHtml(m.host)}</div>
+          </div>
+          <span class="machine-badge env"><i class="bi bi-lock-fill"></i> конфиг</span>
+          ${m.has_mac?`<button class="btn btn-ghost btn-sm" title="Wake-on-LAN" onclick="wol('${m.id}',this)"><i class="bi bi-power"></i></button>`:''}
+        </div>`).join('');
+    }
+
+    if (!dbMs.length) {
+      dbEl.innerHTML = '<div class="text-muted" style="padding:16px 20px;font-size:13px">Нет добавленных клиентов. Нажмите "+ Добавить клиента".</div>';
+    } else {
+      dbEl.innerHTML = dbMs.map(m=>{
+        const dbId = m.id.replace('db_','');
+        return `
+        <div class="machine-row" id="row-${m.id}">
+          <span class="status-dot ${m.online?'dot-on':'dot-off'}"></span>
+          <i class="bi bi-pc-display" style="color:var(--green);font-size:16px;flex-shrink:0"></i>
+          <div style="flex:1;min-width:0">
+            <div class="machine-name">${escHtml(m.name)}</div>
+            <div class="machine-sub">${escHtml(m.host)}</div>
+          </div>
+          <span class="machine-badge"><i class="bi bi-pencil-square"></i> вручную</span>
+          ${m.has_mac?`<button class="btn btn-ghost btn-sm" title="Wake-on-LAN" onclick="wol('${m.id}',this)"><i class="bi bi-power"></i></button>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="edit(${dbId})" title="Редактировать"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="del(${dbId},'${escHtml(m.name)}')" title="Удалить"><i class="bi bi-trash3"></i></button>
+        </div>`;
+      }).join('');
+    }
+  });
+}
+
+function wol(mid, btn){
+  btn.disabled=true;
+  fetch(`/api/wol/${mid}`,{method:'POST'}).then(r=>r.json()).then(d=>{
+    btn.disabled=false;
+    alert(d.ok ? '✅ WoL отправлен' : '❌ '+(d.error||'Ошибка'));
+  }).catch(()=>{btn.disabled=false;alert('Нет связи');});
+}
+
+function openModal(data){
+  document.getElementById('modal-title').innerHTML =
+    `<i class="bi bi-pc-display" style="color:var(--green);margin-right:8px"></i>${data?'Редактировать клиента':'Добавить клиента'}`;
+  document.getElementById('edit-id').value   = data ? data.id : '';
+  document.getElementById('f-host').value   = data ? data.host : '';
+  document.getElementById('f-name').value   = data ? data.name : '';
+  document.getElementById('f-mac').value    = data ? (data.mac||'') : '';
+  document.getElementById('f-user').value   = data ? (data.user||'nctk') : 'nctk';
+  document.getElementById('f-cockpit').value= data ? (data.cockpit_url||'') : '';
+  document.getElementById('save-msg').textContent = '';
+  document.getElementById('m-modal').classList.add('open');
+  document.getElementById('f-host').focus();
+}
+function closeModal(){ document.getElementById('m-modal').classList.remove('open'); }
+
+function edit(dbId){
+  fetch('/api/machines/list').then(r=>r.json()).then(d=>{
+    const m = (d.machines||[]).find(x=>x.id==dbId);
+    if(m) openModal(m);
+  });
+}
+
+function save(){
+  const dbId   = document.getElementById('edit-id').value;
+  const host   = document.getElementById('f-host').value.trim();
+  const name   = document.getElementById('f-name').value.trim();
+  const mac    = document.getElementById('f-mac').value.trim();
+  const user   = document.getElementById('f-user').value.trim() || 'nctk';
+  const cockpit= document.getElementById('f-cockpit').value.trim() || `http://${host}:1991`;
+  const msg    = document.getElementById('save-msg');
+  if(!host||!name){msg.textContent='IP и имя обязательны';msg.style.color='var(--red)';return;}
+  const url = dbId ? `/api/machines/edit/${dbId}` : '/api/machines/add';
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({host,name,mac,user,cockpit_url:cockpit})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){closeModal();load();}
+    else{msg.textContent=d.error||'Ошибка';msg.style.color='var(--red)';}
+  }).catch(()=>{msg.textContent='Нет связи';msg.style.color='var(--red)';});
+}
+
+function del(dbId, name){
+  if(!confirm(`Удалить клиента "${name}"?`)) return;
+  fetch(`/api/machines/delete/${dbId}`,{method:'POST'})
+    .then(r=>r.json()).then(d=>{ if(d.ok) load(); });
+}
+
+load();
+</script>
+{% endblock %}

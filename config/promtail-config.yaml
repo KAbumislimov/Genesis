@@ -1,0 +1,80 @@
+# Promtail для этой машины. Меняйте host: если нужно.
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+positions:
+  filename: /tmp/positions.yaml
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+scrape_configs:
+  - job_name: system
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: varlogs
+          host: campus-server
+          __path__: /var/log/*.log
+  - job_name: messages
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: messages
+          host: campus-server
+          __path__: /var/log/messages
+  - job_name: secure
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: secure
+          host: campus-server
+          __path__: /var/log/secure
+  # nctk и vm1 шлют логи сами через Promtail (push в Loki)
+  # Контейнеры tg-campus-bot / tg-campus-genclik (Telegram) — отдельный job
+  - job_name: docker_campus_bots
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 15s
+    relabel_configs:
+      - action: keep
+        source_labels: [__meta_docker_container_name]
+        regex: .*tg-campus-(bot|genclik).*
+      - action: replace
+        source_labels: [__meta_docker_container_name]
+        regex: .*
+        replacement: campus-server
+        target_label: host
+      - action: replace
+        source_labels: [__meta_docker_container_name]
+        regex: .*
+        replacement: campus_telegram_bot
+        target_label: job
+      - action: replace
+        source_labels: [__meta_docker_container_name]
+        regex: /?(.*)
+        replacement: ${1}
+        target_label: container
+    pipeline_stages:
+      - docker: {}
+  - job_name: campus_bot_server
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: campus_telegram_bot
+          host: campus-server
+          __path__: /opt/tg-campus-bot/action.log
+  
+  - job_name: campus_landau_server
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: campus_landau
+          host: campus-server
+          __path__: /home/kamran/projects/campus-infra/cron-landau.log
+
+  - job_name: campus_backup
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: backup
+          host: campus-server
+          __path__: /var/log/campus-backup.log

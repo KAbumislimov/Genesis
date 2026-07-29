@@ -1,0 +1,10 @@
+[Unit]
+Description=Campus player watchdog — проверка и перезапуск campus-mpv
+After=campus-mpv.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'systemctl is-active --quiet campus-mpv || systemctl start campus-mpv'
+
+[Install]
+WantedBy=multi-user.target
