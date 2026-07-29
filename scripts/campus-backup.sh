@@ -116,13 +116,21 @@ ssh -o ConnectTimeout=10 client1 \
 && ok "client1 → systemd-services" \
 || fail "client1 → systemd-services"
 
+# /mnt/music/Media — сами звонки/гимн (вне /home/client1, отдельно)
+ssh -o ConnectTimeout=10 client1 \
+    "tar czf - -C /mnt/music Media 2>/dev/null" \
+| $SSHPASS ssh -o StrictHostKeyChecking=no "${PROXMOX_USER}@${PROXMOX_HOST}" \
+    "cat > ${DEST}/media-music.tar.gz" \
+&& ok "client1 → media-music" \
+|| fail "client1 → media-music"
+
 # ── 3. ГЯНДЖЛИК (client2) ────────────────────────────────────────────────
 log "▶ Бэкап: client2 (10.70.0.41)"
 rotate "client2"
 DEST=$(make_dir "client2")
 
 ssh -o ConnectTimeout=10 client2 \
-    "tar czf - --exclude='.cache' --exclude='.local' --exclude='Media' /home/client2/ 2>/dev/null" \
+    "tar czf - --exclude='.cache' --exclude='.local' /home/client2/ 2>/dev/null" \
 | $SSHPASS ssh -o StrictHostKeyChecking=no "${PROXMOX_USER}@${PROXMOX_HOST}" \
     "mkdir -p ${DEST} && cat > ${DEST}/home-client2.tar.gz" \
 && ok "client2 → home-client2.tar.gz" \

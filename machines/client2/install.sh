@@ -157,6 +157,20 @@ if [[ -f "$CLIENT2_HOME/bin/promtail" ]]; then
 fi
 
 # ─────────────────────────────────────────────
+# 7. АУДИО-АНАЛИЗАТОР (FFT для визуализатора в веб-панели)
+# ─────────────────────────────────────────────
+echo "[7/7] Аудио-анализатор..."
+mkdir -p "$CLIENT2_HOME/campus-monitoring"
+cp -f "$SCRIPT_DIR/campus-monitoring/audio-analyzer.py" "$CLIENT2_HOME/campus-monitoring/audio-analyzer.py"
+mkdir -p "$SYSTEMD_USER_DIR"
+cp -f "$SCRIPT_DIR/systemd/campus-audio-analyzer.service" "$SYSTEMD_USER_DIR/campus-audio-analyzer.service"
+sudo -u "$CLIENT2_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$CLIENT2_USER")" \
+    systemctl --user daemon-reload
+sudo -u "$CLIENT2_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$CLIENT2_USER")" \
+    systemctl --user enable --now campus-audio-analyzer
+echo "  ✅ campus-audio-analyzer (user service)"
+
+# ─────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║       CLIENT2 УСТАНОВКА ЗАВЕРШЕНА ✅         ║"
@@ -166,4 +180,9 @@ echo "  Статус mpv:  sudo -u client2 XDG_RUNTIME_DIR=/run/user/\$(id -u cl
 echo "  Тест звука:  campus-playerctl play $MEDIA_DIR/1/1peremena.mp3"
 echo "  Логи бота:   journalctl -u campus-telegram-bot -f"
 echo "  Заполни:     $BOT_DIR/config.env"
+echo ""
+echo "⚠️  ЕЩЁ НУЖНО СДЕЛАТЬ (с центрального сервера, не отсюда):"
+echo "  1. bash scripts/setup-recovery-ssh-keys.sh   — доступ сервера сюда без пароля"
+echo "  2. bash scripts/restore-client2.sh                — Cockpit"
+echo "  3. Восстановить содержимое $MEDIA_DIR из бэкапа (см. docs/DISASTER-RECOVERY.md)"
 echo ""

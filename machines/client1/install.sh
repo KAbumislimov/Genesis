@@ -97,16 +97,22 @@ sudo cp -f "$REPO_DIR/systemd/campus-player-watchdog.service"  /etc/systemd/syst
 sudo cp -f "$REPO_DIR/systemd/campus-player-watchdog.timer"    /etc/systemd/system/
 sudo cp -f "$REPO_DIR/systemd/node_exporter.service"           /etc/systemd/system/
 sudo cp -f "$REPO_DIR/systemd/promtail.service"                /etc/systemd/system/
+sudo cp -f "$REPO_DIR/systemd/campus-audio-analyzer.service"   /etc/systemd/system/
 
 sudo systemctl daemon-reload
 mkdir -p "$HOME_DIR/logs"
 mkdir -p /var/lib/campus-player/inbox 2>/dev/null || sudo mkdir -p /var/lib/campus-player/inbox && sudo chown client1:client1 /var/lib/campus-player/inbox
+
+# Аудио-анализатор (FFT для визуализатора в веб-панели)
+mkdir -p "$HOME_DIR/campus-monitoring"
+cp -f "$REPO_DIR/campus-monitoring/audio-analyzer.py" "$HOME_DIR/campus-monitoring/audio-analyzer.py"
 
 sudo systemctl enable --now campus-mpv
 sudo systemctl enable --now campus-telegram-bot
 sudo systemctl enable --now campus-player-watchdog.timer
 sudo systemctl enable --now node_exporter
 sudo systemctl enable --now promtail
+sudo systemctl enable --now campus-audio-analyzer
 
 # 7. Crontab
 echo "[7/7] Установка crontab..."
@@ -116,7 +122,7 @@ echo ""
 echo "=== Установка завершена ==="
 echo ""
 echo "Проверь статус сервисов:"
-echo "  systemctl status campus-mpv campus-telegram-bot node_exporter promtail"
+echo "  systemctl status campus-mpv campus-telegram-bot node_exporter promtail campus-audio-analyzer"
 echo ""
 echo "Если ещё не заполнил секреты:"
 echo "  nano ~/telegram-campus-bot/config.env   (BOT_TOKEN, LOG_GROUP_ID)"
@@ -124,3 +130,8 @@ echo "  nano ~/cron_notify.env                  (BOT_TOKEN, LOG_GROUP_ID)"
 echo ""
 echo "Samba пароль (для доступа с Windows):"
 echo "  sudo smbpasswd -a client1"
+echo ""
+echo "⚠️  ЕЩЁ НУЖНО СДЕЛАТЬ (с центрального сервера, не отсюда):"
+echo "  1. bash scripts/setup-recovery-ssh-keys.sh   — доступ сервера сюда без пароля"
+echo "  2. bash scripts/restore-client1.sh              — Cockpit"
+echo "  3. Восстановить содержимое /mnt/music/Media из бэкапа (см. docs/DISASTER-RECOVERY.md)"
