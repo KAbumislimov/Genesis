@@ -133,6 +133,10 @@ def _game_state_save(state: dict):
     except Exception:
         pass
 
+# Многие API-шлюзы (Cloudflare и т.п.) банят стандартный User-Agent
+# urllib.request ("Python-urllib/3.x") как бота — отсюда были 403.
+_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+
 # ── AI call (Groq → Anthropic → Ollama fallback chain) ───────────────────────
 def _ask_openai_compat(url: str, auth_header: str, model: str, system: str, user_text: str) -> str:
     """Generic OpenAI-compatible chat completion call."""
@@ -146,7 +150,7 @@ def _ask_openai_compat(url: str, auth_header: str, model: str, system: str, user
         ]
     }).encode()
     req = urllib.request.Request(url, data=body,
-        headers={'Authorization': auth_header, 'Content-Type': 'application/json'},
+        headers={'Authorization': auth_header, 'Content-Type': 'application/json', 'User-Agent': _UA},
         method='POST')
     with urllib.request.urlopen(req, timeout=15) as r:
         d = json.loads(r.read())
@@ -165,20 +169,20 @@ def _ask_ai(user_text: str, system: str) -> str:
                 'generationConfig': {'maxOutputTokens': 300, 'temperature': 0.7}
             }).encode()
             req = urllib.request.Request(url, data=body,
-                headers={'Content-Type': 'application/json'}, method='POST')
+                headers={'Content-Type': 'application/json', 'User-Agent': _UA}, method='POST')
             with urllib.request.urlopen(req, timeout=15) as r:
                 d = json.loads(r.read())
             return d['candidates'][0]['content']['parts'][0]['text'].strip()
         except Exception as e:
             print(f'Gemini error: {e}', file=sys.stderr)
 
-    # 2) Groq
+    # 2) Groq (реально основной провайдер сейчас - Gemini без квоты, Anthropic без ключа)
     groq_key = os.environ.get('GROQ_API_KEY', '')
     if groq_key:
         try:
             return _ask_openai_compat(
                 'https://api.groq.com/openai/v1/chat/completions',
-                f'Bearer {groq_key}', 'llama-3.1-8b-instant', system, user_text)
+                f'Bearer {groq_key}', 'llama-3.3-70b-versatile', system, user_text)
         except Exception as e:
             print(f'Groq error: {e}', file=sys.stderr)
 
@@ -194,7 +198,7 @@ def _ask_ai(user_text: str, system: str) -> str:
             }).encode()
             req = urllib.request.Request('https://api.anthropic.com/v1/messages', data=body,
                 headers={'x-api-key': anthropic_key, 'anthropic-version': '2023-06-01',
-                         'content-type': 'application/json'}, method='POST')
+                         'content-type': 'application/json', 'User-Agent': _UA}, method='POST')
             with urllib.request.urlopen(req, timeout=15) as r:
                 d = json.loads(r.read())
             return d['content'][0]['text'].strip()
