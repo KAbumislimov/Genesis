@@ -199,6 +199,7 @@ services:
       - ./bots/client1/config.env:/bot_config.env:ro
       - ${CAMPUS_BACKUP_DIR:-/home/kamran/campus-backups}:/campus-backups:ro
     environment:
+      - TZ=Asia/Baku
       - CLIENT1_HOST=${CLIENT1_HOST:-10.20.0.41}
       - CLIENT1_USER=${CLIENT1_USER:-client1}
       - CLIENT1_MAC=${CLIENT1_MAC:-}
