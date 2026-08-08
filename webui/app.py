@@ -35,6 +35,21 @@ def _no_cache_html(response):
         response.headers['Expires'] = '0'
     return response
 
+@app.before_request
+def _profile_cors_preflight():
+    if request.method == 'OPTIONS' and request.path in _PROFILE_CORS_PATHS:
+        return ('', 204)
+
+@app.after_request
+def _profile_cors_headers(response):
+    origin = request.headers.get('Origin', '')
+    if request.path in _PROFILE_CORS_PATHS and origin == HELPDESK_URL:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
 # ── Config ────────────────────────────────────────
 CLIENT1_HOST = os.environ.get('CLIENT1_HOST', '10.20.0.41')
 CLIENT1_USER = os.environ.get('CLIENT1_USER', 'client1')
@@ -42,8 +57,9 @@ SSH_KEY   = os.environ.get('SSH_KEY',   '/secrets/campus_bot')
 MUSIC_DIR  = os.environ.get('MUSIC_DIR', '/music')
 DB_PATH    = os.environ.get('DB_PATH',  '/data/webui.db')
 SSO_BRIDGE_SECRET = os.environ.get('SSO_BRIDGE_SECRET', '')
-HELPDESK_URL = os.environ.get('HELPDESK_URL', 'http://10.10.4.120:8094')
+HELPDESK_URL = os.environ.get('HELPDESK_URL', 'https://10.10.4.120:8094')
 _sso_serializer = URLSafeTimedSerializer(SSO_BRIDGE_SECRET or 'insecure-dev-only')
+_PROFILE_CORS_PATHS = ('/api/profile/update', '/api/profile/avatar', '/api/profile/password')
 AVATAR_DIR = os.path.join(os.path.dirname(DB_PATH), 'avatars')
 os.makedirs(AVATAR_DIR, exist_ok=True)
 WALLPAPER_DIR = os.path.join(os.path.dirname(DB_PATH), 'wallpapers')
@@ -2235,6 +2251,28 @@ def api_profile_avatar():
     with get_db() as c:
         c.execute('UPDATE users SET avatar=? WHERE id=?', (filename, current_user.id))
     return jsonify({'ok': True, 'url': f'/avatars/{filename}'})
+
+@app.route('/api/profile/password', methods=['POST'])
+@login_required
+def api_profile_password():
+    data    = request.get_json() or {}
+    old_pw  = data.get('old_password', '')
+    new_pw  = data.get('new_password', '')
+    confirm = data.get('confirm_password', '')
+    if not old_pw or not new_pw:
+        return jsonify({'ok': False, 'error': 'Заполните все поля'})
+    if new_pw != confirm:
+        return jsonify({'ok': False, 'error': 'Пароли не совпадают'})
+    if len(new_pw) < 4:
+        return jsonify({'ok': False, 'error': 'Пароль слишком короткий (мин. 4 символа)'})
+    with get_db() as c:
+        row = c.execute('SELECT * FROM users WHERE id=?', (current_user.id,)).fetchone()
+    if not check_password_hash(row['password_hash'], old_pw):
+        return jsonify({'ok': False, 'error': 'Неверный текущий пароль'})
+    with get_db() as c:
+        c.execute('UPDATE users SET password_hash=? WHERE id=?',
+                   (generate_password_hash(new_pw), current_user.id))
+    return jsonify({'ok': True})
 
 import secrets as _secrets
 _STREAM_TOKEN = os.environ.get('CAMPUS_STREAM_TOKEN') or _secrets.token_urlsafe(32)

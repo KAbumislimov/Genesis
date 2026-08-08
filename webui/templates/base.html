@@ -3153,7 +3153,7 @@ if ('serviceWorker' in navigator) {
 </div>
 <script>
 (function(){
-  var HELPDESK_BASE = 'http://10.10.4.120:8094';
+  var HELPDESK_BASE = 'https://10.10.4.120:8094';
   var seenKey = 'hops-broadcast-seen';
   function poll(){
     fetch(HELPDESK_BASE + '/api/broadcast/active').then(function(r){ return r.json(); }).then(function(data){

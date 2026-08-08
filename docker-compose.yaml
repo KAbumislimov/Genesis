@@ -239,7 +239,7 @@ services:
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
       # Helpdesk Ops single sign-on bridge
       - SSO_BRIDGE_SECRET=${SSO_BRIDGE_SECRET:-}
-      - HELPDESK_URL=${HELPDESK_URL:-http://10.10.4.120:8094}
+      - HELPDESK_URL=${HELPDESK_URL:-https://10.10.4.120:8094}
     ulimits:
       nofile:
         soft: 65536
