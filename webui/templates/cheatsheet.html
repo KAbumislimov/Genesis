@@ -119,6 +119,9 @@
     <button class="cs-tab" onclick="switchTab('cisco',this)">
       <i class="bi bi-router-fill"></i> Cisco / AP
     </button>
+    <button class="cs-tab" onclick="switchTab('server',this)">
+      <i class="bi bi-hdd-rack-fill"></i> Наш сервер
+    </button>
   </div>
 
   <!-- ══════════════ WINDOWS ══════════════ -->
@@ -781,6 +784,72 @@
       {% endfor %}
 
       <div class="no-results" id="no-cisco" style="display:none">
+        <i class="bi bi-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:.3"></i>
+        Команды не найдены
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ НАШ СЕРВЕР ══════════════ -->
+  <div class="cs-panel" id="panel-server">
+    <div class="cs-grid" id="grid-server">
+
+      {% set server_cats = [
+        ('mon', 'bi-activity', 'acc-sys', 'Мониторинг', [
+          ('campus-mon', 'Живой TUI-дашборд: CPU/RAM/диск/load сразу для centos+client1+proxmox в одном окне, q — выход'),
+          ('campus-mon --once', 'Разовая проверка доступности всех трёх хостов без TUI'),
+          ('btop', 'Мониторинг ресурсов локального сервера (centos), поставлен в ~/.local/bin без root'),
+          ('docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"', 'Список всех запущенных контейнеров на сервере'),
+          ('docker stats --no-stream', 'Снимок CPU/RAM по всем контейнерам разом'),
+          ('free -h && df -h /', 'Быстрая проверка памяти и диска locale'),
+        ]),
+        ('ssh', 'bi-terminal', 'acc-ssh', 'SSH-доступ (алиасы уже настроены)', [
+          ('ssh client1', 'Зайти на client1 (10.20.0.41, кампус) — плеер/аудио/telegram-bot'),
+          ('ssh proxmox', 'Зайти на гипервизор Proxmox (10.20.1.106) по ключу'),
+          ('ssh client2', 'Зайти на client2 (10.70.0.41)'),
+          ('scp FILE client1:~/', 'Скопировать файл на client1'),
+          ('scp FILE proxmox:~/', 'Скопировать файл на proxmox'),
+        ]),
+        ('svc', 'bi-gear-wide-connected', 'acc-svc', 'Сервисы этого сервера', [
+          ('cd /home/kamran/projects/campus-infra && docker compose up -d', 'Поднять/обновить весь стек campus-infra'),
+          ('cd /home/kamran/projects/campus-infra && docker compose logs -f campus-webui', 'Логи веб-интерфейса кампуса в реальном времени'),
+          ('cd /home/kamran/projects/glpi && docker compose up -d', 'Поднять/перезапустить GLPI (helpdesk-система)'),
+          ('cd /home/kamran/projects/glpi && docker compose logs -f glpi', 'Логи GLPI'),
+          ('docker restart media-helpdesk', 'Перезапустить прототип media-helpdesk (порт 8091)'),
+        ]),
+        ('web', 'bi-globe2', 'acc-net', 'Веб-адреса сервисов', [
+          ('http://10.10.4.120:8092/', 'GLPI — helpdesk/тикет-система'),
+          ('http://10.10.4.120:8091/', 'media-helpdesk — прототип портала заявок (пока не используется)'),
+          ('http://10.10.4.120:3000/', 'Grafana — дашборды и графики'),
+          ('http://10.10.4.120:8090/', 'campus-webui — управление плеерами/кампусами'),
+        ]),
+      ] %}
+
+      {% for id, icon, acc, title, cmds in server_cats %}
+      <div class="cs-cat" data-cat="{{ id }}">
+        <div class="cs-cat-head">
+          <i class="bi {{ icon }} {{ acc }}"></i>
+          <span class="{{ acc }}">{{ title }}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--muted)">{{ cmds|length }} команд</span>
+        </div>
+        <div class="cs-cat-body">
+          {% for cmd, desc in cmds %}
+          <div class="cs-cmd" data-cmd="{{ cmd }}" data-desc="{{ desc }}">
+            <div>
+              <div class="cs-cmd-code">{{ cmd }}</div>
+              <div class="cs-cmd-desc">{{ desc }}</div>
+            </div>
+            <button class="cs-copy" onclick="copyCmd(this, '{{ cmd|replace("'", "\\'") }}')"
+                    title="Скопировать">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="no-results" id="no-server" style="display:none">
         <i class="bi bi-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:.3"></i>
         Команды не найдены
       </div>

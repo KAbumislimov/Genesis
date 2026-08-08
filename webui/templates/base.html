@@ -460,6 +460,86 @@ html[data-theme="studio"] .btn-ghost:hover{background:rgba(79,195,247,.08);borde
 html[data-theme="studio"] .nav-logo-left,html[data-theme="studio"] .nav-logo-right{
   background:#081422!important;box-shadow:0 0 0 1px rgba(79,195,247,.15),0 2px 14px rgba(0,0,0,.5)!important;}
 
+/* ── CORPORATE: light professional office / meeting-room style ── */
+html[data-theme="corporate"]{
+  --bg:#eef1f6;--bg2:rgba(255,255,255,.98);--bg3:rgba(242,245,250,.98);--border:#dbe1e9;
+  --blue:#2454d6;--green:#16803c;--purple:#5d4fbf;--orange:#b5650a;
+  --red:#c0273a;--yellow:#a9790a;--muted:#5c6b82;--text:#1b2436;
+}
+html[data-theme="corporate"]::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    linear-gradient(rgba(36,84,214,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(36,84,214,.035) 1px,transparent 1px);
+  background-size:64px 64px,64px 64px;
+}
+html[data-theme="corporate"] .top-nav{
+  background:rgba(255,255,255,.98);border-bottom:1px solid var(--border);
+  box-shadow:0 1px 0 rgba(20,30,60,.04),0 4px 16px rgba(20,30,60,.035);
+  backdrop-filter:blur(10px);
+}
+html[data-theme="corporate"] #sidebar{
+  background:rgba(255,255,255,.99);border-right:1px solid var(--border);
+  box-shadow:2px 0 16px rgba(20,30,60,.05);
+}
+html[data-theme="corporate"] .nav-link{color:var(--muted)}
+html[data-theme="corporate"] .nav-link.active{
+  color:var(--blue);background:rgba(36,84,214,.07);
+  box-shadow:inset 0 -2px 0 var(--blue);
+}
+html[data-theme="corporate"] .nav-link:hover{background:rgba(36,84,214,.05);color:var(--blue)}
+html[data-theme="corporate"] .sb-link.active{
+  background:rgba(36,84,214,.08);color:var(--blue);
+  box-shadow:inset 3px 0 0 var(--blue);
+}
+html[data-theme="corporate"] .sb-link:hover{background:rgba(36,84,214,.05);color:var(--blue)}
+html[data-theme="corporate"] .card{
+  background:var(--bg2);border:1px solid var(--border);
+  box-shadow:0 1px 3px rgba(20,30,60,.06),0 1px 2px rgba(20,30,60,.04);
+}
+html[data-theme="corporate"] .card-hd{
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  border-left:3px solid var(--blue);
+}
+html[data-theme="corporate"] .btn-primary{
+  background:var(--blue);color:#fff;font-weight:700;
+  border:none;border-radius:8px;box-shadow:0 1px 2px rgba(36,84,214,.25);
+}
+html[data-theme="corporate"] .btn-primary:hover{
+  background:#1d46ba;box-shadow:0 4px 12px rgba(36,84,214,.3);transform:translateY(-1px);
+}
+html[data-theme="corporate"] .btn-ghost{
+  border-radius:8px;background:var(--bg3);border-color:var(--border);color:var(--muted);
+}
+html[data-theme="corporate"] .btn-ghost:hover{background:#e6ebf2;border-color:var(--blue);color:var(--blue)}
+html[data-theme="corporate"] input,html[data-theme="corporate"] select,html[data-theme="corporate"] textarea{
+  background:#fff!important;border-color:var(--border)!important;color:var(--text)!important;
+}
+html[data-theme="corporate"] input:focus,html[data-theme="corporate"] select:focus{
+  border-color:var(--blue)!important;box-shadow:0 0 0 3px rgba(36,84,214,.12)!important;
+}
+html[data-theme="corporate"] .alert-info{
+  background:rgba(36,84,214,.06);border-color:rgba(36,84,214,.25);color:var(--blue);
+}
+html[data-theme="corporate"] .cp-send{
+  background:var(--blue)!important;border-radius:8px!important;color:#fff!important;
+  box-shadow:none!important;
+}
+html[data-theme="corporate"] .nav-logo-left,html[data-theme="corporate"] .nav-logo-right{
+  background:#fff!important;box-shadow:0 1px 6px rgba(20,30,60,.1)!important;
+}
+html[data-theme="corporate"] .campus-card{
+  background:var(--bg2)!important;border:1px solid var(--border)!important;
+  border-top:3px solid var(--blue)!important;
+  box-shadow:0 1px 3px rgba(20,30,60,.06)!important;
+}
+html[data-theme="corporate"] .bdg-admin{
+  background:rgba(93,79,191,.1);color:var(--purple);border:1px solid rgba(93,79,191,.3);
+}
+html[data-theme="corporate"] .bdg-viewer{
+  background:rgba(36,84,214,.08);color:var(--blue);border:1px solid rgba(36,84,214,.25);
+}
+
 html.light-theme body{background:var(--bg);color:var(--text)}
 
 /* ── Transparency/backdrop brightness — affects ALL pages, ALL elements ── */
@@ -920,6 +1000,14 @@ html.has-wallpaper.light-theme {
                          outline:2px solid transparent;transition:.15s">
             <span style="width:14px;height:14px;border-radius:50%;background:#00ff41;box-shadow:0 0 6px #00ff41;display:block"></span>
             <span style="font-size:10px;font-weight:700;color:#2e7d2e;letter-spacing:.04em" data-i18n="theme.matrix">МАТРИЦА</span>
+          </button>
+          <button class="tp-swatch" data-theme="corporate" onclick="setTheme('corporate')"
+                  style="height:58px;border-radius:10px;border:1px solid #dbe1e9;cursor:pointer;
+                         background:linear-gradient(135deg,#eef1f6,#ffffff);display:flex;flex-direction:column;
+                         align-items:center;justify-content:center;gap:4px;
+                         outline:2px solid transparent;transition:.15s">
+            <span style="width:14px;height:14px;border-radius:50%;background:#2454d6;display:block"></span>
+            <span style="font-size:10px;font-weight:700;color:#2454d6;letter-spacing:.04em">КОРПОРАТИВ</span>
           </button>
           <button class="tp-swatch" data-theme="campus" onclick="setTheme('campus')"
                   style="height:58px;border-radius:10px;border:1px solid #1a1a1a;cursor:pointer;
