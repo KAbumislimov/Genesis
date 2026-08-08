@@ -7,6 +7,7 @@ import urllib.request, urllib.error
 from functools import wraps
 from datetime import datetime, timedelta
 import paramiko
+from itsdangerous import URLSafeTimedSerializer
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -40,6 +41,9 @@ CLIENT1_USER = os.environ.get('CLIENT1_USER', 'client1')
 SSH_KEY   = os.environ.get('SSH_KEY',   '/secrets/campus_bot')
 MUSIC_DIR  = os.environ.get('MUSIC_DIR', '/music')
 DB_PATH    = os.environ.get('DB_PATH',  '/data/webui.db')
+SSO_BRIDGE_SECRET = os.environ.get('SSO_BRIDGE_SECRET', '')
+HELPDESK_URL = os.environ.get('HELPDESK_URL', 'http://10.10.4.120:8094')
+_sso_serializer = URLSafeTimedSerializer(SSO_BRIDGE_SECRET or 'insecure-dev-only')
 AVATAR_DIR = os.path.join(os.path.dirname(DB_PATH), 'avatars')
 os.makedirs(AVATAR_DIR, exist_ok=True)
 WALLPAPER_DIR = os.path.join(os.path.dirname(DB_PATH), 'wallpapers')
@@ -2139,6 +2143,17 @@ def api_history():
             'SELECT username, track_name, played_at FROM play_log ORDER BY id DESC LIMIT 50'
         ).fetchall()
     return jsonify({'ok': True, 'history': [dict(r) for r in rows]})
+
+@app.route('/helpdesk-sso')
+@login_required
+def helpdesk_sso():
+    """Bridges an already-authenticated session here into a matching
+    Helpdesk Ops account (same email) — no second password prompt."""
+    email = (current_user.email or '').strip()
+    if not email:
+        return redirect(HELPDESK_URL)
+    token = _sso_serializer.dumps(email)
+    return redirect(f"{HELPDESK_URL}/sso?token={token}")
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
