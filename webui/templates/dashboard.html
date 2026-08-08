@@ -2868,7 +2868,7 @@ function wampSetTheme(name) {
   });
 }
 (function(){
-  var saved = localStorage.getItem('wamp-theme') || 'default';
+  var saved = localStorage.getItem('wamp-theme') || 'classic';
   document.documentElement.setAttribute('data-wamp', saved);
   document.querySelectorAll('.wamp2-theme-swatch').forEach(function(el){
     el.classList.toggle('active', el.dataset.wamp===saved);
