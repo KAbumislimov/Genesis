@@ -561,6 +561,14 @@ html.has-wallpaper.light-theme {
   --bg3: rgba(235,240,248,0.72);
   --border: rgba(0,0,0,0.15);
 }
+/* Corporate theme + wallpaper: same fix — light theme, needs dark text */
+html.has-wallpaper[data-theme="corporate"] {
+  --text: #1c2436;
+  --muted: #5c6b82;
+  --bg2: rgba(255,255,255,0.85);
+  --bg3: rgba(242,245,250,0.85);
+  --border: rgba(20,30,60,0.15);
+}
 
 /* ── Lang / theme controls ── */
 .lang-group{display:flex;gap:3px;align-items:center}
@@ -2569,6 +2577,11 @@ window.addEventListener('DOMContentLoaded', function() {
        href="{{ url_for('machines_page') }}" onclick="closeSidebar()">
       <i class="bi bi-pc-display" style="color:var(--green)"></i>
       <span>Тонкие клиенты</span>
+    </a>
+    <a class="sb-link" href="http://10.10.4.120:8094" target="_blank" rel="noopener" onclick="closeSidebar()">
+      <i class="bi bi-headset" style="color:var(--blue)"></i>
+      <span>Helpdesk</span>
+      <i class="bi bi-box-arrow-up-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
     </a>
     <div class="sb-sep"></div>
     <div style="padding:4px 12px 3px;font-size:10px;font-weight:700;text-transform:uppercase;
