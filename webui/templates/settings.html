@@ -168,6 +168,38 @@
             <span class="st-sw-lbl">КОРПОРАТИВ</span>
           </button>
         </div>
+        <!-- 20 additional theme concepts — same setTheme() wiring as the swatches above -->
+        <div style="margin-top:10px">
+          <select onchange="setTheme(this.value)"
+                  style="width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--border);
+                         border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer">
+            <option value="" disabled selected>+ Ещё 20 тем...</option>
+            <optgroup label="Продвинутые концепты">
+              <option value="neo-brutalism">1. Neo-Brutalism</option>
+              <option value="vision-os">2. Vision OS</option>
+              <option value="cyber-cut">3. Cyber-Cut</option>
+              <option value="arcade-3d">4. Arcade 3D</option>
+              <option value="skeuomorphic">5. Skeuomorphic Analog</option>
+              <option value="neon-glow">6. Neon Glow</option>
+              <option value="claymorphic">7. Claymorphic 3D</option>
+              <option value="minimal-line">8. Minimal Line Art</option>
+              <option value="pixel-retro">9. Pixel Retro Arcade</option>
+              <option value="hologram">10. Futuristic Hologram</option>
+              <option value="cyber-hud">11. Cyber-Grid HUD</option>
+              <option value="glass-brutal">12. Glass Neu-Brutalism</option>
+              <option value="soft-paper">13. Soft Paper Material</option>
+              <option value="cyber-switch">14. Outlined Cyber Switch</option>
+              <option value="soft-neumorphic">15. Soft Neumorphic Glow</option>
+              <option value="slashed-matrix">16. Slashed Matrix</option>
+            </optgroup>
+            <optgroup label="Базовые визуальные стили">
+              <option value="modern-dark">17. Modern Dark</option>
+              <option value="clean-light">18. Clean Light</option>
+              <option value="cyberpunk-yellow">19. Cyberpunk Yellow</option>
+              <option value="nordic-slate">20. Nordic Slate</option>
+            </optgroup>
+          </select>
+        </div>
       </div>
 
       <!-- Language -->
