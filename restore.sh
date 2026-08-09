@@ -12,10 +12,11 @@
 set -euo pipefail
 
 REPO_DIR="$HOME/projects/campus-infra"
+HELPDESK_OPS_DIR="$HOME/projects/helpdesk-ops"
 SECRETS_DIR="$HOME/projects/campus-secrets"
 BACKUP_DIR="$HOME/campus-backups"
-SECRETS_REPO="https://github.com/MediaAudioserver/campus-secrets.git"
-INFRA_REPO="https://github.com/MediaAudioserver/campus-infra.git"
+SECRETS_REPO="https://github.com/KAbumislimov/campus-secrets.git"
+INFRA_REPO="https://github.com/KAbumislimov/campus-infra.git"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 log()  { echo -e "${GREEN}[✓]${NC} $*"; }
@@ -51,7 +52,7 @@ if [[ $ONLY_UP -eq 0 && $ONLY_DATA -eq 0 ]] || [[ $ONLY_SECRETS -eq 1 ]]; then
     warn "Нужен GitHub токен для campus-secrets (приватный репо)"
     warn "Токен хранится у Камрана или в записях"
     read -rp "GitHub Token (ghp_...): " GH_TOKEN
-    git clone "https://${GH_TOKEN}@github.com/MediaAudioserver/campus-secrets.git" "$SECRETS_DIR"
+    git clone "https://${GH_TOKEN}@github.com/KAbumislimov/campus-secrets.git" "$SECRETS_DIR"
   else
     log "campus-secrets уже есть — обновляю..."
     git -C "$SECRETS_DIR" pull --ff-only 2>/dev/null || warn "Не удалось обновить campus-secrets"
@@ -60,9 +61,22 @@ if [[ $ONLY_UP -eq 0 && $ONLY_DATA -eq 0 ]] || [[ $ONLY_SECRETS -eq 1 ]]; then
   log "Копирую .env..."
   cp "$SECRETS_DIR/.env" "$REPO_DIR/.env"
   log ".env установлен"
+
+  if [[ -f "$SECRETS_DIR/server/helpdesk-ops.env" && -d "$HELPDESK_OPS_DIR" ]]; then
+    cp "$SECRETS_DIR/server/helpdesk-ops.env" "$HELPDESK_OPS_DIR/.env"
+    log "helpdesk-ops/.env установлен"
+  fi
 fi
 
 [[ $ONLY_SECRETS -eq 1 ]] && { log "Секреты готовы."; exit 0; }
+
+# ─── Шаг 2.5: Личные утилиты (campus-mon, gitkamran) ───────────
+if [[ -d "$REPO_DIR/personal-bin" ]]; then
+  mkdir -p "$HOME/.local/bin"
+  cp "$REPO_DIR"/personal-bin/* "$HOME/.local/bin/"
+  chmod +x "$HOME"/.local/bin/campus-mon "$HOME"/.local/bin/gitkamran 2>/dev/null || true
+  log "Личные утилиты (campus-mon, gitkamran) установлены в ~/.local/bin"
+fi
 
 # ─── Шаг 3: Данные из бэкапа ──────────────────────────────────
 if [[ $ONLY_DATA -eq 1 ]] || [[ $ONLY_UP -eq 0 ]]; then
@@ -85,6 +99,25 @@ if [[ $ONLY_DATA -eq 1 ]] || [[ $ONLY_UP -eq 0 ]]; then
     log "Восстанавливаю helpdesk.db из бэкапа: $LATEST_HELPDESK"
     cp "$LATEST_HELPDESK" "$REPO_DIR/data/helpdesk/helpdesk.db"
   fi
+
+  # helpdesk-ops (порт 8094) — своя БД и вложения
+  if [[ -d "$HELPDESK_OPS_DIR" ]]; then
+    mkdir -p "$HELPDESK_OPS_DIR/data"
+    LATEST_HOPS_DB=$(find "$BACKUP_DIR" -name "helpdesk_ops.db" 2>/dev/null | sort | tail -1)
+    if [[ -n "$LATEST_HOPS_DB" ]]; then
+      log "Восстанавливаю helpdesk_ops.db из бэкапа: $LATEST_HOPS_DB"
+      cp "$LATEST_HOPS_DB" "$HELPDESK_OPS_DIR/data/helpdesk_ops.db"
+    elif [[ -f "$HELPDESK_OPS_DIR/data/helpdesk_ops.db" ]]; then
+      log "helpdesk_ops.db уже есть (не перезаписываю)"
+    else
+      warn "Бэкап helpdesk_ops.db не найден — будет создан новый (пустой)"
+    fi
+    LATEST_HOPS_UP=$(find "$BACKUP_DIR" -name "helpdesk_ops_uploads.tar.gz" 2>/dev/null | sort | tail -1)
+    if [[ -n "$LATEST_HOPS_UP" ]]; then
+      log "Восстанавливаю вложения helpdesk-ops: $LATEST_HOPS_UP"
+      tar xzf "$LATEST_HOPS_UP" -C "$HELPDESK_OPS_DIR/data/"
+    fi
+  fi
 fi
 
 [[ $ONLY_DATA -eq 1 ]] && { log "Данные восстановлены."; exit 0; }
@@ -100,7 +133,7 @@ fi
 
 # ─── Шаг 5: Docker Compose ────────────────────────────────────
 cd "$REPO_DIR"
-log "Поднимаю контейнеры..."
+log "Поднимаю контейнеры campus-infra..."
 docker compose \
   --profile webui \
   --profile logs \
@@ -108,6 +141,11 @@ docker compose \
   --profile cockpit \
   --profile helpdesk \
   up -d --build
+
+if [[ -d "$HELPDESK_OPS_DIR" ]]; then
+  log "Поднимаю helpdesk-ops (порт 8094)..."
+  ( cd "$HELPDESK_OPS_DIR" && docker compose up -d --build )
+fi
 
 # ─── Шаг 6: Проверка ──────────────────────────────────────────
 echo ""
@@ -117,7 +155,8 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -v "^NAMES
 echo ""
 log "═══ Готово! ═══"
 echo -e "  Web UI:       ${GREEN}http://10.10.4.120:8090${NC}"
-echo -e "  HelpDesk:     ${GREEN}http://10.10.4.120:8091${NC}"
+echo -e "  HelpDesk (старый прототип): ${GREEN}http://10.10.4.120:8091${NC}"
+echo -e "  Helpdesk Ops: ${GREEN}https://10.10.4.120:8094${NC}"
 echo -e "  Grafana:      ${GREEN}http://10.10.4.120:3000${NC}"
 echo -e "  Cockpit:      ${GREEN}http://10.10.4.120:1991${NC}"
 echo ""

@@ -38,7 +38,7 @@ SSH ключ для всех: `~/.ssh/campus_bot`
 
 ```bash
 # Клонировать репо
-git clone https://github.com/MediaAudioserver/campus-infra.git ~/projects/campus-infra
+git clone https://github.com/KAbumislimov/campus-infra.git ~/projects/campus-infra
 
 # Запустить полное восстановление
 bash ~/projects/campus-infra/restore.sh

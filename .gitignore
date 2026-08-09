@@ -21,6 +21,7 @@ data/webui/webui.db
 data/webui/avatars/
 data/webui/voices/
 data/webui/announces/
+data/webui/hf_cache/
 data/helpdesk/helpdesk.db
 data/helpdesk/uploads/
 

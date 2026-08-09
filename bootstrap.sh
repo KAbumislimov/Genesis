@@ -5,7 +5,7 @@
 #
 #  С нуля на новой машине (2 команды):
 #
-#    git clone https://github.com/MediaAudioserver/campus-infra.git
+#    git clone https://github.com/KAbumislimov/campus-infra.git
 #    cd campus-infra && bash bootstrap.sh all
 #
 #  Если нужен доступ к приватному campus-secrets (токен GitHub):
@@ -23,8 +23,8 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SECRETS_DIR="${SECRETS_DIR:-$HOME/projects/campus-secrets}"
-SECRETS_REPO_SSH="git@github.com:MediaAudioserver/campus-secrets.git"
-SECRETS_REPO_HTTPS="https://github.com/MediaAudioserver/campus-secrets.git"
+SECRETS_REPO_SSH="git@github.com:KAbumislimov/campus-secrets.git"
+SECRETS_REPO_HTTPS="https://github.com/KAbumislimov/campus-secrets.git"
 GH_TOKEN="${GH_TOKEN:-}"
 
 CLIENT1_HOST="${CLIENT1_HOST:-10.20.0.41}"
@@ -71,7 +71,7 @@ fetch_secrets() {
 
     # Пробуем HTTPS с токеном
     if [[ -n "$GH_TOKEN" ]]; then
-        CLONE_URL="https://${GH_TOKEN}@github.com/MediaAudioserver/campus-secrets.git"
+        CLONE_URL="https://${GH_TOKEN}@github.com/KAbumislimov/campus-secrets.git"
         git clone --quiet "$CLONE_URL" "$SECRETS_DIR"
         ok "Секреты клонированы (HTTPS+token)"
         return 0
