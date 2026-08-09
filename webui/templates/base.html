@@ -13,7 +13,11 @@
 <link id="gfont-link" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Nunito:wght@300;400;600;700&family=Ubuntu:wght@300;400;500;700&family=Open+Sans:wght@300;400;600;700&family=Montserrat:wght@300;400;500;700&family=Exo+2:wght@300;400;500;700&display=swap" rel="stylesheet">
 <!-- Prevent flash -->
 <script>(function(){
-  var t=localStorage.getItem('theme')||'dark';
+  window._themeIsAdmin = {{ 'true' if current_user.is_authenticated and current_user.role == 'admin' else 'false' }};
+  window._themeServerDefault = {{ theme_default|tojson }};
+  var t = window._themeIsAdmin
+    ? (localStorage.getItem('theme') || window._themeServerDefault || 'dark')
+    : (window._themeServerDefault || 'dark');
   if(t==='light') document.documentElement.classList.add('light-theme');
   else if(t!=='dark') document.documentElement.setAttribute('data-theme',t);
   var _ts=localStorage.getItem('textSize');
@@ -1079,6 +1083,15 @@ html[data-theme="nordic-slate"]{--bg:#2e3440;--bg2:#3b4252;--bg3:#434c5e;--borde
               <option value="nordic-slate">20. Nordic Slate</option>
             </optgroup>
           </select>
+          {% if current_user.role == 'admin' %}
+          <button onclick="themeSetDefault()"
+                  style="width:100%;margin-top:6px;background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);
+                         color:var(--blue);border-radius:8px;padding:6px;font-size:11px;font-weight:700;cursor:pointer;
+                         display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="bi bi-people-fill"></i> Сделать для всех пользователей
+          </button>
+          <div class="theme-default-lbl" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px"></div>
+          {% endif %}
         </div>
         <!-- Link to full settings page -->
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);text-align:center">

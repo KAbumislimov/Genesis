@@ -637,7 +637,11 @@ function applyLang() {
 }
 
 /* ── Theme ── */
-var currentTheme = localStorage.getItem('theme') || 'dark';
+var currentTheme = (typeof window._themeIsAdmin !== 'undefined')
+  ? (window._themeIsAdmin
+      ? (localStorage.getItem('theme') || window._themeServerDefault || 'dark')
+      : (window._themeServerDefault || 'dark'))
+  : (localStorage.getItem('theme') || 'dark');
 
 var THEMES = {
   dark:   { label:'Тёмная',    accent:'#58a6ff', bg:'#0d1117' },
@@ -659,6 +663,21 @@ function setTheme(th) {
 
 function toggleTheme() {
   setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
+function themeSetDefault() {
+  var lbls = document.querySelectorAll('.theme-default-lbl');
+  fetch('/api/theme/default', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({value: currentTheme})})
+  .then(function(r){return r.json();}).then(function(d){
+    var msg = d.ok ? '✅ Сохранено для всех пользователей' : '❌ ' + (d.error || 'Ошибка');
+    if (d.ok) {
+      window._themeServerDefault = currentTheme;
+      if (typeof toast === 'function') toast('✅ Тема применена для всех пользователей');
+    }
+    lbls.forEach(function(lbl){ lbl.textContent = msg; });
+  }).catch(function(){ lbls.forEach(function(lbl){ lbl.textContent = '❌ Ошибка сети'; }); });
 }
 
 function toggleThemePicker(e) {

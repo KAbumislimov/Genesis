@@ -199,6 +199,15 @@
               <option value="nordic-slate">20. Nordic Slate</option>
             </optgroup>
           </select>
+          {% if current_user.role == 'admin' %}
+          <button onclick="themeSetDefault()"
+                  style="width:100%;margin-top:6px;background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);
+                         color:var(--blue);border-radius:8px;padding:6px;font-size:11px;font-weight:700;cursor:pointer;
+                         display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="bi bi-people-fill"></i> Сделать для всех пользователей
+          </button>
+          <div class="theme-default-lbl" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px"></div>
+          {% endif %}
         </div>
       </div>
 

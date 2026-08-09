@@ -920,7 +920,7 @@ def logout():
 
 @app.context_processor
 def inject_globals():
-    result = {'ann_count': 0, 'wallpaper_default': 'off'}
+    result = {'ann_count': 0, 'wallpaper_default': 'off', 'theme_default': ''}
     if current_user.is_authenticated:
         try:
             with get_db() as c:
@@ -928,6 +928,9 @@ def inject_globals():
                 row = c.execute("SELECT value FROM settings WHERE key='wallpaper_default'").fetchone()
                 if row:
                     result['wallpaper_default'] = row['value']
+                row2 = c.execute("SELECT value FROM settings WHERE key='theme_default'").fetchone()
+                if row2:
+                    result['theme_default'] = row2['value']
         except Exception:
             pass
     return result
@@ -944,6 +947,20 @@ def api_wallpaper_default():
     val = (request.get_json() or {}).get('value', 'off')
     with get_db() as c:
         c.execute("INSERT OR REPLACE INTO settings (key,value) VALUES ('wallpaper_default',?)", (val,))
+    return jsonify({'ok': True})
+
+@app.route('/api/theme/default', methods=['GET', 'POST'])
+@login_required
+def api_theme_default():
+    if request.method == 'GET':
+        with get_db() as c:
+            row = c.execute("SELECT value FROM settings WHERE key='theme_default'").fetchone()
+        return jsonify({'ok': True, 'default': row['value'] if row else ''})
+    if current_user.role != 'admin':
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    val = (request.get_json() or {}).get('value', '')
+    with get_db() as c:
+        c.execute("INSERT OR REPLACE INTO settings (key,value) VALUES ('theme_default',?)", (val,))
     return jsonify({'ok': True})
 
 @app.route('/announcements')
