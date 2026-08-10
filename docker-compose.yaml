@@ -205,7 +205,7 @@ services:
       - CLIENT1_MAC=${CLIENT1_MAC:-}
       - SSH_KEY=/secrets/campus_bot
       - MUSIC_DIR=/music
-      - SECRET_KEY=${WEBUI_SECRET_KEY:-campus-change-me-in-prod}
+      - SECRET_KEY=${WEBUI_SECRET_KEY}
       - DB_PATH=/data/webui.db
       - DEFAULT_VOL=${DEFAULT_VOL:-100}
       - CLIENT1_INBOX=/var/lib/campus-player/inbox
@@ -238,7 +238,7 @@ services:
       - OLLAMA_MODEL=${OLLAMA_MODEL:-}
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
       # Helpdesk Ops single sign-on bridge
-      - SSO_BRIDGE_SECRET=${SSO_BRIDGE_SECRET:-}
+      - SSO_BRIDGE_SECRET=${SSO_BRIDGE_SECRET}
       - HELPDESK_URL=${HELPDESK_URL:-https://10.10.4.120:8094}
     ulimits:
       nofile:
@@ -281,9 +281,9 @@ services:
     volumes:
       - ./data/helpdesk:/data
     environment:
-      - SECRET_KEY=${HELPDESK_SECRET_KEY:-media-helpdesk-2026}
-      - ADMIN_USER=${HELPDESK_ADMIN_USER:-admin}
-      - ADMIN_PASS=${HELPDESK_ADMIN_PASS:-media2026}
+      - SECRET_KEY=${HELPDESK_SECRET_KEY}
+      - ADMIN_USER=${HELPDESK_ADMIN_USER}
+      - ADMIN_PASS=${HELPDESK_ADMIN_PASS}
       - DB_PATH=/data/helpdesk.db
       - UPLOAD_DIR=/data/uploads
       - TG_TOKEN=${NOTIFICATION_BOT_TOKEN:-}

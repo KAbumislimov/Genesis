@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Безопасность{% endblock %}
+{% block extra_head %}
+<style>
+.sec-group{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.sec-group summary{list-style:none;cursor:pointer;padding:16px 20px;display:flex;align-items:center;gap:12px;
+  font-weight:800;font-size:15px;user-select:none}
+.sec-group summary::-webkit-details-marker{display:none}
+.sec-group summary .sg-icon{width:34px;height:34px;border-radius:50%;background:rgba(88,166,255,.12);color:var(--blue);
+  display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.sec-group summary .sg-count{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);
+  background:var(--bg3);padding:3px 10px;border-radius:999px;flex-shrink:0}
+.sec-group summary .sg-chev{color:var(--muted);font-size:13px;transition:transform .2s;flex-shrink:0}
+.sec-group[open] summary .sg-chev{transform:rotate(180deg)}
+.sec-group[open] summary{border-bottom:1px solid var(--border)}
+.sec-body{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px}
+.sec-item{display:flex;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.sec-item:last-child{padding-bottom:0;border-bottom:none}
+.sec-check{width:22px;height:22px;border-radius:50%;background:rgba(63,185,80,.15);color:var(--green);
+  display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+.sec-item-title{font-weight:800;font-size:13.5px;margin-bottom:3px}
+.sec-item-body{font-size:13px;color:var(--muted);line-height:1.6}
+.sec-roadmap{display:flex;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.sec-roadmap:last-child{padding-bottom:0;border-bottom:none}
+.sec-roadmap-dot{width:22px;height:22px;border-radius:50%;background:rgba(255,167,87,.15);color:var(--orange);
+  display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+@keyframes secBodyIn{0%{opacity:0;transform:scale(.92) translateY(6px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+</style>
+{% endblock %}
+{% block content %}
+<div style="max-width:820px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <h1 style="font-size:26px;font-weight:900;margin-bottom:4px"><i class="bi bi-shield-lock-fill" style="color:var(--blue)"></i> Безопасность</h1>
+    <p style="color:var(--muted);font-size:13px">Что реально защищает эту панель, простыми словами — и что ещё в планах</p>
+  </div>
+
+  <details class="sec-group" open>
+    <summary><span class="sg-icon"><i class="bi bi-key"></i></span> Вход в систему <span class="sg-count">2</span><i class="bi bi-chevron-down sg-chev"></i></summary>
+    <div class="sec-body">
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Пароли не хранятся в открытом виде</div>
+          <div class="sec-item-body">У каждого пользователя свой аккаунт. Пароль хранится только как хеш с солью (Werkzeug/PBKDF2) — даже прямой доступ к базе данных не покажет ничей реальный пароль.</div>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Учётные записи можно заблокировать и «выкинуть» из сессии</div>
+          <div class="sec-item-body">Блокировка пользователя (is_blocked) и принудительный выход (force_logout) применяются мгновенно — не остаётся «подвисшей» сессии, которая продолжает работать после отзыва доступа.</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="sec-group">
+    <summary><span class="sg-icon"><i class="bi bi-people"></i></span> Роли и доступ <span class="sg-count">1</span><i class="bi bi-chevron-down sg-chev"></i></summary>
+    <div class="sec-body">
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Каждый видит только то, что положено его роли</div>
+          <div class="sec-item-body">Admin, Staff и Viewer получают разный набор действий и разные разделы меню — управление машинами кампуса, настройками и пользователями доступно только роли Admin.</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="sec-group">
+    <summary><span class="sg-icon"><i class="bi bi-window"></i></span> Сессии <span class="sg-count">1</span><i class="bi bi-chevron-down sg-chev"></i></summary>
+    <div class="sec-body">
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Защищённая сессионная кука</div>
+          <div class="sec-item-body">Кука входа помечена HttpOnly (недоступна скриптам страницы), Secure (только по HTTPS) и SameSite=Lax (не отправляется при межсайтовых запросах).</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="sec-group">
+    <summary><span class="sg-icon"><i class="bi bi-diagram-3"></i></span> Сеть и защита в браузере <span class="sg-count">3</span><i class="bi bi-chevron-down sg-chev"></i></summary>
+    <div class="sec-body">
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Шифрование при передаче</div>
+          <div class="sec-item-body">Вся панель работает по HTTPS. Заголовок Strict-Transport-Security говорит браузеру больше никогда не откатываться на обычный HTTP для этого сайта.</div>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Нельзя подгрузить чужой скрипт</div>
+          <div class="sec-item-body">Заголовок Content-Security-Policy блокирует загрузку кода с сайта злоумышленника — основная защита от атак вида «подмешать скрипт».</div>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Нельзя встроить в чужую страницу</div>
+          <div class="sec-item-body">X-Frame-Options и соответствующее правило CSP не дают встроить панель в iframe на чужой странице — защита от «кликджекинга».</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="sec-group">
+    <summary><span class="sg-icon"><i class="bi bi-file-earmark-lock2"></i></span> Секреты и резервные копии <span class="sg-count">2</span><i class="bi bi-chevron-down sg-chev"></i></summary>
+    <div class="sec-body">
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Секреты хранятся не в коде</div>
+          <div class="sec-item-body">Пароли, ключи и токены задаются только в локальном файле конфигурации, который никогда не попадает в GitHub. Приложение теперь отказывается запускаться, если реальный секрет не задан — вместо того чтобы незаметно работать со значением по умолчанию, которое любой мог увидеть в исходном коде.</div>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-check"><i class="bi bi-check-lg"></i></div>
+        <div>
+          <div class="sec-item-title">Ничего не живёт только на одной машине</div>
+          <div class="sec-item-body">Код автоматически бэкапится в приватный репозиторий каждый час; база данных и загруженные файлы бэкапятся отдельно по расписанию.</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="sec-group">
+    <summary><span class="sg-icon"><i class="bi bi-signpost-split"></i></span> Что ещё в планах <span class="sg-count">2</span><i class="bi bi-chevron-down sg-chev"></i></summary>
+    <div class="sec-body">
+      <div class="sec-roadmap">
+        <div class="sec-roadmap-dot"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <div class="sec-item-title">Отдельные токены на форму (CSRF)</div>
+          <div class="sec-item-body">Сейчас подделку межсайтовых запросов блокирует настройка куки SameSite=Lax. Отдельный токен на каждую форму — следующий уровень защиты, запланирован, но пока не реализован.</div>
+        </div>
+      </div>
+      <div class="sec-roadmap">
+        <div class="sec-roadmap-dot"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <div class="sec-item-title">Независимая проверка безопасности</div>
+          <div class="sec-item-body">Всё на этой странице — результат самопроверки вместе с ассистентом, который сопровождает эту панель. Логичный следующий шаг — внешний пентест для независимого подтверждения.</div>
+        </div>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+document.querySelectorAll('.sec-group').forEach(function(d){
+  d.addEventListener('toggle', function(){
+    if (d.open) {
+      var body = d.querySelector('.sec-body');
+      body.style.animation = 'none';
+      void body.offsetWidth;
+      body.style.animation = 'secBodyIn .28s cubic-bezier(.2,1.4,.4,1)';
+    }
+  });
+});
+</script>
+{% endblock %}

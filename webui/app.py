@@ -9,11 +9,22 @@ from datetime import datetime, timedelta
 import paramiko
 from itsdangerous import URLSafeTimedSerializer
 
+def _require_secret(name, min_length=16):
+    """No hardcoded fallback on purpose: a weak default that 'just works'
+    is how a security review finds a real secret still set to it in prod."""
+    val = os.environ.get(name, '')
+    if len(val) < min_length:
+        raise RuntimeError(
+            f'{name} is missing or too short (need >= {min_length} chars). '
+            f'Set a real random value in .env — refusing to start with a weak default.')
+    return val
+
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-app.secret_key = os.environ.get('SECRET_KEY', 'campus-change-me-in-prod')
+app.secret_key = _require_secret('SECRET_KEY')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200 MB max upload
 
@@ -26,6 +37,28 @@ def _unauthorized():
     if request.path.startswith('/api/'):
         return jsonify({'ok': False, 'error': 'session_expired', 'reload': True}), 401
     return redirect(url_for('login', next=request.url))
+
+@app.after_request
+def set_security_headers(response):
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Permissions-Policy'] = 'geolocation=(), camera=()'
+    # Pragmatic CSP: the app relies on inline <script>/onclick handlers and
+    # inline <style> blocks throughout its templates (not nonce-based), so a
+    # strict CSP would break the UI. This still blocks the main real-world
+    # threat — loading script/frames from an attacker-controlled origin.
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; "
+        "font-src 'self' cdn.jsdelivr.net fonts.gstatic.com data:; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'"
+    )
+    return response
 
 @app.after_request
 def _no_cache_html(response):
@@ -56,9 +89,9 @@ CLIENT1_USER = os.environ.get('CLIENT1_USER', 'client1')
 SSH_KEY   = os.environ.get('SSH_KEY',   '/secrets/campus_bot')
 MUSIC_DIR  = os.environ.get('MUSIC_DIR', '/music')
 DB_PATH    = os.environ.get('DB_PATH',  '/data/webui.db')
-SSO_BRIDGE_SECRET = os.environ.get('SSO_BRIDGE_SECRET', '')
+SSO_BRIDGE_SECRET = _require_secret('SSO_BRIDGE_SECRET')
 HELPDESK_URL = os.environ.get('HELPDESK_URL', 'https://10.10.4.120:8094')
-_sso_serializer = URLSafeTimedSerializer(SSO_BRIDGE_SECRET or 'insecure-dev-only')
+_sso_serializer = URLSafeTimedSerializer(SSO_BRIDGE_SECRET)
 _PROFILE_CORS_PATHS = ('/api/profile/update', '/api/profile/avatar', '/api/profile/password')
 AVATAR_DIR = os.path.join(os.path.dirname(DB_PATH), 'avatars')
 os.makedirs(AVATAR_DIR, exist_ok=True)
@@ -2230,6 +2263,11 @@ def settings_page():
         if s:
             silence = s['value'] == '1'
     return render_template('settings.html', tg_settings=tg_settings, silence=silence)
+
+@app.route('/security')
+@admin_only
+def security_page():
+    return render_template('security.html')
 
 @app.route('/avatars/<path:filename>')
 @login_required

@@ -2692,6 +2692,13 @@ window.addEventListener('DOMContentLoaded', function() {
       <i class="bi bi-gear-fill"></i>
       <span>Настройки</span>
     </a>
+    {% if current_user.role == 'admin' %}
+    <a class="sb-link {% if request.endpoint=='security_page' %}active{% endif %}"
+       href="{{ url_for('security_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-shield-lock-fill"></i>
+      <span>Безопасность</span>
+    </a>
+    {% endif %}
     <div class="sb-sep"></div>
     <!-- Opacity controls — always visible in sidebar -->
     <div style="padding:10px 14px 14px">
