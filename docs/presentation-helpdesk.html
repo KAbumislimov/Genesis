@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helpdesk Ops — Presentation</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --green:#3fb950;--blue:#58a6ff;--purple:#bc8cff;--orange:#ffa657;
+  --red:#f85149;--yellow:#e3b341;--text:#e6edf3;--muted:#8b949e;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:18px}
+.deck{width:100vw;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;
+  padding:36px 60px 72px;}
+.slide.active{display:flex}
+
+.slide.enter-from-right{display:flex;animation:enterR .45s cubic-bezier(.22,.68,0,1.2) forwards}
+.slide.enter-from-left {display:flex;animation:enterL .45s cubic-bezier(.22,.68,0,1.2) forwards}
+.slide.exit-to-left    {display:flex;animation:exitL  .3s  cubic-bezier(.55,0,.7,.4)   forwards}
+.slide.exit-to-right   {display:flex;animation:exitR  .3s  cubic-bezier(.55,0,.7,.4)   forwards}
+
+@keyframes enterR{from{opacity:0;transform:translateX(60px)  scale(.97)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes enterL{from{opacity:0;transform:translateX(-60px) scale(.97)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes exitL {from{opacity:1;transform:translateX(0)     scale(1)}  to{opacity:0;transform:translateX(-50px) scale(.97)}}
+@keyframes exitR {from{opacity:1;transform:translateX(0)     scale(1)}  to{opacity:0;transform:translateX(50px)  scale(.97)}}
+
+#tx-flash{position:fixed;inset:0;z-index:999;pointer-events:none;opacity:0;display:flex;flex-direction:column}
+#tx-flash.fire{animation:txFire .38s ease forwards}
+@keyframes txFire{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+.tx-scan{position:absolute;left:0;right:0;height:2px;background:var(--blue);box-shadow:0 0 18px 4px var(--blue);animation:txScan .38s ease forwards}
+@keyframes txScan{from{top:0;opacity:1}to{top:100%;opacity:0}}
+.tx-glitch{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(88,166,255,.03) 3px,rgba(88,166,255,.03) 4px);animation:txGlitch .38s steps(3) forwards}
+@keyframes txGlitch{0%,100%{clip-path:inset(0 0 100% 0)}30%{clip-path:inset(20% 0 60% 0);transform:translateX(-3px)}60%{clip-path:inset(60% 0 10% 0);transform:translateX(3px)}}
+.tx-bar{position:absolute;left:0;right:0;height:1px;background:rgba(88,166,255,.5);animation:txBar .38s ease forwards}
+@keyframes txBar{from{top:50%;opacity:.8}to{top:50%;opacity:0;transform:scaleX(1.3)}}
+
+.nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;align-items:center;
+  background:rgba(22,27,34,.97);border:1px solid var(--border);
+  padding:7px 18px;border-radius:40px;backdrop-filter:blur(10px);z-index:500}
+.nav button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:3px 10px;border-radius:6px;transition:.2s}
+.nav button:hover{color:var(--text);background:var(--bg3)}
+.nav-info{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);min-width:52px;text-align:center}
+.dots{display:flex;gap:5px;flex-wrap:wrap;max-width:340px;justify-content:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--border);cursor:pointer;transition:.25s;flex-shrink:0}
+.dot.active{background:var(--blue);width:22px;border-radius:4px}
+
+.H1{font-size:58px;font-weight:900;line-height:1.05}
+.H2{font-size:40px;font-weight:800;line-height:1.15;margin-bottom:20px}
+.GRAD{background:linear-gradient(135deg,var(--blue) 30%,var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.g{color:var(--green)}.b{color:var(--blue)}.p{color:var(--purple)}
+.o{color:var(--orange)}.r{color:var(--red)}.m{color:var(--muted)}
+
+.pill{display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);
+  background:var(--bg3);border:1px solid var(--border);padding:4px 14px;border-radius:20px;margin-bottom:14px}
+.live{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,.5)}50%{box-shadow:0 0 0 7px rgba(63,185,80,0)}}
+
+.bdg{display:inline-flex;align-items:center;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:700;padding:3px 10px;border-radius:8px}
+.bdg.bg{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.4)}
+.bdg.bb{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.4)}
+.bdg.bp{background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.4)}
+.bdg.br{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.4)}
+.bdg.bo{background:rgba(255,166,87,.15);color:var(--orange);border:1px solid rgba(255,166,87,.4)}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 22px}
+.card.cb{border-color:var(--blue);background:rgba(88,166,255,.05)}
+.card.cg{border-color:var(--green);background:rgba(63,185,80,.05)}
+.card.cp{border-color:var(--purple);background:rgba(188,140,255,.05)}
+.card.co{border-color:var(--orange);background:rgba(255,166,87,.05)}
+.card.cr{border-color:var(--red);background:rgba(248,81,73,.05)}
+.card-h{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:12px}
+
+.litem{display:flex;align-items:flex-start;gap:14px;padding:10px 0;border-bottom:1px solid var(--border);font-size:17px;line-height:1.5}
+.litem:last-child{border-bottom:none}
+.litem .ico{font-size:24px;flex-shrink:0;margin-top:1px;width:34px;text-align:center}
+.litem .main b{font-size:18px;display:block;margin-bottom:2px}
+.litem .main span{color:var(--muted);font-size:15px}
+
+.stats{display:flex;gap:14px;flex-wrap:wrap}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 22px;flex:1;min-width:100px}
+.stat .num{font-size:44px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1}
+.stat .lbl{font-size:15px;color:var(--muted);margin-top:6px;line-height:1.4}
+
+code{font-family:'JetBrains Mono',monospace;background:var(--bg3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;font-size:.85em;color:var(--green)}
+.codeblk{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.codeblk-h{background:var(--bg3);padding:8px 16px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px}
+.wd span{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:3px}
+.wd .dr{background:#f85149}.wd .dy{background:#ffa657}.wd .dg{background:#3fb950}
+.codeblk-body{padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.9;color:var(--muted)}
+.kw{color:var(--purple)}.cm{color:#484f58;font-style:italic}
+.str{color:var(--yellow)}.fn{color:var(--blue)}.vr{color:var(--orange)}
+.ok{color:var(--green)}.err2{color:var(--red)}
+
+.bigtbl{border-collapse:collapse;width:100%}
+.bigtbl th{background:var(--bg3);padding:10px 14px;text-align:left;font-size:14px;font-weight:700;color:var(--muted);border:1px solid var(--border)}
+.bigtbl td{padding:9px 14px;border:1px solid var(--border);font-size:16px;line-height:1.4}
+.bigtbl td.mono{font-family:'JetBrains Mono',monospace;font-size:14px}
+.bigtbl tr:hover td{background:rgba(88,166,255,.04)}
+
+.foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap}
+.foot span{font-size:13px;color:var(--muted)}
+
+/* Language switcher — simple, no mascot */
+#langbar{position:fixed;top:18px;right:20px;z-index:400;display:flex;gap:4px;
+  background:rgba(22,27,34,.9);border:1px solid var(--border);border-radius:30px;padding:5px;backdrop-filter:blur(8px)}
+#langbar button{background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+  padding:6px 12px;border-radius:20px;cursor:pointer;transition:.15s}
+#langbar button.active{background:var(--blue);color:#001b33}
+#langbar button:not(.active):hover{color:var(--text);background:var(--bg3)}
+
+/* Security "found & fixed" incident card */
+.incident{border:1px solid var(--red);background:rgba(248,81,73,.06);border-radius:14px;overflow:hidden}
+.incident-hd{background:rgba(248,81,73,.14);padding:12px 20px;font-weight:800;font-size:14px;color:var(--red);
+  display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(248,81,73,.3)}
+.incident-body{padding:16px 20px;font-size:15px;line-height:1.65;color:var(--text)}
+.arrow-fix{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:14px}
+.arrow-fix .from{color:var(--red);font-family:'JetBrains Mono',monospace}
+.arrow-fix .to{color:var(--green);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- 0: Title -->
+<div class="slide active">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px">
+    <div class="pill" data-az="the school organization · Bakı" data-ru="the school organization · Баку" data-en="the school organization · Baku"><span class="live"></span> <span data-az="Canlı sistem" data-ru="Работает live" data-en="Live in production">Работает live</span></div>
+    <div class="H1">Helpdesk <span class="GRAD">Ops</span></div>
+    <p style="font-size:20px;color:var(--muted);margin-top:16px;max-width:640px;line-height:1.6"
+       data-az="Daxili IT dəstək platforması — tiketlər, gündəlik hesabatlar, audit jurnalı, PIN ilə qorunan giriş. GLPI cəhdinin əvəzinə sıfırdan quruldu."
+       data-ru="Внутренняя платформа IT-поддержки — тикеты, ежедневные отчёты, журнал действий, вход под PIN. Построена с нуля вместо заброшенной попытки на GLPI."
+       data-en="Internal IT support platform — tickets, daily reports, audit trail, PIN-gated access. Built from scratch, replacing an abandoned GLPI attempt.">Внутренняя платформа IT-поддержки — тикеты, ежедневные отчёты, журнал действий, вход под PIN. Построена с нуля вместо заброшенной попытки на GLPI.</p>
+    <div class="stats" style="margin-top:28px;max-width:640px">
+      <div class="stat"><div class="num b">4</div><div class="lbl" data-az="rol: lead/tech/staff/qonaq" data-ru="роли: lead/tech/staff/guest" data-en="roles: lead/tech/staff/guest">роли: lead/tech/staff/guest</div></div>
+      <div class="stat"><div class="num g">20</div><div class="lbl" data-az="hazır dizayn teması" data-ru="готовых тем оформления" data-en="ready-made visual themes">готовых тем оформления</div></div>
+      <div class="stat"><div class="num p">3</div><div class="lbl" data-az="dil: AZ/RU/EN" data-ru="языка: AZ/RU/EN" data-en="languages: AZ/RU/EN">языка: AZ/RU/EN</div></div>
+      <div class="stat"><div class="num" style="color:var(--red)">1</div><div class="lbl" data-az="tapılıb düzəldilən boşluq" data-ru="найденная и закрытая дыра" data-en="security hole found & closed">найденная и закрытая дыра</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 1: Problem -->
+<div class="slide">
+  <div class="pill" data-az="Problem" data-ru="Проблема, с которой начали" data-en="The problem we started from"><span class="live"></span> Проблема, с которой начали</div>
+  <div class="H2" data-az='Heç bir tiket sistemi <span class="GRAD">yox idi</span>' data-ru='Тикет-системы <span class="GRAD">не было вообще</span>' data-en='There was <span class="GRAD">no ticket system</span> at all'>Тикет-системы <span class="GRAD">не было вообще</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div class="card cr" style="flex:1">
+      <div class="card-h" data-az="Əvvəl idi" data-ru="Как было" data-en="Before">Как было</div>
+      <div class="litem"><span class="ico">💬</span><div class="main"><b data-az="Chatlarda itən müraciətlər" data-ru="Заявки терялись в чатах" data-en="Requests lost in chats">Заявки терялись в чатах</b><span data-az="WhatsApp, Telegram, şifahi — heç bir izi yox" data-ru="WhatsApp, Telegram, устно — без единого следа" data-en="WhatsApp, Telegram, verbal — no trace left">WhatsApp, Telegram, устно — без единого следа</span></div></div>
+      <div class="litem"><span class="ico">🤷</span><div class="main"><b data-az="Nə edildiyi bilinmirdi" data-ru="Непонятно, что сделано" data-en="Unclear what was done">Непонятно, что сделано</b><span data-az="Rəy yoxdur, hesabat yoxdur" data-ru="Ни фидбека, ни объяснений от техников" data-en="No feedback, no explanation from techs">Ни фидбека, ни объяснений от техников</span></div></div>
+      <div class="litem"><span class="ico">📉</span><div class="main"><b data-az="Statistika sıfır" data-ru="Статистики — ноль" data-en="Zero statistics">Статистики — ноль</b><span data-az="Kim nə qədər iş görüb — bilinmir" data-ru="Кто сколько сделал за год — никто не знает" data-en="Who did how much over a year — nobody knows">Кто сколько сделал за год — никто не знает</span></div></div>
+    </div>
+    <div class="card cg" style="flex:1">
+      <div class="card-h" data-az="İndi belədir" data-ru="Как стало" data-en="Now">Как стало</div>
+      <div class="litem"><span class="ico">🎫</span><div class="main"><b data-az="Hər müraciət — tiket" data-ru="Каждая заявка — тикет" data-en="Every request is a ticket">Каждая заявка — тикет</b><span data-az="Nömrə, status, prioritet, son tarix" data-ru="Номер, статус, приоритет, срок" data-en="Number, status, priority, due date">Номер, статус, приоритет, срок</span></div></div>
+      <div class="litem"><span class="ico">📊</span><div class="main"><b data-az="Tam tarixçə hər işçi üzrə" data-ru="Полная история по каждому сотруднику" data-en="Full history per employee">Полная история по каждому сотруднику</b><span data-az="İl sonra da axtarıla bilər" data-ru="Можно поднять даже через год" data-en="Searchable even a year later">Можно поднять даже через год</span></div></div>
+      <div class="litem"><span class="ico">🏆</span><div class="main"><b data-az="Reytinq lövhəsi" data-ru="Рейтинг лучших сотрудников" data-en="Leaderboard of top performers">Рейтинг лучших сотрудников</b><span data-az="30 gün üzrə, izahı ilə" data-ru="За 30 дней, с прозрачной методикой" data-en="Over 30 days, with a transparent methodology">За 30 дней, с прозрачной методикой</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 2: Tickets & SLA -->
+<div class="slide">
+  <div class="pill" data-az="Tiketlər · SLA · Prioritetlər" data-ru="Тикеты · SLA · Приоритеты" data-en="Tickets · SLA · Priorities"><span class="live"></span> Тикеты · SLA · Приоритеты</div>
+  <div class="H2" data-az='Tiket sistemi — <span class="GRAD">rol əsaslı icazələrlə</span>' data-ru='Тикет-система — <span class="GRAD">с ролевыми правами</span>' data-en='Ticket system — <span class="GRAD">with role-based permissions</span>'>Тикет-система — <span class="GRAD">с ролевыми правами</span></div>
+  <div style="overflow-x:auto">
+    <table class="bigtbl">
+      <thead><tr>
+        <th data-az="Prioritet" data-ru="Приоритет" data-en="Priority">Приоритет</th>
+        <th data-az="Qeyd olunmalıdır" data-ru="Взять в работу" data-en="Acknowledge">Взять в работу</th>
+        <th data-az="Həll" data-ru="Решить" data-en="Resolve">Решить</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="badge-pill" style="color:var(--red)">🔴 <span data-az="Təcili" data-ru="Срочный" data-en="Urgent">Срочный</span></span></td><td>15 <span data-az="dəq" data-ru="мин" data-en="min">мин</span></td><td>2 <span data-az="saat" data-ru="часа" data-en="hours">часа</span></td></tr>
+        <tr><td><span class="badge-pill" style="color:var(--orange)">🟠 <span data-az="Yüksək" data-ru="Высокий" data-en="High">Высокий</span></span></td><td>1 <span data-az="saat" data-ru="час" data-en="hour">час</span></td><td>1 <span data-az="iş günü" data-ru="рабочий день" data-en="business day">рабочий день</span></td></tr>
+        <tr><td><span class="badge-pill" style="color:var(--blue)">🟡 <span data-az="Normal" data-ru="Обычный" data-en="Normal">Обычный</span></span></td><td>4 <span data-az="saat" data-ru="часа" data-en="hours">часа</span></td><td>3 <span data-az="iş günü" data-ru="рабочих дня" data-en="business days">рабочих дня</span></td></tr>
+        <tr><td><span class="badge-pill" style="color:var(--green)">🟢 <span data-az="Aşağı" data-ru="Низкий" data-en="Low">Низкий</span></span></td><td>1 <span data-az="iş günü" data-ru="рабочий день" data-en="business day">рабочий день</span></td><td>7 <span data-az="iş günü" data-ru="рабочих дней" data-en="business days">рабочих дней</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="display:flex;gap:14px;margin-top:16px">
+    <div class="card cb" style="flex:1"><div class="card-h" data-az="Axtarış və nömrələmə" data-ru="Поиск и нумерация" data-en="Search & numbering">Поиск и нумерация</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.7" data-az="Hər tiketə nömrə verilir — istənilən vaxt axtarıla bilər. Bağlanmış tiketlər arxivə düşmür, tarixçədə qalır."
+        data-ru="Каждому тикету присваивается номер — можно найти в любой момент. Закрытые тикеты не пропадают, остаются в истории."
+        data-en="Every ticket gets a number — searchable at any time. Closed tickets aren't discarded, they stay in the history.">Каждому тикету присваивается номер — можно найти в любой момент. Закрытые тикеты не пропадают, остаются в истории.</div>
+    </div>
+    <div class="card cp" style="flex:1"><div class="card-h" data-az="Bölmə linkləri" data-ru="Публичные ссылки на тикет" data-en="Shareable ticket links">Публичные ссылки на тикет</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.7" data-az="Kodsuz açıq link və ya PIN qorumalı — seçim yaradan tərəfindən edilir."
+        data-ru="Открытая ссылка без кода или защищённая PIN-кодом — выбирает тот, кто создаёт."
+        data-en="An open link with no code, or a PIN-protected one — the creator chooses.">Открытая ссылка без кода или защищённая PIN-кодом — выбирает тот, кто создаёт.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 3: Roles & Access -->
+<div class="slide">
+  <div class="pill" data-az="Rollar" data-ru="Роли и доступ" data-en="Roles & access"><span class="live"></span> Роли и доступ</div>
+  <div class="H2" data-az='Hər kəs yalnız <span class="GRAD">öz roluna aid olanı</span> görür' data-ru='Каждый видит только <span class="GRAD">то, что положено его роли</span>' data-en='Everyone sees only <span class="GRAD">what their role allows</span>'>Каждый видит только <span class="GRAD">то, что положено его роли</span></div>
+  <div style="display:flex;gap:14px;flex:1">
+    <div class="card cp" style="flex:1"><div class="card-h">Team Lead</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="Bütün tiketlər, idarəetmə paneli, audit jurnalı (PIN ilə), tema dəyişikliyini hamı üçün tətbiq etmək."
+        data-ru="Все тикеты, панель управления, журнал действий (под PIN), применение темы для всех пользователей."
+        data-en="All tickets, the admin panel, the audit log (PIN-gated), applying a theme for every user.">Все тикеты, панель управления, журнал действий (под PIN), применение темы для всех пользователей.</div>
+    </div>
+    <div class="card cb" style="flex:1"><div class="card-h">Helpdesk (tech)</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="Özünə təyin olunan tiketlər, gündəlik hesabatlar, aktivlərin qeydiyyatı."
+        data-ru="Тикеты, назначенные на себя, ежедневные отчёты, учёт выданных активов."
+        data-en="Tickets assigned to self, daily reports, asset check-in/out logging.">Тикеты, назначенные на себя, ежедневные отчёты, учёт выданных активов.</div>
+    </div>
+    <div class="card cg" style="flex:1"><div class="card-h">Staff</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="Sadəcə müraciət yaratmaq və öz sorğularını izləmək."
+        data-ru="Только создание заявки и отслеживание своих обращений."
+        data-en="Just submitting a request and tracking their own submissions.">Только создание заявки и отслеживание своих обращений.</div>
+    </div>
+    <div class="card" style="flex:1"><div class="card-h" data-az="Qonaq" data-ru="Guest" data-en="Guest">Guest</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="Kampus direktorları kimi kənar şəxslər üçün — sadələşdirilmiş forma, yalnız özününkü görünür."
+        data-ru="Для внешних людей вроде директоров кампусов — упрощённая форма, видят только своё."
+        data-en="For outside people like campus directors — a simplified form, they see only their own submissions.">Для внешних людей вроде директоров кампусов — упрощённая форма, видят только своё.</div>
+    </div>
+  </div>
+  <div class="foot">
+    <span data-az="Bütün rollar üçün ayrı giriş — ortaq admin login yoxdur" data-ru="У каждого свой личный логин — общего admin-входа нет" data-en="Everyone has their own login — no shared admin account">У каждого свой личный логин — общего admin-входа нет</span>
+  </div>
+</div>
+
+<!-- 4: Reports & Notes -->
+<div class="slide">
+  <div class="pill" data-az="Hesabatlar · Lövhə" data-ru="Отчёты и доска заметок" data-en="Reports & notes board"><span class="live"></span> Отчёты и доска заметок</div>
+  <div class="H2" data-az='Gündəlik hesabat və <span class="GRAD">ümumi lövhə</span>' data-ru='Ежедневный отчёт и <span class="GRAD">общая доска заметок</span>' data-en='Daily report and a <span class="GRAD">shared notes board</span>'>Ежедневный отчёт и <span class="GRAD">общая доска заметок</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div class="card cb" style="flex:1">
+      <div class="card-h" data-az="Gündəlik hesabat" data-ru="Ежедневный отчёт" data-en="Daily report">Ежедневный отчёт</div>
+      <div class="litem"><span class="ico">✅</span><div class="main"><b data-az="Nə edilib" data-ru="Что сделано" data-en="What was done">Что сделано</b></div></div>
+      <div class="litem"><span class="ico">➡️</span><div class="main"><b data-az="Sabaha nə qalıb" data-ru="Что переносится на завтра" data-en="What carries over to tomorrow">Что переносится на завтра</b></div></div>
+      <div class="litem"><span class="ico">🚧</span><div class="main"><b data-az="Hansı bloklar var" data-ru="Какие есть блокеры" data-en="What's blocking progress">Какие есть блокеры</b></div></div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px" data-az="Foto/video/audio qoşmaq olar; filial və kateqoriya seçimi ilə."
+        data-ru="Можно приложить фото/видео/аудио; с выбором филиала и категории."
+        data-en="Photo/video/audio attachments supported; with branch and category selection.">Можно приложить фото/видео/аудио; с выбором филиала и категории.</div>
+    </div>
+    <div class="card cg" style="flex:1">
+      <div class="card-h" data-az="Ümumi lövhə" data-ru="Общая доска заметок" data-en="Shared notes board">Общая доска заметок</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="Hər kəs qeyd yarada bilər — online, dərhal görünür. Xatırlatma tarixi qoyula bilər, bildiriş göndərilir."
+        data-ru="Любой может оставить заметку — появляется у всех сразу. Можно назначить дату напоминания — придёт уведомление."
+        data-en="Anyone can post a note — visible to everyone instantly. A reminder date can be set — a notification fires when it's due.">Любой может оставить заметку — появляется у всех сразу. Можно назначить дату напоминания — придёт уведомление.</div>
+      <div class="bdg bg" style="margin-top:12px" data-az="Səsli qeyd → mətnə çevrilir" data-ru="Голосовая заметка → расшифровка в текст" data-en="Voice note → transcribed to text">Голосовая заметка → расшифровка в текст</div>
+    </div>
+  </div>
+</div>
+
+<!-- 5: Admin panel + audit -->
+<div class="slide">
+  <div class="pill" data-az="İdarəetmə · Audit" data-ru="Управление и журнал действий" data-en="Admin panel & audit trail"><span class="live"></span> Управление и журнал действий</div>
+  <div class="H2" data-az='Admin panel: <span class="GRAD">SQL-siz tam nəzarət</span>' data-ru='Панель администратора: <span class="GRAD">полный контроль без SQL</span>' data-en='Admin panel: <span class="GRAD">full control, zero SQL</span>'>Панель администратора: <span class="GRAD">полный контроль без SQL</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div class="card" style="flex:1">
+      <div class="card-h" data-az="/manage panelində" data-ru="На странице /manage" data-en="On the /manage page">На странице /manage</div>
+      <div class="litem"><span class="ico">👤</span><div class="main"><b data-az="İşçi əlavəsi/deaktivasiyası" data-ru="Добавление / деактивация сотрудников" data-en="Add / deactivate employees">Добавление / деактивация сотрудников</b></div></div>
+      <div class="litem"><span class="ico">🔑</span><div class="main"><b data-az="Parol sıfırlanması" data-ru="Сброс пароля" data-en="Password reset">Сброс пароля</b></div></div>
+      <div class="litem"><span class="ico">🏢</span><div class="main"><b data-az="Filial və kateqoriya idarəsi" data-ru="Управление филиалами и категориями" data-en="Branch & category management">Управление филиалами и категориями</b></div></div>
+    </div>
+    <div class="incident" style="flex:1;border-color:var(--blue);background:rgba(88,166,255,.05)">
+      <div class="incident-hd" style="color:var(--blue);background:rgba(88,166,255,.14);border-bottom-color:rgba(88,166,255,.3)">
+        <i>🔐</i> <span data-az="Audit jurnalı — PIN ilə əlavə kilid" data-ru="Журнал действий — второй замок под PIN" data-en="Audit log — a second lock behind a PIN">Журнал действий — второй замок под PIN</span>
+      </div>
+      <div class="incident-body" data-az="Hər klik, hər əməliyyat qeyd olunur: kim, nə vaxt, hansı IP-dən. Team Lead roluna belə tam jurnalı açmaq üçün ayrıca PIN lazımdır — oğurlanmış parol tək başına kifayət etmir. Yanlış PIN cəhdləri məhdudlaşdırılıb (giriş kimi)."
+        data-ru="Каждый клик, каждое действие фиксируется: кто, когда, с какого IP. Даже роли Team Lead нужен отдельный PIN, чтобы открыть полный журнал — одного украденного пароля недостаточно. Попытки подобрать PIN ограничены (как и вход)."
+        data-en="Every click, every action is logged: who, when, from which IP. Even a Team Lead account needs a separate PIN to open the full log — a stolen password alone isn't enough. Wrong-PIN attempts are rate-limited, same as login.">Каждый клик, каждое действие фиксируется: кто, когда, с какого IP. Даже роли Team Lead нужен отдельный PIN, чтобы открыть полный журнал — одного украденного пароля недостаточно. Попытки подобрать PIN ограничены (как и вход).</div>
+    </div>
+  </div>
+</div>
+
+<!-- 6: Leaderboard -->
+<div class="slide">
+  <div class="pill" data-az="Reytinq lövhəsi" data-ru="Рейтинг лучших сотрудников" data-en="Top performers leaderboard"><span class="live"></span> Рейтинг лучших сотрудников</div>
+  <div class="H2" data-az='Kim yaxşı işləyir — <span class="GRAD">şəffaf metodika ilə</span>' data-ru='Кто хорошо работает — <span class="GRAD">с прозрачной методикой</span>' data-en='Who is doing great — <span class="GRAD">with a transparent methodology</span>'>Кто хорошо работает — <span class="GRAD">с прозрачной методикой</span></div>
+  <div class="codeblk" style="flex:1">
+    <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>Score formula</div>
+    <div class="codeblk-body" style="font-size:16px;line-height:2.1">
+      <span class="fn">score</span> = <span class="vr">closed_30d</span> − 2 × <span class="vr">overdue_now</span><br>
+      <span class="cm"><span data-az="// Bərabərlik: ortalama həll müddəti daha sürətli olan qalib gəlir" data-ru="// Ничья: побеждает более быстрое среднее время решения" data-en="// Tie-break: faster average resolution time wins">// Ничья: побеждает более быстрое среднее время решения</span></span><br>
+      <span class="ok" data-az="✔ Həcm + etibarlılıq birlikdə mükafatlandırılır" data-ru="✔ Награждается и объём, и надёжность вместе" data-en="✔ Rewards volume and reliability together">✔ Награждается и объём, и надёжность вместе</span>
+    </div>
+  </div>
+  <div class="foot">
+    <span data-az="30 günlük pəncərə · overdue cəzası · ortalama həll vaxtı" data-ru="Окно 30 дней · штраф за просрочку · среднее время решения" data-en="30-day window · overdue penalty · average resolution time">Окно 30 дней · штраф за просрочку · среднее время решения</span>
+  </div>
+</div>
+
+<!-- 7: Voice assistant -->
+<div class="slide">
+  <div class="pill" data-az="Səsli köməkçi" data-ru="Голосовой помощник" data-en="Voice assistant"><span class="live"></span> Голосовой помощник</div>
+  <div class="H2" data-az='"Qeyd" sözü ilə <span class="GRAD">avtomatik xatırlatma</span>' data-ru='Слово «Заметка» → <span class="GRAD">автоматическое напоминание</span>' data-en='The word "note" → <span class="GRAD">an automatic reminder</span>'>Слово «Заметка» → <span class="GRAD">автоматическое напоминание</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div class="card cp" style="flex:1"><div class="card-h" data-az="Necə işləyir" data-ru="Как это работает" data-en="How it works">Как это работает</div>
+      <div class="litem"><span class="ico">🎙️</span><div class="main"><b data-az="Səs → mətn (Whisper)" data-ru="Голос → текст (Whisper)" data-en="Speech → text (Whisper)">Голос → текст (Whisper)</b><span data-az="Brauzerdə tanınır, heçnə yüklənmir" data-ru="Распознаётся в браузере, никуда не грузится" data-en="Recognized in-browser, nothing uploaded">Распознаётся в браузере, никуда не грузится</span></div></div>
+      <div class="litem"><span class="ico">🔑</span><div class="main"><b data-az="«Заметка» açar sözü" data-ru="Ключевое слово «Заметка»" data-en="Trigger word: "note"">Ключевое слово «Заметка»</b><span data-az="Eşidilən kimi — avtomatik qeyd yaranır" data-ru="Как только звучит — создаётся заметка" data-en="As soon as it's heard — a note is created">Как только звучит — создаётся заметка</span></div></div>
+      <div class="litem"><span class="ico">🔔</span><div class="main"><b data-az="Dərhal bildiriş" data-ru="Мгновенное уведомление" data-en="Instant notification">Мгновенное уведомление</b></div></div>
+    </div>
+    <div class="card" style="flex:1"><div class="card-h" data-az="İnterfeys" data-ru="Интерфейс" data-en="Interface">Интерфейс</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="Üzən ikon, ekranın istənilən yerinə köçürülə bilər. Sağ küncdə çat paneli var — yazıb da soruşmaq olar."
+        data-ru="Плавающая иконка — можно перетащить в любое место экрана. Есть панель чата сбоку — можно спрашивать и текстом."
+        data-en="A floating icon — draggable anywhere on screen. A side chat panel is also available — you can type instead of speaking.">Плавающая иконка — можно перетащить в любое место экрана. Есть панель чата сбоку — можно спрашивать и текстом.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 8: 20 Themes -->
+<div class="slide">
+  <div class="pill" data-az="Dizayn" data-ru="Оформление" data-en="Visual design"><span class="live"></span> Оформление</div>
+  <div class="H2" data-az='20 tema — <span class="GRAD">hər biri həqiqətən fərqli</span>' data-ru='20 тем — <span class="GRAD">каждая по-настоящему другая</span>' data-en='20 themes — <span class="GRAD">each one genuinely different</span>'>20 тем — <span class="GRAD">каждая по-настоящему другая</span></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+    <span class="bdg bb">Neo-Brutalism</span><span class="bdg bp">Vision OS</span><span class="bdg bg">Cyber-Cut</span>
+    <span class="bdg bo">Arcade 3D</span><span class="bdg br">Neon Glow</span><span class="bdg bb">Hologram</span>
+    <span class="bdg bp">Slashed Matrix</span><span class="bdg bg">Nordic Slate</span><span class="bdg bo">+ 12 <span data-az="daha" data-ru="ещё" data-en="more">ещё</span></span>
+  </div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div class="card cb" style="flex:1"><div class="card-h" data-az="Nə fərqlənir" data-ru="Что реально отличается" data-en="What actually differs">Что реально отличается</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.9" data-az="Kursor · şrift · düymə forması · klik effekti · fon animasiyası — sadəcə rəng deyil."
+        data-ru="Курсор · шрифт · форма кнопок · эффект клика · фоновая анимация — не просто перекраска."
+        data-en="Cursor · font · button shape · click effect · background animation — not just a recolor.">Курсор · шрифт · форма кнопок · эффект клика · фоновая анимация — не просто перекраска.</div>
+    </div>
+    <div class="card cg" style="flex:1"><div class="card-h" data-az="Bütün istifadəçilər üçün" data-ru="«Сделать для всех пользователей»" data-en="&quot;Set for all users&quot;">«Сделать для всех пользователей»</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.9" data-az="Team Lead özünə seçdiyi temanı bir düymə ilə hamıya tətbiq edir — hər kəs eyni interfeysi görür."
+        data-ru="Team Lead выбирает тему для себя и одной кнопкой применяет её всем — все видят одинаковый интерфейс."
+        data-en="A Team Lead picks a theme for themself and applies it to everyone with one button — everyone sees the same interface.">Team Lead выбирает тему для себя и одной кнопкой применяет её всем — все видят одинаковый интерфейс.</div>
+    </div>
+  </div>
+  <div class="foot"><span data-az="İki tətbiqdə də işləyir: Helpdesk Ops və campus-webui" data-ru="Работает в обоих приложениях: Helpdesk Ops и campus-webui" data-en="Works in both apps: Helpdesk Ops and campus-webui">Работает в обоих приложениях: Helpdesk Ops и campus-webui</span></div>
+</div>
+
+<!-- 9: SECURITY overview -->
+<div class="slide">
+  <div class="pill" style="border-color:var(--red);color:var(--red)" data-az="Təhlükəsizlik" data-ru="Безопасность" data-en="Security"><span class="live" style="background:var(--red)"></span> <b data-az="Təhlükəsizlik" data-ru="Безопасность" data-en="Security">Безопасность</b></div>
+  <div class="H2" data-az='Nəzəriyyə deyil — <span class="GRAD">real audit nəticəsi</span>' data-ru='Не декларация — <span class="GRAD">результат реального аудита</span>' data-en='Not a claim — <span class="GRAD">the result of a real audit</span>'>Не декларация — <span class="GRAD">результат реального аудита</span></div>
+  <div class="stats" style="margin-bottom:16px">
+    <div class="stat"><div class="num g">7</div><div class="lbl" data-az="qatlı müdafiə" data-ru="уровней защиты" data-en="layers of defense">уровней защиты</div></div>
+    <div class="stat"><div class="num" style="color:var(--red)">1</div><div class="lbl" data-az="tapılan real boşluq" data-ru="найденная реальная дыра" data-en="real hole found">найденная реальная дыра</div></div>
+    <div class="stat"><div class="num b">0</div><div class="lbl" data-az="kodda sabit sirr" data-ru="жёстко зашитых секретов в коде" data-en="hardcoded secrets in code">жёстко зашитых секретов в коде</div></div>
+    <div class="stat"><div class="num p">2</div><div class="lbl" data-az="planlaşdırılan addım" data-ru="пункта в открытом плане" data-en="items on the open roadmap">пункта в открытом плане</div></div>
+  </div>
+  <div style="display:flex;gap:14px;flex:1">
+    <div class="card cb" style="flex:1"><div class="card-h">🔑 <span data-az="Giriş" data-ru="Вход" data-en="Sign-in">Вход</span></div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7" data-az="Hash-lənmiş parollar, cəhd limiti" data-ru="Хешированные пароли, лимит попыток" data-en="Hashed passwords, attempt limits">Хешированные пароли, лимит попыток</div>
+    </div>
+    <div class="card cg" style="flex:1"><div class="card-h">🍪 <span data-az="Sessiya" data-ru="Сессия" data-en="Session">Сессия</span></div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7" data-az="HttpOnly · Secure · SameSite" data-ru="HttpOnly · Secure · SameSite" data-en="HttpOnly · Secure · SameSite">HttpOnly · Secure · SameSite</div>
+    </div>
+    <div class="card cp" style="flex:1"><div class="card-h">🌐 <span data-az="Şəbəkə" data-ru="Сеть" data-en="Network">Сеть</span></div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7" data-az="HTTPS, HSTS, CSP başlıqları" data-ru="HTTPS, HSTS, заголовки CSP" data-en="HTTPS, HSTS, CSP headers">HTTPS, HSTS, заголовки CSP</div>
+    </div>
+    <div class="card co" style="flex:1"><div class="card-h">🗝️ <span data-az="Sirlər" data-ru="Секреты" data-en="Secrets">Секреты</span></div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7" data-az="Zəif default = start yoxdur" data-ru="Слабый дефолт = сервер не стартует" data-en="Weak default = server refuses to start">Слабый дефолт = сервер не стартует</div>
+    </div>
+  </div>
+</div>
+
+<!-- 10: The incident -->
+<div class="slide">
+  <div class="pill" style="border-color:var(--red);color:var(--red)" data-az="Real hadisə" data-ru="Реальный случай" data-en="A real incident"><span class="live" style="background:var(--red)"></span> <span data-az="Real hadisə" data-ru="Реальный случай" data-en="A real incident">Реальный случай</span></div>
+  <div class="H2" data-az='Tapdıq — <span class="GRAD">elə həmin gün bağladıq</span>' data-ru='Нашли — и <span class="GRAD">закрыли в тот же день</span>' data-en='Found it — and <span class="GRAD">closed it the same day</span>'>Нашли — и <span class="GRAD">закрыли в тот же день</span></div>
+  <div class="incident" style="flex:1">
+    <div class="incident-hd"><i>⚠️</i> <span data-az="media-helpdesk — unudulmuş köhnə prototip" data-ru="media-helpdesk — забытый старый прототип" data-en="media-helpdesk — a forgotten old prototype">media-helpdesk — забытый старый прототип</span></div>
+    <div class="incident-body">
+      <p data-az="Helpdesk Ops-a keçmədən əvvəlki ilk cəhd — istifadə olunmasa da 6 gün kampus şəbəkəsində açıq işləyirdi, kodda sabit yazılmış giriş məlumatları ilə."
+         data-ru="Самая первая попытка до перехода на Helpdesk Ops — хоть и не использовалась, 6 дней подряд работала в открытом доступе в сети кампуса с логином, зашитым прямо в код."
+         data-en="The very first attempt before the move to Helpdesk Ops — unused, yet it had been running exposed on the campus network for 6 days straight, with a login hardcoded right into the source.">Самая первая попытка до перехода на Helpdesk Ops — хоть и не использовалась, 6 дней подряд работала в открытом доступе в сети кампуса с логином, зашитым прямо в код.</p>
+      <div class="arrow-fix">
+        <span class="from">admin / media2026</span> → <span class="to" data-az="konteyner dayandırıldı" data-ru="контейнер остановлен" data-en="container stopped">контейнер остановлен</span>
+      </div>
+      <div class="arrow-fix">
+        <span class="from">AUDIT_PIN = 1108</span> → <span class="to" data-az="yeni təsadüfi 8 rəqəm + limit" data-ru="новый случайный 8-значный + лимит попыток" data-en="new random 8-digit + rate limit">новый случайный 8-значный + лимит попыток</span>
+      </div>
+      <div class="arrow-fix">
+        <span class="from" data-az="zəif defolt sirlər koddadır" data-ru="слабые дефолты секретов в коде" data-en="weak default secrets in code">слабые дефолты секретов в коде</span> → <span class="to" data-az="server real sirr olmadan başlamır" data-ru="сервер отказывается стартовать без реального секрета" data-en="server refuses to start without a real one">сервер отказывается стартовать без реального секрета</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 11: Network & headers -->
+<div class="slide">
+  <div class="pill" data-az="Şəbəkə və brauzer" data-ru="Сеть и защита в браузере" data-en="Network & browser hardening"><span class="live"></span> Сеть и защита в браузере</div>
+  <div class="H2" data-az='Hər sorğu <span class="GRAD">4 sərt başlıqla</span> qorunur' data-ru='Каждый ответ идёт с <span class="GRAD">жёсткими заголовками</span>' data-en='Every response ships with <span class="GRAD">strict security headers</span>'>Каждый ответ идёт с <span class="GRAD">жёсткими заголовками</span></div>
+  <div class="codeblk" style="flex:1">
+    <div class="codeblk-h"><div class="wd"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>HTTP response headers</div>
+    <div class="codeblk-body" style="font-size:14px;line-height:2">
+      <span class="kw">X-Frame-Options</span>: <span class="str">DENY</span> <span class="cm"><span data-az="// başqa səhifəyə keçirilə bilməz" data-ru="// нельзя встроить в чужую страницу" data-en="// can't be embedded on another page">// нельзя встроить в чужую страницу</span></span><br>
+      <span class="kw">Strict-Transport-Security</span>: <span class="str">max-age=31536000</span> <span class="cm"><span data-az="// yalnız HTTPS" data-ru="// только HTTPS, навсегда" data-en="// HTTPS only, forever">// только HTTPS, навсегда</span></span><br>
+      <span class="kw">Content-Security-Policy</span>: <span class="str">default-src 'self'...</span> <span class="cm"><span data-az="// yad skript yasaqdır" data-ru="// чужой скрипт не загрузится" data-en="// no loading foreign scripts">// чужой скрипт не загрузится</span></span><br>
+      <span class="kw">X-Content-Type-Options</span>: <span class="str">nosniff</span><br>
+    </div>
+  </div>
+  <div class="foot">
+    <span data-az="Eyni dəst iki tətbiqdə də: Helpdesk Ops və campus-webui" data-ru="Один и тот же набор в обоих приложениях: Helpdesk Ops и campus-webui" data-en="The same set in both apps: Helpdesk Ops and campus-webui">Один и тот же набор в обоих приложениях: Helpdesk Ops и campus-webui</span>
+  </div>
+</div>
+
+<!-- 12: Roadmap -->
+<div class="slide">
+  <div class="pill" data-az="Açıq plan" data-ru="Что ещё в открытом плане" data-en="What's still on the open roadmap"><span class="live"></span> Что ещё в открытом плане</div>
+  <div class="H2" data-az='Gizlətmirik — <span class="GRAD">bu, hələ bitməyib</span>' data-ru='Не скрываем — <span class="GRAD">это ещё не готово</span>' data-en='Not hiding it — <span class="GRAD">this isn't done yet</span>'>Не скрываем — <span class="GRAD">это ещё не готово</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div class="card co" style="flex:1"><div class="card-h">⏳ CSRF <span data-az="tokenləri" data-ru="токены на форму" data-en="tokens">токены на форму</span></div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="İndi SameSite=Lax kuki qoruyur. Hər forma üçün ayrıca token — planlaşdırılıb."
+        data-ru="Сейчас защищает кука SameSite=Lax. Отдельный токен на каждую форму — в планах."
+        data-en="Currently protected by the SameSite=Lax cookie. A dedicated token per form is planned.">Сейчас защищает кука SameSite=Lax. Отдельный токен на каждую форму — в планах.</div>
+    </div>
+    <div class="card co" style="flex:1"><div class="card-h">⏳ <span data-az="Müstəqil pentest" data-ru="Независимый пентест" data-en="Independent pentest">Независимый пентест</span></div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="İndiyə qədər hər şey daxili özünüyoxlama nəticəsidir. Növbəti addım — kənar təsdiq."
+        data-ru="Всё на этих слайдах — результат внутренней самопроверки. Следующий шаг — внешнее подтверждение."
+        data-en="Everything so far is the result of an internal self-review. The next step is external validation.">Всё на этих слайдах — результат внутренней самопроверки. Следующий шаг — внешнее подтверждение.</div>
+    </div>
+  </div>
+  <div class="foot"><span data-az="Ətraflı: hər tətbiqin öz «Təhlükəsizlik» səhifəsi" data-ru="Подробности: у каждого приложения своя страница «Безопасность»" data-en="Details: each app has its own &quot;Security&quot; page">Подробности: у каждого приложения своя страница «Безопасность»</span></div>
+</div>
+
+<!-- 13: Backups -->
+<div class="slide">
+  <div class="pill" data-az="Ehtiyat nüsxə" data-ru="Резервные копии" data-en="Backups"><span class="live"></span> Резервные копии</div>
+  <div class="H2" data-az='Heç nə <span class="GRAD">bir maşında yaşamır</span>' data-ru='Ничего не живёт <span class="GRAD">только на одной машине</span>' data-en='Nothing lives <span class="GRAD">on only one machine</span>'>Ничего не живёт <span class="GRAD">только на одной машине</span></div>
+  <div style="display:flex;gap:16px;flex:1">
+    <div class="card cg" style="flex:1"><div class="card-h">🐙 <span data-az="Kod" data-ru="Код" data-en="Code">Код</span></div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="Hər saat GitHub-a avtomatik push. Sirlər .gitignore-dadır, kodda yoxdur."
+        data-ru="Каждый час автоматически пушится в GitHub. Секреты — в .gitignore, в код не попадают."
+        data-en="Auto-pushed to GitHub every hour. Secrets stay in .gitignore, never in the code.">Каждый час автоматически пушится в GitHub. Секреты — в .gitignore, в код не попадают.</div>
+    </div>
+    <div class="card cb" style="flex:1"><div class="card-h">🗄️ <span data-az="Baza və fayllar" data-ru="База и файлы" data-en="Database and files">База и файлы</span></div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.8" data-az="SQLite bazaları və yüklənmiş fayllar ayrıca cədvəl üzrə kopyalanır."
+        data-ru="SQLite-базы и загруженные файлы бэкапятся отдельно по расписанию."
+        data-en="SQLite databases and uploaded files are backed up separately on a schedule.">SQLite-базы и загруженные файлы бэкапятся отдельно по расписанию.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 14: Closing -->
+<div class="slide">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:820px">
+    <div class="pill"><span class="live"></span> <span data-az="Stek" data-ru="Стек" data-en="Stack">Стек</span></div>
+    <div class="H2" data-az='Sadə stek, <span class="GRAD">ciddi yanaşma</span>' data-ru='Простой стек, <span class="GRAD">серьёзный подход</span>' data-en='A simple stack, <span class="GRAD">taken seriously</span>'>Простой стек, <span class="GRAD">серьёзный подход</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 22px">
+      <span class="bdg bb">Flask</span><span class="bdg bg">SQLite</span><span class="bdg bp">Jinja2</span>
+      <span class="bdg bo">Docker</span><span class="bdg br">Whisper STT</span><span class="bdg bb">edge-tts</span>
+    </div>
+    <p style="font-size:17px;color:var(--muted);line-height:1.7" data-az="Build addımı yoxdur, ağır freymvork yoxdur — sadəcə oxunaqlı Python və Jinja, real işçilər üçün quruldu, real audit ilə yoxlanıldı."
+       data-ru="Ни сборки, ни тяжёлых фреймворков — просто понятный Python и Jinja, построено для реальных сотрудников и проверено реальным аудитом."
+       data-en="No build step, no heavy frameworks — just readable Python and Jinja, built for real employees and checked by a real audit.">Ни сборки, ни тяжёлых фреймворков — просто понятный Python и Jinja, построено для реальных сотрудников и проверено реальным аудитом.</p>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- Lang switcher -->
+<div id="langbar">
+  <button class="btab-lang" data-lang="az" onclick="setLang('az',event)">AZ</button>
+  <button class="btab-lang active" data-lang="ru" onclick="setLang('ru',event)">RU</button>
+  <button class="btab-lang" data-lang="en" onclick="setLang('en',event)">EN</button>
+</div>
+
+<!-- Transition flash -->
+<div id="tx-flash">
+  <div class="tx-glitch"></div>
+  <div class="tx-scan"></div>
+  <div class="tx-bar"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button onclick="go(-1)">◀</button>
+  <div class="dots" id="dots"></div>
+  <span class="nav-info" id="ctr">1 / 15</span>
+  <button onclick="go(1)">▶</button>
+</div>
+
+<script>
+const slides  = document.querySelectorAll('.slide');
+const txFlash = document.getElementById('tx-flash');
+let cur = 0;
+let transitioning = false;
+const dotsEl = document.getElementById('dots');
+const ctrEl  = document.getElementById('ctr');
+
+slides.forEach((_,i) => {
+  const d = document.createElement('div');
+  d.className = 'dot'+(i===0?' active':'');
+  d.onclick = () => show(i);
+  dotsEl.appendChild(d);
+});
+ctrEl.textContent = '1 / ' + slides.length;
+
+function triggerFlash() {
+  txFlash.classList.remove('fire');
+  void txFlash.offsetWidth;
+  txFlash.classList.add('fire');
+  setTimeout(() => txFlash.classList.remove('fire'), 400);
+}
+
+function show(n, force) {
+  if (transitioning && !force) return;
+  const next = (n + slides.length) % slides.length;
+  if (next === cur) return;
+  transitioning = true;
+  const forward = next > cur || (cur === slides.length-1 && next === 0);
+  const outCls = forward ? 'exit-to-left'    : 'exit-to-right';
+  const inCls  = forward ? 'enter-from-right' : 'enter-from-left';
+
+  const leaving = slides[cur];
+  leaving.classList.add(outCls);
+  triggerFlash();
+
+  setTimeout(() => {
+    leaving.classList.remove('active', outCls);
+    dotsEl.children[cur].classList.remove('active');
+    cur = next;
+    dotsEl.children[cur].classList.add('active');
+    ctrEl.textContent = (cur+1)+' / '+slides.length;
+
+    const entering = slides[cur];
+    entering.classList.add('active', inCls);
+
+    setTimeout(() => {
+      entering.classList.remove(inCls);
+      transitioning = false;
+    }, 480);
+  }, 300);
+}
+
+function go(d){ show(cur + d); }
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight' || e.key===' ') { e.preventDefault(); go(1); }
+  if (e.key==='ArrowLeft')                 { e.preventDefault(); go(-1); }
+});
+
+function applyI18N(lang) {
+  document.querySelectorAll('[data-ru]').forEach(el => {
+    el.innerHTML = el.dataset[lang] || el.dataset.ru;
+  });
+}
+function setLang(lang, e) {
+  document.querySelectorAll('.btab-lang').forEach(t => t.classList.remove('active'));
+  if (e) e.target.classList.add('active');
+  applyI18N(lang);
+}
+applyI18N('ru');
+</script>
+</body>
+</html>

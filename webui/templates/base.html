@@ -2484,10 +2484,10 @@ window.addEventListener('DOMContentLoaded', function() {
 {% if current_user.is_authenticated %}
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 <nav id="sidebar">
-  <!-- Шапка: аватар + имя пользователя — кликабельно = профиль -->
-  <div class="sb-header">
-    <a class="sb-user" href="{{ url_for('profile') }}" onclick="closeSidebar()"
-       style="text-decoration:none;flex:1;display:flex;align-items:center;gap:10px;min-width:0">
+  <!-- Шапка: аватар + имя пользователя — клик открывает меню профиля -->
+  <div class="sb-header" style="position:relative">
+    <button class="sb-user" onclick="toggleUserMenu(event)"
+       style="background:none;border:none;text-align:left;cursor:pointer;text-decoration:none;flex:1;display:flex;align-items:center;gap:10px;min-width:0;padding:0">
       {% if current_user.avatar %}
         <img src="/avatars/{{ current_user.avatar }}" alt="av"
              style="width:36px;height:36px;border-radius:50%;object-fit:cover;
@@ -2500,7 +2500,7 @@ window.addEventListener('DOMContentLoaded', function() {
           {{ (current_user.display_name[0] if current_user.display_name else current_user.username[0])|upper }}
         </span>
       {% endif %}
-      <div style="min-width:0">
+      <div style="min-width:0;flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--text);
                     overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
           {{ current_user.display_name if current_user.display_name != current_user.username else current_user.username }}
@@ -2512,8 +2512,23 @@ window.addEventListener('DOMContentLoaded', function() {
           {% else %}пользователь{% endif %}
         </div>
       </div>
-    </a>
+      <i class="bi bi-chevron-down" style="font-size:10px;color:var(--muted);flex-shrink:0"></i>
+    </button>
     <button class="sb-close" onclick="closeSidebar()">×</button>
+    <div id="userMenu" style="display:none;position:absolute;top:56px;left:14px;right:14px;
+         background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+         box-shadow:0 8px 24px rgba(0,0,0,.4);padding:6px;z-index:200">
+      <a href="{{ url_for('profile') }}" onclick="closeSidebar()"
+         style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;font-size:13px;
+                color:var(--text);text-decoration:none">
+        <i class="bi bi-person-gear"></i> Профиль
+      </a>
+      <a href="{{ url_for('logout') }}"
+         style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;font-size:13px;
+                color:#f85149;text-decoration:none">
+        <i class="bi bi-box-arrow-right"></i> Выход
+      </a>
+    </div>
   </div>
 
   <!-- Ссылки -->
@@ -2742,6 +2757,16 @@ function closeSidebar(){
 }
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape') closeSidebar();
+});
+function toggleUserMenu(e){
+  if (e) e.stopPropagation();
+  var m = document.getElementById('userMenu');
+  if (!m) return;
+  m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+}
+document.addEventListener('click', function(e){
+  var m = document.getElementById('userMenu');
+  if (m && m.style.display === 'block' && !m.contains(e.target)) m.style.display = 'none';
 });
 function toggleSbFolders() {
   var list = document.getElementById('sb-folders');
