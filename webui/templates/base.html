@@ -3168,7 +3168,7 @@ function renderBugReports() {
   var catIcons = {bug:'🐛',equipment:'🔧',idea:'💡',other:'📝'};
   var statusLabels = {new:'🆕 Новый',in_progress:'⚙️ В работе',resolved:'✅ Решено',closed:'🔒 Закрыт'};
   el.innerHTML = list.map(function(r) {
-    var d = new Date(r.created_at);
+    var d = new Date((r.created_at || '').replace(' ', 'T'));
     var dStr = d.toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
     return '<div class="brp-item'+(r.status==='resolved'||r.status==='closed'?' resolved':'')+'" data-id="'+r.id+'">'+
       '<div class="brp-it-hdr">'+
