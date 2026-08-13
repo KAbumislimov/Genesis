@@ -405,6 +405,14 @@ def init_db():
             campus      TEXT DEFAULT "",
             created_at  TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS favorites (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            username    TEXT NOT NULL,
+            folder      TEXT NOT NULL DEFAULT "",
+            name        TEXT NOT NULL,
+            created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(username, folder, name)
+        )''')
     reload_machines()
     _start_audio_poll_thread()
 
@@ -2032,9 +2040,18 @@ def api_play_radio():
 @app.route('/api/tracks')
 @login_required
 def api_tracks():
-    q      = request.args.get('q','').strip()
-    folder = request.args.get('folder','').strip()
-    ts     = scan_tracks(q, folder_filter=folder or None)
+    q         = request.args.get('q','').strip()
+    folder    = request.args.get('folder','').strip()
+    fav_only  = request.args.get('favorites','').strip() in ('1', 'true')
+    with get_db() as c:
+        fav_rows = c.execute('SELECT folder, name FROM favorites WHERE username=?',
+                             (current_user.username,)).fetchall()
+    fav_set = {(r['folder'], r['name']) for r in fav_rows}
+    ts = scan_tracks(q, folder_filter=None if fav_only else (folder or None))
+    for t in ts:
+        t['fav'] = (t.get('folder', ''), t['name']) in fav_set
+    if fav_only:
+        ts = [t for t in ts if t['fav']]
     return jsonify({'ok': True, 'tracks': ts, 'total': total_tracks(), 'found': len(ts),
                     'folders': MUSIC_FOLDERS})
 
@@ -2883,6 +2900,64 @@ def api_tracks_delete():
     os.remove(path)
     log_action(current_user.username, 'delete_track', 'local', f'{folder}/{name}' if folder else name)
     return jsonify({'ok': True})
+
+@app.route('/api/tracks/rename', methods=['POST'])
+@login_required
+def api_tracks_rename():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data     = request.get_json() or {}
+    folder   = os.path.basename((data.get('folder') or '').strip())
+    old_name = os.path.basename((data.get('old_name') or '').strip())
+    new_name = os.path.basename((data.get('new_name') or '').strip())
+    if not old_name or not new_name or '..' in old_name or '..' in new_name:
+        return jsonify({'ok': False, 'error': 'Недопустимое имя'})
+    if folder == KAMRAN_FOLDER and not _kamran_unlocked():
+        return jsonify({'ok': False, 'error': 'PIN требуется для KAMRAN'})
+    old_ext = os.path.splitext(old_name)[1].lower()
+    if os.path.splitext(new_name)[1].lower() != old_ext:
+        new_name = os.path.splitext(new_name)[0] + old_ext
+    if not new_name.lower().endswith(AUDIO_EXTS):
+        return jsonify({'ok': False, 'error': 'Недопустимое расширение файла'})
+    base_dir = os.path.join(MUSIC_DIR, folder) if folder else MUSIC_DIR
+    old_path = os.path.join(base_dir, old_name)
+    new_path = os.path.join(base_dir, new_name)
+    if not os.path.isfile(old_path):
+        return jsonify({'ok': False, 'error': 'Файл не найден'})
+    if old_name != new_name and os.path.exists(new_path):
+        return jsonify({'ok': False, 'error': 'Файл с таким именем уже существует'})
+    os.rename(old_path, new_path)
+    with get_db() as c:
+        c.execute('UPDATE favorites SET name=? WHERE folder=? AND name=?', (new_name, folder, old_name))
+    log_action(current_user.username, 'rename_track', 'local',
+               f'{folder}/{old_name} → {new_name}' if folder else f'{old_name} → {new_name}')
+    return jsonify({'ok': True, 'name': new_name})
+
+@app.route('/api/tracks/favorite', methods=['POST'])
+@login_required
+def api_tracks_favorite():
+    data   = request.get_json() or {}
+    name   = os.path.basename((data.get('name') or '').strip())
+    folder = os.path.basename((data.get('folder') or '').strip())
+    action = data.get('action', 'add')
+    if not name:
+        return jsonify({'ok': False, 'error': 'Недопустимое имя'})
+    with get_db() as c:
+        if action == 'remove':
+            c.execute('DELETE FROM favorites WHERE username=? AND folder=? AND name=?',
+                      (current_user.username, folder, name))
+        else:
+            c.execute('''INSERT OR IGNORE INTO favorites (username, folder, name)
+                        VALUES (?,?,?)''', (current_user.username, folder, name))
+    return jsonify({'ok': True, 'favorite': action != 'remove'})
+
+@app.route('/api/tracks/favorites', methods=['GET'])
+@login_required
+def api_tracks_favorites_list():
+    with get_db() as c:
+        rows = c.execute('SELECT folder, name FROM favorites WHERE username=? ORDER BY created_at DESC',
+                         (current_user.username,)).fetchall()
+    return jsonify({'ok': True, 'favorites': [{'folder': r['folder'], 'name': r['name']} for r in rows]})
 
 # ══════════════════════════════════════════════════
 @app.route('/machines')

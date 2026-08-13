@@ -896,6 +896,13 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   white-space:nowrap;flex-shrink:0}
 .wamp2-pdu{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--wt-pl-num);
   min-width:34px;text-align:right;flex-shrink:0;opacity:.75;font-variant-numeric:tabular-nums}
+.wamp2-pfav{font-size:12px;flex-shrink:0;color:rgba(150,170,200,.35);cursor:pointer;
+  line-height:1;padding:0 1px;transition:color .12s,transform .12s}
+.wamp2-pfav:hover{color:#ffd24a;transform:scale(1.15)}
+.wamp2-pfav.on{color:#ffd24a}
+.wamp2-pren{font-size:10px;flex-shrink:0;color:rgba(150,170,200,.4);cursor:pointer;
+  padding:0 3px;border-radius:3px;transition:.12s}
+.wamp2-pren:hover{color:#88bbff;background:rgba(80,140,240,.18)}
 .wamp2-pl-status{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--wt-pl-num);
   padding:3px 8px;background:rgba(0,0,0,.35);border-top:1px solid rgba(255,255,255,.05);
   display:flex;align-items:center;gap:6px}
@@ -975,6 +982,10 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wamp2-fol-tab:hover{background:rgba(40,80,180,.3);color:#a0d0ff;border-color:rgba(80,140,240,.5)}
 .wamp2-fol-tab.active{background:linear-gradient(180deg,#2050a0,#102060);color:#90c8ff;
   border-color:#1a4090;box-shadow:0 0 6px rgba(40,100,220,.4);text-shadow:0 0 8px rgba(100,180,255,.6)}
+.wamp2-fol-tab-fav{color:rgba(255,210,74,.75);border-color:rgba(200,160,40,.3)}
+.wamp2-fol-tab-fav:hover{background:rgba(180,140,20,.25);color:#ffd24a;border-color:rgba(220,180,60,.5)}
+.wamp2-fol-tab-fav.active{background:linear-gradient(180deg,#a07d10,#5a4508);color:#ffe08a;
+  border-color:#8a6a10;box-shadow:0 0 6px rgba(220,180,60,.4);text-shadow:0 0 8px rgba(255,210,100,.6)}
 /* Toolbar */
 .wamp2-pl-hdr{display:flex;align-items:center;gap:4px;padding:3px 6px;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(0,0,0,.4)}
 .wamp2-pl-search{flex:1;height:16px;background:rgba(0,0,0,.5);border:1px solid rgba(80,120,200,.3);
@@ -1328,6 +1339,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       {% for f in ['Общая','Русские','Зарубежные','Азербайджанские','Турецкие','Смешанная','KAMRAN'] %}
       <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f|upper }}</button>
       {% endfor %}
+      <button class="wamp2-fol-tab wamp2-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ ИЗБРАННОЕ</button>
     </div>
     <!-- Toolbar -->
     <div class="wamp2-pl-hdr">
@@ -2820,11 +2832,19 @@ var _plFolder = '';
 var _currentPlIdx = -1;  // index in _plTracks of currently playing track
 function wampFolderTab(btn, folder) {
   _plFolder = folder;
+  _plFavOnly = false;
   document.querySelectorAll('.wamp2-fol-tab').forEach(function(b){ b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
   // Sync the hidden select if it exists
   var sel = document.getElementById('pl-folder-sel');
   if (sel) sel.value = folder;
+  wampPlLoad();
+}
+function wampFavTab(btn) {
+  _plFavOnly = true;
+  _plFolder = '';
+  document.querySelectorAll('.wamp2-fol-tab').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
   wampPlLoad();
 }
 // wampPlLoad — loads tracks for active folder tab
@@ -2834,7 +2854,7 @@ wampPlLoad = function() {
   var list = document.getElementById('pl-list');
   if(list) list.innerHTML = '<div class="wamp2-pl-loading">Загрузка…</div>';
   var folder = _plFolder || (document.getElementById('pl-folder-sel') ? document.getElementById('pl-folder-sel').value : '');
-  var url = '/api/tracks' + (folder ? '?folder='+encodeURIComponent(folder) : '');
+  var url = '/api/tracks' + (_plFavOnly ? '?favorites=1' : (folder ? '?folder='+encodeURIComponent(folder) : ''));
   fetch(url).then(function(r){return r.json();}).then(function(d){
     _plTracks = d.tracks || [];
     _plLoading = false;
@@ -2877,6 +2897,8 @@ function wampSetTheme(name) {
 
 // ──── PLAYLIST ────────────────────────────────────────
 var _plTracks = [], _plFilter = '', _plSort = 'name', _plCampus = 'client1';
+var _plFavOnly = false;
+var IS_ADMIN = {{ 'true' if current_user.role == 'admin' else 'false' }};
 var _plLoading = false;
 function _ampSyncSongs() {
   var songs = _plTracks.map(function(tr) {
@@ -2944,15 +2966,50 @@ function _wampPlRender() {
     // Strip extension from display name for cleanliness
     var dispNm = nm.replace(/\.(mp3|ogg|flac|wav|aac|m4a|wma|opus)$/i,'');
     div.innerHTML =
+      '<span class="wamp2-pfav'+(tr.fav?' on':'')+'" title="'+(tr.fav?'Убрать из избранного':'В избранное')+'">'+(tr.fav?'★':'☆')+'</span>' +
       '<span class="wamp2-pin">'+(i+1)+'.</span>' +
       '<span class="wamp2-pnm" title="'+_escHtml(nm)+'">'+_escHtml(dispNm)+'</span>' +
       (showFolderBadge && tr.folder ? '<span class="wamp2-pfol">'+_escHtml(tr.folder)+'</span>' : '') +
       (meta ? '<span class="wamp2-pmeta">'+_escHtml(meta)+'</span>' : '') +
-      '<span class="wamp2-pdu">'+dur+'</span>';
+      '<span class="wamp2-pdu">'+dur+'</span>' +
+      (IS_ADMIN ? '<span class="wamp2-pren" title="Переименовать">✎</span>' : '');
     div.onclick = (function(t, ri){ return function(){ _wampPlPlay(t, div, ri); }; })(tr, realIdx);
+    var favEl = div.querySelector('.wamp2-pfav');
+    favEl.onclick = (function(t, fe){ return function(ev){ ev.stopPropagation(); wampToggleFavorite(t, fe); }; })(tr, favEl);
+    if (IS_ADMIN) {
+      var renEl = div.querySelector('.wamp2-pren');
+      renEl.onclick = (function(t){ return function(ev){ ev.stopPropagation(); wampRenameTrack(t); }; })(tr);
+    }
     list.appendChild(div);
   });
-  if(stat) stat.textContent = tracks.length + ' треков' + (_plFolder ? ' · ' + _plFolder : '');
+  if(stat) stat.textContent = tracks.length + ' треков' + (_plFavOnly ? ' · избранное' : (_plFolder ? ' · ' + _plFolder : ''));
+}
+function wampToggleFavorite(tr, favEl) {
+  var willFav = !tr.fav;
+  fetch('/api/tracks/favorite', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: tr.name, folder: tr.folder||'', action: willFav?'add':'remove'})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) { toast('⚠️ '+(d.error||'err')); return; }
+    tr.fav = willFav;
+    favEl.classList.toggle('on', willFav);
+    favEl.textContent = willFav ? '★' : '☆';
+    favEl.title = willFav ? 'Убрать из избранного' : 'В избранное';
+    if (_plFavOnly && !willFav) _wampPlRender();
+  });
+}
+function wampRenameTrack(tr) {
+  var oldDisp = tr.name.replace(/\.(mp3|ogg|flac|wav|aac|m4a|wma|opus)$/i,'');
+  var newDisp = prompt('Новое имя файла:', oldDisp);
+  if (newDisp === null) return;
+  newDisp = newDisp.trim();
+  if (!newDisp || newDisp === oldDisp) return;
+  fetch('/api/tracks/rename', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({folder: tr.folder||'', old_name: tr.name, new_name: newDisp})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) { toast('⚠️ '+(d.error||'err')); return; }
+    toast('✔ Переименовано: '+d.name);
+    wampPlLoad();
+  });
 }
 function _wampPlPlay(tr, el, ampIdx) {
   document.querySelectorAll('.wamp2-pli').forEach(function(x){x.classList.remove('pl-active');});
