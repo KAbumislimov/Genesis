@@ -7,7 +7,7 @@
 # 2026-08-13: переключено с --ao=alsa --audio-device=alsa/hw:1,0.
 [Unit]
 Description=Campus MPV daemon (with IPC, Pulse)
-After=default.target pulseaudio.service
+After=pulseaudio.service
 Wants=pulseaudio.service
 
 [Service]

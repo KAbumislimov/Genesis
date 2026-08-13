@@ -3,16 +3,16 @@
 # Устанавливается в /etc/profile.d/campus-notify-login.sh
 # Срабатывает при каждом интерактивном SSH-логине.
 
-[[ -z "$SSH_CLIENT" && -z "$SSH_CONNECTION" ]] && exit 0
+[[ -z "$SSH_CLIENT" && -z "$SSH_CONNECTION" ]] && return 0
 
 ENV_FILE="${HOME}/cron_notify.env"
 [[ ! -f "$ENV_FILE" ]] && ENV_FILE="/home/client1/cron_notify.env"
-[[ ! -f "$ENV_FILE" ]] && exit 0
+[[ ! -f "$ENV_FILE" ]] && return 0
 
 BOT_TOKEN=$(grep '^BOT_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '[:space:]')
 LOG_GROUP_ID=$(grep '^LOG_GROUP_ID=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '[:space:]')
 
-[[ -z "$BOT_TOKEN" || -z "$LOG_GROUP_ID" ]] && exit 0
+[[ -z "$BOT_TOKEN" || -z "$LOG_GROUP_ID" ]] && return 0
 
 HOSTNAME=$(hostname -s)
 WHO=$(whoami)
@@ -31,4 +31,4 @@ curl -s --max-time 8 \
     -d "chat_id=${LOG_GROUP_ID}&text=${MSG}" \
     > /dev/null 2>&1 &
 
-exit 0
+return 0
