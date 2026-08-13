@@ -1,0 +1,185 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════
+#  RECOVER CAMPUS MACHINE — полное восстановление client1/client2 ОДНОЙ командой,
+#  после того как на новую машину руками поставили Ubuntu 22.04 Server
+#  (это единственный шаг, который нельзя автоматизировать — нужны руки
+#  и флешка).
+#
+#  Запуск (с центрального CentOS-сервера):
+#      bash scripts/recover-campus-machine.sh client1 10.20.1.50 SomeTempPass
+#      bash scripts/recover-campus-machine.sh client2  10.20.1.103 pas123123
+#
+#  Делает всё за один проход:
+#    1. Проверка SSH/sudo доступа по временному паролю
+#    2. Временный passwordless sudo на кампус-машине (снимается в конце)
+#    3. Копирование machines/<campus>/ и запуск install.sh (пакеты, плеер,
+#       watchdog, cron-расписание звонков, audio-analyzer)
+#    4. Токен бота из campus-secrets — С ПРОВЕРКОЙ, что он реально рабочий
+#       (запускает локальный бот только если Telegram API его принял)
+#    5. Восстановление музыки/звонков (scripts/restore-music.sh)
+#    6. SSH-ключи на кампус-машину + обновление алиаса ~/.ssh/config
+#    7. Обновление CLIENT_HOST в конфиге серверного control-бота
+#       (тот, что даёт кнопки Громче/Тише/Стоп в Telegram-группе) +
+#       его перезапуск (нужен once-выданный scoped sudo, см. README ниже)
+#
+#  Требует один раз заранее (см. docs/DISASTER-RECOVERY.md):
+#      echo "kamran ALL=(ALL) NOPASSWD: \
+#        /usr/bin/systemctl restart tg-campus-client1.service, \
+#        /usr/bin/systemctl restart tg-campus-client2.service" \
+#        | sudo tee /etc/sudoers.d/90-campus-bot-restart
+#  Без этого шаг 7 просто попросит перезапустить руками — всё остальное
+#  всё равно отработает.
+# ═══════════════════════════════════════════════════════════════════════
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+[[ -f "$REPO/.env" ]] && set -a && source "$REPO/.env" && set +a
+
+CAMPUS="${1:-}"
+TEMP_IP="${2:-}"
+TEMP_PASS="${3:-}"
+
+if [[ "$CAMPUS" != "client1" && "$CAMPUS" != "client2" ]] || [[ -z "$TEMP_IP" ]] || [[ -z "$TEMP_PASS" ]]; then
+    echo "Использование: bash scripts/recover-campus-machine.sh client1|client2 <ip> <временный_пароль>" >&2
+    exit 1
+fi
+
+# ── Конфигурация по кампусам ──────────────────────────────────────────────
+if [[ "$CAMPUS" == "client1" ]]; then
+    CAMPUS_USER="client1"
+    CAMPUS_HOME="/home/client1"
+    SERVER_BOT_SERVICE="tg-campus-client1.service"
+    SERVER_BOT_ENV="/opt/tg-campus-bot/client1.env"
+else
+    CAMPUS_USER="client2"
+    CAMPUS_HOME="/home/client2"
+    SERVER_BOT_SERVICE="tg-campus-client2.service"
+    SERVER_BOT_ENV="/opt/tg-campus-bot/client2.env"
+fi
+
+INSTALL_SRC="$REPO/machines/$CAMPUS"
+SECRETS_BOT_CONFIG="$HOME/projects/campus-secrets/$CAMPUS/telegram-bot.config.env"
+CAMPUS_KEY="${CAMPUS_KEY:-$HOME/.ssh/campus_bot}"
+ALIAS_KEY="${ALIAS_KEY:-$HOME/.ssh/id_tunnel}"
+SUDOERS_MARKER="/etc/sudoers.d/90-${CAMPUS}-install-temp"
+SSH_CONFIG="$HOME/.ssh/config"
+
+log()  { echo "[recover:${CAMPUS}] ▶ $*"; }
+ok()   { echo "[recover:${CAMPUS}] ✅ $*"; }
+warn() { echo "[recover:${CAMPUS}] ⚠️  $*"; }
+fail() { echo "[recover:${CAMPUS}] ❌ $*" >&2; exit 1; }
+
+sp() { sshpass -p "$TEMP_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${CAMPUS_USER}@${TEMP_IP}" "$@"; }
+sp_scp_to() { sshpass -p "$TEMP_PASS" scp -o StrictHostKeyChecking=no "$1" "${CAMPUS_USER}@${TEMP_IP}:$2"; }
+
+# ── 1. Проверка доступа ───────────────────────────────────────────────────
+log "Проверяю SSH/sudo доступ к $TEMP_IP..."
+sp "echo ok" >/dev/null 2>&1 || fail "Нет SSH-доступа. Проверь IP/пароль."
+sp "echo '$TEMP_PASS' | sudo -S true" >/dev/null 2>&1 || fail "Пароль не подходит для sudo на $CAMPUS_USER."
+ok "SSH/sudo доступ подтверждён"
+
+# ── 2. Временный passwordless sudo (снимается в конце скрипта) ───────────
+log "Включаю временный NOPASSWD sudo на время установки..."
+sp "echo '$TEMP_PASS' | sudo -S bash -c 'echo \"$CAMPUS_USER ALL=(ALL) NOPASSWD:ALL\" > $SUDOERS_MARKER && chmod 440 $SUDOERS_MARKER && visudo -c'" >/dev/null \
+    || fail "Не удалось настроить временный sudoers"
+ok "Временный sudo включён"
+
+# ── 3. Копируем machines/<campus>/ и запускаем install.sh ────────────────
+log "Копирую установочные файлы..."
+sshpass -p "$TEMP_PASS" rsync -az --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" \
+    "$INSTALL_SRC/" "${CAMPUS_USER}@${TEMP_IP}:${CAMPUS_HOME}/${CAMPUS}-install/" \
+    || fail "rsync установочных файлов не удался"
+ok "Файлы скопированы"
+
+log "Запускаю install.sh (пакеты + плеер + cron + watchdog, пара минут)..."
+sp "cd ${CAMPUS_HOME}/${CAMPUS}-install && bash install.sh" 2>&1 | sed 's/^/    /'
+ok "install.sh выполнен"
+
+# ── 4. Бот-токен из campus-secrets — с проверкой валидности ──────────────
+if [[ -f "$SECRETS_BOT_CONFIG" ]]; then
+    log "Проверяю токен локального бота из campus-secrets..."
+    BOT_TOKEN=$(grep '^BOT_TOKEN=' "$SECRETS_BOT_CONFIG" | cut -d= -f2)
+    if [[ -n "$BOT_TOKEN" ]] && curl -sf --max-time 10 "https://api.telegram.org/bot${BOT_TOKEN}/getMe" | grep -q '"ok":true'; then
+        sp_scp_to "$SECRETS_BOT_CONFIG" "${CAMPUS_HOME}/telegram-campus-bot/config.env"
+        sp "sudo systemctl enable --now campus-telegram-bot" >/dev/null 2>&1
+        ok "Токен рабочий — локальный бот запущен"
+    else
+        warn "Токен в campus-secrets НЕДЕЙСТВИТЕЛЕН (не прошёл проверку Telegram API) — локальный бот не запущен. Нужен свежий токен от @BotFather → campus-secrets/$CAMPUS/telegram-bot.config.env"
+    fi
+else
+    warn "Нет файла $SECRETS_BOT_CONFIG — локальный бот не настроен"
+fi
+
+# ── 5. SSH-ключи на кампус-машину (для алиаса и для control-бота) ────────
+log "Добавляю SSH-ключи на машину..."
+for pubkey in "${ALIAS_KEY}.pub" "${CAMPUS_KEY}.pub"; do
+    [[ -f "$pubkey" ]] || continue
+    PK=$(cat "$pubkey")
+    sp "mkdir -p ~/.ssh && chmod 700 ~/.ssh && (grep -qF '$PK' ~/.ssh/authorized_keys 2>/dev/null || echo '$PK' >> ~/.ssh/authorized_keys) && chmod 600 ~/.ssh/authorized_keys"
+done
+ok "SSH-ключи добавлены"
+
+# ── 6. Обновляем SSH-алиас ~/.ssh/config → новый IP ───────────────────────
+log "Обновляю SSH-алиас '$CAMPUS' → $TEMP_IP..."
+if grep -q "^Host ${CAMPUS}\$" "$SSH_CONFIG" 2>/dev/null; then
+    python3 - "$SSH_CONFIG" "$CAMPUS" "$TEMP_IP" <<'PYEOF'
+import sys, re
+path, campus, ip = sys.argv[1], sys.argv[2], sys.argv[3]
+text = open(path).read()
+pattern = re.compile(r'(Host %s\n(?:.*\n)*?    HostName )\S+' % re.escape(campus))
+new_text, n = pattern.subn(r'\g<1>' + ip, text, count=1)
+if n:
+    open(path, 'w').write(new_text)
+PYEOF
+else
+    cat >> "$SSH_CONFIG" <<EOF
+
+Host $CAMPUS
+    HostName $TEMP_IP
+    User $CAMPUS_USER
+    IdentityFile $ALIAS_KEY
+    IdentitiesOnly yes
+EOF
+fi
+ssh -o BatchMode=yes -o ConnectTimeout=8 "$CAMPUS" "echo ok" >/dev/null 2>&1 \
+    || fail "SSH-алиас '$CAMPUS' не заработал после обновления — проверь ~/.ssh/config"
+ok "ssh $CAMPUS теперь работает без пароля"
+
+# ── 7. Музыка/звонки ────────────────────────────────────────────────────
+bash "$REPO/scripts/restore-music.sh" "$CAMPUS"
+
+# ── 8. Серверный control-бот: новый CLIENT_HOST + рестарт ────────────────
+log "Обновляю CLIENT_HOST в $SERVER_BOT_ENV..."
+if [[ -w "$SERVER_BOT_ENV" ]]; then
+    sed -i "s/^CLIENT_HOST=.*/CLIENT_HOST=$TEMP_IP/" "$SERVER_BOT_ENV"
+    ok "CLIENT_HOST обновлён"
+else
+    warn "Нет прав на запись в $SERVER_BOT_ENV — обнови руками: CLIENT_HOST=$TEMP_IP"
+fi
+
+if sudo -n systemctl restart "$SERVER_BOT_SERVICE" 2>/dev/null; then
+    ok "$SERVER_BOT_SERVICE перезапущен — управление плеером из Telegram работает"
+else
+    warn "Нет прав на рестарт без пароля — выполни руками: sudo systemctl restart $SERVER_BOT_SERVICE"
+    warn "(чтобы это тоже стало автоматическим — см. NOPASSWD-правило в шапке этого скрипта)"
+fi
+
+# ── 9. Снимаем временный sudo на кампус-машине ────────────────────────────
+log "Снимаю временный NOPASSWD sudo на $CAMPUS..."
+sp "echo '$TEMP_PASS' | sudo -S rm -f $SUDOERS_MARKER" >/dev/null 2>&1 \
+    && ok "Временный sudo снят" \
+    || warn "Не снялся автоматически — сними руками на $CAMPUS: sudo rm $SUDOERS_MARKER"
+
+# ── Итог ────────────────────────────────────────────────────────────────
+echo ""
+echo "╔══════════════════════════════════════════╗"
+echo "║   ВОССТАНОВЛЕНИЕ $CAMPUS ЗАВЕРШЕНО ✅"
+echo "╚══════════════════════════════════════════╝"
+echo ""
+echo "  Проверка плеера:  ssh $CAMPUS systemctl --user status campus-mpv"
+echo "  Тест звука:       ssh $CAMPUS campus-playerctl play ${CAMPUS_HOME}/Media/1/1peremena.mp3"
+echo ""
+echo "  ⚠️  Когда машина физически переедет на постоянную сеть — обновить:"
+echo "      - ~/.ssh/config ($CAMPUS → постоянный IP)"
+echo "      - CLIENT_HOST в $SERVER_BOT_ENV → постоянный IP"
+echo "      - sudo systemctl restart $SERVER_BOT_SERVICE"
