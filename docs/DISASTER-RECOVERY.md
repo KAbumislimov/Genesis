@@ -15,16 +15,32 @@
 
 ## Что НЕ автоматизировано (руками)
 
-- **Сама музыка/звонки (`Media`)** — это ~800МБ реального аудио (звонки, гимн,
-  плейлисты). `campus-backup.sh` теперь бэкапит эту папку еженедельно на Proxmox
-  (`root@10.20.1.106:/mnt/campus-backup/<campus>/media-music.tar.gz` для client1,
-  внутри `home-client2.tar.gz` для client2) — но **восстановление на новую машину нужно
-  запустить руками** (см. ниже).
 - **Сетевые настройки** (статический IP / DHCP-резервация, MAC для Wake-on-LAN
   в `.env` → `CLIENT1_MAC`) — у новой сетевой карты будет новый MAC, `.env` нужно
   обновить вручную.
 - **Samba-шара** (`/etc/samba/smb.conf`, `[music]`) — конфиг не в репозитории,
   настраивается руками по образцу со второго кампуса.
+
+## Музыка/звонки (`Media`, ~800МБ)
+
+Мастер-копия живёт прямо на сервере: `/home/kamran/Media`. Она же еженедельно
+бэкапится на Proxmox (`homelab/backup/campus-backup.sh`, шаг "centos →
+media-music" → `/mnt/campus-backup/centos/media-music/`) — **отдельно** от
+бэкапов client1/client2, у которых Media сознательно исключена (`--exclude='Media'`),
+чтобы не дублировать 800МБ трижды.
+
+**Восстановление — одна команда** (сначала берёт локальную мастер-копию,
+если её вдруг нет — сама скачает резерв с Proxmox):
+
+```bash
+bash scripts/restore-music.sh client1   # или client2
+```
+
+(Раньше тут был путь через `scp .../<campus>/<дата>/*.tar.gz` — он не
+соответствовал ни реальной структуре бэкапов на Proxmox, ни самому
+`campus-backup.sh`, который давно живёт в `homelab/backup/`, а не в этом
+репозитории. Обнаружено и исправлено 2026-08-13 при реальном восстановлении
+client2 — см. `scripts/restore-music.sh`.)
 
 ## Порядок действий (пошагово)
 
@@ -50,19 +66,13 @@ bash scripts/restore-<campus>.sh            # Cockpit
 bash bootstrap.sh <campus>                  # токены ботов из campus-secrets
 ```
 
-### 3. Восстановить музыку/звонки из бэкапа
+### 3. Восстановить музыку/звонки
 
 ```bash
-# На Proxmox бэкапы лежат в /mnt/campus-backup/<campus>/<дата>/
-# Последний по дате — самый свежий. Скачать и распаковать на новую машину:
-
-scp root@10.20.1.106:/mnt/campus-backup/client1/<дата>/media-music.tar.gz /tmp/
-ssh client1@<host> "tar xzf /tmp/media-music.tar.gz -C /mnt/music/"
-
-# client2: Media внутри home-client2.tar.gz
-scp root@10.20.1.106:/mnt/campus-backup/client2/<дата>/home-client2.tar.gz /tmp/
-ssh client2@<host> "tar xzf /tmp/home-client2.tar.gz -C / --strip-components=2 home/client2/Media"
+bash scripts/restore-music.sh client1   # или client2
 ```
+
+См. раздел "Музыка/звонки" выше.
 
 ### 4. Обновить сеть
 

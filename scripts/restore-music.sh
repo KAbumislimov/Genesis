@@ -1,12 +1,11 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════
 #  RESTORE MUSIC/BELLS — копирует мастер-копию Media (звонки/гимн/
-#  плейлисты) с центрального CentOS-сервера на кампус-машину.
-#
-#  ВАЖНО: реальный крон-бэкап (homelab/backup/campus-backup.sh) НЕ бэкапит
-#  Media на Proxmox (--exclude='Media' в самом скрипте) — поэтому этот
-#  скрипт берёт данные из локальной мастер-копии на сервере
-#  (/home/kamran/Media), а не с Proxmox.
+#  плейлисты) на кампус-машину. Источник, по приоритету:
+#    1. Локальная мастер-копия на сервере (/home/kamran/Media) — обычный путь
+#    2. Резерв на Proxmox (${BACKUP_ROOT}/centos/media-music/) — если вдруг
+#       локальной копии нет (см. homelab/backup/campus-backup.sh, шаг
+#       "centos → media-music", бэкапится туда еженедельно с 2026-08-13)
 #
 #  Запуск (с центрального CentOS-сервера):
 #      bash scripts/restore-music.sh client1
@@ -27,13 +26,28 @@ fi
 
 MASTER_SRC="/home/kamran/Media"
 CAMPUS_KEY="${CAMPUS_KEY:-/home/kamran/.ssh/campus_bot}"
+PROXMOX_HOST="10.20.1.106"
+PROXMOX_USER="root"
+PROXMOX_KEY="${PROXMOX_KEY:-/home/kamran/.ssh/id_ed25519}"
 
 log()  { echo "[restore-music:${CAMPUS}] $*"; }
 fail() { echo "[restore-music:${CAMPUS}] ❌ $*" >&2; exit 1; }
 
-[[ -d "$MASTER_SRC" ]] || fail "Мастер-копия не найдена: $MASTER_SRC"
-SRC_SIZE=$(du -sh "$MASTER_SRC" | cut -f1)
-log "Мастер-копия найдена: $MASTER_SRC ($SRC_SIZE)"
+if [[ -d "$MASTER_SRC" ]]; then
+    SRC_SIZE=$(du -sh "$MASTER_SRC" | cut -f1)
+    log "Мастер-копия найдена локально: $MASTER_SRC ($SRC_SIZE)"
+else
+    log "Локальной копии нет ($MASTER_SRC) — тяну резерв с Proxmox..."
+    ssh -i "$PROXMOX_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${PROXMOX_USER}@${PROXMOX_HOST}" \
+        "test -d /mnt/campus-backup/centos/media-music" \
+        || fail "Резерва на Proxmox тоже нет (/mnt/campus-backup/centos/media-music) — данных нет нигде"
+    mkdir -p "$MASTER_SRC"
+    rsync -az -e "ssh -i $PROXMOX_KEY -o StrictHostKeyChecking=no" \
+        "${PROXMOX_USER}@${PROXMOX_HOST}:/mnt/campus-backup/centos/media-music/" "$MASTER_SRC/" \
+        || fail "Не удалось скачать резерв с Proxmox"
+    SRC_SIZE=$(du -sh "$MASTER_SRC" | cut -f1)
+    log "Скачано с Proxmox: $MASTER_SRC ($SRC_SIZE)"
+fi
 
 # ── 1. Проверить SSH-доступ к кампус-машине ─────────────────────────────
 log "Проверяю SSH-доступ к $CAMPUS..."
