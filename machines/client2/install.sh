@@ -32,8 +32,8 @@ echo "[1/6] Системные пакеты..."
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
     mpv socat ffmpeg python3 curl wget jq \
-    alsa-utils >/dev/null
-echo "  ✅ mpv socat ffmpeg python3 — OK"
+    alsa-utils pulseaudio pulseaudio-utils >/dev/null
+echo "  ✅ mpv socat ffmpeg python3 pulseaudio — OK"
 
 # ─────────────────────────────────────────────
 # 2. /run/campus-player (tmpfiles)

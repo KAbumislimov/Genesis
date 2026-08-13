@@ -1,12 +1,18 @@
 # ~/.config/systemd/user/campus-mpv.service
 # User-сервис (запускать через: systemctl --user enable --now campus-mpv)
+#
+# --ao=pulse (не прямой ALSA hw:1,0) — так campus-audio-analyzer (FFT для
+# веб-панели) может слушать вывод через PulseAudio monitor-source. Прямой
+# ALSA-доступ этого не позволяет (эксклюзивный захват устройства), см.
+# 2026-08-13: переключено с --ao=alsa --audio-device=alsa/hw:1,0.
 [Unit]
-Description=Campus MPV daemon (with IPC, ALSA)
-After=default.target
+Description=Campus MPV daemon (with IPC, Pulse)
+After=default.target pulseaudio.service
+Wants=pulseaudio.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/mpv --idle=yes --no-video --ao=alsa --audio-device=alsa/hw:1,0 --input-ipc-server=/run/campus-player/mpv.sock --volume=100
+ExecStart=/usr/bin/mpv --idle=yes --no-video --ao=pulse --input-ipc-server=/run/campus-player/mpv.sock --volume=100
 Restart=always
 RestartSec=2
 
