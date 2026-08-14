@@ -709,6 +709,19 @@ MUSIC_FOLDERS   = ['Общая', 'Русские', 'Зарубежные', 'Аз
 KAMRAN_FOLDER   = 'KAMRAN'
 AUDIO_EXTS      = ('.mp3', '.ogg', '.wav', '.flac', '.m4a', '.aac')
 
+def all_music_folders():
+    """MUSIC_FOLDERS (fixed order, existing content untouched) + any custom
+    folders an admin created afterwards via /api/tracks/create-folder."""
+    extra = []
+    try:
+        extra = sorted(
+            d for d in os.listdir(MUSIC_DIR)
+            if d not in MUSIC_FOLDERS and os.path.isdir(os.path.join(MUSIC_DIR, d))
+        )
+    except Exception:
+        pass
+    return MUSIC_FOLDERS + extra
+
 # ── Metadata cache (built in background) ──────────
 import threading as _threading
 _meta_cache = {}   # path → {dur, size, fmt, kbps}
@@ -767,8 +780,8 @@ def scan_tracks(q='', folder_filter=None):
     try:
         # Collect (folder_name, dir_path) pairs to scan
         scan_dirs = []
-        # Named subfolders first
-        for sub in MUSIC_FOLDERS:
+        # Named subfolders first (fixed ones + any custom folders created later)
+        for sub in all_music_folders():
             sub_path = os.path.join(MUSIC_DIR, sub)
             if not os.path.isdir(sub_path):
                 continue
@@ -814,7 +827,7 @@ def total_tracks():
             if f.lower().endswith(AUDIO_EXTS)
             and os.path.isfile(os.path.join(MUSIC_DIR, f))
         )
-        for sub in MUSIC_FOLDERS:
+        for sub in all_music_folders():
             sub_path = os.path.join(MUSIC_DIR, sub)
             if os.path.isdir(sub_path):
                 count += sum(
@@ -1257,6 +1270,7 @@ def dashboard():
         tomorrow_is_weekend=(tdow >= 5),
         tomorrow_events=tomorrow_events,
         perms=user_perms(),
+        music_folders=all_music_folders(),
     )
 
 @app.route('/tracks')
@@ -2053,7 +2067,7 @@ def api_tracks():
     if fav_only:
         ts = [t for t in ts if t['fav']]
     return jsonify({'ok': True, 'tracks': ts, 'total': total_tracks(), 'found': len(ts),
-                    'folders': MUSIC_FOLDERS})
+                    'folders': all_music_folders()})
 
 @app.route('/api/play-all', methods=['POST'])
 @login_required
@@ -2958,6 +2972,56 @@ def api_tracks_favorites_list():
         rows = c.execute('SELECT folder, name FROM favorites WHERE username=? ORDER BY created_at DESC',
                          (current_user.username,)).fetchall()
     return jsonify({'ok': True, 'favorites': [{'folder': r['folder'], 'name': r['name']} for r in rows]})
+
+_FOLDER_NAME_RE = _re.compile(r'^[\w \-\.\(\)\[\]А-Яа-яЁёƏəÜüÖöĞğİıŞşÇç]{1,60}$')
+
+@app.route('/api/tracks/create-folder', methods=['POST'])
+@login_required
+def api_tracks_create_folder():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data = request.get_json() or {}
+    name = os.path.basename((data.get('name') or '').strip())
+    if not name or '..' in name or not _FOLDER_NAME_RE.match(name):
+        return jsonify({'ok': False, 'error': 'Недопустимое название папки'})
+    existing = {f.lower() for f in all_music_folders()}
+    if name.lower() in existing:
+        return jsonify({'ok': False, 'error': 'Такая папка уже есть'})
+    os.makedirs(os.path.join(MUSIC_DIR, name), exist_ok=True)
+    log_action(current_user.username, 'create_music_folder', 'local', name)
+    return jsonify({'ok': True, 'folders': all_music_folders()})
+
+@app.route('/api/tracks/move', methods=['POST'])
+@login_required
+def api_tracks_move():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data        = request.get_json() or {}
+    name        = os.path.basename((data.get('name') or '').strip())
+    src_folder  = os.path.basename((data.get('folder') or '').strip())
+    dst_folder  = os.path.basename((data.get('dest_folder') or '').strip())
+    if not name or '..' in name:
+        return jsonify({'ok': False, 'error': 'Недопустимое имя файла'})
+    folders = all_music_folders()
+    if dst_folder not in folders:
+        return jsonify({'ok': False, 'error': 'Папка назначения не найдена'})
+    if (src_folder == KAMRAN_FOLDER or dst_folder == KAMRAN_FOLDER) and not _kamran_unlocked():
+        return jsonify({'ok': False, 'error': 'PIN требуется для KAMRAN'})
+    src_path = os.path.join(MUSIC_DIR, src_folder, name) if src_folder else os.path.join(MUSIC_DIR, name)
+    dst_dir  = os.path.join(MUSIC_DIR, dst_folder)
+    dst_path = os.path.join(dst_dir, name)
+    if not os.path.isfile(src_path):
+        return jsonify({'ok': False, 'error': 'Файл не найден'})
+    if src_path == dst_path:
+        return jsonify({'ok': True})
+    if os.path.exists(dst_path):
+        return jsonify({'ok': False, 'error': 'В папке назначения уже есть файл с таким именем'})
+    os.makedirs(dst_dir, exist_ok=True)
+    os.rename(src_path, dst_path)
+    with get_db() as c:
+        c.execute('UPDATE favorites SET folder=? WHERE folder=? AND name=?', (dst_folder, src_folder, name))
+    log_action(current_user.username, 'move_track', 'local', f'{name}: {src_folder or "—"} → {dst_folder}')
+    return jsonify({'ok': True})
 
 # ══════════════════════════════════════════════════
 @app.route('/machines')
