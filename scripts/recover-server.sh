@@ -25,7 +25,11 @@
 #    7. Docker compose up для campus-infra + helpdesk-ops
 #    8. БД (webui + helpdesk_ops) — из последнего бэкапа
 #    9. Media (звонки/гимн, ~800МБ) — из бэкапа на Proxmox
-#   10. crontab (недельный бэкап, часовой github-пуш, ежедневный БД-бэкап)
+#   10. ops-journal: ops-log CLI в /usr/local/bin, sudoers для ausearch/
+#       aureport без пароля, auditd-правило admin_cmds (кто что выполнял) —
+#       сами данные (clean/) приезжают вместе с git-клоном на шаге 3
+#   11. crontab (недельный бэкап, часовой github-пуш, ежедневный БД-бэкап,
+#       ежедневный дайджест, ночное авто-заполнение журнала, ops-journal sync)
 #
 #  ЧТО НЕ ВОССТАНАВЛИВАЕТ (осознанно, отдельная задача):
 #    - aaPanel и все НЕ-кампусные docker-приложения (Bitwarden, AI-тулзы,
@@ -69,7 +73,7 @@ prx_ssh "test -d ${BACKUP_ROOT}" || fail "Бэкап на Proxmox не найд�
 ok "Proxmox-бэкап найден"
 
 # ── 1. Пакеты ──────────────────────────────────────────────────────────
-log "ШАГ 1/10 — Пакеты"
+log "ШАГ 1/11 — Пакеты"
 dnf install -y -q git rsync sshpass python3 python3-pip >/dev/null
 ok "git, rsync, sshpass, python3"
 
@@ -99,7 +103,7 @@ else
 fi
 
 # ── 2. SSH-ключи ──────────────────────────────────────────────────────
-log "ШАГ 2/10 — SSH-ключи из бэкапа"
+log "ШАГ 2/11 — SSH-ключи из бэкапа"
 mkdir -p "$HOME_DIR/.ssh"
 prx_rsync "${PROXMOX_USER}@${PROXMOX_HOST}:${BACKUP_ROOT}/ssh-keys/" "$HOME_DIR/.ssh/" \
     || fail "Не удалось скачать SSH-ключи с Proxmox"
@@ -110,7 +114,7 @@ chown -R kamran:kamran "$HOME_DIR/.ssh" 2>/dev/null || true
 ok "SSH-ключи восстановлены ($(ls "$HOME_DIR/.ssh" | wc -l) файлов)"
 
 # ── 3. Репозитории ────────────────────────────────────────────────────
-log "ШАГ 3/10 — Клонирую репозитории (github key)"
+log "ШАГ 3/11 — Клонирую репозитории (github key)"
 export GIT_SSH_COMMAND="ssh -i $HOME_DIR/.ssh/github -o StrictHostKeyChecking=no"
 if [[ ! -d "$HOME_DIR/projects/.git" ]]; then
     mkdir -p "$HOME_DIR/projects"
@@ -128,7 +132,7 @@ fi
 chown -R kamran:kamran "$HOME_DIR/projects"
 
 # ── 4. .env-файлы (из бэкапа поверх git-клона — в git их нет, gitignore) ─
-log "ШАГ 4/10 — .env-файлы (campus-infra, helpdesk-ops)"
+log "ШАГ 4/11 — .env-файлы (campus-infra, helpdesk-ops)"
 for proj in campus-infra helpdesk-ops; do
     prx_rsync "${PROXMOX_USER}@${PROXMOX_HOST}:${BACKUP_ROOT}/${proj}/.env" "$HOME_DIR/projects/${proj}/.env" 2>/dev/null \
         && ok "${proj}/.env восстановлен" \
@@ -136,7 +140,7 @@ for proj in campus-infra helpdesk-ops; do
 done
 
 # ── 5. Боты-контроллеры плееров (/opt/tg-campus-bot) ─────────────────────
-log "ШАГ 5/10 — Telegram-боты (/opt/tg-campus-bot)"
+log "ШАГ 5/11 — Telegram-боты (/opt/tg-campus-bot)"
 mkdir -p /opt/tg-campus-bot
 prx_rsync "${PROXMOX_USER}@${PROXMOX_HOST}:${BACKUP_ROOT}/tg-campus-bot/" /opt/tg-campus-bot/ \
     || fail "Не удалось восстановить /opt/tg-campus-bot"
@@ -155,7 +159,7 @@ for svc in tg-campus-client1.service tg-campus-client2.service; do
 done
 
 # ── 6. nginx-конфиги ───────────────────────────────────────────────────
-log "ШАГ 6/10 — nginx-конфиги"
+log "ШАГ 6/11 — nginx-конфиги"
 mkdir -p /etc/nginx/conf.d
 prx_rsync "${PROXMOX_USER}@${PROXMOX_HOST}:${BACKUP_ROOT}/nginx-conf/" /etc/nginx/conf.d/ \
     && ok "nginx-конфиги восстановлены" \
@@ -164,14 +168,14 @@ nginx -t 2>&1 && systemctl enable --now nginx >/dev/null 2>&1 && ok "nginx за�
     || echo "  ⚠️  nginx -t упал — конфиг требует ручной правки (SSL-сертификаты и т.п.) прежде чем стартовать"
 
 # ── 7. Media (звонки/гимн) — до docker compose up, чтобы сразу было на месте
-log "ШАГ 7/10 — Media (звонки/гимн)"
+log "ШАГ 7/11 — Media (звонки/гимн)"
 prx_rsync "${PROXMOX_USER}@${PROXMOX_HOST}:${BACKUP_ROOT}/media-music/" "$HOME_DIR/Media/" \
     && ok "Media восстановлен ($(du -sh "$HOME_DIR/Media" 2>/dev/null | cut -f1))" \
     || echo "  ⚠️  Media не восстановился — проверь путь бэкапа руками"
 chown -R kamran:kamran "$HOME_DIR/Media" 2>/dev/null || true
 
 # ── 8. Docker compose up ──────────────────────────────────────────────
-log "ШАГ 8/10 — Docker compose (campus-infra + helpdesk-ops)"
+log "ШАГ 8/11 — Docker compose (campus-infra + helpdesk-ops)"
 # ВАЖНО: docker-compose.yaml также ОПИСЫВАЕТ сервисы tg-campus-bot и
 # tg-campus-client2, но они никогда реально не разворачивались как
 # контейнеры — те же боты уже работают как systemd-сервисы (см. шаг 5),
@@ -187,7 +191,7 @@ log "ШАГ 8/10 — Docker compose (campus-infra + helpdesk-ops)"
     || echo "  ⚠️  helpdesk-ops docker compose up упал — смотри docker compose logs"
 
 # ── 9. БД (поверх свежесозданных пустых, из последнего бэкапа) ──────────
-log "ШАГ 9/10 — Базы данных из бэкапа"
+log "ШАГ 9/11 — Базы данных из бэкапа"
 sleep 5  # дать контейнерам создать свежие (пустые) БД перед перезаписью
 mkdir -p /tmp/.db-restore
 prx_rsync "${PROXMOX_USER}@${PROXMOX_HOST}:${BACKUP_ROOT}/webui-data/" /tmp/.db-restore/webui-data/ 2>/dev/null || true
@@ -206,8 +210,50 @@ if [[ -d /tmp/.db-restore/helpdesk-ops-data ]]; then
 fi
 rm -rf /tmp/.db-restore
 
-# ── 10. crontab ────────────────────────────────────────────────────────
-log "ШАГ 10/10 — crontab"
+# ── 10. ops-journal (auditd + ops-log CLI + sudoers) ────────────────────
+log "ШАГ 10/11 — ops-journal (серверный аудит)"
+OPS_ROOT="$HOME_DIR/projects/ops-journal"
+mkdir -p "$OPS_ROOT/raw" "$OPS_ROOT/clean"
+chown -R kamran:kamran "$OPS_ROOT"
+
+if [[ -f "$OPS_ROOT/scripts/ops-log" ]]; then
+    cp "$OPS_ROOT/scripts/ops-log" /usr/local/bin/ops-log
+    chmod +x /usr/local/bin/ops-log
+    ok "ops-log CLI установлен в /usr/local/bin/ops-log"
+else
+    echo "  ⚠️  $OPS_ROOT/scripts/ops-log не найден — репозиторий восстановлен без ops-journal?"
+fi
+
+SUDOERS_FILE=/etc/sudoers.d/ops-journal-audit
+if [[ ! -f "$SUDOERS_FILE" ]]; then
+    cat > "$SUDOERS_FILE" <<'EOF'
+# Позволяет ночной синхронизации ops-journal (от имени kamran, через cron)
+# читать команд-лог auditd без пароля — только на чтение, только эти два
+# бинарника, больше ничего.
+kamran ALL=(root) NOPASSWD: /usr/sbin/ausearch, /usr/sbin/aureport
+EOF
+    chmod 440 "$SUDOERS_FILE"
+    visudo -cf "$SUDOERS_FILE" >/dev/null && ok "sudoers для ausearch/aureport установлен" \
+        || { echo "  ⚠️  sudoers-файл не прошёл проверку — удаляю"; rm -f "$SUDOERS_FILE"; }
+else
+    ok "sudoers для ops-journal уже есть, не трогаю"
+fi
+
+AUDIT_RULES_FILE=/etc/audit/rules.d/admin-cmds.rules
+if [[ ! -f "$AUDIT_RULES_FILE" ]]; then
+    cat > "$AUDIT_RULES_FILE" <<'EOF'
+-a always,exit -F arch=b64 -S execve -F auid>=1000 -F auid!=4294967295 -k admin_cmds
+-a always,exit -F arch=b32 -S execve -F auid>=1000 -F auid!=4294967295 -k admin_cmds
+EOF
+    chmod 640 "$AUDIT_RULES_FILE"
+    augenrules --load >/dev/null 2>&1 && ok "auditd-правило admin_cmds загружено" \
+        || echo "  ⚠️  augenrules --load не сработал — проверь auditd руками (systemctl status auditd)"
+else
+    ok "auditd-правило admin_cmds уже есть, не трогаю"
+fi
+
+# ── 11. crontab ────────────────────────────────────────────────────────
+log "ШАГ 11/11 — crontab"
 CRON_TMP=$(mktemp)
 crontab -u kamran -l 2>/dev/null > "$CRON_TMP" || true
 if ! grep -q "campus-backup.sh" "$CRON_TMP" 2>/dev/null; then
@@ -215,6 +261,9 @@ if ! grep -q "campus-backup.sh" "$CRON_TMP" 2>/dev/null; then
 0 2 * * 0 $HOME_DIR/projects/homelab/backup/campus-backup.sh >> $HOME_DIR/log/campus-backup-\$(date +\%Y-\%m-\%d).log 2>&1
 0 3 * * * $HOME_DIR/projects/campus-infra/scripts/backup-data.sh >> $HOME_DIR/log/backup-data.log 2>&1
 0 * * * * $HOME_DIR/projects/campus-infra/scripts/backup-to-github.sh >> $HOME_DIR/log/backup-to-github.log 2>&1
+0 20 * * * $HOME_DIR/projects/campus-infra/scripts/daily-digest.sh >> $HOME_DIR/log/daily-digest.log 2>&1
+0 0 * * * $HOME_DIR/projects/helpdesk-ops/journal_autofill.py >> $HOME_DIR/log/journal-autofill.log 2>&1
+50 23 * * * $HOME_DIR/projects/ops-journal/scripts/sync.sh >> $HOME_DIR/log/ops-journal-sync.log 2>&1
 EOF
     mkdir -p "$HOME_DIR/log"
     chown kamran:kamran "$HOME_DIR/log"
@@ -237,6 +286,7 @@ echo "    docker compose -f $HOME_DIR/projects/helpdesk-ops/docker-compose.yml p
 echo "    curl -k https://localhost:8090/  (campus-webui)"
 echo "    curl -k https://localhost:8094/  (helpdesk-ops)"
 echo "    systemctl status tg-campus-client1 tg-campus-client2"
+echo "    sudo -n ausearch -k admin_cmds -ts today  (ops-journal audit — должно работать без пароля)"
 echo ""
 echo "  ⚠️  Отдельно, руками (не автоматизировано):"
 echo "    - Cockpit, если не установлен: dnf install cockpit && systemctl enable --now cockpit.socket"
