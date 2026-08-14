@@ -23,10 +23,12 @@ for tool in campus-mon gitkamran; do
     fi
 done
 
-# Только campus-infra + helpdesk-ops — НЕ "-A" по всему $HOME/projects,
-# чтобы никогда случайно не утащить в бэкап личные файлы (Desktop, Downloads,
-# xlsx-отчёты, посторонние git-репозитории вроде nginx-ui и т.п.)
-git add campus-infra helpdesk-ops
+# Только campus-infra + helpdesk-ops + ops-journal — НЕ "-A" по всему
+# $HOME/projects, чтобы никогда случайно не утащить в бэкап личные файлы
+# (Desktop, Downloads, xlsx-отчёты, посторонние git-репозитории вроде
+# nginx-ui и т.п.). ops-journal/raw/ гитигнорится внутри самого ops-journal —
+# сюда попадает только уже очищенный (sanitize.py) ops-journal/clean/.
+git add campus-infra helpdesk-ops ops-journal
 
 if git diff --cached --quiet; then
     log "Изменений нет, коммит не нужен"
