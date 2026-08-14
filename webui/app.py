@@ -150,6 +150,51 @@ def reload_machines():
         pass
     MACHINES = machines
 
+PROMETHEUS_CONFIG = os.environ.get('PROMETHEUS_CONFIG', '')
+PROMETHEUS_RELOAD_URL = os.environ.get('PROMETHEUS_RELOAD_URL', '')
+
+def sync_prometheus_targets():
+    """Adds a scrape target for any machine (from MACHINES) whose host_ip
+    isn't already in prometheus.yml's `node` job — additive only, never
+    removes an existing target (a stale one just shows as "down" in
+    Prometheus, which is a visible, safe failure mode, unlike accidentally
+    dropping a target something else still depends on). Preserves the file's
+    existing formatting/comments via targeted text insertion rather than a
+    full YAML parse+dump, since the file is hand-maintained."""
+    if not PROMETHEUS_CONFIG or not os.path.isfile(PROMETHEUS_CONFIG):
+        return
+    try:
+        with open(PROMETHEUS_CONFIG, encoding='utf-8') as f:
+            text = f.read()
+        added = []
+        for m in MACHINES:
+            host = m.get('host')
+            if not host or f'host_ip: {host}' in text:
+                continue
+            # Prefer the human-typed 'user' field (e.g. "cgtk") over the
+            # DB row id ("db_6") so Grafana/Prometheus labels stay readable
+            nodename = (m.get('user') or m.get('id') or m.get('name') or host).replace(' ', '_')
+            block = (f"      - targets: ['{host}:9100']\n"
+                     f"        labels:\n"
+                     f"          nodename: {nodename}\n"
+                     f"          host_ip: {host}\n")
+            marker = '    relabel_configs:'
+            if marker not in text:
+                continue
+            text = text.replace(marker, block + marker, 1)
+            added.append(nodename)
+        if added:
+            with open(PROMETHEUS_CONFIG, 'w', encoding='utf-8') as f:
+                f.write(text)
+            if PROMETHEUS_RELOAD_URL:
+                try:
+                    urllib.request.urlopen(
+                        urllib.request.Request(PROMETHEUS_RELOAD_URL, method='POST'), timeout=5)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
 # ── CentOS server (terminal only) ─────────────────
 CENTOS_HOST    = os.environ.get('CENTOS_HOST', '10.10.4.120')
 CENTOS_USER    = os.environ.get('CENTOS_USER', 'kamran')
@@ -431,6 +476,7 @@ def init_db():
             UNIQUE(username, folder, name)
         )''')
     reload_machines()
+    sync_prometheus_targets()
     _start_audio_poll_thread()
 
 def log_action(username, action, machine='client1', detail=None):
@@ -687,6 +733,7 @@ def api_machines_add():
         c.execute('INSERT INTO thin_clients (host,name,mac,user,cockpit_url) VALUES (?,?,?,?,?)',
                   (host, name, mac, user, cockpit))
     reload_machines()
+    sync_prometheus_targets()
     log_action(current_user.username, 'machine_add', 'webui', f'{name} ({host})')
     return jsonify({'ok': True})
 
@@ -706,6 +753,7 @@ def api_machines_edit(db_id):
         c.execute('UPDATE thin_clients SET host=?,name=?,mac=?,user=?,cockpit_url=? WHERE id=?',
                   (host, name, mac, user, cockpit, db_id))
     reload_machines()
+    sync_prometheus_targets()
     log_action(current_user.username, 'machine_edit', 'webui', f'{name} ({host})')
     return jsonify({'ok': True})
 

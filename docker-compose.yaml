@@ -198,6 +198,7 @@ services:
       - ${MUSIC_ROOT_PATH:-/home/kamran/Kamran Music}:/music:rw
       - ./bots/client1/config.env:/bot_config.env:ro
       - ${CAMPUS_BACKUP_DIR:-/home/kamran/campus-backups}:/campus-backups:ro
+      - ./config/prometheus.yml:/prometheus-config/prometheus.yml:rw
     environment:
       - TZ=Asia/Baku
       - CLIENT1_HOST=${CLIENT1_HOST:-10.20.0.41}
@@ -240,6 +241,9 @@ services:
       # Helpdesk Ops single sign-on bridge
       - SSO_BRIDGE_SECRET=${SSO_BRIDGE_SECRET}
       - HELPDESK_URL=${HELPDESK_URL:-https://10.10.4.120:8094}
+      # Auto-registers new /machines entries as Prometheus scrape targets
+      - PROMETHEUS_CONFIG=/prometheus-config/prometheus.yml
+      - PROMETHEUS_RELOAD_URL=${PROMETHEUS_RELOAD_URL:-http://host.docker.internal:9091/-/reload}
     ulimits:
       nofile:
         soft: 65536
