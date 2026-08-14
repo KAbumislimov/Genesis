@@ -903,6 +903,30 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wamp2-pren{font-size:10px;flex-shrink:0;color:rgba(150,170,200,.4);cursor:pointer;
   padding:0 3px;border-radius:3px;transition:.12s}
 .wamp2-pren:hover{color:#88bbff;background:rgba(80,140,240,.18)}
+
+/* Right-click context menu */
+.wamp2-ctx{display:none;position:fixed;z-index:9000;min-width:210px;
+  background:#141a26;border:1px solid rgba(80,120,200,.4);border-radius:8px;
+  box-shadow:0 10px 34px rgba(0,0,0,.55);padding:6px;font-family:'JetBrains Mono',monospace}
+.wamp2-ctx.open{display:block}
+.wamp2-ctx-info{padding:8px 10px 6px}
+.wamp2-ctx-name{font-size:11.5px;color:#e0eeff;font-weight:700;word-break:break-word;line-height:1.4}
+.wamp2-ctx-meta{font-size:9.5px;color:rgba(140,170,220,.6);margin-top:4px}
+.wamp2-ctx-sep{height:1px;background:rgba(255,255,255,.08);margin:4px 2px}
+.wamp2-ctx-item{display:flex;align-items:center;gap:7px;width:100%;text-align:left;
+  background:none;border:none;color:#c8d6f0;font-family:inherit;font-size:11px;
+  padding:7px 10px;border-radius:5px;cursor:pointer;position:relative}
+.wamp2-ctx-item:hover{background:rgba(60,110,220,.22);color:#fff}
+.wamp2-ctx-item.wamp2-ctx-danger{color:#ff8f95}
+.wamp2-ctx-item.wamp2-ctx-danger:hover{background:rgba(220,60,70,.2);color:#ffb0b5}
+.wamp2-ctx-arrow{margin-left:auto;opacity:.6}
+.wamp2-ctx-submenu{display:none;position:absolute;left:100%;top:-6px;min-width:170px;
+  background:#141a26;border:1px solid rgba(80,120,200,.4);border-radius:8px;
+  box-shadow:0 10px 34px rgba(0,0,0,.55);padding:6px;max-height:260px;overflow-y:auto}
+.wamp2-ctx-submenu-trigger:hover .wamp2-ctx-submenu{display:block}
+.wamp2-ctx-submenu-item{display:block;width:100%;text-align:left;background:none;border:none;
+  color:#c8d6f0;font-family:inherit;font-size:10.5px;padding:6px 9px;border-radius:5px;cursor:pointer}
+.wamp2-ctx-submenu-item:hover{background:rgba(60,110,220,.22);color:#fff}
 .wamp2-pl-status{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--wt-pl-num);
   padding:3px 8px;background:rgba(0,0,0,.35);border-top:1px solid rgba(255,255,255,.05);
   display:flex;align-items:center;gap:6px}
@@ -986,6 +1010,8 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wamp2-fol-tab-fav:hover{background:rgba(180,140,20,.25);color:#ffd24a;border-color:rgba(220,180,60,.5)}
 .wamp2-fol-tab-fav.active{background:linear-gradient(180deg,#a07d10,#5a4508);color:#ffe08a;
   border-color:#8a6a10;box-shadow:0 0 6px rgba(220,180,60,.4);text-shadow:0 0 8px rgba(255,210,100,.6)}
+.wamp2-fol-tab-new{border-style:dashed;color:rgba(150,180,150,.6);border-color:rgba(90,160,90,.3)}
+.wamp2-fol-tab-new:hover{background:rgba(60,140,60,.22);color:#8ee08e;border-color:rgba(100,180,100,.5)}
 /* Toolbar */
 .wamp2-pl-hdr{display:flex;align-items:center;gap:4px;padding:3px 6px;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(0,0,0,.4)}
 .wamp2-pl-search{flex:1;height:16px;background:rgba(0,0,0,.5);border:1px solid rgba(80,120,200,.3);
@@ -1336,10 +1362,31 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <!-- Folder tabs row -->
     <div class="wamp2-fol-tabs" id="pl-folder-tabs">
       <button class="wamp2-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">ВСЕ</button>
-      {% for f in ['Общая','Русские','Зарубежные','Азербайджанские','Турецкие','Смешанная','KAMRAN'] %}
+      {% for f in music_folders %}
       <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f|upper }}</button>
       {% endfor %}
       <button class="wamp2-fol-tab wamp2-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ ИЗБРАННОЕ</button>
+      {% if current_user.role == 'admin' %}
+      <button class="wamp2-fol-tab wamp2-fol-tab-new" data-folder="__new__" onclick="wampCreateFolder()" title="Создать папку">+ ПАПКА</button>
+      {% endif %}
+    </div>
+
+    <!-- Right-click track menu -->
+    <div id="wamp2-ctx" class="wamp2-ctx">
+      <div class="wamp2-ctx-info">
+        <div class="wamp2-ctx-name" id="ctx-name"></div>
+        <div class="wamp2-ctx-meta" id="ctx-meta"></div>
+      </div>
+      <div class="wamp2-ctx-sep"></div>
+      <button class="wamp2-ctx-item" id="ctx-fav-btn"><span id="ctx-fav-icon">☆</span> <span id="ctx-fav-label">В избранное</span></button>
+      {% if current_user.role == 'admin' %}
+      <button class="wamp2-ctx-item" id="ctx-rename-btn">✎ Переименовать</button>
+      <div class="wamp2-ctx-item wamp2-ctx-submenu-trigger" id="ctx-move-btn">📁 Переместить в… <span class="wamp2-ctx-arrow">›</span>
+        <div class="wamp2-ctx-submenu" id="ctx-move-submenu"></div>
+      </div>
+      <div class="wamp2-ctx-sep"></div>
+      <button class="wamp2-ctx-item wamp2-ctx-danger" id="ctx-delete-btn">🗑 Удалить файл</button>
+      {% endif %}
     </div>
     <!-- Toolbar -->
     <div class="wamp2-pl-hdr">
@@ -2847,6 +2894,20 @@ function wampFavTab(btn) {
   if (btn) btn.classList.add('active');
   wampPlLoad();
 }
+function wampCreateFolder() {
+  var name = prompt('Название новой папки:');
+  if (name === null) return;
+  name = name.trim();
+  if (!name) return;
+  fetch('/api/tracks/create-folder', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) { toast('⚠️ '+(d.error||'err')); return; }
+    toast('✔ Папка создана: '+name);
+    ALL_FOLDERS = d.folders || ALL_FOLDERS;
+    location.reload();
+  });
+}
 // wampPlLoad — loads tracks for active folder tab
 wampPlLoad = function() {
   if(_plLoading) return;
@@ -2899,6 +2960,7 @@ function wampSetTheme(name) {
 var _plTracks = [], _plFilter = '', _plSort = 'name', _plCampus = 'client1';
 var _plFavOnly = false;
 var IS_ADMIN = {{ 'true' if current_user.role == 'admin' else 'false' }};
+var ALL_FOLDERS = {{ music_folders|tojson }};
 var _plLoading = false;
 function _ampSyncSongs() {
   var songs = _plTracks.map(function(tr) {
@@ -2980,6 +3042,7 @@ function _wampPlRender() {
       var renEl = div.querySelector('.wamp2-pren');
       renEl.onclick = (function(t){ return function(ev){ ev.stopPropagation(); wampRenameTrack(t); }; })(tr);
     }
+    div.oncontextmenu = (function(t, fe){ return function(ev){ ev.preventDefault(); wampShowContextMenu(ev, t, fe); }; })(tr, favEl);
     list.appendChild(div);
   });
   if(stat) stat.textContent = tracks.length + ' треков' + (_plFavOnly ? ' · избранное' : (_plFolder ? ' · ' + _plFolder : ''));
@@ -3011,6 +3074,84 @@ function wampRenameTrack(tr) {
     wampPlLoad();
   });
 }
+
+// ──── Right-click context menu ─────────────────────────
+var _ctxTrack = null, _ctxFavEl = null;
+function wampShowContextMenu(ev, tr, favEl) {
+  _ctxTrack = tr; _ctxFavEl = favEl;
+  var menu = document.getElementById('wamp2-ctx');
+  if (!menu) return;
+  var nm = tr.name.replace(/\.(mp3|ogg|flac|wav|aac|m4a|wma|opus)$/i,'');
+  document.getElementById('ctx-name').textContent = nm;
+  var meta = [tr.folder || '(корень)', tr.dur ? _fmtTime(tr.dur) : null, tr.fmt || null,
+              tr.kbps ? tr.kbps+'k' : null, tr.size ? _fmtSize(tr.size) : null].filter(Boolean).join(' · ');
+  document.getElementById('ctx-meta').textContent = meta;
+  var favIcon = document.getElementById('ctx-fav-icon');
+  var favLabel = document.getElementById('ctx-fav-label');
+  favIcon.textContent = tr.fav ? '★' : '☆';
+  favLabel.textContent = tr.fav ? 'Убрать из избранного' : 'В избранное';
+
+  var moveSubmenu = document.getElementById('ctx-move-submenu');
+  if (moveSubmenu) {
+    moveSubmenu.innerHTML = '';
+    ALL_FOLDERS.forEach(function(f){
+      if (f === (tr.folder||'')) return;
+      var b = document.createElement('button');
+      b.className = 'wamp2-ctx-submenu-item';
+      b.textContent = f;
+      b.onclick = function(){ wampMoveTrack(tr, f); };
+      moveSubmenu.appendChild(b);
+    });
+    if (!moveSubmenu.children.length) moveSubmenu.innerHTML = '<div style="padding:6px 9px;font-size:10px;color:rgba(140,160,200,.5)">Нет других папок</div>';
+  }
+
+  menu.classList.add('open');
+  var x = ev.clientX, y = ev.clientY;
+  var mw = menu.offsetWidth || 210, mh = menu.offsetHeight || 200;
+  if (x + mw > window.innerWidth)  x = window.innerWidth  - mw - 8;
+  if (y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+}
+function wampCtxClose() {
+  var menu = document.getElementById('wamp2-ctx');
+  if (menu) menu.classList.remove('open');
+}
+function wampMoveTrack(tr, destFolder) {
+  fetch('/api/tracks/move', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: tr.name, folder: tr.folder||'', dest_folder: destFolder})
+  }).then(function(r){return r.json();}).then(function(d){
+    wampCtxClose();
+    if(!d.ok) { toast('⚠️ '+(d.error||'err')); return; }
+    toast('✔ Перемещено в '+destFolder);
+    wampPlLoad();
+  });
+}
+function wampDeleteTrack(tr) {
+  if (!confirm('Удалить файл «'+tr.name+'» безвозвратно?')) return;
+  fetch('/api/tracks/delete', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: tr.name, folder: tr.folder||''})
+  }).then(function(r){return r.json();}).then(function(d){
+    wampCtxClose();
+    if(!d.ok) { toast('⚠️ '+(d.error||'err')); return; }
+    toast('✔ Удалено: '+tr.name);
+    wampPlLoad();
+  });
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var favBtn = document.getElementById('ctx-fav-btn');
+  if (favBtn) favBtn.onclick = function(){ if(_ctxTrack) wampToggleFavorite(_ctxTrack, _ctxFavEl); wampCtxClose(); };
+  var renBtn = document.getElementById('ctx-rename-btn');
+  if (renBtn) renBtn.onclick = function(){ wampCtxClose(); if(_ctxTrack) wampRenameTrack(_ctxTrack); };
+  var delBtn = document.getElementById('ctx-delete-btn');
+  if (delBtn) delBtn.onclick = function(){ if(_ctxTrack) wampDeleteTrack(_ctxTrack); };
+  document.addEventListener('click', function(ev){
+    var menu = document.getElementById('wamp2-ctx');
+    if (menu && menu.classList.contains('open') && !menu.contains(ev.target)) wampCtxClose();
+  });
+  document.addEventListener('keydown', function(ev){ if(ev.key === 'Escape') wampCtxClose(); });
+});
+
 function _wampPlPlay(tr, el, ampIdx) {
   document.querySelectorAll('.wamp2-pli').forEach(function(x){x.classList.remove('pl-active');});
   if(el) el.classList.add('pl-active');
