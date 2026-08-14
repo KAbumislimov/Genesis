@@ -159,8 +159,25 @@ CLIENT2_USER = os.environ.get('MACHINE2_USER', 'client2')
 # Base URL for streaming audio to campus machines (HTTP so no TLS issues with internal cert)
 WEBUI_STREAM_BASE = os.environ.get('WEBUI_STREAM_BASE', f'https://{CENTOS_HOST}:8090')
 
-def _get_client2():
-    m = next((x for x in MACHINES if x['host'] != CLIENT1_HOST), None)
+def _resolve_machine(machine_key, strict=False):
+    """Find a MACHINES entry by explicit id/user/name match. With strict=False
+    (the default, used by _client2_conn/_get_client2 for backward compatibility)
+    falls back to "first non-client1 machine" when nothing matches exactly —
+    that's the historical behavior for setups with just client1 + client2. With
+    strict=True (used wherever a caller explicitly named a machine, e.g. the
+    terminal) an unmatched key returns None instead of silently guessing —
+    connecting to the wrong machine because of a typo is worse than erroring."""
+    if not machine_key or machine_key == 'client1':
+        return None
+    m = next((x for x in MACHINES if x['host'] != CLIENT1_HOST and
+              (x.get('id') == machine_key or x.get('user') == machine_key or
+               (x.get('name') or '').lower() == machine_key.lower())), None)
+    if m or strict:
+        return m
+    return next((x for x in MACHINES if x['host'] != CLIENT1_HOST), None)
+
+def _get_client2(machine_key='client2'):
+    m = _resolve_machine(machine_key)
     return (m['host'], m.get('user', CLIENT1_USER)) if m else (None, None)
 
 TERMINAL_MACHINES = {
@@ -1521,11 +1538,11 @@ def admin_activity():
 # ── Cron pause API ────────────────────────────────
 _CRON_PAUSE_FILE = '.cron_paused'
 
-def _client2_conn():
-    m = next((x for x in MACHINES if x['host'] and x['host'] != CLIENT1_HOST), None)
+def _client2_conn(machine_key='client2'):
+    m = _resolve_machine(machine_key)
     if m:
         return m
-    if CLIENT2_HOST:
+    if machine_key == 'client2' and CLIENT2_HOST:
         return {'host': CLIENT2_HOST, 'user': CLIENT2_USER}
     return None
 
@@ -2002,11 +2019,10 @@ def api_play():
     if machine == 'client1':
         host, user, mid = CLIENT1_HOST, CLIENT1_USER, 'client1'
     else:
-        m = next((x for x in MACHINES
-                   if x['host'] != CLIENT1_HOST and
-                      (x.get('user','') == machine or x['host'].endswith(machine))), None)
-        if not m:
-            m = _client2_conn()
+        # Any other campus machine (client2, CGTK, BSTK, ...) — strict match so
+        # an unrecognized machine id errors instead of silently playing
+        # audio on the wrong campus's speakers
+        m = _resolve_machine(machine, strict=True)
         if not m:
             return jsonify({'ok': False, 'error': f'машина {machine} не настроена'})
         host, user, mid = m['host'], m.get('user', CLIENT1_USER), m.get('user', machine)
@@ -2199,16 +2215,22 @@ def api_terminal():
     if not cmd:
         return jsonify({'ok': False, 'error': 'Пустая команда'})
     tm = TERMINAL_MACHINES.get(machine)
-    if not tm:
-        return jsonify({'ok': False, 'error': f'Неизвестная машина: {machine}'})
-    host = tm['host']
-    user = tm['user']
-    key  = tm['key']
-    # client2 host is resolved at runtime from MACHINES
-    if machine == 'client2' and not host:
-        host, user = _get_client2()
+    if tm:
+        host, user, key = tm['host'], tm['user'], tm['key']
+        # client2 (and any other campus machine resolved at runtime) has no
+        # static host in TERMINAL_MACHINES — look it up by the same key
+        # the request sent, not always "client2"
         if not host:
-            return jsonify({'ok': False, 'error': 'Client2 не настроен'})
+            host, user = _get_client2(machine)
+            if not host:
+                return jsonify({'ok': False, 'error': f'{tm["label"]} не настроен'})
+    else:
+        # Not one of the 3 well-known slots — try resolving it as any
+        # other campus machine (CGTK, BSTK, etc.) added via /machines
+        m = _resolve_machine(machine, strict=True)
+        if not m:
+            return jsonify({'ok': False, 'error': f'Неизвестная машина: {machine}'})
+        host, user, key = m['host'], m.get('user', CLIENT1_USER), SSH_KEY
     s = None
     try:
         s = paramiko.SSHClient()
@@ -3129,15 +3151,16 @@ def api_service_restart():
         return jsonify({'ok': False, 'error': 'service not allowed'})
     if machine == 'client1':
         host, user, key = CLIENT1_HOST, CLIENT1_USER, SSH_KEY
-    elif machine == 'client2':
-        h, u = _get_client2()
-        if not h:
-            return jsonify({'ok': False, 'error': 'client2 not configured'})
-        host, user, key = h, u, SSH_KEY
     elif machine == 'centos':
         host, user, key = CENTOS_HOST, CENTOS_USER, CENTOS_SSH_KEY
     else:
-        return jsonify({'ok': False, 'error': 'unknown machine'})
+        # client2, and any other campus machine (CGTK, BSTK, etc.) added via
+        # /machines — resolved dynamically by id/user/name, strict so a
+        # typo errors instead of silently hitting the wrong machine
+        m = _resolve_machine(machine, strict=True)
+        if not m:
+            return jsonify({'ok': False, 'error': f'unknown machine: {machine}'})
+        host, user, key = m['host'], m.get('user', CLIENT1_USER), SSH_KEY
     r = ssh_run_on(host, user, f'systemctl restart {service} 2>&1; echo "exit:$?"', key=key)
     log_action(current_user.username, 'service_restart', machine, service)
     return jsonify({'ok': r.get('ok', False), 'output': r.get('data', ''), 'error': r.get('error', '')})
