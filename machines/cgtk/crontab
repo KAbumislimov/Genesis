@@ -1,0 +1,32 @@
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=""
+HOME=/home/cgtk
+
+# Утренняя музыка
+45 7 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh utro 115
+59 7 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+
+# Гимн (только понедельник)
+0 8 * * 1 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh himn 150
+3 8 * * 1 /home/cgtk/campus-cron-stop-local.sh
+
+# Перемены 1–9
+40 8 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 1peremena 115
+45 8 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+25 9 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 2peremena 115
+35 9 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+15 10 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 3peremena 115
+20 10 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+0 11 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 4peremena 115
+5 11 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+45 11 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 5peremena 115
+55 11 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+35 12 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 6peremena 115
+40 12 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+20 13 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 7peremena 115
+30 13 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+10 14 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 8peremena 115
+20 14 * * 1-5 /home/cgtk/campus-cron-stop-local.sh
+55 14 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-local.sh 9peremena 115
+10 15 * * 1-5 /home/cgtk/campus-cron-stop-local.sh

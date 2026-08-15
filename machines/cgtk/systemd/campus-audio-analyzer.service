@@ -1,0 +1,12 @@
+[Unit]
+Description=Campus Audio FFT Analyzer
+After=campus-mpv.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/campus-monitoring/audio-analyzer.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
