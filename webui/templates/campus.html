@@ -2,19 +2,25 @@
 {% block title %}{{ cfg.label }} — MEDIA{% endblock %}
 
 {% block extra_head %}
+{% set _CAMPUS_COLORS = {
+  'blue':   {'rgb': '88,166,255',  'rgb2': '63,185,80',   'hex': 'var(--blue)'},
+  'purple': {'rgb': '188,130,255', 'rgb2': '88,166,255',  'hex': '#bc82ff'},
+  'pink':   {'rgb': '255,110,199', 'rgb2': '188,130,255', 'hex': '#ff6ec7'},
+} %}
+{% set _cc = _CAMPUS_COLORS.get(cfg.color, _CAMPUS_COLORS['blue']) %}
 <style>
 .campus-header{
   background:linear-gradient(135deg,
-    rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.08),
-    rgba({% if cfg.color=='blue' %}63,185,80{% else %}88,166,255{% endif %},.04));
-  border:1px solid rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.3);
+    rgba({{ _cc.rgb }},.08),
+    rgba({{ _cc.rgb2 }},.04));
+  border:1px solid rgba({{ _cc.rgb }},.3);
   border-radius:14px;padding:20px 26px;margin-bottom:18px;
   display:flex;align-items:center;gap:18px;
 }
 .campus-icon{
   width:56px;height:56px;border-radius:12px;flex-shrink:0;
-  background:rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.12);
-  border:1px solid rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.3);
+  background:rgba({{ _cc.rgb }},.12);
+  border:1px solid rgba({{ _cc.rgb }},.3);
   display:flex;align-items:center;justify-content:center;font-size:26px;
 }
 .campus-title{font-size:20px;font-weight:800;letter-spacing:.03em}
@@ -50,7 +56,7 @@
 .log-entry:last-child{border-bottom:none}
 .log-time{font-family:'JetBrains Mono',monospace;color:var(--muted);flex-shrink:0;width:135px}
 .log-who{font-weight:700;flex-shrink:0;width:70px;
-  color:{% if cfg.color=='blue' %}var(--blue){% else %}#bc82ff{% endif %}}
+  color:{{ _cc.hex }}}
 .log-action{flex-shrink:0;width:60px}
 .log-detail{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .action-badge{
@@ -75,9 +81,9 @@
   border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;
   cursor:pointer;color:var(--muted);transition:.15s;
 }
-.tab-btn.active{border-color:rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.5);
-  color:{% if cfg.color=='blue' %}var(--blue){% else %}#bc82ff{% endif %};
-  background:rgba({% if cfg.color=='blue' %}88,166,255{% else %}188,130,255{% endif %},.08)}
+.tab-btn.active{border-color:rgba({{ _cc.rgb }},.5);
+  color:{{ _cc.hex }};
+  background:rgba({{ _cc.rgb }},.08)}
 </style>
 {% endblock %}
 

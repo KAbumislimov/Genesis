@@ -2596,16 +2596,25 @@ _file_meta_cache = {}   # (machine, folder, filename) -> {size, duration, format
 _MEDIA_PATHS = {
     'client1': '/mnt/music/Media',
     'client2':  '/home/client2/Media',
+    'cgtk': '/home/cgtk/Media',
 }
 
 def _machine_ssh(machine):
-    """Вернуть (host, user) для машины."""
+    """Вернуть (host, user) для машины. 'client1' — основная (env-переменные);
+    'client2' сохраняет исторический lenient-фоллбек (первая не-client1 машина);
+    любой другой ключ (например 'cgtk') резолвится строго через MACHINES —
+    опечатка в имени машины вернёт (None, None) вместо подключения не туда."""
+    if not machine or machine == 'client1':
+        return CLIENT1_HOST, CLIENT1_USER
     if machine == 'client2':
-        m = next((x for x in MACHINES if x['host'] != CLIENT1_HOST), None)
+        m = _resolve_machine('client2')
         if m:
             return m['host'], m.get('user', 'client2')
         return '10.70.0.41', 'client2'
-    return CLIENT1_HOST, CLIENT1_USER
+    m = _resolve_machine(machine, strict=True)
+    if not m:
+        return None, None
+    return m['host'], m.get('user', machine)
 
 def _load_folder_meta(folder, machine='client1'):
     folder = str(folder)
@@ -2719,13 +2728,9 @@ def _mpv_get_on(host, user, prop):
 @admin_only
 def api_cron_status():
     machine = request.args.get('machine', 'client1')
-    if machine == 'client2':
-        m = _client2_conn()
-        if not m:
-            return jsonify({'ok': False, 'error': 'client2 не настроен'})
-        host, user = m['host'], m.get('user', 'client2')
-    else:
-        host, user = CLIENT1_HOST, CLIENT1_USER
+    host, user = _machine_ssh(machine)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{machine} не настроен'})
     path  = _mpv_get_on(host, user, 'path')
     pause = _mpv_get_on(host, user, 'pause')
     if path and pause is False:
@@ -2738,13 +2743,10 @@ def api_cron_status():
 def api_cron_log():
     lines   = request.args.get('lines', 100, type=int)
     machine = request.args.get('machine', 'client1')
-    if machine == 'client2':
-        m = _client2_conn()
-        host  = m['host'] if m else CLIENT2_HOST
-        user  = m.get('user', 'client2') if m else CLIENT2_USER
-        log   = '/home/client2/action.log'
-    else:
-        host, user, log = CLIENT1_HOST, CLIENT1_USER, '/home/client1/action.log'
+    host, user = _machine_ssh(machine)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{machine} не настроен'})
+    log = f'/home/{user}/action.log'
     r = ssh_run_on(host, user, f'tail -n {min(lines, 300)} {log} 2>/dev/null')
     if not r['ok']:
         return jsonify({'ok': False, 'error': r.get('error', 'SSH error')})
@@ -2794,6 +2796,9 @@ _MACHINE_MAP = {
     'client2':  {'host': '10.70.0.41', 'user': 'client2', 'label': 'Client2 Campus',
               'color': 'purple', 'icon': 'pc-display',
               'log': '/home/client2/action.log', 'cron_user': 'client2'},
+    'cgtk': {'host': None, 'user': 'cgtk', 'label': 'City Garden Campus',
+              'color': 'pink', 'icon': 'flower1',
+              'log': '/home/cgtk/action.log', 'cron_user': 'cgtk'},
 }
 
 _SLOT_LABELS = {
@@ -2861,10 +2866,16 @@ def _parse_cron(raw_lines):
 def campus_detail(machine):
     if machine not in _MACHINE_MAP:
         return redirect(url_for('index'))
-    cfg = _MACHINE_MAP[machine]
+    cfg = dict(_MACHINE_MAP[machine])
     host, user = cfg['host'], cfg['user']
+    if not host:
+        # DB-registered machine (e.g. cgtk) — no static env host, resolve via MACHINES
+        m = _resolve_machine(machine, strict=True)
+        if m:
+            host, user = m['host'], m.get('user', cfg['user'])
+        cfg['host'] = host
 
-    online = host_online(host)
+    online = host_online(host) if host else False
 
     # Crontab → parsed
     cron_entries = []
@@ -3825,7 +3836,7 @@ def _backup_scan():
                             'total': total, 'total_h': _fmt_sz(total), 'report': report})
     # Размеры музыки (rsync)
     music = {}
-    for mname in ('music-client1', 'music-client2'):
+    for mname in ('music-client1', 'music-client2', 'music-cgtk'):
         mp = os.path.join(BACKUP_DIR, mname)
         if os.path.isdir(mp):
             sz = _dir_size(mp)
@@ -3836,6 +3847,7 @@ def _backup_scan():
         latest_path = entries[0]['path']
         for key, fname in [('client1', 'client1-config.tar.gz'),
                             ('client2',  'client2-config.tar.gz'),
+                            ('cgtk', 'cgtk-config.tar.gz'),
                             ('centos', 'centos.tar.gz')]:
             fp = os.path.join(latest_path, fname)
             if os.path.isfile(fp):
@@ -4047,12 +4059,18 @@ def api_announce():
     if campuses in ('client1', 'all'):
         results['client1'] = _play_on(CLIENT1_HOST, CLIENT1_USER, 'client1')
     if campuses in ('client2', 'all'):
-        client2m = next((m for m in MACHINES if m['host'] != CLIENT1_HOST), None)
-        client2_host = client2m['host'] if client2m else '10.70.0.41'
-        client2_user = client2m.get('user', 'client2') if client2m else 'client2'
-        results['client2'] = _play_on(client2_host, client2_user, 'client2')
+        client2 = _client2_conn('client2')
+        if client2:
+            results['client2'] = _play_on(client2['host'], client2.get('user', 'client2'), 'client2')
+    # 'all' now means "all registered campuses" (client1 + client2 + cgtk), same
+    # convention as the cron-pause 'both' handling above
+    if campuses in ('cgtk', 'all'):
+        cgtk = _client2_conn('cgtk')
+        if cgtk:
+            results['cgtk'] = _play_on(cgtk['host'], cgtk.get('user', 'cgtk'), 'cgtk')
 
-    campus_label = {'client1': 'Client1', 'client2': 'Client2', 'all': 'Все кампусы'}.get(campuses, campuses)
+    campus_label = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden',
+                     'all': 'Все кампусы'}.get(campuses, campuses)
     tg_notify(
         f'📢 <b>Объявление по радио</b>\n'
         f'🏫 {campus_label}\n'

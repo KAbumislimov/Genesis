@@ -104,6 +104,18 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
         </span>
       </div>
 
+      <!-- City Garden Campus -->
+      <div class="bk-row">
+        <span class="bk-lbl">
+          <i class="bi bi-flower1" style="margin-right:4px"></i>City Garden Campus
+        </span>
+        <span class="bk-val {% if machines.get('cgtk',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
+          {% if machines.get('cgtk') %}
+            {% if machines.cgtk.ok %}✅ {{ machines.cgtk.size_h }}{% else %}—{% endif %}
+          {% else %}—{% endif %}
+        </span>
+      </div>
+
       <!-- Сервер CentOS -->
       <div class="bk-row">
         <span class="bk-lbl">
@@ -131,6 +143,14 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
         </span>
         <span class="bk-val bk-ok">
           {{ music.get('music-client2', {}).get('size_h', '—') }}
+        </span>
+      </div>
+      <div class="bk-row">
+        <span class="bk-lbl">
+          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка City Garden
+        </span>
+        <span class="bk-val bk-ok">
+          {{ music.get('music-cgtk', {}).get('size_h', '—') }}
         </span>
       </div>
 
