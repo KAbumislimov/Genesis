@@ -37,6 +37,10 @@ scrape_configs:
         labels:
           nodename: host-10.20.1.106
           host_ip: 10.20.1.106
+      - targets: ['10.20.1.102:9100']
+        labels:
+          nodename: cgtk
+          host_ip: 10.20.1.102
     relabel_configs:
       - source_labels: [nodename]
         regex: (.+)

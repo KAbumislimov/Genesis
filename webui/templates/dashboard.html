@@ -63,6 +63,10 @@
   border-color:rgba(188,130,255,.25);
   box-shadow:0 0 0 1px rgba(188,130,255,.08),0 4px 24px rgba(188,130,255,.06);
 }
+.campus-card.cgtk-card.playing{
+  border-color:rgba(255,110,199,.25);
+  box-shadow:0 0 0 1px rgba(255,110,199,.08),0 4px 24px rgba(255,110,199,.06);
+}
 
 /* top accent line */
 .campus-card::before{
@@ -72,6 +76,7 @@
 }
 .campus-card.playing::before{opacity:1;background:linear-gradient(90deg,transparent,rgba(63,185,80,.6),transparent)}
 .campus-card.client2-card.playing::before{background:linear-gradient(90deg,transparent,rgba(188,130,255,.6),transparent)}
+.campus-card.cgtk-card.playing::before{background:linear-gradient(90deg,transparent,rgba(255,110,199,.6),transparent)}
 
 /* card header */
 .cc-header{
@@ -84,9 +89,11 @@
   justify-content:center;font-size:16px;flex-shrink:0}
 .cc-icon-client1{background:rgba(88,166,255,.1);color:var(--blue)}
 .cc-icon-client2{background:rgba(188,130,255,.1);color:var(--purple)}
+.cc-icon-cgtk{background:rgba(255,110,199,.1);color:#ff6ec7}
 .cc-name{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 .cc-name-client1{color:var(--blue)}
 .cc-name-client2{color:var(--purple)}
+.cc-name-cgtk{color:#ff6ec7}
 .cc-badges{display:flex;align-items:center;gap:7px}
 
 .badge-live{
@@ -128,6 +135,7 @@
   background:radial-gradient(circle at 35% 35%,#21262d,#0d1117);
 }
 .cc-disc.client2-spinning{border-color:var(--purple)}
+.cc-disc.cgtk-spinning{border-color:#ff6ec7}
 @keyframes disc-spin{to{transform:rotate(360deg)}}
 .cc-track-label{font-size:10px;font-weight:700;text-transform:uppercase;
   letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
@@ -163,6 +171,10 @@
   border-color:rgba(188,130,255,.35);background:rgba(188,130,255,.07);color:var(--purple);
 }
 .tb2.himn-btn-client2:hover{background:rgba(188,130,255,.15);border-color:var(--purple)}
+.tb2.himn-btn-cgtk{
+  border-color:rgba(255,110,199,.35);background:rgba(255,110,199,.07);color:#ff6ec7;
+}
+.tb2.himn-btn-cgtk:hover{background:rgba(255,110,199,.15);border-color:#ff6ec7}
 
 .tb2.stop-btn{
   border-color:rgba(248,81,73,.35);background:rgba(248,81,73,.07);color:var(--red);
@@ -776,9 +788,9 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   color:#d4a030!important;border-color:rgba(200,160,30,.35)!important}
 .w2b-himn:hover{background:linear-gradient(180deg,#4a3210 0%,#2a1a08 100%)!important;color:#f0c050!important}
 /* Стоп по кампусам — приглушённо красная */
-.w2b-snar,.w2b-sgenc{background:linear-gradient(180deg,#3a1010 0%,#220808 100%)!important;
+.w2b-snar,.w2b-sgenc,.w2b-scg{background:linear-gradient(180deg,#3a1010 0%,#220808 100%)!important;
   color:#cc6060!important;border-color:rgba(180,50,50,.3)!important;font-size:8px!important}
-.w2b-snar:hover,.w2b-sgenc:hover{color:#ff8888!important;border-color:rgba(220,80,80,.5)!important}
+.w2b-snar:hover,.w2b-sgenc:hover,.w2b-scg:hover{color:#ff8888!important;border-color:rgba(220,80,80,.5)!important}
 @keyframes micPulse{0%,100%{box-shadow:0 0 6px rgba(0,200,192,.4)}50%{box-shadow:0 0 14px rgba(0,200,192,.8)}}
 .w2b-gap{width:5px;height:1px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.1);margin:0 1px}
 .w2sep{width:1px;height:16px;background:rgba(255,255,255,.1);margin:0 2px;flex-shrink:0}
@@ -1101,10 +1113,12 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wamp2-camp-grp">
       <button class="wamp2-camp active" id="wa-tab-client1" onclick="setActiveCampus('client1')">NAR</button>
       <button class="wamp2-camp" id="wa-tab-client2" onclick="setActiveCampus('client2')">GËNC</button>
+      <button class="wamp2-camp" id="wa-tab-cgtk" onclick="setActiveCampus('cgtk')">CG</button>
     </div>
     <div class="wamp2-wm" style="margin-left:auto;display:flex;align-items:center;gap:3px">
       <label title="NAR цвет" style="cursor:pointer"><input type="color" id="hclr-client1" value="#00e8c0" oninput="setDualColor('client1',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
       <label title="GËNC цвет" style="cursor:pointer"><input type="color" id="hclr-client2" value="#c090ff" oninput="setDualColor('client2',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
+      <label title="CG цвет" style="cursor:pointer"><input type="color" id="hclr-cgtk" value="#ff6ec7" oninput="setDualColor('cgtk',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
       <button class="wa-float-restore" id="wa-float-btn" onclick="toggleWaFloat()" title="Открепить / прикрепить плеер">⧉</button>
       <div class="wamp2-wmbtn" onclick="document.getElementById('wa-skin').style.display='none'" title="Свернуть">_</div>
       <div class="wamp2-wmbtn" onclick="document.getElementById('wa-skin').style.display=''" title="Восстановить">□</div>
@@ -1112,6 +1126,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   </div>
   <span class="wave-color-swatch" id="hsw-client1" style="display:none;background:#00e8c0"></span>
   <span class="wave-color-swatch" id="hsw-client2" style="display:none;background:#c090ff"></span>
+  <span class="wave-color-swatch" id="hsw-cgtk" style="display:none;background:#ff6ec7"></span>
   <canvas id="vol-knob" width="80" height="80" style="display:none;position:absolute"></canvas>
 
   <!-- ── LCD Display ── -->
@@ -1178,12 +1193,14 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     {% if perms.stop %}
     <button class="w2b w2b-snar" onclick="stopCampus('client1')" title="Стоп только Client1">■ NAR</button>
     <button class="w2b w2b-sgenc" onclick="stopCampus('client2')" title="Стоп только Client2">■ GNC</button>
+    <button class="w2b w2b-scg" onclick="stopCampus('cgtk')" title="Стоп только City Garden">■ CG</button>
     {% endif %}
     {% if perms.himn %}
     <div class="w2b-gap"></div>
     <button class="w2b w2b-himn" onclick="_doPlayHimn('client1')" title="Гимн Client1 Campus">♪ NAR</button>
     <button class="w2b w2b-himn" onclick="_doPlayHimn('client2')" title="Гимн Client2 Campus">♪ GNC</button>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600)" title="Гимн оба кампуса одновременно">♪ ALL</button>
+    <button class="w2b w2b-himn" onclick="_doPlayHimn('cgtk')" title="Гимн City Garden Campus">♪ CG</button>
+    <button class="w2b w2b-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн всех кампусов одновременно">♪ ALL</button>
     {% endif %}
   </div>
 
@@ -1213,6 +1230,18 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       </div>
       <span class="wamp2-cs-time" id="wamp-pos-client2">0:00</span>
       <span class="wamp2-cs-dur" id="wamp-dur-client2"></span>
+    </div>
+    <div class="wamp2-cs-row" id="wamp2-row-cgtk">
+      <span class="wamp2-cs-dot" id="live-cgtk" style="color:var(--wt-led)">▶</span>
+      <span class="wamp2-cs-dot" id="stop-cgtk" style="display:none;color:#f87060">■</span>
+      <span class="wamp2-cs-campus" style="color:var(--c-cgtk,#ff6ec7)">CG</span>
+      <span id="conn-cgtk" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
+      <span class="wamp2-cs-track" id="mini-name-cgtk">Не играет</span>
+      <div class="wamp2-cs-prog" onclick="wampSeek('cgtk',event,this)" title="Перемотка">
+        <div class="wamp2-cs-fill" id="prog-fill-cgtk" style="width:0%"></div>
+      </div>
+      <span class="wamp2-cs-time" id="wamp-pos-cgtk">0:00</span>
+      <span class="wamp2-cs-dur" id="wamp-dur-cgtk"></span>
     </div>
   </div>
 
@@ -1284,6 +1313,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <button class="wamp2-eqcs active" id="eqcs-both" onclick="eqSetCampus('both')">Оба</button>
         <button class="wamp2-eqcs" id="eqcs-client1" onclick="eqSetCampus('client1')">Client1</button>
         <button class="wamp2-eqcs" id="eqcs-client2"  onclick="eqSetCampus('client2')">Client2</button>
+        <button class="wamp2-eqcs" id="eqcs-cgtk" onclick="eqSetCampus('cgtk')">City Garden</button>
       </div>
       <div class="wamp2-eq-bands" id="eq-bands-row"></div>
       <div class="wamp2-eq-presets">
@@ -1308,6 +1338,10 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('client2')">■ STOP GƏNC</button>
       </div>
       <div class="wamp2-opt-row">
+        <span class="wamp2-opt-lbl">Стоп City Garden</span>
+        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('cgtk')">■ STOP CG</button>
+      </div>
+      <div class="wamp2-opt-row">
         <span class="wamp2-opt-lbl">Стоп Все</span>
         <button class="wamp2-opt-btn wamp2-opt-stop" onclick="doStopAll()">■ STOP ALL</button>
       </div>
@@ -1322,8 +1356,12 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client2')">♪ HIMN GƏNC</button>
       </div>
       <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Гимн Оба</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600)">♪ HIMN ALL</button>
+        <span class="wamp2-opt-lbl">Гимн City Garden</span>
+        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('cgtk')">♪ HIMN CG</button>
+      </div>
+      <div class="wamp2-opt-row">
+        <span class="wamp2-opt-lbl">Гимн Все</span>
+        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)">♪ HIMN ALL</button>
       </div>
       {% endif %}
     </div>
@@ -1422,6 +1460,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="ann-chip active" data-campus="all" onclick="selectCampus(this)">📡 Все</div>
       <div class="ann-chip" data-campus="client1" onclick="selectCampus(this)">🏫 Client1</div>
       <div class="ann-chip" data-campus="client2" onclick="selectCampus(this)">🏫 Client2</div>
+      <div class="ann-chip" data-campus="cgtk" onclick="selectCampus(this)">🏫 City Garden</div>
     </div>
     <div id="ann-https-warn" class="ann-https-warn" style="display:none">
       <i class="bi bi-shield-exclamation"></i> Микрофон работает только по HTTPS.
@@ -1486,11 +1525,16 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         </button>
       </div>
       <div style="display:flex;gap:8px">
+        <button id="btn-cron-cgtk" class="cron-btn" onclick="cronToggle('cgtk')" style="flex:1">
+          <i class="bi bi-flower1"></i> City Garden <span id="cron-cgtk-lbl"><i class="bi bi-play-fill"></i> вкл</span>
+        </button>
+      </div>
+      <div style="display:flex;gap:8px">
         <button class="cron-btn" onclick="cronToggle('both')" style="flex:1;background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.25);color:var(--red)">
-          <i class="bi bi-pause-circle"></i> Стоп оба
+          <i class="bi bi-pause-circle"></i> Стоп все
         </button>
         <button class="cron-btn" onclick="cronResume('both')" style="flex:1">
-          <i class="bi bi-play-circle"></i> Включить оба
+          <i class="bi bi-play-circle"></i> Включить все
         </button>
       </div>
     </div>
@@ -1598,7 +1642,8 @@ function toggleAudioEngine(btn) {
 // ──── WAVE COLOR STATE ─────────────────────────────────
 var _waveColors = {
   client1: localStorage.getItem('wave_color_client1') || '#58a6ff',
-  client2:  localStorage.getItem('wave_color_client2')  || '#bc8cff'
+  client2:  localStorage.getItem('wave_color_client2')  || '#bc8cff',
+  cgtk: localStorage.getItem('wave_color_cgtk') || '#ff6ec7'
 };
 
 var _vizMode = 'bars';
@@ -2494,10 +2539,10 @@ function setDualColor(campus, hex) {
 }
 
 // ──── HUB STATE ───────────────────────────────────────
-var _hubStatus = { client1: {}, client2: {} };
+var _hubStatus = { client1: {}, client2: {}, cgtk: {} };
 var dualWave = makeVisualizer('hub-canvas');
 (function(){
-  ['client1','client2'].forEach(function(id){
+  ['client1','client2','cgtk'].forEach(function(id){
     var sw=document.getElementById('hsw-'+id);
     var inp=document.getElementById('hclr-'+id);
     var c=_waveColors[id];
@@ -2752,7 +2797,7 @@ function toggleEqPanel() { wampShowTab('eq'); }
 
 function eqSetCampus(c) {
   _eqCampus = c;
-  ['both','client1','client2'].forEach(function(id){
+  ['both','client1','client2','cgtk'].forEach(function(id){
     var b = document.getElementById('eqcs-'+id);
     if(b) b.classList.toggle('active', id===c);
   });
@@ -2805,7 +2850,7 @@ function eqReset() {
 }
 
 // ──── AUDIO FFT SSE ───────────────────────────────────
-var _audioSSE = {client1: null, client2: null};
+var _audioSSE = {client1: null, client2: null, cgtk: null};
 var _audioSSESrc = null;
 
 function _startAudioSSE() {
@@ -3183,7 +3228,7 @@ function wampSendToCampus(machine) {
     body:JSON.stringify({name: song.name, folder: song.folder||'', machine: machine})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) toast('⚠️ '+(d.error||'err'));
-    else toast('▶ '+(machine==='client1'?'NAR':'GNC')+' — '+song.name.slice(0,30));
+    else toast('▶ '+({client1:'NAR',client2:'GNC',cgtk:'CG'}[machine]||machine)+' — '+song.name.slice(0,30));
   });
 }
 function wampPlayAll() {
@@ -3213,7 +3258,7 @@ function wampPlayAllOshhaya() {
   }).then(function(r){ return r.json(); }).then(function(d){
     if(btn) btn.textContent = '▶ ИГРАТЬ ВСЁ';
     if(d.ok) {
-      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + (_activeCampus === 'client1' ? 'Client1' : 'Client2'));
+      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[_activeCampus]||_activeCampus));
       // Switch playlist view to Общая folder
       var tab = document.querySelector('.wamp2-fol-tab[data-folder="Общая"]');
       if(tab) wampFolderTab(tab, 'Общая');
@@ -3276,11 +3321,11 @@ function setMuteUI(muted) {
 }
 
 function stopCampus(campus) {
-  var labels = {client1:'Client1', client2:'Client2'};
+  var labels = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
   fetch('/api/stop/' + campus, {method:'POST'})
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d.ok) { toast('■ Стоп — ' + (labels[campus]||campus)); setTimeout(pollStatus,600); setTimeout(pollVm1,600); }
+      if (d.ok) { toast('■ Стоп — ' + (labels[campus]||campus)); setTimeout(pollStatus,600); setTimeout(pollVm1,600); setTimeout(pollCgtk,600); }
       else toast('⚠️ ' + (d.error||'Ошибка'));
     });
 }
@@ -3462,14 +3507,79 @@ function pollVm1() {
       if (mn) mn.textContent = t('np.idle');
     });
 }
+
+// ──── STATUS POLL — CGTK (City Garden) ─────────────────
+function pollCgtk() {
+  var conn = document.getElementById('conn-cgtk');
+  if (!conn) return;
+  fetch('/api/status?machine=cgtk', {signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      _hubStatus.cgtk = d;
+      var live  = document.getElementById('live-cgtk');
+      var stop  = document.getElementById('stop-cgtk');
+      var dot   = document.getElementById('htab-dot-cgtk');
+      var hconn = document.getElementById('htab-conn-cgtk');
+      var mn    = document.getElementById('mini-name-cgtk');
+      if (d.error && !d.playing) {
+        conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
+        if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
+        if (live) live.style.display = 'none';
+        if (stop) stop.style.display = '';
+        if (dot)  dot.className = 'htab-dot';
+        if (mn)   mn.textContent = t('np.idle');
+        return;
+      }
+      conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
+      if (hconn){ hconn.className='htab-conn'; hconn.innerHTML='<i class="bi bi-wifi"></i>'; }
+      if (d.playing) {
+        if (live) live.style.display = '';
+        if (stop) stop.style.display = 'none';
+        if (dot)  dot.className = 'htab-dot cgtklive';
+        if (mn)   mn.textContent = d.track || '—';
+      } else if (d.paused) {
+        if (live) live.style.display = 'none';
+        if (stop) stop.style.display = '';
+        if (dot)  dot.className = 'htab-dot';
+        if (mn)   mn.textContent = d.track || t('np.paused');
+      } else {
+        if (live) live.style.display = 'none';
+        if (stop) stop.style.display = '';
+        if (dot)  dot.className = 'htab-dot';
+        if (mn)   mn.textContent = t('np.idle');
+      }
+      // Update cgtk progress bar
+      _progState.cgtk.playing = d.playing || false;
+      if (d.position !== undefined && d.position !== null) {
+        _progState.cgtk.pos = d.position; _progState.cgtk.ts = Date.now();
+      }
+      if (d.duration !== undefined && d.duration !== null) _progState.cgtk.dur = d.duration;
+      if (!d.playing) { _progState.cgtk.pos=0; _progState.cgtk.dur=0; }
+      _updateProgress('cgtk');
+    }).catch(function() {
+      if (conn) { conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
+      var hconn=document.getElementById('htab-conn-cgtk');
+      if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
+      var stopEl=document.getElementById('stop-cgtk');
+      var liveEl=document.getElementById('live-cgtk');
+      var dotEl=document.getElementById('htab-dot-cgtk');
+      var mn=document.getElementById('mini-name-cgtk');
+      if (liveEl) liveEl.style.display='none';
+      if (stopEl) stopEl.style.display='';
+      if (dotEl)  dotEl.className='htab-dot';
+      if (mn) mn.textContent = t('np.idle');
+    });
+}
 {% if current_user.role == 'admin' %}
 pollVm1();
 setInterval(pollVm1, 15000);
+pollCgtk();
+setInterval(pollCgtk, 15000);
 {% endif %}
 
 // ──── HIMN ────────────────────────────────────────────
 function _doPlayHimn(machine) {
-  var labels = {client1:'Client1', client2:'Client2'};
+  var labels = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
   toast('⏳ ' + t('toast.himn_start') + ' → ' + (labels[machine] || machine));
   fetch('/api/himn/' + machine, {method:'POST'})
     .then(function(r){ return r.json(); })
@@ -3478,6 +3588,7 @@ function _doPlayHimn(machine) {
         toast('🎵 ' + t('toast.himn_playing') + ' — ' + (labels[machine] || machine));
         setTimeout(pollStatus, 1200);
         setTimeout(pollVm1, 1200);
+        setTimeout(pollCgtk, 1200);
       } else { toast('⚠️ ' + (d.error || 'нет прав')); }
     }).catch(function(){ toast('⚠️ нет связи'); });
 }
@@ -3498,6 +3609,7 @@ function toast(msg) {
 const TIME_LABELS = {
   client1:{label:'Client1',color:'#58a6ff',icon:'bi-building'},
   client2:{label:'Client2',color:'#bc8cff',icon:'bi-pc-display'},
+  cgtk:{label:'City Garden',color:'#ff6ec7',icon:'bi-flower1'},
   centos:{label:'CentOS',color:'#ffa657',icon:'bi-server'},
 };
 var _timeOffsets = {}, _timeOnline = {};
@@ -3573,17 +3685,17 @@ setInterval(fetchMachineTimes, 30000);
 
 // ──── CRON ────────────────────────────────────────────
 {% if perms.admin %}
-var _cronState = {client1:false, client2:false};
+var _cronState = {client1:false, client2:false, cgtk:false};
 function _cronApplyUI() {
-  var bothPaused = _cronState.client1 && _cronState.client2;
-  var anyPaused  = _cronState.client1 || _cronState.client2;
+  var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
+  var anyPaused  = _cronState.client1 || _cronState.client2 || _cronState.cgtk;
   var chip = document.getElementById('cron-status-chip');
   if (chip) {
     if (bothPaused) { chip.innerHTML = '<i class="bi bi-pause-fill"></i> '+t('cron.paused'); chip.style.cssText='background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.4);color:var(--red)'; }
     else if (anyPaused) { chip.innerHTML = '<i class="bi bi-exclamation-circle"></i> '+t('cron.partial'); chip.style.cssText='background:rgba(210,153,34,.15);border:1px solid rgba(210,153,34,.4);color:#d2a81a'; }
     else { chip.innerHTML = '<i class="bi bi-play-fill"></i> '+t('cron.active'); chip.style.cssText='background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.4);color:var(--green)'; }
   }
-  ['client1','client2'].forEach(function(m) {
+  ['client1','client2','cgtk'].forEach(function(m) {
     var btn = document.getElementById('btn-cron-'+m);
     var lbl = document.getElementById('cron-'+m+'-lbl');
     if (!btn||!lbl) return;
@@ -3599,7 +3711,7 @@ function _cronApplyUI() {
 function pollCron() {
   fetch('/api/cron/pause').then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
-    _cronState.client1=!!d.client1; _cronState.client2=!!d.client2;
+    _cronState.client1=!!d.client1; _cronState.client2=!!d.client2; _cronState.cgtk=!!d.cgtk;
     _cronApplyUI();
   }).catch(function(){});
 }
@@ -3908,7 +4020,7 @@ function closeFP(panelId, btnId) {
 })();
 
 // ──── PROGRESS BAR + POSITION TRACKING ────────────────
-var _progState={client1:{pos:0,dur:0,playing:false,ts:0},client2:{pos:0,dur:0,playing:false,ts:0}};
+var _progState={client1:{pos:0,dur:0,playing:false,ts:0},client2:{pos:0,dur:0,playing:false,ts:0},cgtk:{pos:0,dur:0,playing:false,ts:0}};
 
 function _fmtTime(s){
   s=Math.max(0,Math.round(s));
@@ -3929,13 +4041,13 @@ function _updateProgress(ck){
   if(posEl) posEl.textContent=_fmtTime(pos);
   if(durEl) durEl.textContent=dur>0?' / '+_fmtTime(dur):'';
 }
-setInterval(function(){_updateProgress('client1');_updateProgress('client2');},500);
+setInterval(function(){_updateProgress('client1');_updateProgress('client2');_updateProgress('cgtk');},500);
 
 // ──── ACTIVE CAMPUS (Winamp unified LCD + seek bar) ──────
 var _activeCampus = 'client1';
 function setActiveCampus(c) {
   _activeCampus = c;
-  ['client1','client2'].forEach(function(id){
+  ['client1','client2','cgtk'].forEach(function(id){
     var b = document.getElementById('wa-tab-'+id);
     if(b) b.classList.toggle('active', id===c);
   });
@@ -3959,7 +4071,8 @@ setInterval(function(){
   var trackEl = document.getElementById('mini-name-'+ck);
   if(lcdTr && trackEl) lcdTr.textContent = trackEl.textContent||'CAMPUS PLAYER';
   var lcdI = document.getElementById('wa-lcd-info');
-  if(lcdI) lcdI.textContent = (ck==='client1'?'CLIENT1':'GƏNCLIK') + ' · ' + (st.playing?'PLAYING':'STOPPED');
+  var _lcdCampusName = (ck==='client1'?'CLIENT1':(ck==='client2'?'GƏNCLIK':'CITY GARDEN'));
+  if(lcdI) lcdI.textContent = _lcdCampusName + ' · ' + (st.playing?'PLAYING':'STOPPED');
   var sf = document.getElementById('wa-seek-fill');
   var sb = document.getElementById('wa-seek-thumb');
   if(sf){ sf.style.width = pct.toFixed(1)+'%'; sf.style.transition = st.playing?'width .4s linear':'none'; }
@@ -4021,7 +4134,7 @@ function wampSeek(ck, evt, wrap){
   var r=wrap.querySelector('.wamp-progress-bar').getBoundingClientRect();
   var pct=Math.max(0,Math.min(1,(evt.clientX-r.left)/r.width));
   var newPos=Math.round(pct*st.dur);
-  var machine=(ck==='client1')?'client1':'client2';
+  var machine=ck;
   fetch('/api/seek',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:machine,pos:newPos})
   }).then(function(r){return r.json();}).catch(function(){});

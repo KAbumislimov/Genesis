@@ -1603,10 +1603,13 @@ def _cron_is_paused(host, user):
 def api_cron_pause_get():
     if not has_perm('admin'):
         return jsonify({'ok': False, 'error': 'forbidden'}), 403
-    client2 = _client2_conn()
+    client2  = _client2_conn('client2')
+    cgtk = _client2_conn('cgtk')
     result = {'client1': _cron_is_paused(CLIENT1_HOST, CLIENT1_USER)}
     if client2:
         result['client2'] = _cron_is_paused(client2['host'], client2.get('user', 'client2'))
+    if cgtk:
+        result['cgtk'] = _cron_is_paused(cgtk['host'], cgtk.get('user', 'cgtk'))
     return jsonify({'ok': True, **result})
 
 @app.route('/api/cron/pause', methods=['POST'])
@@ -1618,11 +1621,15 @@ def api_cron_pause_set():
     machine = data.get('machine', 'both')
     paused  = bool(data.get('paused', True))
     cmd     = f'touch ~/{_CRON_PAUSE_FILE}' if paused else f'rm -f ~/{_CRON_PAUSE_FILE}'
-    client2     = _client2_conn()
+    client2     = _client2_conn('client2')
+    cgtk    = _client2_conn('cgtk')
     if machine in ('client1', 'both'):
         ssh_run_on(CLIENT1_HOST, CLIENT1_USER, cmd)
     if machine in ('client2', 'both') and client2:
         ssh_run_on(client2['host'], client2.get('user', 'client2'), cmd)
+    # 'both' now means "all registered campuses" (client1 + client2 + cgtk), not just two
+    if machine in ('cgtk', 'both') and cgtk:
+        ssh_run_on(cgtk['host'], cgtk.get('user', 'cgtk'), cmd)
     return jsonify({'ok': True, 'paused': paused, 'machine': machine})
 
 # ── API ───────────────────────────────────────────
@@ -1784,6 +1791,17 @@ def api_stop_client2():
     log_action(current_user.username, 'stop', 'client2')
     return jsonify({'ok': True})
 
+@app.route('/api/stop/cgtk', methods=['POST'])
+@login_required
+def api_stop_cgtk():
+    if not has_perm('stop'):
+        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
+    cgtk = _client2_conn('cgtk')
+    if cgtk:
+        _mpv_stop_on(cgtk['host'], cgtk.get('user', 'cgtk'))
+    log_action(current_user.username, 'stop', 'cgtk')
+    return jsonify({'ok': True})
+
 @app.route('/api/seek', methods=['POST'])
 @login_required
 def api_seek():
@@ -1804,6 +1822,7 @@ def api_seek():
 
 HIMN_CLIENT1 = '/mnt/music/Media/1/HIMN.mp3'
 HIMN_CLIENT2  = '/home/client2/Media/1/himn.mp3'
+HIMN_CGTK = '/home/cgtk/Media/1/himn.mp3'
 
 def _play_himn(host, user, filepath, vol):
     r = ssh_run_on(host, user,
@@ -1849,6 +1868,28 @@ def api_himn_client2():
         tg_notify(
             f'🎼 <b>Государственный гимн</b>\n'
             f'🏫 Кампус: <b>Client2</b>\n'
+            f'👤 Запустил: <b>{current_user.username}</b>\n'
+            f'🕐 {_tg_fmt_time()}',
+            event_type='himn'
+        )
+    return jsonify({'ok': r['ok'], 'error': r.get('error')})
+
+@app.route('/api/himn/cgtk', methods=['POST'])
+@login_required
+def api_himn_cgtk():
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав на гимн'})
+    cgtk = _client2_conn('cgtk')
+    host = cgtk['host'] if cgtk else None
+    user = cgtk.get('user', 'cgtk') if cgtk else 'cgtk'
+    if not host:
+        return jsonify({'ok': False, 'error': 'City Garden не подключен'})
+    r = _play_himn(host, user, HIMN_CGTK, 150)
+    if r['ok']:
+        _log_himn_play(current_user.username, 'cgtk', os.path.basename(HIMN_CGTK))
+        tg_notify(
+            f'🎼 <b>Государственный гимн</b>\n'
+            f'🏫 Кампус: <b>City Garden</b>\n'
             f'👤 Запустил: <b>{current_user.username}</b>\n'
             f'🕐 {_tg_fmt_time()}',
             event_type='himn'
