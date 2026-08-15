@@ -75,7 +75,7 @@ CAMPUS_HOME="/home/$CAMPUS_USER"
 SERVER_BOT_SERVICE=""
 SERVER_BOT_ENV=""
 if [[ -f "$CAMPUS_BOTS_CONF" ]]; then
-    IFS=':' read -r _ SERVER_BOT_SERVICE SERVER_BOT_ENV < <(grep -m1 "^${CAMPUS}:" "$CAMPUS_BOTS_CONF" || true)
+    IFS=':' read -r _ SERVER_BOT_SERVICE SERVER_BOT_ENV < <(grep -m1 "^${CAMPUS}:" "$CAMPUS_BOTS_CONF" || true) || true
 fi
 
 INSTALL_SRC="$REPO/machines/$CAMPUS"
@@ -250,5 +250,9 @@ echo "  Тест звука:       ssh $CAMPUS campus-playerctl play ${CAMPUS_HO
 echo ""
 echo "  ⚠️  Когда машина физически переедет на постоянную сеть — обновить:"
 echo "      - ~/.ssh/config ($CAMPUS → постоянный IP)"
-echo "      - CLIENT_HOST в $SERVER_BOT_ENV → постоянный IP"
-echo "      - sudo systemctl restart $SERVER_BOT_SERVICE"
+if [[ -n "$SERVER_BOT_SERVICE" ]]; then
+    echo "      - CLIENT_HOST в $SERVER_BOT_ENV → постоянный IP"
+    echo "      - sudo systemctl restart $SERVER_BOT_SERVICE"
+else
+    echo "      - (control-бот для '$CAMPUS' ещё не заведён — см. config/campus-bots.conf)"
+fi

@@ -10,6 +10,7 @@
 #  Запуск (с центрального CentOS-сервера):
 #      bash scripts/restore-music.sh client1
 #      bash scripts/restore-music.sh client2
+#      bash scripts/restore-music.sh cgtk   # и любой другой кампус
 #  Предполагает, что SSH-доступ к кампус-машине уже настроен
 #  (см. scripts/setup-recovery-ssh-keys.sh — шаг ПЕРЕД этим).
 # ═══════════════════════════════════════════════════════════════════════
@@ -19,8 +20,8 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 [[ -f "$REPO/.env" ]] && set -a && source "$REPO/.env" && set +a
 
 CAMPUS="${1:-}"
-if [[ "$CAMPUS" != "client1" && "$CAMPUS" != "client2" ]]; then
-    echo "Использование: bash scripts/restore-music.sh client1|client2" >&2
+if [[ ! "$CAMPUS" =~ ^[a-z][a-z0-9]*$ ]]; then
+    echo "Использование: bash scripts/restore-music.sh <campus>   (client1, client2, cgtk, ...)" >&2
     exit 1
 fi
 
@@ -55,12 +56,14 @@ ssh -i "$CAMPUS_KEY" -o ConnectTimeout=8 -o StrictHostKeyChecking=no -o BatchMod
     || fail "Нет SSH-доступа к $CAMPUS (алиас из ~/.ssh/config). Сначала: bash scripts/setup-recovery-ssh-keys.sh"
 
 # ── 2. Определить целевой путь на кампус-машине ──────────────────────────
+# client1 — особый случай (Samba-шара смонтирована в /mnt/music), у всех
+# остальных кампусов (client2, cgtk, ...) музыка живёт в домашней папке.
 if [[ "$CAMPUS" == "client1" ]]; then
     DEST="/mnt/music/Media"
     ssh -i "$CAMPUS_KEY" "$CAMPUS" "sudo mkdir -p /mnt/music && sudo chown \$(whoami):\$(whoami) /mnt/music" < /dev/null \
         || fail "Не удалось подготовить /mnt/music на client1"
 else
-    DEST="/home/client2/Media"
+    DEST="/home/$CAMPUS/Media"
 fi
 
 # ── 3. Синхронизировать (rsync поверх ssh, с ключом campus_bot) ─────────
