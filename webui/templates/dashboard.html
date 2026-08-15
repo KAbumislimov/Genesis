@@ -516,6 +516,10 @@
 .fph-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0 2px;transition:.15s}
 .fph-close:hover{color:var(--red)}
 .float-panel-body{padding:14px}
+.wa-help-row{display:flex;flex-direction:column;gap:1px;padding:6px 0;border-bottom:1px solid var(--border)}
+.wa-help-row:last-child{border-bottom:none}
+.wa-help-row b{color:var(--text);font-size:12.5px}
+.wa-help-row span{color:var(--muted);font-size:11.5px}
 
 /* ═══ EQUALIZER PANEL ═══ */
 .eq-panel{
@@ -1169,7 +1173,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <button class="w2b w2b-play" id="wa-play-btn" onclick="doPlay()" title="Воспроизвести на активном кампусе">▶ PLAY</button>
     <button class="w2b w2b-pause" id="wa-pause-btn" onclick="doPause()" title="Пауза / продолжить">⏸ ПАУЗА</button>
     {% if perms.stop %}
-    <button class="w2b w2b-stop" onclick="doStopAll()" title="⏹ СТОП — выключить ВСЁ на обоих кампусах">⏹ СТОП</button>
+    <button class="w2b w2b-stop" onclick="doStopAll()" title="⏹ СТОП — выключить ВСЁ на всех кампусах">⏹ СТОП</button>
     {% endif %}
     {% if perms.next %}
     <button class="w2b w2b-next" onclick="doNext()" title="Следующий трек">СЛЕД ⏭</button>
@@ -1202,6 +1206,8 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <button class="w2b w2b-himn" onclick="_doPlayHimn('cgtk')" title="Гимн City Garden Campus">♪ CG</button>
     <button class="w2b w2b-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн всех кампусов одновременно">♪ ALL</button>
     {% endif %}
+    <div class="w2b-gap"></div>
+    <button class="w2b w2b-help" onclick="toggleFP('wa-help-panel', this)" title="Что означают кнопки?">❓</button>
   </div>
 
   <!-- ── Campus status rows ── -->
@@ -1541,6 +1547,31 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   </div>
 </div>
 {% endif %}
+
+<div class="float-panel" id="wa-help-panel">
+  <div class="float-panel-hdr" id="wa-help-drag">
+    <i class="bi bi-question-circle" style="color:var(--blue)"></i>
+    <span class="float-panel-title">Что означают кнопки</span>
+    <button class="fph-close" onclick="closeFP('wa-help-panel')">✕</button>
+  </div>
+  <div class="float-panel-body" style="font-size:12.5px;line-height:1.5">
+    <div style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">Управление</div>
+    <div class="wa-help-row"><b>⏮ ПРЕД / СЛЕД ⏭</b><span>Предыдущий / следующий трек</span></div>
+    <div class="wa-help-row"><b>▶ PLAY / ⏸ ПАУЗА</b><span>Играть / пауза на активном (выбранном) кампусе</span></div>
+    <div class="wa-help-row"><b>⏹ СТОП</b><span>Остановить звук сразу на всех кампусах</span></div>
+    <div class="wa-help-row"><b>▶ ИГРАТЬ ВСЁ</b><span>Играть всю папку «Общая» вперемешку на активном кампусе</span></div>
+    <div class="wa-help-row"><b>🔀 ШАФ / 🔁 ПОВТ</b><span>Перемешать треки / повторять текущий трек</span></div>
+    <div class="wa-help-row"><b>🎚 EQ / 📋 PL</b><span>Эквалайзер / список треков</span></div>
+    <div class="wa-help-row"><b>🔇 МЬЮ</b><span>Выключить/включить звук на активном кампусе</span></div>
+    <div class="wa-help-row"><b>🎤 МИК</b><span>Живое объявление по громкой связи (выбор кампуса — внутри)</span></div>
+    <div style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 6px">По каждому кампусу отдельно</div>
+    <div class="wa-help-row"><b>■ NAR / ■ GNC / ■ CG</b><span>Стоп только на этом одном кампусе</span></div>
+    <div class="wa-help-row"><b>♪ NAR / ♪ GNC / ♪ CG</b><span>Проиграть гимн только на этом кампусе</span></div>
+    <div class="wa-help-row"><b>♪ ALL</b><span>Гимн сразу на всех кампусах</span></div>
+    <div style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 6px">Вкладки NAR / GËNC / CG вверху</div>
+    <div class="wa-help-row"><b>Вкладка кампуса</b><span>Выбирает, какой кампус сейчас «активный» — команды PLAY/ПАУЗА/МЬЮ/ИГРАТЬ ВСЁ действуют именно на него</span></div>
+  </div>
+</div>
 
 <div class="float-dock">
   <div class="fdock-row">
@@ -4000,7 +4031,7 @@ function closeFP(panelId, btnId) {
 }
 // Draggable float panels
 (function(){
-  ['va-panel-drag','ann-panel-drag','cron-panel-drag'].forEach(function(hid){
+  ['va-panel-drag','ann-panel-drag','cron-panel-drag','wa-help-drag'].forEach(function(hid){
     var h=document.getElementById(hid); if(!h) return;
     var panel=h.parentElement, ox=0,oy=0,drag=false;
     h.addEventListener('mousedown',function(e){
