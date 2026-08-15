@@ -881,6 +881,31 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   50%{opacity:1;transform:scale(1.05) rotate(1deg)}
   75%{opacity:.9;transform:scale(.98) rotate(-1deg)}}
 @media (prefers-reduced-motion:reduce){.wa-himn-group::before,.wa-minuta-group .wa-special-icon{animation:none}}
+
+.wa-mik-group{background:radial-gradient(120% 160% at 0% 0%,#083838 0%,#052424 55%,#021414 100%);
+  border:1.5px solid rgba(0,220,210,.3);box-shadow:0 0 0 1px rgba(0,220,210,.06) inset,0 6px 22px -8px rgba(0,200,192,.3)}
+.wa-mik-group .wa-special-title,.wa-mik-group .wa-special-icon{color:#40fffa}
+.wa-mik-group .wa-special-btn{background:linear-gradient(180deg,#0e4848 0%,#062a2a 100%);
+  color:#7cf5ee;border-color:rgba(0,220,210,.35)}
+.wa-mik-group .wa-special-btn:hover{background:linear-gradient(180deg,#125858 0%,#083636 100%);
+  color:#bafff8;box-shadow:0 4px 14px -4px rgba(0,220,210,.5)}
+.wa-mik-group .wa-special-btn.wa-special-all{background:linear-gradient(180deg,#146c68 0%,#0a403c 100%);
+  color:#e0fffa;border-color:#40fffa}
+
+.wa-cron-group{background:radial-gradient(120% 160% at 0% 0%,#132a1c 0%,#0d1e14 40%,#14141c 70%,#1a0f10 100%);
+  border:1.5px solid rgba(120,160,255,.28);box-shadow:0 0 0 1px rgba(120,160,255,.06) inset,0 6px 22px -8px rgba(80,140,255,.25)}
+.wa-cron-group .wa-special-title{color:#a8c8ff}
+.wa-cron-icon{display:flex;align-items:center;gap:5px}
+.wa-cron-icon img{height:22px;width:auto;filter:drop-shadow(0 0 5px rgba(120,160,255,.6));border-radius:3px}
+.wa-cron-flag{font-size:18px}
+.wa-cron-group .wa-special-btn{background:linear-gradient(180deg,#1c3c28 0%,#122418 100%);
+  color:#a8e8bc;border-color:rgba(90,200,130,.35)}
+.wa-cron-group .wa-special-btn:hover{background:linear-gradient(180deg,#254e34 0%,#183020 100%);
+  color:#d0ffe0;box-shadow:0 4px 14px -4px rgba(90,200,130,.5)}
+.wa-cron-group .wa-special-btn.wa-special-all{background:linear-gradient(180deg,#2a5c3c 0%,#173824 100%);
+  color:#e0ffe8;border-color:#5ac882}
+.wa-cron-group .wa-special-btn.paused{background:linear-gradient(180deg,#5c1c1c 0%,#380f0f 100%)!important;
+  color:#ffb0b0!important;border-color:#e05050!important}
 .w2b-snar:hover,.w2b-sgenc:hover,.w2b-scg:hover{color:#ff8888!important;border-color:rgba(220,80,80,.5)!important}
 @keyframes micPulse{0%,100%{box-shadow:0 0 6px rgba(0,200,192,.4)}50%{box-shadow:0 0 14px rgba(0,200,192,.8)}}
 .w2b-gap{width:5px;height:1px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.1);margin:0 1px}
@@ -1305,6 +1330,15 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <button class="wa-special-btn wa-special-all" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн на всех кампусах одновременно">ВСЕ</button>
       </div>
     </div>
+    <div class="wa-special-group wa-mik-group">
+      <div class="wa-special-hd"><span class="wa-special-icon">🎤</span><span class="wa-special-title" data-i18n="wamp.mik_group">Мик</span></div>
+      <div class="wa-special-btns">
+        <button class="wa-special-btn" onclick="_openMicFor('client1')" title="Объявление — Client1">NAR</button>
+        <button class="wa-special-btn" onclick="_openMicFor('client2')" title="Объявление — Client2">GNC</button>
+        <button class="wa-special-btn" onclick="_openMicFor('cgtk')" title="Объявление — City Garden">CG</button>
+        <button class="wa-special-btn wa-special-all" onclick="_openMicFor('all')" title="Объявление на всех кампусах">ВСЕ</button>
+      </div>
+    </div>
     <div class="wa-special-group wa-minuta-group">
       <div class="wa-special-hd"><span class="wa-special-icon">🕯️</span><span class="wa-special-title" data-i18n="wamp.minuta">Минута молчания</span></div>
       <div class="wa-special-btns">
@@ -1314,6 +1348,20 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <button class="wa-special-btn wa-special-all" onclick="_doPlayMinutaAll(this)" title="Минута молчания на всех кампусах одновременно">ВСЕ</button>
       </div>
     </div>
+    {% if perms.admin %}
+    <div class="wa-special-group wa-cron-group">
+      <div class="wa-special-hd">
+        <span class="wa-special-icon wa-cron-icon"><img src="/static/leg.logo.t.png" alt="LEG"><span class="wa-cron-flag">🇦🇿</span></span>
+        <span class="wa-special-title" data-i18n="wamp.cron_group">Крон</span>
+      </div>
+      <div class="wa-special-btns">
+        <button class="wa-special-btn" id="btn-cron-client1" onclick="cronToggle('client1')" title="Пауза/включить крон — Client1">NAR</button>
+        <button class="wa-special-btn" id="btn-cron-client2" onclick="cronToggle('client2')" title="Пауза/включить крон — Client2">GNC</button>
+        <button class="wa-special-btn" id="btn-cron-cgtk" onclick="cronToggle('cgtk')" title="Пауза/включить крон — City Garden">CG</button>
+        <button class="wa-special-btn wa-special-all" id="btn-cron-all" onclick="_cronToggleAll()" title="Пауза/включить крон на всех кампусах">ВСЕ</button>
+      </div>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -3548,6 +3596,13 @@ function waOpenMic() {
   toggleFP('ann-float-panel', document.getElementById('fdock-ann'));
   if(btn) btn.classList.toggle('active', !isOpen);
 }
+function _openMicFor(campus) {
+  var panel = document.getElementById('ann-float-panel');
+  if (!panel) return;
+  var chip = document.querySelector('.ann-chip[data-campus="' + campus + '"]');
+  if (chip) selectCampus(chip);
+  if (!panel.classList.contains('open')) toggleFP('ann-float-panel', null);
+}
 
 // ──── STATUS POLL — CLIENT1 ─────────────────────────────
 function setIdleNctk() {
@@ -3988,25 +4043,17 @@ setInterval(fetchMachineTimes, 30000);
 var _cronState = {client1:false, client2:false, cgtk:false};
 function _cronApplyUI() {
   var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
-  var anyPaused  = _cronState.client1 || _cronState.client2 || _cronState.cgtk;
-  var chip = document.getElementById('cron-status-chip');
-  if (chip) {
-    if (bothPaused) { chip.innerHTML = '<i class="bi bi-pause-fill"></i> '+t('cron.paused'); chip.style.cssText='background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.4);color:var(--red)'; }
-    else if (anyPaused) { chip.innerHTML = '<i class="bi bi-exclamation-circle"></i> '+t('cron.partial'); chip.style.cssText='background:rgba(210,153,34,.15);border:1px solid rgba(210,153,34,.4);color:#d2a81a'; }
-    else { chip.innerHTML = '<i class="bi bi-play-fill"></i> '+t('cron.active'); chip.style.cssText='background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.4);color:var(--green)'; }
-  }
   ['client1','client2','cgtk'].forEach(function(m) {
     var btn = document.getElementById('btn-cron-'+m);
-    var lbl = document.getElementById('cron-'+m+'-lbl');
-    if (!btn||!lbl) return;
-    if (_cronState[m]) {
-      btn.classList.add('paused');
-      lbl.innerHTML = '<i class="bi bi-pause-fill"></i> '+t('cron.off');
-    } else {
-      btn.classList.remove('paused');
-      lbl.innerHTML = '<i class="bi bi-play-fill"></i> '+t('cron.on');
-    }
+    if (!btn) return;
+    btn.classList.toggle('paused', !!_cronState[m]);
   });
+  var allBtn = document.getElementById('btn-cron-all');
+  if (allBtn) allBtn.classList.toggle('paused', bothPaused);
+}
+function _cronToggleAll() {
+  var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
+  if (bothPaused) cronResume('both'); else cronToggle('both');
 }
 function pollCron() {
   fetch('/api/cron/pause').then(function(r){return r.json();}).then(function(d){
