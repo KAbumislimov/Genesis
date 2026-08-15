@@ -39,6 +39,7 @@ const I18N = {
     'wamp.mic': 'МИК', 'wamp.mic_t': 'Объявление по кампусу через микрофон',
     'wamp.stop_group': 'Стоп:', 'wamp.himn_group': 'Гимн',
     'wamp.minuta': 'Минута молчания', 'wamp.minuta_t': 'Минута молчания — специальный трек, вне расписания',
+    'wamp.mik_group': 'Мик', 'wamp.cron_group': 'Крон',
     'player.staff_only': 'только Staff / Admin',
     /* Now playing */
     'np.now':         'Сейчас',
@@ -254,6 +255,7 @@ const I18N = {
     'wamp.mic': 'MIC', 'wamp.mic_t': 'Campus announcement via microphone',
     'wamp.stop_group': 'Stop:', 'wamp.himn_group': 'Anthem',
     'wamp.minuta': 'Minute of Silence', 'wamp.minuta_t': 'Minute of silence — special track, outside the schedule',
+    'wamp.mik_group': 'Mic', 'wamp.cron_group': 'Cron',
     'player.staff_only': 'Staff / Admin only',
     /* Now playing */
     'np.now':         'Now',
@@ -465,6 +467,7 @@ const I18N = {
     'wamp.mic': 'MİK', 'wamp.mic_t': 'Mikrofonla kampus elanı',
     'wamp.stop_group': 'Dayan:', 'wamp.himn_group': 'Himn',
     'wamp.minuta': 'Sükut dəqiqəsi', 'wamp.minuta_t': 'Sükut dəqiqəsi — cədvəldən kənar xüsusi trek',
+    'wamp.mik_group': 'Mik', 'wamp.cron_group': 'Kron',
     'player.staff_only': 'Yalnız Staff / Admin',
     /* Now playing */
     'np.now':         'İndi',
