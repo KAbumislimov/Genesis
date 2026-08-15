@@ -69,8 +69,14 @@ ok()   { echo "[recover:${CAMPUS}] ✅ $*"; }
 warn() { echo "[recover:${CAMPUS}] ⚠️  $*"; }
 fail() { echo "[recover:${CAMPUS}] ❌ $*" >&2; exit 1; }
 
-sp() { sshpass -p "$TEMP_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${CAMPUS_USER}@${TEMP_IP}" "$@"; }
-sp_scp_to() { sshpass -p "$TEMP_PASS" scp -o StrictHostKeyChecking=no "$1" "${CAMPUS_USER}@${TEMP_IP}:$2"; }
+# Reuse one SSH connection across all the temp-password calls below instead
+# of renegotiating a fresh handshake every time — noticeably faster on a
+# slow/high-latency link, and simply not used at all if the first `sp` call
+# fails (ControlMaster=auto degrades to a normal one-off connection).
+SSH_CTL_PATH="/tmp/.ssh-cm-recover-${CAMPUS}-%r@%h:%p"
+SSH_CM_OPTS=(-o ControlMaster=auto -o ControlPersist=120s -o "ControlPath=$SSH_CTL_PATH")
+sp() { sshpass -p "$TEMP_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${SSH_CM_OPTS[@]}" "${CAMPUS_USER}@${TEMP_IP}" "$@"; }
+sp_scp_to() { sshpass -p "$TEMP_PASS" scp -o StrictHostKeyChecking=no "${SSH_CM_OPTS[@]}" "$1" "${CAMPUS_USER}@${TEMP_IP}:$2"; }
 
 # ── 1. Проверка доступа ───────────────────────────────────────────────────
 log "Проверяю SSH/sudo доступ к $TEMP_IP..."
@@ -169,6 +175,10 @@ log "Снимаю временный NOPASSWD sudo на $CAMPUS..."
 sp "echo '$TEMP_PASS' | sudo -S rm -f $SUDOERS_MARKER" >/dev/null 2>&1 \
     && ok "Временный sudo снят" \
     || warn "Не снялся автоматически — сними руками на $CAMPUS: sudo rm $SUDOERS_MARKER"
+
+# Закрываем переиспользуемое SSH-соединение — не обязательно (само истечёт
+# через ControlPersist), но чище не оставлять висящий сокет
+sshpass -p "$TEMP_PASS" ssh -O exit -o "ControlPath=$SSH_CTL_PATH" "${CAMPUS_USER}@${TEMP_IP}" >/dev/null 2>&1 || true
 
 # ── Итог ────────────────────────────────────────────────────────────────
 echo ""
