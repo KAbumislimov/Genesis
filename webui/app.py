@@ -948,6 +948,56 @@ def _perem_vol(campus, slot):
     d = _PEREM_VOL.get(campus, {'himn': 150, '_default': 115})
     return d.get(slot, d['_default'])
 
+# ── Live crontab read/edit for perem quick-access panel ─────────────────────
+# Каждый кампус хранит своё СОБСТВЕННОЕ время/громкость (подтверждено
+# пользователем — не единое расписание на все три). Редактирование идёт
+# напрямую в реальный crontab машины (не в декоративный SCHEDULE), чтобы
+# изменение реально что-то меняло, а не только отображалось в UI.
+_HHMM_RE = re.compile(r'^([01]?\d|2[0-3]):([0-5]\d)$')
+_CAMPUS_LABEL_RU = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
+
+def _crontab_find_slot_lines(lines, slot):
+    """Индексы (start_idx, stop_idx) для строк слота в списке строк crontab."""
+    marker = f'campus-cron-media-notify.sh {slot} '
+    for i, line in enumerate(lines):
+        if marker in line:
+            j = i + 1
+            while j < len(lines) and (not lines[j].strip() or lines[j].strip().startswith('#')):
+                j += 1
+            if j < len(lines) and 'campus-cron-stop-notify.sh' in lines[j]:
+                return i, j
+            return i, None
+    return None, None
+
+def _crontab_parse_time(line):
+    parts = line.split(' ')
+    return f'{int(parts[1]):02d}:{int(parts[0]):02d}'
+
+def _crontab_parse_vol(line):
+    return line.strip().split(' ')[-1]
+
+def _crontab_replace_time(line, hh, mm):
+    parts = line.split(' ')
+    if len(parts) < 5:
+        return line
+    parts[0], parts[1] = str(mm), str(hh)
+    return ' '.join(parts)
+
+def _crontab_replace_time_and_vol(line, hh, mm, vol):
+    parts = line.split(' ')
+    if len(parts) < 6:
+        return line
+    parts[0], parts[1] = str(mm), str(hh)
+    parts[-1] = str(vol)
+    return ' '.join(parts)
+
+def _crontab_push(host, user, new_content):
+    """Атомарно устанавливает новый crontab через heredoc (без stdin-пайпа)."""
+    marker = 'CRONEOF9f3a'
+    cmd = (f"cat > /tmp/.newcron_{marker} << '{marker}'\n{new_content}{marker}\n"
+           f"crontab /tmp/.newcron_{marker} && rm -f /tmp/.newcron_{marker} && echo INSTALLED")
+    return ssh_run_on(host, user, cmd, timeout=15)
+
 def load_schedule():
     try:
         if os.path.exists(SCHEDULE_JSON):
@@ -1947,6 +1997,113 @@ def api_perem_slots():
     return jsonify({'ok': True, 'slots': [
         {'id': s, 'label': PEREM_SLOT_LABELS.get(s, s)} for s in PEREM_SLOTS
     ]})
+
+@app.route('/api/perem/schedule')
+@login_required
+def api_perem_schedule_get():
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    out = {}
+    for campus in ('client1', 'client2', 'cgtk'):
+        host, user = _machine_ssh(campus)
+        if not host:
+            out[campus] = {'ok': False, 'error': 'не подключен'}
+            continue
+        r = ssh_run_on(host, user, 'crontab -l 2>/dev/null', timeout=10)
+        if not r['ok']:
+            out[campus] = {'ok': False, 'error': r.get('error')}
+            continue
+        lines = r['data'].split('\n')
+        slots = {}
+        for slot in PEREM_SLOTS:
+            si, ei = _crontab_find_slot_lines(lines, slot)
+            if si is None:
+                continue
+            slots[slot] = {
+                'start': _crontab_parse_time(lines[si]),
+                'vol':   _crontab_parse_vol(lines[si]),
+                'stop':  _crontab_parse_time(lines[ei]) if ei is not None else None,
+            }
+        out[campus] = {'ok': True, 'slots': slots}
+    return jsonify({'ok': True, 'campuses': out})
+
+@app.route('/api/perem/schedule/<campus>/<slot>', methods=['POST'])
+@login_required
+def api_perem_schedule_edit(campus, slot):
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    if campus not in _MEDIA_PATHS:
+        return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
+    if slot not in PEREM_SLOTS:
+        return jsonify({'ok': False, 'error': 'Неизвестный слот'}), 400
+
+    data = request.get_json() or {}
+    new_start = (data.get('start') or '').strip()
+    new_stop  = (data.get('stop') or '').strip()
+    try:
+        new_vol = int(data.get('vol'))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'Некорректная громкость'})
+    if not _HHMM_RE.match(new_start) or not _HHMM_RE.match(new_stop):
+        return jsonify({'ok': False, 'error': 'Время в формате ЧЧ:ММ'})
+    if not (0 <= new_vol <= 160):
+        return jsonify({'ok': False, 'error': 'Громкость должна быть 0–160'})
+    sh, sm = (int(x) for x in new_start.split(':'))
+    th, tm = (int(x) for x in new_stop.split(':'))
+
+    host, user = _machine_ssh(campus)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{campus} не подключен'})
+    r = ssh_run_on(host, user, 'crontab -l 2>/dev/null', timeout=10)
+    if not r['ok']:
+        return jsonify({'ok': False, 'error': r.get('error') or 'не удалось прочитать crontab'})
+    lines = r['data'].split('\n')
+    si, ei = _crontab_find_slot_lines(lines, slot)
+    if si is None:
+        return jsonify({'ok': False, 'error': 'Слот не найден в crontab этой машины'})
+
+    old_start = _crontab_parse_time(lines[si])
+    old_vol   = _crontab_parse_vol(lines[si])
+    old_stop  = _crontab_parse_time(lines[ei]) if ei is not None else None
+
+    lines[si] = _crontab_replace_time_and_vol(lines[si], sh, sm, new_vol)
+    if ei is not None:
+        lines[ei] = _crontab_replace_time(lines[ei], th, tm)
+
+    new_content = '\n'.join(lines) + '\n'
+    r2 = _crontab_push(host, user, new_content)
+    if not r2['ok'] or 'INSTALLED' not in (r2.get('data') or ''):
+        return jsonify({'ok': False, 'error': r2.get('error') or 'не удалось применить crontab'})
+
+    # Репо-копия — best-effort, чтобы не разъезжалась с реальной машиной
+    try:
+        repo_path = os.path.join(os.path.dirname(__file__), '..', 'machines', campus, 'crontab')
+        if os.path.exists(repo_path):
+            with open(repo_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+    except Exception:
+        pass
+
+    label = PEREM_SLOT_LABELS.get(slot, slot)
+    campus_label = _CAMPUS_LABEL_RU.get(campus, campus)
+    detail = (f'{label} [{campus}]: время {old_start}→{new_start}'
+              + (f', стоп {old_stop}→{new_stop}' if old_stop else '')
+              + f', громкость {old_vol}→{new_vol}')
+    log_action(current_user.username, 'perem_schedule_edit', campus, detail)
+    tg_notify(
+        f'✏️ <b>Изменено расписание звонка</b>\n'
+        f'🏫 Кампус: <b>{campus_label}</b>\n'
+        f'🔄 {label}\n'
+        f'🕐 Время: {old_start} → <b>{new_start}</b>'
+        + (f'\n⏹ Стоп: {old_stop} → <b>{new_stop}</b>' if old_stop else '')
+        + f'\n🔊 Громкость: {old_vol} → <b>{new_vol}</b>\n'
+        f'👤 Изменил: <b>{current_user.username}</b>\n'
+        f'🕐 {_tg_fmt_time()}',
+        event_type='schedule'
+    )
+    return jsonify({'ok': True,
+                     'old': {'start': old_start, 'stop': old_stop, 'vol': old_vol},
+                     'new': {'start': new_start, 'stop': new_stop, 'vol': new_vol}})
 
 @app.route('/api/volume', methods=['POST'])
 @login_required

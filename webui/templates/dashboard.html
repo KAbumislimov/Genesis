@@ -523,9 +523,9 @@
 
 /* ═══ PEREM QUICK-ACCESS PANEL ═══ */
 .perem-qa-list{max-height:min(60vh,520px);overflow-y:auto}
-.perem-qa-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:7px 0;border-bottom:1px solid var(--border)}
+.perem-qa-row{padding:7px 0;border-bottom:1px solid var(--border)}
 .perem-qa-row:last-child{border-bottom:none}
+.perem-qa-main{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .perem-qa-label{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap}
 .perem-qa-btns{display:flex;gap:5px;flex-shrink:0}
 .perem-qa-btn{border:1px solid var(--border);background:var(--bg3);color:var(--text);
@@ -538,6 +538,25 @@
 .perem-qa-btn.c-client2{border-color:var(--c-client2,#c090ff);color:var(--c-client2,#c090ff)}
 .perem-qa-btn.c-cgtk{border-color:var(--c-cgtk,#ff6ec7);color:var(--c-cgtk,#ff6ec7)}
 .perem-qa-btn.c-all{border-color:var(--yellow,#f5c451);color:var(--yellow,#f5c451);font-weight:900}
+.perem-qa-editbtn{border:1px solid var(--border);background:none;color:var(--muted);
+  border-radius:6px;padding:4px 6px;cursor:pointer;font-size:11px;line-height:1;transition:.12s}
+.perem-qa-editbtn:hover{color:var(--text);background:var(--bg3)}
+.perem-qa-edit{margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:8px;
+  display:flex;flex-direction:column;gap:6px}
+.perem-edit-row{display:flex;align-items:center;gap:6px;font-size:11.5px}
+.perem-edit-campus{width:34px;flex-shrink:0;font-weight:800;font-size:10.5px}
+.perem-edit-campus.c-client1{color:var(--c-client1,#00e8c0)}
+.perem-edit-campus.c-client2{color:var(--c-client2,#c090ff)}
+.perem-edit-campus.c-cgtk{color:var(--c-cgtk,#ff6ec7)}
+.perem-edit-inp{border:1px solid var(--border);background:var(--bg);color:var(--text);
+  border-radius:5px;padding:3px 6px;font-size:11.5px;font-variant-numeric:tabular-nums}
+.perem-edit-inp[type=time]{width:88px}
+.perem-edit-vol{width:52px}
+.perem-edit-save{border:1px solid var(--border);background:var(--bg);color:var(--text);
+  border-radius:5px;padding:3px 8px;cursor:pointer;font-size:12px;line-height:1}
+.perem-edit-save:hover{background:var(--bg3)}
+.perem-edit-save.busy{opacity:.5;pointer-events:none}
+.perem-edit-status{font-size:12px;width:16px;text-align:center}
 
 /* ═══ EQUALIZER PANEL ═══ */
 .eq-panel{
@@ -1607,13 +1626,17 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="perem-qa-list">
       {% for s in perem_slots %}
       <div class="perem-qa-row">
-        <span class="perem-qa-label">{{ s.label }}</span>
-        <div class="perem-qa-btns">
-          <button class="perem-qa-btn c-client1" onclick="_doPlayPerem('client1','{{ s.id }}',this)" title="{{ s.label }} — только Client1">NAR</button>
-          <button class="perem-qa-btn c-client2" onclick="_doPlayPerem('client2','{{ s.id }}',this)" title="{{ s.label }} — только Client2">GNC</button>
-          <button class="perem-qa-btn c-cgtk" onclick="_doPlayPerem('cgtk','{{ s.id }}',this)" title="{{ s.label }} — только City Garden">CG</button>
-          <button class="perem-qa-btn c-all" onclick="_doPlayPeremAll('{{ s.id }}',this)" title="{{ s.label }} — сразу на всех кампусах">ВСЕ</button>
+        <div class="perem-qa-main">
+          <span class="perem-qa-label">{{ s.label }}</span>
+          <div class="perem-qa-btns">
+            <button class="perem-qa-btn c-client1" onclick="_doPlayPerem('client1','{{ s.id }}',this)" title="{{ s.label }} — только Client1">NAR</button>
+            <button class="perem-qa-btn c-client2" onclick="_doPlayPerem('client2','{{ s.id }}',this)" title="{{ s.label }} — только Client2">GNC</button>
+            <button class="perem-qa-btn c-cgtk" onclick="_doPlayPerem('cgtk','{{ s.id }}',this)" title="{{ s.label }} — только City Garden">CG</button>
+            <button class="perem-qa-btn c-all" onclick="_doPlayPeremAll('{{ s.id }}',this)" title="{{ s.label }} — сразу на всех кампусах">ВСЕ</button>
+            <button class="perem-qa-editbtn" onclick="_togglePeremEdit('{{ s.id }}',this)" title="Редактировать время/громкость по кампусам">✏️</button>
+          </div>
         </div>
+        <div class="perem-qa-edit" id="perem-edit-{{ s.id }}" style="display:none"></div>
       </div>
       {% endfor %}
     </div>
@@ -3713,6 +3736,74 @@ function _doPlayPeremAll(slot, btn) {
   setTimeout(function(){ _doPlayPerem('client2', slot); }, 600);
   setTimeout(function(){ _doPlayPerem('cgtk', slot); }, 1200);
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
+}
+
+// ──── PEREM SCHEDULE EDIT (per-campus время/громкость, реально в crontab) ────
+var _peremSchedule = null;
+function _loadPeremSchedule(cb) {
+  if (_peremSchedule) { cb && cb(); return; }
+  fetch('/api/perem/schedule').then(function(r){ return r.json(); })
+    .then(function(d){ if (d.ok) _peremSchedule = d.campuses; cb && cb(); })
+    .catch(function(){ cb && cb(); });
+}
+function _togglePeremEdit(slot, btn) {
+  var el = document.getElementById('perem-edit-' + slot);
+  if (!el) return;
+  var opening = el.style.display === 'none';
+  if (!opening) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.innerHTML = '<div style="color:var(--muted);font-size:11px">Загрузка…</div>';
+  _peremSchedule = null; // всегда свежие данные при открытии
+  _loadPeremSchedule(function(){ _renderPeremEdit(slot, el); });
+}
+function _renderPeremEdit(slot, el) {
+  el.innerHTML = ['client1','client2','cgtk'].map(function(campus){
+    var c = _peremSchedule && _peremSchedule[campus];
+    var d = c && c.ok ? c.slots[slot] : null;
+    var short = {client1:'NAR', client2:'GNC', cgtk:'CG'}[campus];
+    if (!d) {
+      return '<div class="perem-edit-row"><span class="perem-edit-campus c-'+campus+'">'+short+'</span>' +
+        '<span style="color:var(--muted)">'+(c && !c.ok ? 'нет связи' : 'слот не найден')+'</span></div>';
+    }
+    var uid = slot + '_' + campus;
+    return '<div class="perem-edit-row">' +
+      '<span class="perem-edit-campus c-'+campus+'">'+short+'</span>' +
+      '<input type="time" class="perem-edit-inp" id="pe-start-'+uid+'" value="'+d.start+'" title="Время старта">' +
+      '<input type="time" class="perem-edit-inp" id="pe-stop-'+uid+'" value="'+(d.stop||'')+'" title="Время стопа"' + (d.stop ? '' : ' disabled') + '>' +
+      '<input type="number" class="perem-edit-inp perem-edit-vol" id="pe-vol-'+uid+'" value="'+d.vol+'" min="0" max="160" title="Громкость">' +
+      '<button class="perem-edit-save" onclick="_savePeremEdit(\''+campus+'\',\''+slot+'\',this)" title="Сохранить">💾</button>' +
+      '<span class="perem-edit-status" id="pe-status-'+uid+'"></span>' +
+    '</div>';
+  }).join('');
+}
+function _savePeremEdit(campus, slot, btn) {
+  var uid = slot + '_' + campus;
+  var start = document.getElementById('pe-start-' + uid).value;
+  var stop  = document.getElementById('pe-stop-' + uid).value;
+  var vol   = document.getElementById('pe-vol-' + uid).value;
+  var status = document.getElementById('pe-status-' + uid);
+  if (!start || !stop || vol === '') { if (status) status.textContent = '⚠️'; return; }
+  btn.classList.add('busy');
+  if (status) status.textContent = '…';
+  fetch('/api/perem/schedule/' + campus + '/' + slot, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({start: start, stop: stop, vol: vol})
+  }).then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) {
+        if (_peremSchedule && _peremSchedule[campus] && _peremSchedule[campus].slots) {
+          _peremSchedule[campus].slots[slot] = d.new;
+        }
+        if (status) status.textContent = '✅';
+        toast('✅ ' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[campus]||campus) + ' — расписание обновлено');
+        setTimeout(function(){ if (status) status.textContent = ''; }, 3000);
+      } else {
+        if (status) status.textContent = '⚠️';
+        toast('⚠️ ' + (d.error || 'ошибка'));
+      }
+    })
+    .catch(function(){ if (status) status.textContent = '⚠️'; toast('⚠️ нет связи'); })
+    .finally(function(){ btn.classList.remove('busy'); });
 }
 
 // ──── TOAST ───────────────────────────────────────────
