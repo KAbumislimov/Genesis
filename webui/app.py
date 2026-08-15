@@ -4007,6 +4007,9 @@ def api_timesync_status():
     client2 = _client2_conn()
     if client2:
         targets.append(('client2', client2['host'], client2.get('user', CLIENT1_USER), SSH_KEY))
+    cgtk_host, cgtk_user = _machine_ssh('cgtk')
+    if cgtk_host:
+        targets.append(('cgtk', cgtk_host, cgtk_user, SSH_KEY))
 
     for label, host, user, key in targets:
         t = threading.Thread(target=collect, args=(label, host, user, key))
@@ -4057,6 +4060,10 @@ def api_timesync_sync():
         client2 = _client2_conn()
         if client2:
             targets.append(('client2', client2['host'], client2.get('user', CLIENT1_USER), SSH_KEY))
+    if machine in ('all', 'cgtk'):
+        cgtk_host, cgtk_user = _machine_ssh('cgtk')
+        if cgtk_host:
+            targets.append(('cgtk', cgtk_host, cgtk_user, SSH_KEY))
 
     def do_sync(label, host, user, key):
         s = None
