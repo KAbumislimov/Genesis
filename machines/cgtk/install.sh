@@ -52,7 +52,7 @@ echo "  ✅ /run/campus-player"
 # 3. СКРИПТЫ
 # ─────────────────────────────────────────────
 echo "[3/6] Скрипты..."
-for f in campus-cron-media-local.sh campus-cron-stop-local.sh campus-playerctl notify-ssh-login.sh; do
+for f in campus-cron-media-local.sh campus-cron-stop-local.sh campus-cron-media-notify.sh campus-cron-stop-notify.sh cron_notify.sh campus-playerctl notify-ssh-login.sh; do
     src="$SCRIPT_DIR/scripts/$f"
     dst="$CGTK_HOME/$f"
     if [[ -f "$src" ]]; then
