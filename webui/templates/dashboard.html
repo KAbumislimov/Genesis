@@ -798,6 +798,8 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 @keyframes micPulse{0%,100%{box-shadow:0 0 6px rgba(0,200,192,.4)}50%{box-shadow:0 0 14px rgba(0,200,192,.8)}}
 .w2b-gap{width:5px;height:1px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.1);margin:0 1px}
 .w2sep{width:1px;height:16px;background:rgba(255,255,255,.1);margin:0 2px;flex-shrink:0}
+.w2b-grouplbl{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.04em;
+  align-self:center;flex-shrink:0;margin-right:1px;white-space:nowrap}
 
 /* ── Campus status strip ── */
 .wamp2-cs-strip{background:var(--wt-lcd-bg);padding:3px 8px;border-bottom:1px solid rgba(0,0,0,.6);
@@ -1168,39 +1170,41 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <!-- ── Transport ── -->
   <div class="wamp2-tr">
     {% if perms.prev %}
-    <button class="w2b w2b-prev" onclick="doPrev()" title="Предыдущий трек">⏮ ПРЕД</button>
+    <button class="w2b w2b-prev" onclick="doPrev()" data-i18n-title="wamp.prev_t" title="Предыдущий трек">⏮ <span data-i18n="wamp.prev">ПРЕД</span></button>
     {% endif %}
-    <button class="w2b w2b-play" id="wa-play-btn" onclick="doPlay()" title="Воспроизвести на активном кампусе">▶ PLAY</button>
-    <button class="w2b w2b-pause" id="wa-pause-btn" onclick="doPause()" title="Пауза / продолжить">⏸ ПАУЗА</button>
+    <button class="w2b w2b-play" id="wa-play-btn" onclick="doPlay()" data-i18n-title="wamp.play_t" title="Воспроизвести на активном кампусе">▶ <span data-i18n="wamp.play">PLAY</span></button>
+    <button class="w2b w2b-pause" id="wa-pause-btn" onclick="doPause()" data-i18n-title="wamp.pause_t" title="Пауза / продолжить">⏸ <span data-i18n="wamp.pause">ПАУЗА</span></button>
     {% if perms.stop %}
-    <button class="w2b w2b-stop" onclick="doStopAll()" title="⏹ СТОП — выключить ВСЁ на всех кампусах">⏹ СТОП</button>
+    <button class="w2b w2b-stop" onclick="doStopAll()" data-i18n-title="wamp.stop_t" title="⏹ СТОП — выключить ВСЁ на всех кампусах">⏹ <span data-i18n="wamp.stop">СТОП</span></button>
     {% endif %}
     {% if perms.next %}
-    <button class="w2b w2b-next" onclick="doNext()" title="Следующий трек">СЛЕД ⏭</button>
+    <button class="w2b w2b-next" onclick="doNext()" data-i18n-title="wamp.next_t" title="Следующий трек"><span data-i18n="wamp.next">СЛЕД</span> ⏭</button>
     {% endif %}
     {% if perms.play %}
-    <button class="w2b w2b-playall" onclick="wampPlayAllOshhaya()" title="▶ Играть всё из папки Общая (перемешать) на активном кампусе">▶ ИГРАТЬ ВСЁ</button>
+    <button class="w2b w2b-playall" onclick="wampPlayAllOshhaya()" data-i18n-title="wamp.playall_t" title="▶ Играть всё из папки Общая (перемешать) на активном кампусе">▶ <span data-i18n="wamp.playall">ИГРАТЬ ВСЁ</span></button>
     {% endif %}
     <div class="w2b-gap"></div>
-    <button class="w2b w2b-shf tog" id="wa-shf-btn" onclick="wampToggleShuffle()" title="Перемешать треки">🔀 ШАФ</button>
-    <button class="w2b w2b-rep tog" id="wa-rep-btn" onclick="wampToggleRepeat()" title="Повтор текущего трека">🔁 ПОВТ</button>
+    <button class="w2b w2b-shf tog" id="wa-shf-btn" onclick="wampToggleShuffle()" data-i18n-title="wamp.shuffle_t" title="Перемешать треки">🔀 <span data-i18n="wamp.shuffle">ШАФ</span></button>
+    <button class="w2b w2b-rep tog" id="wa-rep-btn" onclick="wampToggleRepeat()" data-i18n-title="wamp.repeat_t" title="Повтор текущего трека">🔁 <span data-i18n="wamp.repeat">ПОВТ</span></button>
     <div class="w2b-gap"></div>
     {% if perms.vol %}
-    <button class="w2b w2b-eq" id="wa-eq-btn" onclick="wampShowTab('eq')" title="Эквалайзер">🎚 EQ</button>
+    <button class="w2b w2b-eq" id="wa-eq-btn" onclick="wampShowTab('eq')" data-i18n-title="wamp.eq_t" title="Эквалайзер">🎚 EQ</button>
     {% endif %}
-    <button class="w2b w2b-pl" id="wa-pl-btn" onclick="wampShowTab('pl')" title="Плейлист">📋 PL</button>
+    <button class="w2b w2b-pl" id="wa-pl-btn" onclick="wampShowTab('pl')" data-i18n-title="wamp.pl_t" title="Плейлист">📋 PL</button>
     {% if perms.mute %}
-    <button class="w2b w2b-mute" id="wa-mute-btn" onclick="toggleMute()" title="Тишина / включить звук">🔇 МЬЮ</button>
+    <button class="w2b w2b-mute" id="wa-mute-btn" onclick="toggleMute()" data-i18n-title="wamp.mute_t" title="Тишина / включить звук">🔇 <span data-i18n="wamp.mute">МЬЮ</span></button>
     {% endif %}
-    <button class="w2b w2b-mic" id="wa-mic-btn" onclick="waOpenMic()" title="🎤 Объявление по кампусу через микрофон">🎤 МИК</button>
+    <button class="w2b w2b-mic" id="wa-mic-btn" onclick="waOpenMic()" data-i18n-title="wamp.mic_t" title="🎤 Объявление по кампусу через микрофон">🎤 <span data-i18n="wamp.mic">МИК</span></button>
     <div class="w2b-gap"></div>
     {% if perms.stop %}
+    <span class="w2b-grouplbl" data-i18n="wamp.stop_group">Стоп:</span>
     <button class="w2b w2b-snar" onclick="stopCampus('client1')" title="Стоп только Client1">■ NAR</button>
     <button class="w2b w2b-sgenc" onclick="stopCampus('client2')" title="Стоп только Client2">■ GNC</button>
     <button class="w2b w2b-scg" onclick="stopCampus('cgtk')" title="Стоп только City Garden">■ CG</button>
     {% endif %}
     {% if perms.himn %}
     <div class="w2b-gap"></div>
+    <span class="w2b-grouplbl" data-i18n="wamp.himn_group">Гимн:</span>
     <button class="w2b w2b-himn" onclick="_doPlayHimn('client1')" title="Гимн Client1 Campus">♪ NAR</button>
     <button class="w2b w2b-himn" onclick="_doPlayHimn('client2')" title="Гимн Client2 Campus">♪ GNC</button>
     <button class="w2b w2b-himn" onclick="_doPlayHimn('cgtk')" title="Гимн City Garden Campus">♪ CG</button>
@@ -1792,6 +1796,21 @@ function makeVisualizer(canvasId) {
     return Math.min(.95, bass*(0.40+0.55*a*(0.5+0.5*b)*(0.7+0.3*wave)));
   }
 
+  // Визуализатор не должен «играть» сам по себе, когда ничего не звучит —
+  // это общий «часы» для всех voln/анимаций: пока хоть один кампус реально
+  // играет, идёт как обычно; как только никто не играет — застывает на
+  // последнем значении (не Date.now()), поэтому все sin()-based эффекты
+  // перестают двигаться, а не просто становятся тише.
+  var _vizFrozenT = 0;
+  function _anyPlaying() {
+    for (var k in _progState) { if (_progState[k] && _progState[k].playing) return true; }
+    return false;
+  }
+  function _vizTime() {
+    if (_anyPlaying()) _vizFrozenT = Date.now()/1000;
+    return _vizFrozenT;
+  }
+
   // ── RADIAL (ABYSS / default) ─────────────────────────
   function drawRadial() {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
@@ -1803,7 +1822,7 @@ function makeVisualizer(canvasId) {
   }
 
   function _ring(hs,pk,pt,active,ck,cx,cy,R,maxH,ph,H) {
-    var col=_waveColors[ck], f=fd(active,ck), t=Date.now()/1000, ls=f?0.55:0.12;
+    var col=_waveColors[ck], f=fd(active,ck), t=_vizTime(), ls=f?0.55:0.12;
     var bw=(2*Math.PI*R/N)*0.68;
     var gr=c.createRadialGradient(cx,cy,R*.4,cx,cy,R+maxH*.9);
     gr.addColorStop(0,col+(active?'10':'07')); gr.addColorStop(1,col+'00');
@@ -1839,7 +1858,7 @@ function makeVisualizer(canvasId) {
   function drawBars() {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||200;
-    var t=Date.now()/1000;
+    var t=_vizTime();
 
     // Black background
     c.fillStyle='#000'; c.fillRect(0,0,W,H);
@@ -1936,7 +1955,7 @@ function makeVisualizer(canvasId) {
   function drawCurve() {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||200;
-    var t=Date.now()/1000;
+    var t=_vizTime();
     c.fillStyle='#000'; c.fillRect(0,0,W,H);
 
     var NP=100;
@@ -1983,7 +2002,7 @@ function makeVisualizer(canvasId) {
   function drawMirror() {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||200;
-    var t=Date.now()/1000;
+    var t=_vizTime();
     c.fillStyle='#000'; c.fillRect(0,0,W,H);
     var mid=Math.round(H/2), NB=64, SEG=3, GAP=1, STEP=SEG+GAP;
     var bw=Math.max(3,Math.floor((W-(NB-1))/NB));
@@ -2033,7 +2052,7 @@ function makeVisualizer(canvasId) {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
-    var t=Date.now()/1000;
+    var t=_vizTime();
     // divider
     c.strokeStyle='rgba(150,80,255,.12)'; c.lineWidth=1; c.setLineDash([5,7]);
     c.beginPath(); c.moveTo(0,H/2); c.lineTo(W,H/2); c.stroke(); c.setLineDash([]);
@@ -2083,7 +2102,7 @@ function makeVisualizer(canvasId) {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
-    var t=Date.now()/1000, maxR=Math.min(W/4,H/2)-10, NR=8;
+    var t=_vizTime(), maxR=Math.min(W/4,H/2)-10, NR=8;
     [[W/4,actL,'client1',0],[W*3/4,actR,'client2',1]].forEach(function(s){
       var cx=s[0],act=s[1],ck=s[2],off=s[3];
       var col=_waveColors[ck], f=fd(act,ck);
@@ -2119,7 +2138,7 @@ function makeVisualizer(canvasId) {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
-    var t=Date.now()/1000, hs=(t*22)%360;
+    var t=_vizTime(), hs=(t*22)%360;
     var NB=56,gap=1.5,px=14,py=26,lh=16,maxBH=H-py*2-lh;
     var aw=(W-px*2)/2, bw=(aw-(NB-1)*gap)/NB;
     [{hs:hL,pk:pkL,pt:ptL,act:actL,ck:'client1',x0:px,ho:0},
@@ -2163,7 +2182,7 @@ function makeVisualizer(canvasId) {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
-    var t=Date.now()/1000;
+    var t=_vizTime();
     [[W/4,actL,'client1',0],[W*3/4,actR,'client2',1]].forEach(function(s,si){
       var cx=s[0],act=s[1],ck=s[2]; var x0=si*(W/2), x1=x0+W/2;
       var f=fd(act,ck);
@@ -2213,7 +2232,7 @@ function makeVisualizer(canvasId) {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
     c.clearRect(0,0,W,H);
-    var t=Date.now()/1000;
+    var t=_vizTime();
     [[W/4,H/2,actL,'client1',0],[W*3/4,H/2,actR,'client2',180]].forEach(function(s){
       var cx=s[0],cy=s[1],act=s[2],ck=s[3],hoff=s[4];
       var f=fd(act,ck), maxR=Math.min(W/4,H/2)-14;
@@ -2270,7 +2289,7 @@ function makeVisualizer(canvasId) {
   function drawRainbow() {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
-    var t=Date.now()/1000;
+    var t=_vizTime();
     c.fillStyle='#000'; c.fillRect(0,0,W,H);
     var NB=90, gap=1;
     var bw=Math.max(2,(W-(NB-1)*gap)/NB);
@@ -2309,7 +2328,7 @@ function makeVisualizer(canvasId) {
     // Slow trail fade
     c.fillStyle='rgba(0,0,0,0.25)';
     c.fillRect(0,0,W,H);
-    var t=Date.now()/1000;
+    var t=_vizTime();
     var f=fd(actL,'client1')||fd(actR,'client2');
     var act=actL||actR;
     var midY=H/2;
@@ -2358,7 +2377,7 @@ function makeVisualizer(canvasId) {
   function drawSpectrolizer() {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
-    var t=Date.now()/1000;
+    var t=_vizTime();
     c.fillStyle='#000'; c.fillRect(0,0,W,H);
     var f=fd(actL,'client1')||fd(actR,'client2'), act=actL||actR;
     var NB=128, ls=f?0.65:0.12, maxH=H*.72;
@@ -2442,7 +2461,7 @@ function makeVisualizer(canvasId) {
   function drawGroove() {
     var W=cv.offsetWidth||400; if(cv.width!==W)cv.width=W;
     var H=cv.height||240;
-    var t=Date.now()/1000;
+    var t=_vizTime();
     // Dark gradient background
     var bgGr=c.createLinearGradient(0,0,0,H);
     bgGr.addColorStop(0,'#05081a');
@@ -4142,7 +4161,7 @@ function wampSeekActive(evt) {
     var ck=_activeCampus;
     var d=_audioSSE&&_audioSSE[ck];
     var bands=d&&d.bands?d.bands:null;
-    var n=18, bw=Math.floor(W/n)-1, t=Date.now()/1000;
+    var n=18, bw=Math.floor(W/n)-1, t=_vizTime();
     for(var i=0;i<n;i++){
       var tgt;
       if(bands){ tgt=Math.min(1,bands[Math.floor(i/n*bands.length)]||0)*H*0.92; }
