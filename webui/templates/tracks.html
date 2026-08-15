@@ -82,6 +82,9 @@
 .btn-play.client2{background:rgba(188,130,255,.1);border:1px solid rgba(188,130,255,.3);color:#bc82ff}
 .btn-play.client2:hover{background:rgba(188,130,255,.2)}
 .btn-play.client2.is-playing{background:rgba(188,130,255,.2);border-color:#bc82ff;color:#bc82ff}
+.btn-play.cgtk{background:rgba(255,110,199,.1);border:1px solid rgba(255,110,199,.3);color:#ff6ec7}
+.btn-play.cgtk:hover{background:rgba(255,110,199,.2)}
+.btn-play.cgtk.is-playing{background:rgba(255,110,199,.2);border-color:#ff6ec7;color:#ff6ec7}
 .btn-stop-inline{
   background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.3);color:var(--red);
   padding:5px 10px;border-radius:7px;font-size:13px;cursor:pointer;
@@ -306,6 +309,10 @@
                 onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','client2',this)">
           <i class="bi bi-pc-display"></i> <span class="btn-lbl">Client2</span>
         </button>
+        <button class="btn-play cgtk"
+                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','cgtk',this)">
+          <i class="bi bi-flower1"></i> <span class="btn-lbl">City Garden</span>
+        </button>
         {% else %}
         <span style="font-size:12px;color:var(--muted);padding:4px 8px">
           <i class="bi bi-lock-fill"></i> нет доступа
@@ -411,6 +418,7 @@ const OPEN_FOR = '{{ open_pin_for }}';
 const ML = {
   client1:{icon:'bi-building',lbl:'Client1'},
   client2:{icon:'bi-pc-display',lbl:'Client2'},
+  cgtk:{icon:'bi-flower1',lbl:'City Garden'},
 };
 
 /* ── PIN modal ────────────────────────────────── */
@@ -596,6 +604,8 @@ function refreshTracks(){
             <i class="bi bi-building"></i><span class="btn-lbl"> Client1</span></button>
           <button class="btn-play client2" data-machine="client2" onclick="playTrack('${fn}','${fo}','client2',this)">
             <i class="bi bi-pc-display"></i><span class="btn-lbl"> Client2</span></button>
+          <button class="btn-play cgtk" data-machine="cgtk" onclick="playTrack('${fn}','${fo}','cgtk',this)">
+            <i class="bi bi-flower1"></i><span class="btn-lbl"> City Garden</span></button>
           <button class="btn-stop-inline" onclick="stopAll(this)"><i class="bi bi-stop-fill"></i></button>
         </div></div>`;
     }).join('');

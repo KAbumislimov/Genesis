@@ -3426,9 +3426,19 @@ def api_schedule_reset():
     return jsonify({'ok': True, 'schedule': SCHEDULE})
 
 # ══════════════════════════════════════════════════
-# TRACKS SYNC  (client1 ↔ client2)
+# TRACKS SYNC  (client1 local library ⇄ each spoke campus's own copy)
 # ══════════════════════════════════════════════════
+# client1's local MUSIC_DIR is the master library; client2/cgtk each keep their own
+# local copy (they can't stream over the network) that needs periodic sync.
+# Add a key here when a new spoke campus needs the same treatment.
+SYNC_CAMPUSES = ['client2', 'cgtk']
 CLIENT2_MUSIC_DIR = os.environ.get('CLIENT2_MUSIC_DIR', '/var/lib/campus-player/inbox/music')
+
+def _remote_music_dir(campus):
+    """Remote inbox music dir for a spoke campus. All campus-player installs
+    use the same path by convention (see CLIENT2_MUSIC_DIR default); override
+    per campus via <CAMPUS>_MUSIC_DIR env var if a machine's install differs."""
+    return os.environ.get(f'{campus.upper()}_MUSIC_DIR', CLIENT2_MUSIC_DIR)
 
 def _list_remote_tracks(host, user, remote_dir):
     s = None
@@ -3453,20 +3463,24 @@ def api_tracks_sync_status():
         return jsonify({'ok': False, 'error': 'Нет прав'})
     local = set(f for f in os.listdir(MUSIC_DIR)
                 if os.path.splitext(f)[1].lower() in ALLOWED_AUDIO)
-    client2 = _client2_conn()
-    if not client2:
-        return jsonify({'ok': False, 'error': 'client2 не настроен'})
-    remote = _list_remote_tracks(client2['host'], client2.get('user', CLIENT1_USER), CLIENT2_MUSIC_DIR)
-    if isinstance(remote, tuple):
-        return jsonify({'ok': False, 'error': remote[1]})
-    return jsonify({
-        'ok': True,
-        'only_client1': sorted(local - remote),
-        'only_client2':  sorted(remote - local),
-        'both':      sorted(local & remote),
-        'client1_count': len(local),
-        'client2_count':  len(remote),
-    })
+    campuses = {}
+    for campus in SYNC_CAMPUSES:
+        conn = _client2_conn(campus)
+        if not conn:
+            campuses[campus] = {'ok': False, 'error': f'{campus} не настроен'}
+            continue
+        remote = _list_remote_tracks(conn['host'], conn.get('user', CLIENT1_USER), _remote_music_dir(campus))
+        if isinstance(remote, tuple):
+            campuses[campus] = {'ok': False, 'error': remote[1]}
+            continue
+        campuses[campus] = {
+            'ok': True,
+            'only_client1':    sorted(local - remote),
+            'only_remote':  sorted(remote - local),
+            'both':         sorted(local & remote),
+            'remote_count': len(remote),
+        }
+    return jsonify({'ok': True, 'client1_count': len(local), 'campuses': campuses})
 
 @app.route('/api/tracks/sync', methods=['POST'])
 @login_required
@@ -3474,38 +3488,42 @@ def api_tracks_sync():
     if current_user.role not in ('admin', 'staff'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data      = request.get_json() or {}
-    direction = data.get('direction', 'client1_to_client2')
+    campus    = (data.get('campus') or 'client2').strip()
+    direction = data.get('direction', 'client1_to_remote')  # 'client1_to_remote' | 'remote_to_client1'
     files     = data.get('files', [])
+    if campus not in SYNC_CAMPUSES:
+        return jsonify({'ok': False, 'error': f'Неизвестный кампус: {campus}'})
     if not files:
         return jsonify({'ok': False, 'error': 'Список файлов пуст'})
-    client2 = _client2_conn()
-    if not client2:
-        return jsonify({'ok': False, 'error': 'client2 не настроен'})
-    client2_host = client2['host']
-    client2_user = client2.get('user', CLIENT1_USER)
+    conn = _client2_conn(campus)
+    if not conn:
+        return jsonify({'ok': False, 'error': f'{campus} не настроен'})
+    remote_host = conn['host']
+    remote_user = conn.get('user', CLIENT1_USER)
+    remote_dir  = _remote_music_dir(campus)
     copied, errors = [], []
     s = None
     try:
         s = paramiko.SSHClient()
         s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        s.connect(client2_host, username=client2_user, key_filename=SSH_KEY, timeout=10, banner_timeout=20)
+        s.connect(remote_host, username=remote_user, key_filename=SSH_KEY, timeout=10, banner_timeout=20)
         sftp = s.open_sftp()
-        s.exec_command(f'mkdir -p "{CLIENT2_MUSIC_DIR}"')
+        s.exec_command(f'mkdir -p "{remote_dir}"')
         import time; time.sleep(0.3)
         for fname in files:
             fname = os.path.basename(fname)
             if not fname or '..' in fname:
                 continue
-            if direction == 'client1_to_client2':
+            if direction == 'client1_to_remote':
                 local_path  = os.path.join(MUSIC_DIR, fname)
-                remote_path = f'{CLIENT2_MUSIC_DIR}/{fname}'
+                remote_path = f'{remote_dir}/{fname}'
                 if os.path.isfile(local_path):
                     sftp.put(local_path, remote_path)
                     copied.append(fname)
                 else:
                     errors.append(f'{fname}: не найден локально')
             else:
-                remote_path = f'{CLIENT2_MUSIC_DIR}/{fname}'
+                remote_path = f'{remote_dir}/{fname}'
                 local_path  = os.path.join(MUSIC_DIR, fname)
                 sftp.get(remote_path, local_path)
                 copied.append(fname)
@@ -3516,11 +3534,12 @@ def api_tracks_sync():
         if s:
             try: s.close()
             except Exception: pass
-    log_action(current_user.username, f'sync_{direction}', 'client2', f'{len(copied)} файлов')
+    campus_label = {'client2': 'Client2', 'cgtk': 'City Garden'}.get(campus, campus)
+    log_action(current_user.username, f'sync_{direction}', campus, f'{len(copied)} файлов')
     if copied:
         tg_notify(
             f'🔄 <b>Синхронизация треков</b>\n'
-            f'{"client1 → Client2" if direction=="client1_to_client2" else "Client2 → client1"}\n'
+            f'{"client1 → " + campus_label if direction=="client1_to_remote" else campus_label + " → client1"}\n'
             f'📁 {len(copied)} файлов\n'
             f'👤 {current_user.username}\n'
             f'🕐 {_tg_fmt_time()}',

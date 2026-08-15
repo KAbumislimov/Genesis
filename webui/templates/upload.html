@@ -142,39 +142,16 @@
   <div class="card-hd">
     <i class="bi bi-arrow-left-right" style="color:var(--purple)"></i>
     <span class="card-hd-title">Синхронизация треков</span>
-    <span class="text-muted" style="margin-left:auto;font-size:12px">Client1 ↔ Client2</span>
+    <span class="text-muted" style="margin-left:auto;font-size:12px">Client1 (мастер-библиотека) ↔ каждый кампус</span>
   </div>
   <div class="card-body" style="padding:16px 20px">
     <div id="sync-status-text" class="text-muted" style="font-size:13px;margin-bottom:12px">
       Нажмите «Проверить» чтобы сравнить библиотеки
     </div>
-    <div id="sync-diff" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);margin-bottom:8px">
-            <i class="bi bi-building"></i> Только на Client1
-          </div>
-          <div id="only-client1-list" style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto"></div>
-        </div>
-        <div style="background:rgba(188,130,255,.06);border:1px solid rgba(188,130,255,.2);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--purple);margin-bottom:8px">
-            <i class="bi bi-pc-display"></i> Только на Client2
-          </div>
-          <div id="only-client2-list" style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto"></div>
-        </div>
-      </div>
-      <div id="sync-summary" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div id="sync-blocks"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
       <button class="btn btn-ghost" id="btn-sync-check" onclick="checkSync()">
         <i class="bi bi-search"></i> Проверить
-      </button>
-      <button class="btn btn-primary" id="btn-sync-push" onclick="doSync('client1_to_client2')" style="display:none">
-        <i class="bi bi-arrow-right-circle"></i> Client1 → Client2
-      </button>
-      <button class="btn btn-ghost" id="btn-sync-pull" onclick="doSync('client2_to_client1')" style="display:none"
-              style="border-color:rgba(188,130,255,.4);color:var(--purple)">
-        <i class="bi bi-arrow-left-circle"></i> Client2 → Client1
       </button>
     </div>
     <div id="sync-progress" style="display:none;margin-top:10px;font-size:12px;color:var(--muted)"></div>
@@ -419,7 +396,15 @@ function escHtml(s) {
 }
 
 // ── Track sync ──────────────────────────────────
-let _syncData = null;
+// client1's local library is the master; client2/cgtk each keep their own copy on
+// their own machine (no network streaming), so each is compared against
+// client1 independently — add a row here to support a future spoke campus.
+const SYNC_CAMPUSES = [
+  { key:'client2',  label:'Client2',     icon:'bi-pc-display', color:'#bc82ff', bg:'rgba(188,130,255,.06)', border:'rgba(188,130,255,.2)' },
+  { key:'cgtk', label:'City Garden', icon:'bi-flower1',    color:'#ff6ec7', bg:'rgba(255,110,199,.06)', border:'rgba(255,110,199,.2)' },
+];
+
+let _syncData = null; // last /api/tracks/sync/status response
 
 function checkSync() {
   const btn = document.getElementById('btn-sync-check');
@@ -432,33 +417,79 @@ function checkSync() {
     btn.innerHTML = '<i class="bi bi-search"></i> Проверить';
     if (!d.ok) { txt.textContent = 'Ошибка: ' + (d.error||'?'); return; }
     _syncData = d;
-    document.getElementById('sync-diff').style.display = '';
-    const client1 = d.only_client1 || [];
-    const client2  = d.only_client2  || [];
-    document.getElementById('only-client1-list').innerHTML =
-      client1.length ? client1.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') :
-      '<span style="color:var(--muted)">—</span>';
-    document.getElementById('only-client2-list').innerHTML =
-      client2.length ? client2.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') :
-      '<span style="color:var(--muted)">—</span>';
-    document.getElementById('sync-summary').textContent =
-      `Client1: ${d.client1_count} · Client2: ${d.client2_count} · Общих: ${(d.both||[]).length} · Только Client1: ${client1.length} · Только Client2: ${client2.length}`;
-    txt.textContent = client1.length === 0 && client2.length === 0 ? '✅ Библиотеки синхронизированы' : '⚠️ Есть различия';
-    document.getElementById('btn-sync-push').style.display = client1.length ? '' : 'none';
-    document.getElementById('btn-sync-pull').style.display = client2.length  ? '' : 'none';
+    renderSyncBlocks(d);
+    let anyDiff = false, anyOk = false;
+    SYNC_CAMPUSES.forEach(c => {
+      const cd = (d.campuses||{})[c.key];
+      if (!cd || !cd.ok) return;
+      anyOk = true;
+      if ((cd.only_client1||[]).length || (cd.only_remote||[]).length) anyDiff = true;
+    });
+    txt.textContent = !anyOk ? '⚠️ Ни один кампус не настроен' :
+      (anyDiff ? '⚠️ Есть различия' : '✅ Библиотеки синхронизированы');
   }).catch(e=>{ btn.disabled=false; btn.innerHTML='<i class="bi bi-search"></i> Проверить'; txt.textContent='Нет связи: '+e; });
 }
 
-function doSync(direction) {
+function renderSyncBlocks(d) {
+  const wrap = document.getElementById('sync-blocks');
+  wrap.innerHTML = SYNC_CAMPUSES.map(c => {
+    const cd = (d.campuses||{})[c.key];
+    if (!cd) return '';
+    if (!cd.ok) {
+      return `<div style="margin-bottom:14px;font-size:12px;color:var(--muted)">
+        <i class="bi ${c.icon}"></i> ${c.label}: ${escHtml(cd.error||'ошибка')}</div>`;
+    }
+    const onlyNctk = cd.only_client1 || [];
+    const onlyRemote = cd.only_remote || [];
+    const bothN = (cd.both||[]).length;
+    return `<div style="margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
+        <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);margin-bottom:8px">
+            <i class="bi bi-building"></i> Только на Client1
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto">
+            ${onlyNctk.length ? onlyNctk.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') : '<span style="color:var(--muted)">—</span>'}
+          </div>
+        </div>
+        <div style="background:${c.bg};border:1px solid ${c.border};border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${c.color};margin-bottom:8px">
+            <i class="bi ${c.icon}"></i> Только на ${escHtml(c.label)}
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;max-height:160px;overflow-y:auto">
+            ${onlyRemote.length ? onlyRemote.map(f=>`<div style="padding:1px 0">${escHtml(f)}</div>`).join('') : '<span style="color:var(--muted)">—</span>'}
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+        Client1: ${d.client1_count} · ${escHtml(c.label)}: ${cd.remote_count} · Общих: ${bothN} ·
+        Только Client1: ${onlyNctk.length} · Только ${escHtml(c.label)}: ${onlyRemote.length}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" style="display:${onlyNctk.length?'':'none'}" onclick="doSync('${c.key}','client1_to_remote')">
+          <i class="bi bi-arrow-right-circle"></i> Client1 → ${escHtml(c.label)}
+        </button>
+        <button class="btn btn-ghost" style="display:${onlyRemote.length?'':'none'};border-color:${c.border};color:${c.color}"
+                onclick="doSync('${c.key}','remote_to_client1')">
+          <i class="bi bi-arrow-left-circle"></i> ${escHtml(c.label)} → Client1
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function doSync(campus, direction) {
   if (!_syncData) return;
-  const files = direction === 'client1_to_client2' ? (_syncData.only_client1||[]) : (_syncData.only_client2||[]);
+  const cd = (_syncData.campuses||{})[campus];
+  if (!cd || !cd.ok) return;
+  const files = direction === 'client1_to_remote' ? (cd.only_client1||[]) : (cd.only_remote||[]);
   if (!files.length) return;
   const prog = document.getElementById('sync-progress');
   prog.style.display = '';
   prog.textContent = `⏳ Копирую ${files.length} файлов...`;
   fetch('/api/tracks/sync', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({direction, files})
+    body: JSON.stringify({campus, direction, files})
   }).then(r=>r.json()).then(d=>{
     if (d.ok) {
       prog.textContent = `✅ Скопировано: ${d.copied.length} файлов` + (d.errors.length ? ` · Ошибки: ${d.errors.length}` : '');
