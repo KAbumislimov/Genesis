@@ -1,0 +1,11 @@
+groups:
+  - name: campus-machines
+    rules:
+      - alert: CampusMachineDown
+        expr: up{job="node"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} не отвечает"
+          description: "node_exporter на {{ $labels.instance }} не отвечает уже больше 3 минут — машина упала, отключена от сети, или сервис остановлен. Проверь и, если нужно, восстанови: scripts/recover-campus-machine.sh."

@@ -3,6 +3,7 @@
 bots/*/config.env
 machines/client1/bot/config.env
 **/cron_notify.env
+config/alertmanager.yml
 
 # Логи и данные
 remote-logs/

@@ -85,12 +85,27 @@ services:
     network_mode: host
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus_data:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
       - --web.listen-address=:9091
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: unless-stopped
+    profiles: ["logs"]
+    network_mode: host
+    volumes:
+      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=:9093
 
   node-exporter:
     image: prom/node-exporter:v1.6.1
@@ -314,6 +329,7 @@ volumes:
   loki_data:
   grafana_data:
   prometheus_data:
+  alertmanager_data:
   recovery_backups:
 
 networks:

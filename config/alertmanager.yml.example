@@ -1,0 +1,22 @@
+# Template — copy to config/alertmanager.yml and fill in the real bot
+# token + chat_id (from /opt/tg-campus-bot/narimanov.env). The real file is
+# gitignored on purpose (see .gitignore) — restored from the Proxmox backup
+# by recover-server.sh, same as the .env files.
+route:
+  receiver: telegram
+  group_by: ['alertname', 'instance']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token: 'REPLACE_ME'
+        chat_id: 0
+        api_url: 'https://api.telegram.org'
+        parse_mode: 'HTML'
+        message: |
+          {{ range .Alerts }}{{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .Labels.alertname }}</b>
+          {{ .Annotations.description }}
+          {{ end }}
