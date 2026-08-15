@@ -634,7 +634,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wamp-info-panel:last-child .wamp-time-row{color:rgba(184,121,255,.5)}
 .wamp-info-panel:last-child .wamp-time-row span:last-child{color:rgba(184,121,255,.35)}
 /* ── Compact nav chips (in navbar) ── */
-.nav-chips-row{display:flex;align-items:center;gap:6px;flex:1;overflow:hidden;min-width:0}
+.nav-chips-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;flex:1;min-width:0}
 .nc-chip{display:flex;align-items:center;gap:6px;
   background:var(--bg3);border:1px solid var(--border);border-radius:10px;
   padding:5px 10px;white-space:nowrap;flex-shrink:0}
@@ -831,6 +831,56 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 /* Стоп по кампусам — приглушённо красная */
 .w2b-snar,.w2b-sgenc,.w2b-scg{background:linear-gradient(180deg,#3a1010 0%,#220808 100%)!important;
   color:#cc6060!important;border-color:rgba(180,50,50,.3)!important;font-size:8px!important}
+
+/* ═══ SPECIAL CEREMONIAL BAR — Гимн / Минута молчания ═══
+   Крупные, отдельные от обычного тулбара, каждая группа — свой характер:
+   Гимн = золото/торжество, Минута молчания = свеча/тишина. */
+.wa-special-bar{display:flex;gap:12px;padding:12px 14px;margin:2px 0 8px;flex-wrap:wrap}
+.wa-special-group{flex:1;min-width:230px;border-radius:14px;padding:12px 14px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  position:relative;overflow:hidden;transition:transform .15s}
+.wa-special-group:hover{transform:translateY(-1px)}
+.wa-special-hd{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.wa-special-icon{font-size:22px;filter:drop-shadow(0 0 6px currentColor)}
+.wa-special-title{font-size:14px;font-weight:900;letter-spacing:.03em;text-transform:uppercase}
+.wa-special-btns{display:flex;gap:7px;flex-wrap:wrap}
+.wa-special-btn{border-radius:9px;padding:9px 14px;font-size:12px;font-weight:900;
+  letter-spacing:.04em;cursor:pointer;transition:.15s;line-height:1;border:1.5px solid transparent}
+.wa-special-btn:hover{transform:translateY(-2px) scale(1.04)}
+.wa-special-btn:active{transform:translateY(0) scale(.98)}
+.wa-special-btn.busy{opacity:.45;pointer-events:none}
+
+.wa-himn-group{background:radial-gradient(120% 160% at 0% 0%,#3d2c06 0%,#241a04 55%,#160f02 100%);
+  border:1.5px solid rgba(230,180,50,.35);box-shadow:0 0 0 1px rgba(230,180,50,.08) inset,0 6px 22px -8px rgba(230,180,50,.35)}
+.wa-himn-group::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,220,120,.10) 48%,transparent 66%);
+  background-size:220% 220%;animation:himnShine 5s ease-in-out infinite}
+.wa-himn-group .wa-special-title,.wa-himn-group .wa-special-icon{color:#f3c552}
+.wa-himn-group .wa-special-btn{background:linear-gradient(180deg,#5a4310 0%,#332408 100%);
+  color:#f3d580;border-color:rgba(240,200,90,.4)}
+.wa-himn-group .wa-special-btn:hover{background:linear-gradient(180deg,#6f5416 0%,#42300c 100%);
+  color:#ffe9a8;box-shadow:0 4px 14px -4px rgba(240,190,70,.55)}
+.wa-himn-group .wa-special-btn.wa-special-all{background:linear-gradient(180deg,#8a6a12 0%,#513c08 100%);
+  color:#fff3cf;border-color:#f3c552}
+
+.wa-minuta-group{background:radial-gradient(120% 160% at 0% 0%,#1c1414 0%,#100b0c 55%,#0a0708 100%);
+  border:1.5px solid rgba(255,120,60,.28);box-shadow:0 0 0 1px rgba(255,120,60,.06) inset,0 6px 22px -8px rgba(255,90,40,.28)}
+.wa-minuta-group .wa-special-icon{animation:flameFlicker 2.4s ease-in-out infinite}
+.wa-minuta-group .wa-special-title{color:#e8b98a}
+.wa-minuta-group .wa-special-icon{color:#ff8a3d}
+.wa-minuta-group .wa-special-btn{background:linear-gradient(180deg,#2c1c14 0%,#180f0a 100%);
+  color:#e8ab7c;border-color:rgba(255,140,70,.3)}
+.wa-minuta-group .wa-special-btn:hover{background:linear-gradient(180deg,#3a2416 0%,#20140c 100%);
+  color:#ffcfa0;box-shadow:0 4px 14px -4px rgba(255,120,60,.45)}
+.wa-minuta-group .wa-special-btn.wa-special-all{background:linear-gradient(180deg,#5c2f14 0%,#33190a 100%);
+  color:#ffe3c8;border-color:#ff8a3d}
+
+@keyframes himnShine{0%,100%{background-position:0% 0%}50%{background-position:100% 100%}}
+@keyframes flameFlicker{0%,100%{opacity:1;transform:scale(1) rotate(0deg)}
+  25%{opacity:.85;transform:scale(.96) rotate(-2deg)}
+  50%{opacity:1;transform:scale(1.05) rotate(1deg)}
+  75%{opacity:.9;transform:scale(.98) rotate(-1deg)}}
+@media (prefers-reduced-motion:reduce){.wa-himn-group::before,.wa-minuta-group .wa-special-icon{animation:none}}
 .w2b-snar:hover,.w2b-sgenc:hover,.w2b-scg:hover{color:#ff8888!important;border-color:rgba(220,80,80,.5)!important}
 @keyframes micPulse{0%,100%{box-shadow:0 0 6px rgba(0,200,192,.4)}50%{box-shadow:0 0 14px rgba(0,200,192,.8)}}
 .w2b-gap{width:5px;height:1px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.1);margin:0 1px}
@@ -1239,17 +1289,33 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <button class="w2b w2b-sgenc" onclick="stopCampus('client2')" title="Стоп только Client2">■ GNC</button>
     <button class="w2b w2b-scg" onclick="stopCampus('cgtk')" title="Стоп только City Garden">■ CG</button>
     {% endif %}
-    {% if perms.himn %}
-    <div class="w2b-gap"></div>
-    <span class="w2b-grouplbl" data-i18n="wamp.himn_group">Гимн:</span>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('client1')" title="Гимн Client1 Campus">♪ NAR</button>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('client2')" title="Гимн Client2 Campus">♪ GNC</button>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('cgtk')" title="Гимн City Garden Campus">♪ CG</button>
-    <button class="w2b w2b-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн всех кампусов одновременно">♪ ALL</button>
-    {% endif %}
     <div class="w2b-gap"></div>
     <button class="w2b w2b-help" onclick="toggleFP('wa-help-panel', this)" title="Что означают кнопки?">❓</button>
   </div>
+
+  {% if perms.himn %}
+  <!-- ── Special ceremonial actions: Гимн / Минута молчания — большие, отдельные от обычного тулбара ── -->
+  <div class="wa-special-bar">
+    <div class="wa-special-group wa-himn-group">
+      <div class="wa-special-hd"><span class="wa-special-icon">🎖️</span><span class="wa-special-title" data-i18n="wamp.himn_group">Гимн</span></div>
+      <div class="wa-special-btns">
+        <button class="wa-special-btn" onclick="_doPlayHimn('client1')" title="Гимн — Client1">NAR</button>
+        <button class="wa-special-btn" onclick="_doPlayHimn('client2')" title="Гимн — Client2">GNC</button>
+        <button class="wa-special-btn" onclick="_doPlayHimn('cgtk')" title="Гимн — City Garden">CG</button>
+        <button class="wa-special-btn wa-special-all" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн на всех кампусах одновременно">ВСЕ</button>
+      </div>
+    </div>
+    <div class="wa-special-group wa-minuta-group">
+      <div class="wa-special-hd"><span class="wa-special-icon">🕯️</span><span class="wa-special-title" data-i18n="wamp.minuta">Минута молчания</span></div>
+      <div class="wa-special-btns">
+        <button class="wa-special-btn" onclick="_doPlayMinuta('client1',this)" title="Минута молчания — Client1">NAR</button>
+        <button class="wa-special-btn" onclick="_doPlayMinuta('client2',this)" title="Минута молчания — Client2">GNC</button>
+        <button class="wa-special-btn" onclick="_doPlayMinuta('cgtk',this)" title="Минута молчания — City Garden">CG</button>
+        <button class="wa-special-btn wa-special-all" onclick="_doPlayMinutaAll(this)" title="Минута молчания на всех кампусах одновременно">ВСЕ</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- ── Campus status rows ── -->
   <div class="wamp2-cs-strip">
@@ -3711,6 +3777,27 @@ function _doPlayHimn(machine) {
         setTimeout(pollCgtk, 1200);
       } else { toast('⚠️ ' + (d.error || 'нет прав')); }
     }).catch(function(){ toast('⚠️ нет связи'); });
+}
+
+// ──── МИНУТА МОЛЧАНИЯ ────
+var _MINUTA_LABELS = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
+function _doPlayMinuta(campus, btn) {
+  if (btn) btn.classList.add('busy');
+  toast('🕯 ' + t('wamp.minuta') + ' → ' + (_MINUTA_LABELS[campus] || campus));
+  fetch('/api/minuta/' + campus, {method:'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) toast('⚠️ ' + (d.error || 'ошибка'));
+    })
+    .catch(function(){ toast('⚠️ нет связи'); })
+    .finally(function(){ if (btn) btn.classList.remove('busy'); });
+}
+function _doPlayMinutaAll(btn) {
+  if (btn) btn.classList.add('busy');
+  _doPlayMinuta('client1');
+  setTimeout(function(){ _doPlayMinuta('client2'); }, 600);
+  setTimeout(function(){ _doPlayMinuta('cgtk'); }, 1200);
+  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
 }
 
 // ──── PEREM QUICK-ACCESS (dashboard "⚡ быстрый запуск") ────

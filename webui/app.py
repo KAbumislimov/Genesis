@@ -1896,6 +1896,27 @@ def _play_himn(host, user, filepath, vol):
         f'/usr/local/bin/campus-playerctl play "{filepath}" {vol} 2>/dev/null')
     return r
 
+# ── "Минута молчания" — специальный файл вне ротации Media, прямой IPC ─────
+# (не через campus-playerctl: у него play игнорирует громкость молча —
+# известный баг, здесь используем тот же безопасный сокет-путь, что и крон).
+MINUTA_PATHS = {
+    'client1': '/home/client1/special/minuta_molchaniya.mp3',
+    'client2':  '/home/client2/special/minuta_molchaniya.mp3',
+    'cgtk': '/home/cgtk/special/minuta_molchaniya.mp3',
+}
+MINUTA_VOL = 100
+
+def _play_via_ipc(host, user, filepath, vol):
+    file_esc = filepath.replace('\\', '\\\\').replace('"', '\\"')
+    cmd = (
+        'SOCK=/run/campus-player/mpv.sock; '
+        f'[ -S "$SOCK" ] || {{ echo "no socket"; exit 1; }}; '
+        f'[ -f "{filepath}" ] || {{ echo "no file"; exit 1; }}; '
+        f'echo \'{{"command":["set_property","volume",{vol}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+        f'echo \'{{"command":["loadfile","{file_esc}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"'
+    )
+    return ssh_run_on(host, user, cmd, timeout=10)
+
 def _log_himn_play(username, machine, filename):
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     log_action(username, 'himn', machine, filename)
@@ -1962,6 +1983,32 @@ def api_himn_cgtk():
             event_type='himn'
         )
     return jsonify({'ok': r['ok'], 'error': r.get('error')})
+
+_MINUTA_LABEL = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
+
+@app.route('/api/minuta/<campus>', methods=['POST'])
+@login_required
+def api_minuta(campus):
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    if campus not in MINUTA_PATHS:
+        return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
+    host, user = _machine_ssh(campus)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{campus} не подключен'})
+    r = _play_via_ipc(host, user, MINUTA_PATHS[campus], MINUTA_VOL)
+    if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
+        log_action(current_user.username, 'minuta', campus, 'Минута молчания')
+        tg_notify(
+            f'🕯 <b>Минута молчания</b>\n'
+            f'🏫 Кампус: <b>{_MINUTA_LABEL.get(campus, campus)}</b>\n'
+            f'👤 Запустил: <b>{current_user.username}</b>\n'
+            f'🕐 {_tg_fmt_time()}',
+            event_type='minuta'
+        )
+        return jsonify({'ok': True})
+    err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
+    return jsonify({'ok': False, 'error': err})
 
 @app.route('/api/perem/<campus>/<slot>', methods=['POST'])
 @login_required
