@@ -12,13 +12,14 @@
 #  Делает всё за один проход:
 #    1. Проверка SSH/sudo доступа по временному паролю
 #    2. Временный passwordless sudo на кампус-машине (снимается в конце)
-#    3. Копирование machines/<campus>/ и запуск install.sh (пакеты, плеер,
-#       watchdog, cron-расписание звонков, audio-analyzer)
-#    4. Токен бота из campus-secrets — С ПРОВЕРКОЙ, что он реально рабочий
+#    3. SSH-ключи на кампус-машину + обновление алиаса ~/.ssh/config
+#       (сделано ДО install.sh специально — нужно для шага 4)
+#    4. install.sh (пакеты, плеер, watchdog, cron-расписание звонков,
+#       audio-analyzer) И restore-music.sh (музыка/звонки) — ПАРАЛЛЕЛЬНО,
+#       фоновыми задачами с раздельным логом и проверкой кода возврата
+#    5. Токен бота из campus-secrets — С ПРОВЕРКОЙ, что он реально рабочий
 #       (запускает локальный бот только если Telegram API его принял)
-#    5. Восстановление музыки/звонков (scripts/restore-music.sh)
-#    6. SSH-ключи на кампус-машину + обновление алиаса ~/.ssh/config
-#    7. Обновление CLIENT_HOST в конфиге серверного control-бота
+#    6. Обновление CLIENT_HOST в конфиге серверного control-бота
 #       (тот, что даёт кнопки Громче/Тише/Стоп в Telegram-группе) +
 #       его перезапуск (нужен once-выданный scoped sudo, см. README ниже)
 #
@@ -27,7 +28,7 @@
 #        /usr/bin/systemctl restart tg-campus-client1.service, \
 #        /usr/bin/systemctl restart tg-campus-client2.service" \
 #        | sudo tee /etc/sudoers.d/90-campus-bot-restart
-#  Без этого шаг 7 просто попросит перезапустить руками — всё остальное
+#  Без этого шаг 6 просто попросит перезапустить руками — всё остальное
 #  всё равно отработает.
 # ═══════════════════════════════════════════════════════════════════════
 set -euo pipefail
@@ -90,33 +91,11 @@ sp "echo '$TEMP_PASS' | sudo -S bash -c 'echo \"$CAMPUS_USER ALL=(ALL) NOPASSWD:
     || fail "Не удалось настроить временный sudoers"
 ok "Временный sudo включён"
 
-# ── 3. Копируем machines/<campus>/ и запускаем install.sh ────────────────
-log "Копирую установочные файлы..."
-sshpass -p "$TEMP_PASS" rsync -az --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" \
-    "$INSTALL_SRC/" "${CAMPUS_USER}@${TEMP_IP}:${CAMPUS_HOME}/${CAMPUS}-install/" \
-    || fail "rsync установочных файлов не удался"
-ok "Файлы скопированы"
-
-log "Запускаю install.sh (пакеты + плеер + cron + watchdog, пара минут)..."
-sp "cd ${CAMPUS_HOME}/${CAMPUS}-install && bash install.sh" 2>&1 | sed 's/^/    /'
-ok "install.sh выполнен"
-
-# ── 4. Бот-токен из campus-secrets — с проверкой валидности ──────────────
-if [[ -f "$SECRETS_BOT_CONFIG" ]]; then
-    log "Проверяю токен локального бота из campus-secrets..."
-    BOT_TOKEN=$(grep '^BOT_TOKEN=' "$SECRETS_BOT_CONFIG" | cut -d= -f2)
-    if [[ -n "$BOT_TOKEN" ]] && curl -sf --max-time 10 "https://api.telegram.org/bot${BOT_TOKEN}/getMe" | grep -q '"ok":true'; then
-        sp_scp_to "$SECRETS_BOT_CONFIG" "${CAMPUS_HOME}/telegram-campus-bot/config.env"
-        sp "sudo systemctl enable --now campus-telegram-bot" >/dev/null 2>&1
-        ok "Токен рабочий — локальный бот запущен"
-    else
-        warn "Токен в campus-secrets НЕДЕЙСТВИТЕЛЕН (не прошёл проверку Telegram API) — локальный бот не запущен. Нужен свежий токен от @BotFather → campus-secrets/$CAMPUS/telegram-bot.config.env"
-    fi
-else
-    warn "Нет файла $SECRETS_BOT_CONFIG — локальный бот не настроен"
-fi
-
-# ── 5. SSH-ключи на кампус-машину (для алиаса и для control-бота) ────────
+# ── 3. SSH-ключи на кампус-машину (для алиаса и для control-бота) ────────
+# Перенесено раньше install.sh специально: restore-music.sh (шаг 5) требует
+# уже рабочий SSH-алиас с ключом, а не временный пароль — значит, ключ и
+# алиас должны быть готовы ДО того, как мы запустим install.sh и
+# restore-music.sh параллельно.
 log "Добавляю SSH-ключи на машину..."
 for pubkey in "${ALIAS_KEY}.pub" "${CAMPUS_KEY}.pub"; do
     [[ -f "$pubkey" ]] || continue
@@ -125,7 +104,7 @@ for pubkey in "${ALIAS_KEY}.pub" "${CAMPUS_KEY}.pub"; do
 done
 ok "SSH-ключи добавлены"
 
-# ── 6. Обновляем SSH-алиас ~/.ssh/config → новый IP ───────────────────────
+# ── 4. Обновляем SSH-алиас ~/.ssh/config → новый IP ───────────────────────
 log "Обновляю SSH-алиас '$CAMPUS' → $TEMP_IP..."
 if grep -q "^Host ${CAMPUS}\$" "$SSH_CONFIG" 2>/dev/null; then
     python3 - "$SSH_CONFIG" "$CAMPUS" "$TEMP_IP" <<'PYEOF'
@@ -151,10 +130,62 @@ ssh -o BatchMode=yes -o ConnectTimeout=8 "$CAMPUS" "echo ok" >/dev/null 2>&1 \
     || fail "SSH-алиас '$CAMPUS' не заработал после обновления — проверь ~/.ssh/config"
 ok "ssh $CAMPUS теперь работает без пароля"
 
-# ── 7. Музыка/звонки ────────────────────────────────────────────────────
-bash "$REPO/scripts/restore-music.sh" "$CAMPUS"
+# ── 5. install.sh и музыка — ПАРАЛЛЕЛЬНО ──────────────────────────────────
+# Не пересекаются: install.sh трогает пакеты/systemd/cron, restore-music.sh
+# трогает только Media/-каталог с аудио. Оба идут в фоне, дальше ждём
+# каждый отдельно и проверяем реальный код возврата — set -e фон сам по
+# себе не ловит, поэтому проверка через wait обязательна.
+log "Копирую установочные файлы..."
+sshpass -p "$TEMP_PASS" rsync -az --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" \
+    "$INSTALL_SRC/" "${CAMPUS_USER}@${TEMP_IP}:${CAMPUS_HOME}/${CAMPUS}-install/" \
+    || fail "rsync установочных файлов не удался"
+ok "Файлы скопированы"
 
-# ── 8. Серверный control-бот: новый CLIENT_HOST + рестарт ────────────────
+INSTALL_LOG=$(mktemp)
+MUSIC_LOG=$(mktemp)
+
+log "Запускаю install.sh и restore-music.sh параллельно (install: пакеты+плеер+cron+watchdog; музыка: ~800МБ)..."
+( sp "cd ${CAMPUS_HOME}/${CAMPUS}-install && bash install.sh" ) >"$INSTALL_LOG" 2>&1 &
+INSTALL_PID=$!
+( bash "$REPO/scripts/restore-music.sh" "$CAMPUS" ) >"$MUSIC_LOG" 2>&1 &
+MUSIC_PID=$!
+
+INSTALL_RC=0
+wait "$INSTALL_PID" || INSTALL_RC=$?
+sed 's/^/    [install] /' "$INSTALL_LOG"
+if [[ "$INSTALL_RC" -ne 0 ]]; then
+    kill "$MUSIC_PID" 2>/dev/null || true
+    wait "$MUSIC_PID" 2>/dev/null || true
+    rm -f "$INSTALL_LOG" "$MUSIC_LOG"
+    fail "install.sh завершился с ошибкой (код $INSTALL_RC) — смотри вывод выше"
+fi
+ok "install.sh выполнен"
+
+MUSIC_RC=0
+wait "$MUSIC_PID" || MUSIC_RC=$?
+sed 's/^/    [music]   /' "$MUSIC_LOG"
+rm -f "$INSTALL_LOG" "$MUSIC_LOG"
+if [[ "$MUSIC_RC" -ne 0 ]]; then
+    fail "restore-music.sh завершился с ошибкой (код $MUSIC_RC) — смотри вывод выше"
+fi
+ok "Музыка/звонки восстановлены"
+
+# ── 6. Бот-токен из campus-secrets — с проверкой валидности ──────────────
+if [[ -f "$SECRETS_BOT_CONFIG" ]]; then
+    log "Проверяю токен локального бота из campus-secrets..."
+    BOT_TOKEN=$(grep '^BOT_TOKEN=' "$SECRETS_BOT_CONFIG" | cut -d= -f2)
+    if [[ -n "$BOT_TOKEN" ]] && curl -sf --max-time 10 "https://api.telegram.org/bot${BOT_TOKEN}/getMe" | grep -q '"ok":true'; then
+        sp_scp_to "$SECRETS_BOT_CONFIG" "${CAMPUS_HOME}/telegram-campus-bot/config.env"
+        sp "sudo systemctl enable --now campus-telegram-bot" >/dev/null 2>&1
+        ok "Токен рабочий — локальный бот запущен"
+    else
+        warn "Токен в campus-secrets НЕДЕЙСТВИТЕЛЕН (не прошёл проверку Telegram API) — локальный бот не запущен. Нужен свежий токен от @BotFather → campus-secrets/$CAMPUS/telegram-bot.config.env"
+    fi
+else
+    warn "Нет файла $SECRETS_BOT_CONFIG — локальный бот не настроен"
+fi
+
+# ── 7. Серверный control-бот: новый CLIENT_HOST + рестарт ────────────────
 log "Обновляю CLIENT_HOST в $SERVER_BOT_ENV..."
 if [[ -w "$SERVER_BOT_ENV" ]]; then
     sed -i "s/^CLIENT_HOST=.*/CLIENT_HOST=$TEMP_IP/" "$SERVER_BOT_ENV"
@@ -170,7 +201,7 @@ else
     warn "(чтобы это тоже стало автоматическим — см. NOPASSWD-правило в шапке этого скрипта)"
 fi
 
-# ── 9. Снимаем временный sudo на кампус-машине ────────────────────────────
+# ── 8. Снимаем временный sudo на кампус-машине ────────────────────────────
 log "Снимаю временный NOPASSWD sudo на $CAMPUS..."
 sp "echo '$TEMP_PASS' | sudo -S rm -f $SUDOERS_MARKER" >/dev/null 2>&1 \
     && ok "Временный sudo снят" \
