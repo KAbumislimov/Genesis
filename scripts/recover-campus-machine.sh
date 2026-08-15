@@ -1,13 +1,27 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════
-#  RECOVER CAMPUS MACHINE — полное восстановление client1/client2 ОДНОЙ командой,
-#  после того как на новую машину руками поставили Ubuntu 22.04 Server
-#  (это единственный шаг, который нельзя автоматизировать — нужны руки
-#  и флешка).
+#  RECOVER CAMPUS MACHINE — полное восстановление ЛЮБОГО кампуса (client1, client2
+#  и любой новый — cgtk, bstk, ...) ОДНОЙ командой, после того как на новую
+#  машину руками поставили Ubuntu 22.04 Server (это единственный шаг,
+#  который нельзя автоматизировать — нужны руки и флешка).
 #
 #  Запуск (с центрального CentOS-сервера):
 #      bash scripts/recover-campus-machine.sh client1 10.20.1.50 SomeTempPass
 #      bash scripts/recover-campus-machine.sh client2  10.20.1.103 pas123123
+#      bash scripts/recover-campus-machine.sh cgtk 10.20.2.10 pas123123
+#
+#  Для СОВЕРШЕННО НОВОГО кампуса (код которого никогда раньше не
+#  использовался) нужно один раз заранее подготовить его данные — это
+#  реальные школьные данные (расписание звонков и т.п.), их нельзя
+#  сгенерировать автоматически:
+#    - machines/<campus>/  — install.sh + конфиг плеера/cron для звонков
+#      (проще всего скопировать machines/client2/ и поправить под школу)
+#    - (опционально) campus-secrets/<campus>/telegram-bot.config.env —
+#      локальный бот-токен для этой машины
+#    - (опционально) серверный control-бот (кнопки Громче/Тише/Стоп в
+#      Telegram) — заводится отдельно один раз, см. config/campus-bots.conf
+#  Без этого рекавери всё равно сделает ОС/плеер/мониторинг — просто без
+#  готового расписания звонков и без серверного бота, с явным предупреждением.
 #
 #  Делает всё за один проход:
 #    1. Проверка SSH/sudo доступа по временному паролю
@@ -39,23 +53,29 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 CAMPUS="${1:-}"
 TEMP_IP="${2:-}"
 TEMP_PASS="${3:-}"
+CAMPUS_BOTS_CONF="$REPO/config/campus-bots.conf"
 
-if [[ "$CAMPUS" != "client1" && "$CAMPUS" != "client2" ]] || [[ -z "$TEMP_IP" ]] || [[ -z "$TEMP_PASS" ]]; then
-    echo "Использование: bash scripts/recover-campus-machine.sh client1|client2 <ip> <временный_пароль>" >&2
+if [[ ! "$CAMPUS" =~ ^[a-z][a-z0-9]*$ ]] || [[ -z "$TEMP_IP" ]] || [[ -z "$TEMP_PASS" ]]; then
+    echo "Использование: bash scripts/recover-campus-machine.sh <campus> <ip> <временный_пароль>" >&2
+    echo "  <campus> — короткий код кампуса (латиница/цифры, как в machines/<campus>/), например: client1, client2, cgtk" >&2
     exit 1
 fi
 
 # ── Конфигурация по кампусам ──────────────────────────────────────────────
-if [[ "$CAMPUS" == "client1" ]]; then
-    CAMPUS_USER="client1"
-    CAMPUS_HOME="/home/client1"
-    SERVER_BOT_SERVICE="tg-campus-client1.service"
-    SERVER_BOT_ENV="/opt/tg-campus-bot/client1.env"
-else
-    CAMPUS_USER="client2"
-    CAMPUS_HOME="/home/client2"
-    SERVER_BOT_SERVICE="tg-campus-client2.service"
-    SERVER_BOT_ENV="/opt/tg-campus-bot/client2.env"
+# CAMPUS_USER/CAMPUS_HOME выводятся из кода кампуса — так уже устроены
+# client1 и client2 (юзер на машине == код кампуса), никакой ручной привязки не
+# нужно ни для них, ни для новых кампусов.
+CAMPUS_USER="$CAMPUS"
+CAMPUS_HOME="/home/$CAMPUS_USER"
+
+# Серверный control-бот (кнопки Громче/Тише/Стоп) не выводится по шаблону —
+# это отдельный, вручную заведённый systemd-сервис на кампус. Смотрим его
+# в config/campus-bots.conf; если строки для этого кампуса нет — не падаем,
+# просто пропускаем шаг 7 ниже с явным предупреждением.
+SERVER_BOT_SERVICE=""
+SERVER_BOT_ENV=""
+if [[ -f "$CAMPUS_BOTS_CONF" ]]; then
+    IFS=':' read -r _ SERVER_BOT_SERVICE SERVER_BOT_ENV < <(grep -m1 "^${CAMPUS}:" "$CAMPUS_BOTS_CONF" || true)
 fi
 
 INSTALL_SRC="$REPO/machines/$CAMPUS"
@@ -69,6 +89,12 @@ log()  { echo "[recover:${CAMPUS}] ▶ $*"; }
 ok()   { echo "[recover:${CAMPUS}] ✅ $*"; }
 warn() { echo "[recover:${CAMPUS}] ⚠️  $*"; }
 fail() { echo "[recover:${CAMPUS}] ❌ $*" >&2; exit 1; }
+
+[[ -d "$INSTALL_SRC" ]] || fail "Нет $INSTALL_SRC — для нового кампуса сначала создай machines/$CAMPUS/ (проще всего скопировать machines/client2/ и поправить расписание звонков/конфиг плеера под эту школу), потом запускай recover ещё раз."
+
+if [[ -z "$SERVER_BOT_SERVICE" ]]; then
+    warn "Кампус '$CAMPUS' не найден в config/campus-bots.conf — control-бот (кнопки Громче/Тише/Стоп) настраивается отдельно один раз. ОС/плеер/музыка/мониторинг восстановятся полностью, шаг 7 (control-бот) будет пропущен."
+fi
 
 # Reuse one SSH connection across all the temp-password calls below instead
 # of renegotiating a fresh handshake every time — noticeably faster on a
@@ -186,17 +212,19 @@ else
 fi
 
 # ── 7. Серверный control-бот: новый CLIENT_HOST + рестарт ────────────────
-log "Обновляю CLIENT_HOST в $SERVER_BOT_ENV..."
-if [[ -w "$SERVER_BOT_ENV" ]]; then
+if [[ -z "$SERVER_BOT_SERVICE" ]]; then
+    warn "Control-бот для '$CAMPUS' не зарегистрирован (нет строки в config/campus-bots.conf) — шаг пропущен. Всё остальное (ОС/плеер/музыка/мониторинг/алертинг) уже восстановлено."
+elif [[ -w "$SERVER_BOT_ENV" ]]; then
+    log "Обновляю CLIENT_HOST в $SERVER_BOT_ENV..."
     sed -i "s/^CLIENT_HOST=.*/CLIENT_HOST=$TEMP_IP/" "$SERVER_BOT_ENV"
     ok "CLIENT_HOST обновлён"
 else
     warn "Нет прав на запись в $SERVER_BOT_ENV — обнови руками: CLIENT_HOST=$TEMP_IP"
 fi
 
-if sudo -n systemctl restart "$SERVER_BOT_SERVICE" 2>/dev/null; then
+if [[ -n "$SERVER_BOT_SERVICE" ]] && sudo -n systemctl restart "$SERVER_BOT_SERVICE" 2>/dev/null; then
     ok "$SERVER_BOT_SERVICE перезапущен — управление плеером из Telegram работает"
-else
+elif [[ -n "$SERVER_BOT_SERVICE" ]]; then
     warn "Нет прав на рестарт без пароля — выполни руками: sudo systemctl restart $SERVER_BOT_SERVICE"
     warn "(чтобы это тоже стало автоматическим — см. NOPASSWD-правило в шапке этого скрипта)"
 fi
