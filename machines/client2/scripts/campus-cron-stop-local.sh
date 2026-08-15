@@ -1,6 +1,7 @@
 #!/bin/bash
 SOCK="/run/campus-player/mpv.sock"
 LOG="${LOG_FILE:-$HOME/action.log}"
+[ -f "$LOG" ] || touch "$LOG" 2>/dev/null
 [ -w "$LOG" ] 2>/dev/null || LOG="/tmp/landau-cron.log"
 
 # Останавливаем ТОЛЬКО воспроизведение, не завершая mpv-процесс

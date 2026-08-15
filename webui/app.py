@@ -580,7 +580,7 @@ def user_perms():
     }
 
 # ── SSH / MPV ─────────────────────────────────────
-def ssh_run_on(host, user, cmd, key=None):
+def ssh_run_on(host, user, cmd, key=None, timeout=15):
     if key is None:
         key = SSH_KEY
     s = None
@@ -588,11 +588,11 @@ def ssh_run_on(host, user, cmd, key=None):
         s = paramiko.SSHClient()
         s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         s.connect(host, username=user, key_filename=key, timeout=5)
-        _, out, _ = s.exec_command(cmd, timeout=15)
+        _, out, _ = s.exec_command(cmd, timeout=timeout)
         result = out.read().decode().strip()
         return {'ok': True, 'data': result}
     except Exception as e:
-        return {'ok': False, 'error': str(e)}
+        return {'ok': False, 'error': str(e) or repr(e)}
     finally:
         if s:
             try: s.close()
@@ -931,6 +931,22 @@ _SCHEDULE_DEFAULT = [
 ]
 SCHEDULE_JSON = os.path.join(os.path.dirname(DB_PATH), 'schedule.json')
 _sched_lock = threading.Lock()
+
+# ── Quick-access perem triggers (dashboard "быстрый доступ") ────────────────
+# Один список слотов на все кампусы — источник: тот же _SCHEDULE_DEFAULT,
+# что рисует страницу расписания, так что кнопки быстрого доступа всегда
+# совпадают с тем, что реально стоит в кроне.
+PEREM_SLOTS = [e['file'][:-4] for e in _SCHEDULE_DEFAULT if e.get('play')]
+PEREM_SLOT_LABELS = {e['file'][:-4]: e['event'].lstrip('▶').strip() for e in _SCHEDULE_DEFAULT if e.get('play')}
+# Громкость по кампусам — совпадает с их crontab (client1: 110/160, client2/cgtk: 115/150)
+_PEREM_VOL = {
+    'client1': {'himn': 160, '_default': 110},
+    'client2':  {'himn': 150, '_default': 115},
+    'cgtk': {'himn': 150, '_default': 115},
+}
+def _perem_vol(campus, slot):
+    d = _PEREM_VOL.get(campus, {'himn': 150, '_default': 115})
+    return d.get(slot, d['_default'])
 
 def load_schedule():
     try:
@@ -1336,6 +1352,7 @@ def dashboard():
         tomorrow_events=tomorrow_events,
         perms=user_perms(),
         music_folders=all_music_folders(),
+        perem_slots=[{'id': s, 'label': PEREM_SLOT_LABELS.get(s, s)} for s in PEREM_SLOTS],
     )
 
 @app.route('/tracks')
@@ -1895,6 +1912,41 @@ def api_himn_cgtk():
             event_type='himn'
         )
     return jsonify({'ok': r['ok'], 'error': r.get('error')})
+
+@app.route('/api/perem/<campus>/<slot>', methods=['POST'])
+@login_required
+def api_perem_trigger(campus, slot):
+    """Ручной запуск любой перемены/утра/гимна вне расписания — тот же
+    скрипт, что запускает cron (campus-cron-media-notify.sh), поэтому
+    Telegram-уведомление, папка дня и лог получаются автоматически,
+    без дублирования логики здесь."""
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    if slot not in PEREM_SLOTS:
+        return jsonify({'ok': False, 'error': 'Неизвестный слот'}), 400
+    if campus not in _MEDIA_PATHS:
+        return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
+    host, user = _machine_ssh(campus)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{campus} не подключен'})
+    media = _MEDIA_PATHS.get(campus, '/home/client1/Media')
+    vol = _perem_vol(campus, slot)
+    home = f'/home/{campus}'
+    cmd = (f'FORCE_PLAY=1 MEDIA_ROOT="{media}" LOG_FILE="{home}/action.log" '
+           f'"{home}/campus-cron-media-notify.sh" {slot} {vol}')
+    # Скрипт ждёт (play-попытки + фоновые curl в Telegram) — обычному
+    # ssh_run_on таймаута в 15с может не хватить, даём больше запаса.
+    r = ssh_run_on(host, user, cmd, timeout=25)
+    if r['ok']:
+        log_action(current_user.username, 'perem', campus, slot)
+    return jsonify({'ok': r['ok'], 'error': r.get('error')})
+
+@app.route('/api/perem/slots')
+@login_required
+def api_perem_slots():
+    return jsonify({'ok': True, 'slots': [
+        {'id': s, 'label': PEREM_SLOT_LABELS.get(s, s)} for s in PEREM_SLOTS
+    ]})
 
 @app.route('/api/volume', methods=['POST'])
 @login_required

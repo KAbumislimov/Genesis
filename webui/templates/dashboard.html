@@ -521,6 +521,24 @@
 .wa-help-row b{color:var(--text);font-size:12.5px}
 .wa-help-row span{color:var(--muted);font-size:11.5px}
 
+/* ═══ PEREM QUICK-ACCESS PANEL ═══ */
+.perem-qa-list{max-height:min(60vh,520px);overflow-y:auto}
+.perem-qa-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--border)}
+.perem-qa-row:last-child{border-bottom:none}
+.perem-qa-label{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap}
+.perem-qa-btns{display:flex;gap:5px;flex-shrink:0}
+.perem-qa-btn{border:1px solid var(--border);background:var(--bg3);color:var(--text);
+  font-size:10.5px;font-weight:800;letter-spacing:.02em;border-radius:6px;
+  padding:5px 8px;cursor:pointer;transition:.12s;line-height:1}
+.perem-qa-btn:hover{filter:brightness(1.2);transform:translateY(-1px)}
+.perem-qa-btn:active{transform:translateY(0)}
+.perem-qa-btn.busy{opacity:.5;pointer-events:none}
+.perem-qa-btn.c-client1{border-color:var(--c-client1,#00e8c0);color:var(--c-client1,#00e8c0)}
+.perem-qa-btn.c-client2{border-color:var(--c-client2,#c090ff);color:var(--c-client2,#c090ff)}
+.perem-qa-btn.c-cgtk{border-color:var(--c-cgtk,#ff6ec7);color:var(--c-cgtk,#ff6ec7)}
+.perem-qa-btn.c-all{border-color:var(--yellow,#f5c451);color:var(--yellow,#f5c451);font-weight:900}
+
 /* ═══ EQUALIZER PANEL ═══ */
 .eq-panel{
   background:var(--bg3);border-top:1px solid var(--border);
@@ -1577,10 +1595,39 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   </div>
 </div>
 
+{% if perms.himn %}
+<div class="float-panel" id="perem-float-panel">
+  <div class="float-panel-hdr" id="perem-panel-drag">
+    <i class="bi bi-lightning-charge-fill" style="color:var(--yellow,#f5c451)"></i>
+    <span class="float-panel-title">Быстрый запуск перемены</span>
+    <button class="fph-close" onclick="closeFP('perem-float-panel','fdock-perem')">✕</button>
+  </div>
+  <div class="float-panel-body" style="font-size:12.5px">
+    <div style="color:var(--muted);font-size:11.5px;margin-bottom:10px">Запускает ровно тот же файл, что и в кроне — вне расписания, прямо сейчас.</div>
+    <div class="perem-qa-list">
+      {% for s in perem_slots %}
+      <div class="perem-qa-row">
+        <span class="perem-qa-label">{{ s.label }}</span>
+        <div class="perem-qa-btns">
+          <button class="perem-qa-btn c-client1" onclick="_doPlayPerem('client1','{{ s.id }}',this)" title="{{ s.label }} — только Client1">NAR</button>
+          <button class="perem-qa-btn c-client2" onclick="_doPlayPerem('client2','{{ s.id }}',this)" title="{{ s.label }} — только Client2">GNC</button>
+          <button class="perem-qa-btn c-cgtk" onclick="_doPlayPerem('cgtk','{{ s.id }}',this)" title="{{ s.label }} — только City Garden">CG</button>
+          <button class="perem-qa-btn c-all" onclick="_doPlayPeremAll('{{ s.id }}',this)" title="{{ s.label }} — сразу на всех кампусах">ВСЕ</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="float-dock">
   <div class="fdock-row">
     {% if perms.admin %}
     <button class="fdock-btn f-cron" id="fdock-cron" onclick="toggleFP('cron-float-panel',this)" title="Расписание звонков">📅</button>
+    {% endif %}
+    {% if perms.himn %}
+    <button class="fdock-btn f-perem" id="fdock-perem" onclick="toggleFP('perem-float-panel',this)" title="Быстрый запуск перемены вне расписания">⚡</button>
     {% endif %}
     <button class="fdock-btn f-ann" id="fdock-ann" onclick="toggleFP('ann-float-panel',this)" title="Объявление по радио">🎙</button>
     <button class="fdock-btn f-va" id="fdock-va" onclick="toggleFP('va-float-panel',this)" title="Голосовой помощник">🤖</button>
@@ -3643,6 +3690,31 @@ function _doPlayHimn(machine) {
     }).catch(function(){ toast('⚠️ нет связи'); });
 }
 
+// ──── PEREM QUICK-ACCESS (dashboard "⚡ быстрый запуск") ────
+var _PEREM_LABELS = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
+function _doPlayPerem(campus, slot, btn) {
+  if (btn) btn.classList.add('busy');
+  fetch('/api/perem/' + campus + '/' + slot, {method:'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        toast('⚡ ' + (_PEREM_LABELS[campus] || campus));
+        setTimeout(pollStatus, 1200);
+        setTimeout(pollVm1, 1200);
+        setTimeout(pollCgtk, 1200);
+      } else { toast('⚠️ ' + (d.error || 'ошибка')); }
+    })
+    .catch(function(){ toast('⚠️ нет связи'); })
+    .finally(function(){ if (btn) btn.classList.remove('busy'); });
+}
+function _doPlayPeremAll(slot, btn) {
+  if (btn) btn.classList.add('busy');
+  _doPlayPerem('client1', slot);
+  setTimeout(function(){ _doPlayPerem('client2', slot); }, 600);
+  setTimeout(function(){ _doPlayPerem('cgtk', slot); }, 1200);
+  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
+}
+
 // ──── TOAST ───────────────────────────────────────────
 function toast(msg) {
   var el = document.getElementById('dash-toast');
@@ -4050,7 +4122,7 @@ function closeFP(panelId, btnId) {
 }
 // Draggable float panels
 (function(){
-  ['va-panel-drag','ann-panel-drag','cron-panel-drag','wa-help-drag'].forEach(function(hid){
+  ['va-panel-drag','ann-panel-drag','cron-panel-drag','wa-help-drag','perem-panel-drag'].forEach(function(hid){
     var h=document.getElementById(hid); if(!h) return;
     var panel=h.parentElement, ox=0,oy=0,drag=false;
     h.addEventListener('mousedown',function(e){
