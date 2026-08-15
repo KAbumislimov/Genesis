@@ -27,6 +27,6 @@ HOME=/home/cgtk
 20 13 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-notify.sh 7peremena 115
 30 13 * * 1-5 /home/cgtk/campus-cron-stop-notify.sh
 10 14 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-notify.sh 8peremena 115
-20 14 * * 1-5 /home/cgtk/campus-cron-stop-notify.sh
+15 14 * * 1-5 /home/cgtk/campus-cron-stop-notify.sh
 55 14 * * 1-5 MEDIA_ROOT=/home/cgtk/Media LOG_FILE=/home/cgtk/action.log /home/cgtk/campus-cron-media-notify.sh 9peremena 115
 10 15 * * 1-5 /home/cgtk/campus-cron-stop-notify.sh

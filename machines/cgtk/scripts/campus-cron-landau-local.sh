@@ -21,6 +21,7 @@ done
 
 MEDIA="${MEDIA_ROOT:-$HOME/Media}"
 LOG_FILE="${LOG_FILE:-$HOME/action.log}"
+[ -f "$LOG_FILE" ] || touch "$LOG_FILE" 2>/dev/null
 [ -w "$LOG_FILE" ] 2>/dev/null || LOG_FILE="/tmp/media-cron.log"
 
 SLOT="${1:-}"

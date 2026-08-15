@@ -10,6 +10,23 @@ CHUNK  = 1024   # ~46 ms at 22050 Hz
 BANDS  = 16     # output bands for visualizer
 
 def find_monitor():
+    # mpv запускается с --ao=pulse (без --audio-device) — значит звук всегда
+    # идёт через ТЕКУЩИЙ default sink PulseAudio. Раньше здесь был хардкод
+    # "ищем monitor с 'usb' в имени" — работало только пока default sink это
+    # и есть USB-карта; если он сменится (или на другой машине его нет),
+    # find_monitor() возвращал None, и сервис падал в restart-loop.
+    try:
+        default_sink = subprocess.check_output(['pactl', 'get-default-sink'],
+                                                 stderr=subprocess.DEVNULL, text=True).strip()
+        if default_sink:
+            monitor = default_sink + '.monitor'
+            out = subprocess.check_output(['pactl', 'list', 'sources', 'short'],
+                                           stderr=subprocess.DEVNULL, text=True)
+            if monitor in out:
+                return monitor
+    except Exception:
+        pass
+    # Фолбэк — старое поведение (USB-звук)
     try:
         out = subprocess.check_output(['pactl','list','sources','short'],
                                        stderr=subprocess.DEVNULL, text=True)

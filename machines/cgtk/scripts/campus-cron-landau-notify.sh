@@ -75,6 +75,7 @@ SIZE_H="$(du -h "$FILE" 2>/dev/null | cut -f1)"
 # (mpv qısa trek bitəndə "idle"-a qayıdır — statusa görə yoxlama yalan
 # "uğursuz" verə bilər, halbuki səs həqiqətən oxudu).
 CRON_LOG="${LOG_FILE:-$HOME/action.log}"
+[[ -f "$CRON_LOG" ]] || touch "$CRON_LOG" 2>/dev/null
 [[ -w "$CRON_LOG" ]] 2>/dev/null || CRON_LOG="/tmp/media-cron.log"
 
 # Əsas (dəyişilməmiş) skripti çağırırıq — real oxutma məntiqi ordadır
