@@ -65,8 +65,12 @@ fi
 FILE_ESC=$(printf '%s' "$FILE" | sed 's/\\/\\\\/g; s/"/\\"/g')
 PLAY_OK=""
 for attempt in 1 2 3; do
-  if mpv_ipc "{\"command\":[\"set_property\",\"volume\",$VOL]}" 2>>"$LOG_FILE" && \
-     mpv_ipc "{\"command\":[\"loadfile\",\"$FILE_ESC\",\"replace\"]}" 2>>"$LOG_FILE"; then
+  # Громкость до загрузки файла на некоторых старых версиях mpv недоступна
+  # ("property unavailable", пока нет активного трека) — не блокируем этим
+  # loadfile через &&, громкость всё равно переустанавливается ниже после
+  # старта воспроизведения.
+  mpv_ipc "{\"command\":[\"set_property\",\"volume\",$VOL]}" 2>>"$LOG_FILE" || true
+  if mpv_ipc "{\"command\":[\"loadfile\",\"$FILE_ESC\",\"replace\"]}" 2>>"$LOG_FILE"; then
     PLAY_OK=1
     sleep 2
     mpv_ipc "{\"command\":[\"set_property\",\"volume\",$VOL]}" 2>/dev/null || true
