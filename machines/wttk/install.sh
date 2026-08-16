@@ -1,5 +1,5 @@
 #!/bin/bash
-# Установка cgtk-клиента с нуля (Ubuntu 22.04).
+# Установка wttk-клиента с нуля (Ubuntu 22.04).
 # Запуск: bash install.sh
 # Что делает:
 #   - Устанавливает mpv, socat, ffmpeg, python3
@@ -12,16 +12,16 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CGTK_USER="${CGTK_USER:-cgtk}"
-CGTK_HOME="/home/$CGTK_USER"
-BOT_DIR="$CGTK_HOME/telegram-campus-bot"
-MEDIA_DIR="$CGTK_HOME/Media"
+WTTK_USER="${WTTK_USER:-wttk}"
+WTTK_HOME="/home/$WTTK_USER"
+BOT_DIR="$WTTK_HOME/telegram-campus-bot"
+MEDIA_DIR="$WTTK_HOME/Media"
 
 echo ""
 echo "╔══════════════════════════════════════════╗"
-echo "║       CGTK CLIENT INSTALL                 ║"
+echo "║       WTTK CLIENT INSTALL                 ║"
 echo "╚══════════════════════════════════════════╝"
-echo "  Пользователь: $CGTK_USER"
+echo "  Пользователь: $WTTK_USER"
 echo "  Время: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 
@@ -40,11 +40,11 @@ echo "  ✅ mpv socat ffmpeg python3 pulseaudio — OK"
 # ─────────────────────────────────────────────
 echo "[2/6] /run/campus-player..."
 sudo mkdir -p /run/campus-player
-sudo chown "$CGTK_USER:audio" /run/campus-player
+sudo chown "$WTTK_USER:audio" /run/campus-player
 sudo chmod 2775 /run/campus-player
 
 # tmpfiles.d — пересоздавать после перезагрузки
-echo "d /run/campus-player 2775 $CGTK_USER audio -" | \
+echo "d /run/campus-player 2775 $WTTK_USER audio -" | \
     sudo tee /etc/tmpfiles.d/campus-player.conf >/dev/null
 echo "  ✅ /run/campus-player"
 
@@ -54,7 +54,7 @@ echo "  ✅ /run/campus-player"
 echo "[3/6] Скрипты..."
 for f in campus-cron-media-local.sh campus-cron-stop-local.sh campus-cron-media-notify.sh campus-cron-stop-notify.sh cron_notify.sh campus-playerctl notify-ssh-login.sh; do
     src="$SCRIPT_DIR/scripts/$f"
-    dst="$CGTK_HOME/$f"
+    dst="$WTTK_HOME/$f"
     if [[ -f "$src" ]]; then
         cp -f "$src" "$dst"
         chmod +x "$dst"
@@ -69,7 +69,7 @@ echo "  ✅ SSH login notification"
 
 # Симлинк campus-playerctl в PATH
 if [[ ! -f "/usr/local/bin/campus-playerctl" ]]; then
-    sudo ln -sf "$CGTK_HOME/campus-playerctl" /usr/local/bin/campus-playerctl
+    sudo ln -sf "$WTTK_HOME/campus-playerctl" /usr/local/bin/campus-playerctl
 fi
 
 # ─────────────────────────────────────────────
@@ -77,18 +77,18 @@ fi
 # ─────────────────────────────────────────────
 echo "[4/6] Systemd сервисы..."
 
-# campus-mpv — user-сервис (запускается под cgtk)
-SYSTEMD_USER_DIR="$CGTK_HOME/.config/systemd/user"
+# campus-mpv — user-сервис (запускается под wttk)
+SYSTEMD_USER_DIR="$WTTK_HOME/.config/systemd/user"
 mkdir -p "$SYSTEMD_USER_DIR"
 cp -f "$SCRIPT_DIR/systemd/campus-mpv.service" "$SYSTEMD_USER_DIR/campus-mpv.service"
 
 # Включаем linger чтобы user-сервис стартовал без логина
-sudo loginctl enable-linger "$CGTK_USER"
+sudo loginctl enable-linger "$WTTK_USER"
 
 # Запускаем user-сервис
-sudo -u "$CGTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$CGTK_USER")" \
+sudo -u "$WTTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$WTTK_USER")" \
     systemctl --user daemon-reload
-sudo -u "$CGTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$CGTK_USER")" \
+sudo -u "$WTTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$WTTK_USER")" \
     systemctl --user enable --now campus-mpv
 echo "  ✅ campus-mpv (user service)"
 
@@ -129,15 +129,15 @@ fi
 # 6. CRONTAB
 # ─────────────────────────────────────────────
 echo "[6/6] Crontab (расписание перемен)..."
-mkdir -p "$CGTK_HOME/Media"
+mkdir -p "$WTTK_HOME/Media"
 
-CRON_TMP="/tmp/campus_cgtk_cron_$$"
-crontab -u "$CGTK_USER" -l 2>/dev/null > "$CRON_TMP" || true
+CRON_TMP="/tmp/campus_wttk_cron_$$"
+crontab -u "$WTTK_USER" -l 2>/dev/null > "$CRON_TMP" || true
 
 # Проверяем не установлен ли уже
 if ! grep -q "campus-cron-media-local" "$CRON_TMP" 2>/dev/null; then
     cat "$SCRIPT_DIR/crontab" >> "$CRON_TMP"
-    crontab -u "$CGTK_USER" "$CRON_TMP"
+    crontab -u "$WTTK_USER" "$CRON_TMP"
     echo "  ✅ Crontab установлен"
 else
     echo "  ✅ Crontab уже есть"
@@ -147,8 +147,8 @@ rm -f "$CRON_TMP"
 # ─────────────────────────────────────────────
 # PROMTAIL / NODE EXPORTER (опционально)
 # ─────────────────────────────────────────────
-if [[ -f "$CGTK_HOME/bin/promtail" ]]; then
-    cp -f "$SCRIPT_DIR/promtail-config.yaml" "$CGTK_HOME/promtail/config.yaml" 2>/dev/null || true
+if [[ -f "$WTTK_HOME/bin/promtail" ]]; then
+    cp -f "$SCRIPT_DIR/promtail-config.yaml" "$WTTK_HOME/promtail/config.yaml" 2>/dev/null || true
     sudo cp -f "$SCRIPT_DIR/systemd/promtail.service" /etc/systemd/system/promtail.service
     sudo cp -f "$SCRIPT_DIR/systemd/node_exporter.service" /etc/systemd/system/node_exporter.service
     sudo systemctl daemon-reload
@@ -160,28 +160,28 @@ fi
 # 7. АУДИО-АНАЛИЗАТОР (FFT для визуализатора в веб-панели)
 # ─────────────────────────────────────────────
 echo "[7/7] Аудио-анализатор..."
-mkdir -p "$CGTK_HOME/campus-monitoring"
-cp -f "$SCRIPT_DIR/campus-monitoring/audio-analyzer.py" "$CGTK_HOME/campus-monitoring/audio-analyzer.py"
+mkdir -p "$WTTK_HOME/campus-monitoring"
+cp -f "$SCRIPT_DIR/campus-monitoring/audio-analyzer.py" "$WTTK_HOME/campus-monitoring/audio-analyzer.py"
 mkdir -p "$SYSTEMD_USER_DIR"
 cp -f "$SCRIPT_DIR/systemd/campus-audio-analyzer.service" "$SYSTEMD_USER_DIR/campus-audio-analyzer.service"
-sudo -u "$CGTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$CGTK_USER")" \
+sudo -u "$WTTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$WTTK_USER")" \
     systemctl --user daemon-reload
-sudo -u "$CGTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$CGTK_USER")" \
+sudo -u "$WTTK_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$WTTK_USER")" \
     systemctl --user enable --now campus-audio-analyzer
 echo "  ✅ campus-audio-analyzer (user service)"
 
 # ─────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════╗"
-echo "║       CGTK УСТАНОВКА ЗАВЕРШЕНА ✅         ║"
+echo "║       WTTK УСТАНОВКА ЗАВЕРШЕНА ✅         ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
-echo "  Статус mpv:  sudo -u cgtk XDG_RUNTIME_DIR=/run/user/\$(id -u cgtk) systemctl --user status campus-mpv"
+echo "  Статус mpv:  sudo -u wttk XDG_RUNTIME_DIR=/run/user/\$(id -u wttk) systemctl --user status campus-mpv"
 echo "  Тест звука:  campus-playerctl play $MEDIA_DIR/1/1peremena.mp3"
 echo "  Логи бота:   journalctl -u campus-telegram-bot -f"
 echo "  Заполни:     $BOT_DIR/config.env"
 echo ""
 echo "⚠️  Если этот install.sh запущен НЕ через scripts/recover-campus-machine.sh —"
 echo "    SSH-ключи, музыку и control-бот нужно поднять отдельно (см. scripts/recover-campus-machine.sh)."
-echo "    Cockpit (опционально) — скопируй scripts/restore-client2.sh как scripts/restore-cgtk.sh и поправь под эту машину."
+echo "    Cockpit (опционально) — скопируй scripts/restore-client2.sh как scripts/restore-wttk.sh и поправь под эту машину."
 echo ""

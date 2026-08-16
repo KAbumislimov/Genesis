@@ -1,7 +1,7 @@
 #!/bin/bash
 # Media: воспроизведение по расписанию. Папки: 1=пн..5=пт, 6-7=сб-вс→папка 1.
 # Вызов: campus-cron-media-local.sh SLOT [VOL]
-# VOL: 110 (client1 перемены), 130 (cgtk перемены), 160 (гимн). Длительность — cron stop.
+# VOL: 110 (client1 перемены), 130 (wttk перемены), 160 (гимн). Длительность — cron stop.
 # Использует прямой IPC (socat) вместо campus-playerctl — избегаем SIGKILL.
 set -e
 export PATH="/usr/local/bin:/usr/bin:/bin"

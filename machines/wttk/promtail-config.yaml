@@ -1,9 +1,9 @@
-# Promtail для cgtk — шлёт логи на сервер CentOS
+# Promtail для wttk — шлёт логи на сервер CentOS
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
 positions:
-  filename: /tmp/positions-cgtk.yaml
+  filename: /tmp/positions-wttk.yaml
 clients:
   - url: http://10.10.4.120:3100/loki/api/v1/push
 scrape_configs:
@@ -12,12 +12,12 @@ scrape_configs:
       - targets: [localhost]
         labels:
           job: varlogs
-          host: cgtk
+          host: wttk
           __path__: /var/log/*.log
   - job_name: syslog
     static_configs:
       - targets: [localhost]
         labels:
           job: syslog
-          host: cgtk
+          host: wttk
           __path__: /var/log/syslog

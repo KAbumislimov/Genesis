@@ -6,7 +6,7 @@
 [[ -z "$SSH_CLIENT" && -z "$SSH_CONNECTION" ]] && return 0
 
 ENV_FILE="${HOME}/cron_notify.env"
-[[ ! -f "$ENV_FILE" ]] && ENV_FILE="/home/cgtk/cron_notify.env"
+[[ ! -f "$ENV_FILE" ]] && ENV_FILE="/home/wttk/cron_notify.env"
 [[ ! -f "$ENV_FILE" ]] && return 0
 
 BOT_TOKEN=$(grep '^BOT_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '[:space:]')

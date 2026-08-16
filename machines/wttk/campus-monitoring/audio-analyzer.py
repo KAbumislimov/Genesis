@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Campus audio analyzer — PulseAudio monitor → FFT → /tmp/campus-audio-level.json
-Runs as a persistent background process on client1/cgtk.
+Runs as a persistent background process on client1/wttk.
 """
 import subprocess, struct, json, time, os, signal, sys, math
 OUTPUT = '/tmp/campus-audio-level.json'
@@ -15,7 +15,7 @@ def find_monitor():
     # машине (USB-звук, встроенный analog, HDMI — неважно). Раньше здесь был
     # хардкод "ищем monitor с 'usb' в имени" — работало только на client1 (у
     # него реально USB-звуковая карта), а на любой другой машине без USB-звука
-    # (например cgtk — только встроенный аудиочип) find_monitor() всегда
+    # (например wttk — только встроенный аудиочип) find_monitor() всегда
     # возвращал None, и весь сервис падал в бесконечный restart-loop.
     try:
         default_sink = subprocess.check_output(['pactl', 'get-default-sink'],
@@ -66,8 +66,8 @@ def run(monitor):
         HAS_NP = False
 
     proc = subprocess.Popen(
-        ['pacat', '--record', f'--device={monitor}',
-         f'--rate={RATE}', f'--channels={CH}', '--format=s16le', '--latency-msec=30', '--raw'],
+        ['pacat', '--record', '--device={}'.format(monitor),
+         '--rate={}'.format(RATE), '--channels={}'.format(CH), '--format=s16le', '--latency-msec=30', '--raw'],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
     )
 
@@ -106,7 +106,7 @@ def run(monitor):
             else:
                 # Pure-Python fallback: time-domain RMS with rough frequency simulation
                 n = len(data) // 2
-                samps = struct.unpack(f'{n}h', data)
+                samps = struct.unpack('{}h'.format(n), data)
                 rms = math.sqrt(sum(s*s for s in samps) / n) / 32768.0
                 raw = [rms * math.exp(-i * 0.13) * (0.8 + 0.2 * abs(math.sin(i * 1.7 + time.time())))
                        for i in range(BANDS)]
@@ -131,5 +131,5 @@ if __name__ == '__main__':
     if not mon:
         print("No PulseAudio monitor found", file=sys.stderr)
         sys.exit(1)
-    print(f"Analyzer started: {mon}", flush=True)
+    print("Analyzer started: {}".format(mon), flush=True)
     run(mon)

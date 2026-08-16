@@ -34,7 +34,7 @@ def load_config():
     env.setdefault('LOG_GROUP_ID', os.environ.get('LOG_GROUP_ID', ''))
     env.setdefault('DIR_KAMRAN', '/home/client1/Media/Kamran Music')
     env.setdefault('SERVER_HOST', '10.10.4.120')
-    env.setdefault('CGTK_HOST', '10.70.0.41')
+    env.setdefault('WTTK_HOST', '10.70.0.41')
     env.setdefault('SSH_KEY', os.environ.get('SSH_KEY', ''))
     env.setdefault('SSH_KEY_FOR_TIME', os.environ.get('SSH_KEY_FOR_TIME', ''))
     return env
@@ -229,12 +229,12 @@ def get_time_remote(host, user, key=None):
 def get_time_all_machines(update_date_ts=None):
     cfg = load_config()
     srv = cfg.get('SERVER_HOST', '10.10.4.120')
-    cgtk_host = cfg.get('CGTK_HOST', '10.70.0.41')
+    wttk_host = cfg.get('WTTK_HOST', '10.70.0.41')
     key = cfg.get('SSH_KEY') or cfg.get('SSH_KEY_FOR_TIME')
     lines = []
     lines.append(f"🖥 Server (centos): {get_time_remote(srv, 'kamran', key)}")
     lines.append(f"🖥 client1 (эта машина): {datetime.now().strftime('%H:%M:%S %d.%m.%Y')}")
-    lines.append(f"🖥 cgtk: {get_time_remote(cgtk_host, 'cgtk', key)}")
+    lines.append(f"🖥 wttk: {get_time_remote(wttk_host, 'wttk', key)}")
     if update_date_ts:
         try:
             dt = datetime.fromtimestamp(update_date_ts)
@@ -290,10 +290,10 @@ def get_server_status():
     if srv:
         out = _ssh_sysinfo(srv, 'kamran', key, sysinfo_cmd)
         results.append(_format_machine_status(f"Сервер ({srv})", out))
-    cgtk_host = cfg.get('CGTK_HOST', '10.70.0.41')
-    if cgtk_host:
-        out = _ssh_sysinfo(cgtk_host, 'cgtk', key, sysinfo_cmd)
-        results.append(_format_machine_status(f"cgtk ({cgtk_host})", out))
+    wttk_host = cfg.get('WTTK_HOST', '10.70.0.41')
+    if wttk_host:
+        out = _ssh_sysinfo(wttk_host, 'wttk', key, sysinfo_cmd)
+        results.append(_format_machine_status(f"wttk ({wttk_host})", out))
     return "🖥 <b>Статус серверов</b>\n\n" + "\n\n".join(results)
 
 def main_keyboard():

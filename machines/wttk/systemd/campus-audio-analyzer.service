@@ -4,9 +4,12 @@ After=campus-mpv.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 %h/campus-monitoring/audio-analyzer.py
+User=wttk
+ExecStart=/usr/bin/python3 /home/wttk/campus-monitoring/audio-analyzer.py
 Restart=always
 RestartSec=5
+Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
