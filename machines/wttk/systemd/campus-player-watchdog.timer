@@ -1,0 +1,11 @@
+[Unit]
+Description=Watchdog campus-mpv каждые 5 минут
+After=multi-user.target
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=yes
+
+[Install]
+WantedBy=timers.target
