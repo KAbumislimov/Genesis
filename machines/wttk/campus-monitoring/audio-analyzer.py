@@ -17,13 +17,21 @@ def find_monitor():
     # него реально USB-звуковая карта), а на любой другой машине без USB-звука
     # (например wttk — только встроенный аудиочип) find_monitor() всегда
     # возвращал None, и весь сервис падал в бесконечный restart-loop.
+    # get-default-sink появился в поздних версиях pactl — на старом
+    # PulseAudio (например Ubuntu 16.04) его нет, парсим `pactl info` вместо
+    # этого (стабильная, давно существующая команда).
     try:
-        default_sink = subprocess.check_output(['pactl', 'get-default-sink'],
-                                                 stderr=subprocess.DEVNULL, text=True).strip()
+        info = subprocess.check_output(['pactl', 'info'],
+                                        stderr=subprocess.DEVNULL, universal_newlines=True)
+        default_sink = None
+        for line in info.splitlines():
+            if line.startswith('Default Sink:'):
+                default_sink = line.split(':', 1)[1].strip()
+                break
         if default_sink:
             monitor = default_sink + '.monitor'
             out = subprocess.check_output(['pactl', 'list', 'sources', 'short'],
-                                           stderr=subprocess.DEVNULL, text=True)
+                                           stderr=subprocess.DEVNULL, universal_newlines=True)
             if monitor in out:
                 return monitor
     except Exception:
@@ -31,7 +39,7 @@ def find_monitor():
     # Фолбэк — старое поведение (USB-звук, как на client1)
     try:
         out = subprocess.check_output(['pactl','list','sources','short'],
-                                       stderr=subprocess.DEVNULL, text=True)
+                                       stderr=subprocess.DEVNULL, universal_newlines=True)
         for line in out.splitlines():
             if "monitor" in line and "usb" in line.lower():
                 cols = line.split('\t')
@@ -87,12 +95,22 @@ def run(monitor):
         window = np.hanning(CHUNK).astype(np.float32)
         band_groups = make_log_bands(CHUNK, RATE, BANDS)
 
+    buf = b''
     while True:
         try:
-            data = proc.stdout.read(BYTES)
-            if not data or len(data) < BYTES:
+            # pacat может отдавать данные меньшими кусками, чем latency-msec
+            # предполагает (особенно на старых версиях) — накапливаем буфер,
+            # а не отбрасываем частичное чтение, иначе полный BYTES-чанк
+            # может вообще никогда не набраться.
+            chunk = proc.stdout.read(BYTES - len(buf))
+            if not chunk:
                 time.sleep(0.02)
                 continue
+            buf += chunk
+            if len(buf) < BYTES:
+                continue
+            data = buf[:BYTES]
+            buf = buf[BYTES:]
 
             if HAS_NP:
                 samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0

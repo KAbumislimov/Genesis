@@ -8,12 +8,13 @@ User=wttk
 Group=audio
 PermissionsStartOnly=true
 ExecStartPre=/bin/bash -c 'mkdir -p /run/campus-player && chown wttk:audio /run/campus-player && chmod 775 /run/campus-player'
+Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 ExecStart=/usr/bin/mpv \
   --no-video \
   --idle=yes \
   --force-window=no \
-  --audio-display=no \
-  --input-ipc-server=/run/campus-player/mpv.sock \
+  --input-unix-socket=/run/campus-player/mpv.sock \
   --ao=pulse
 Restart=always
 RestartSec=3
