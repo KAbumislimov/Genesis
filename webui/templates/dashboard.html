@@ -839,9 +839,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
    Гимн = золото/торжество, Минута молчания = свеча/тишина. */
 .wa-special-bar{display:flex;gap:12px;padding:12px 14px;margin:2px 0 8px;flex-wrap:wrap}
 .wa-special-group{flex:1;min-width:230px;border-radius:14px;padding:12px 14px;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  display:flex;flex-direction:column;gap:6px;
   position:relative;overflow:hidden;transition:transform .15s}
 .wa-special-group:hover{transform:translateY(-1px)}
+.wa-special-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.wa-special-desc{font-size:10.5px;line-height:1.3;color:rgba(255,255,255,.55);font-weight:500;letter-spacing:.01em}
 .wa-special-hd{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .wa-special-icon{font-size:22px;filter:drop-shadow(0 0 6px currentColor)}
 .wa-special-title{font-size:14px;font-weight:900;letter-spacing:.03em;text-transform:uppercase}
@@ -1346,44 +1348,56 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <!-- ── Special ceremonial actions: Гимн / Минута молчания — большие, отдельные от обычного тулбара ── -->
   <div class="wa-special-bar">
     <div class="wa-special-group wa-himn-group">
-      <div class="wa-special-hd"><span class="wa-special-icon">🎖️</span><span class="wa-special-title" data-i18n="wamp.himn_group">Гимн</span></div>
-      <div class="wa-special-btns">
-        <button class="wa-special-btn" onclick="_doPlayHimn('client1')" title="Гимн — Client1">NAR</button>
-        <button class="wa-special-btn" onclick="_doPlayHimn('client2')" title="Гимн — Client2">GNC</button>
-        <button class="wa-special-btn" onclick="_doPlayHimn('cgtk')" title="Гимн — City Garden">CG</button>
-        <button class="wa-special-btn wa-special-all" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн на всех кампусах одновременно">ВСЕ</button>
+      <div class="wa-special-top">
+        <div class="wa-special-hd"><span class="wa-special-icon">🎖️</span><span class="wa-special-title" data-i18n="wamp.himn_group">Гимн</span></div>
+        <div class="wa-special-btns">
+          <button class="wa-special-btn" onclick="_doPlayHimn('client1')" title="Гимн — Client1">NAR</button>
+          <button class="wa-special-btn" onclick="_doPlayHimn('client2')" title="Гимн — Client2">GNC</button>
+          <button class="wa-special-btn" onclick="_doPlayHimn('cgtk')" title="Гимн — City Garden">CG</button>
+          <button class="wa-special-btn wa-special-all" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн на всех кампусах одновременно">ВСЕ</button>
+        </div>
       </div>
+      <div class="wa-special-desc" data-i18n="wamp.himn_desc">Включить гимн — на одном кампусе или сразу везде</div>
     </div>
     <div class="wa-special-group wa-mik-group">
-      <div class="wa-special-hd"><span class="wa-special-icon">🎤</span><span class="wa-special-title" data-i18n="wamp.mik_group">Мик</span></div>
-      <div class="wa-special-btns">
-        <button class="wa-special-btn" onclick="_openMicFor('client1')" title="Объявление — Client1">NAR</button>
-        <button class="wa-special-btn" onclick="_openMicFor('client2')" title="Объявление — Client2">GNC</button>
-        <button class="wa-special-btn" onclick="_openMicFor('cgtk')" title="Объявление — City Garden">CG</button>
-        <button class="wa-special-btn wa-special-all" onclick="_openMicFor('all')" title="Объявление на всех кампусах">ВСЕ</button>
+      <div class="wa-special-top">
+        <div class="wa-special-hd"><span class="wa-special-icon">🎤</span><span class="wa-special-title" data-i18n="wamp.mik_group">Мик</span></div>
+        <div class="wa-special-btns">
+          <button class="wa-special-btn" onclick="_openMicFor('client1')" title="Объявление — Client1">NAR</button>
+          <button class="wa-special-btn" onclick="_openMicFor('client2')" title="Объявление — Client2">GNC</button>
+          <button class="wa-special-btn" onclick="_openMicFor('cgtk')" title="Объявление — City Garden">CG</button>
+          <button class="wa-special-btn wa-special-all" onclick="_openMicFor('all')" title="Объявление на всех кампусах">ВСЕ</button>
+        </div>
       </div>
+      <div class="wa-special-desc" data-i18n="wamp.mik_desc">Живое объявление по громкой связи — выбери кампус</div>
     </div>
     <div class="wa-special-group wa-minuta-group">
-      <div class="wa-special-hd"><span class="wa-special-icon">🕯️</span><span class="wa-special-title" data-i18n="wamp.minuta">Минута молчания</span></div>
-      <div class="wa-special-btns">
-        <button class="wa-special-btn" onclick="_doPlayMinuta('client1',this)" title="Минута молчания — Client1">NAR</button>
-        <button class="wa-special-btn" onclick="_doPlayMinuta('client2',this)" title="Минута молчания — Client2">GNC</button>
-        <button class="wa-special-btn" onclick="_doPlayMinuta('cgtk',this)" title="Минута молчания — City Garden">CG</button>
-        <button class="wa-special-btn wa-special-all" onclick="_doPlayMinutaAll(this)" title="Минута молчания на всех кампусах одновременно">ВСЕ</button>
+      <div class="wa-special-top">
+        <div class="wa-special-hd"><span class="wa-special-icon">🕯️</span><span class="wa-special-title" data-i18n="wamp.minuta">Минута молчания</span></div>
+        <div class="wa-special-btns">
+          <button class="wa-special-btn" onclick="_doPlayMinuta('client1',this)" title="Минута молчания — Client1">NAR</button>
+          <button class="wa-special-btn" onclick="_doPlayMinuta('client2',this)" title="Минута молчания — Client2">GNC</button>
+          <button class="wa-special-btn" onclick="_doPlayMinuta('cgtk',this)" title="Минута молчания — City Garden">CG</button>
+          <button class="wa-special-btn wa-special-all" onclick="_doPlayMinutaAll(this)" title="Минута молчания на всех кампусах одновременно">ВСЕ</button>
+        </div>
       </div>
+      <div class="wa-special-desc" data-i18n="wamp.minuta_desc">Запустить минуту молчания вне расписания</div>
     </div>
     {% if perms.admin %}
     <div class="wa-special-group wa-cron-group">
-      <div class="wa-special-hd">
-        <span class="wa-special-icon wa-cron-icon"><img src="/static/leg.logo.t.png" alt="LEG"><span class="wa-cron-flag">🇦🇿</span></span>
-        <span class="wa-special-title" data-i18n="wamp.cron_group">Крон</span>
+      <div class="wa-special-top">
+        <div class="wa-special-hd">
+          <span class="wa-special-icon wa-cron-icon"><img src="/static/leg.logo.t.png" alt="LEG"><span class="wa-cron-flag">🇦🇿</span></span>
+          <span class="wa-special-title" data-i18n="wamp.cron_group">Крон</span>
+        </div>
+        <div class="wa-special-btns">
+          <button class="wa-special-btn" id="btn-cron-client1" onclick="cronToggle('client1')" title="Пауза/включить крон — Client1">NAR</button>
+          <button class="wa-special-btn" id="btn-cron-client2" onclick="cronToggle('client2')" title="Пауза/включить крон — Client2">GNC</button>
+          <button class="wa-special-btn" id="btn-cron-cgtk" onclick="cronToggle('cgtk')" title="Пауза/включить крон — City Garden">CG</button>
+          <button class="wa-special-btn wa-special-all" id="btn-cron-all" onclick="_cronToggleAll()" title="Пауза/включить крон на всех кампусах">ВСЕ</button>
+        </div>
       </div>
-      <div class="wa-special-btns">
-        <button class="wa-special-btn" id="btn-cron-client1" onclick="cronToggle('client1')" title="Пауза/включить крон — Client1">NAR</button>
-        <button class="wa-special-btn" id="btn-cron-client2" onclick="cronToggle('client2')" title="Пауза/включить крон — Client2">GNC</button>
-        <button class="wa-special-btn" id="btn-cron-cgtk" onclick="cronToggle('cgtk')" title="Пауза/включить крон — City Garden">CG</button>
-        <button class="wa-special-btn wa-special-all" id="btn-cron-all" onclick="_cronToggleAll()" title="Пауза/включить крон на всех кампусах">ВСЕ</button>
-      </div>
+      <div class="wa-special-desc" data-i18n="wamp.cron_desc">Остановить/включить автоматические звонки по расписанию</div>
     </div>
     {% endif %}
   </div>

@@ -40,6 +40,10 @@ const I18N = {
     'wamp.stop_group': 'Стоп:', 'wamp.himn_group': 'Гимн',
     'wamp.minuta': 'Минута молчания', 'wamp.minuta_t': 'Минута молчания — специальный трек, вне расписания',
     'wamp.mik_group': 'Мик', 'wamp.cron_group': 'Крон',
+    'wamp.himn_desc': 'Включить гимн — на одном кампусе или сразу везде',
+    'wamp.mik_desc': 'Живое объявление по громкой связи — выбери кампус',
+    'wamp.minuta_desc': 'Запустить минуту молчания вне расписания',
+    'wamp.cron_desc': 'Остановить/включить автоматические звонки по расписанию',
     'player.staff_only': 'только Staff / Admin',
     /* Now playing */
     'np.now':         'Сейчас',
@@ -256,6 +260,10 @@ const I18N = {
     'wamp.stop_group': 'Stop:', 'wamp.himn_group': 'Anthem',
     'wamp.minuta': 'Minute of Silence', 'wamp.minuta_t': 'Minute of silence — special track, outside the schedule',
     'wamp.mik_group': 'Mic', 'wamp.cron_group': 'Cron',
+    'wamp.himn_desc': 'Play the anthem — one campus or everywhere at once',
+    'wamp.mik_desc': 'Live PA announcement — pick a campus',
+    'wamp.minuta_desc': 'Trigger the minute of silence outside the schedule',
+    'wamp.cron_desc': 'Stop/enable the automatic scheduled bells',
     'player.staff_only': 'Staff / Admin only',
     /* Now playing */
     'np.now':         'Now',
@@ -468,6 +476,10 @@ const I18N = {
     'wamp.stop_group': 'Dayan:', 'wamp.himn_group': 'Himn',
     'wamp.minuta': 'Sükut dəqiqəsi', 'wamp.minuta_t': 'Sükut dəqiqəsi — cədvəldən kənar xüsusi trek',
     'wamp.mik_group': 'Mik', 'wamp.cron_group': 'Kron',
+    'wamp.himn_desc': 'Himni işə sal — bir kampusda və ya hamısında birdən',
+    'wamp.mik_desc': 'Canlı radio elanı — kampus seç',
+    'wamp.minuta_desc': 'Sükut dəqiqəsini cədvəldən kənar işə sal',
+    'wamp.cron_desc': 'Avtomatik zəngləri dayandır/işə sal',
     'player.staff_only': 'Yalnız Staff / Admin',
     /* Now playing */
     'np.now':         'İndi',
