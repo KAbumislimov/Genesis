@@ -1,0 +1,11 @@
+[Unit]
+Description=Promtail
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/wctk/bin/promtail -config.file=/home/wctk/promtail/config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

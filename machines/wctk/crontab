@@ -1,0 +1,32 @@
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=""
+HOME=/home/wctk
+
+# Утренняя музыка
+45 7 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh utro 115
+59 7 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+
+# Гимн (только понедельник)
+0 8 * * 1 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh himn 150
+3 8 * * 1 /home/wctk/campus-cron-stop-notify.sh
+
+# Перемены 1–9
+40 8 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 1peremena 115
+45 8 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+25 9 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 2peremena 115
+35 9 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+15 10 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 3peremena 115
+20 10 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+0 11 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 4peremena 115
+5 11 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+45 11 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 5peremena 115
+55 11 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+35 12 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 6peremena 115
+40 12 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+20 13 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 7peremena 115
+30 13 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+10 14 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 8peremena 115
+15 14 * * 1-5 /home/wctk/campus-cron-stop-notify.sh
+55 14 * * 1-5 MEDIA_ROOT=/home/wctk/Media LOG_FILE=/home/wctk/action.log /home/wctk/campus-cron-media-notify.sh 9peremena 115
+10 15 * * 1-5 /home/wctk/campus-cron-stop-notify.sh

@@ -1,0 +1,17 @@
+[Unit]
+Description=Campus Audio FFT Analyzer
+After=campus-mpv.service
+
+[Service]
+Type=simple
+Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+ExecStartPre=-/bin/systemctl --user start pulseaudio.service
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 15); do [ -S /run/user/1000/pulse/native ] && exit 0; sleep 1; done'
+ExecStart=/usr/bin/python3 /home/wctk/campus-monitoring/audio-analyzer.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
