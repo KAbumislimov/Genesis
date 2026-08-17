@@ -4,9 +4,6 @@ After=sound.target network.target pulseaudio.service
 
 [Service]
 Type=simple
-User=wctk
-Group=audio
-PermissionsStartOnly=true
 ExecStartPre=/bin/bash -c 'mkdir -p /run/campus-player && chown wctk:audio /run/campus-player && chmod 775 /run/campus-player'
 Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
 Environment=XDG_RUNTIME_DIR=/run/user/1000
@@ -16,6 +13,10 @@ Environment=XDG_RUNTIME_DIR=/run/user/1000
 # Стартуем PulseAudio явно и ждём готовности сокета перед запуском mpv.
 ExecStartPre=-/bin/systemctl --user start pulseaudio.service
 ExecStartPre=/bin/bash -c 'for i in $(seq 1 15); do [ -S /run/user/1000/pulse/native ] && exit 0; sleep 1; done'
+# Принудительно разъёмьютить и выставить громкость на каждом старте —
+# не полагаемся только на сохранённый ALSA-стейт (может побиться при
+# внезапном отключении питания на этой машине).
+ExecStartPre=-/bin/bash -c 'pactl set-default-sink alsa_output.pci-0000_00_14.0.analog-stereo; pactl set-sink-mute alsa_output.pci-0000_00_14.0.analog-stereo 0; pactl set-sink-volume alsa_output.pci-0000_00_14.0.analog-stereo 90%; amixer -c 0 sset Master unmute 90%; amixer -c 0 sset PCM 100%'
 ExecStart=/usr/bin/mpv \
   --no-video \
   --idle=yes \

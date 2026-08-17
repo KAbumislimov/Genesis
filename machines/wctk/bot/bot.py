@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Telegram-бот для клиента client1: кнопки, список треков, логи в группу «наримановскую», /info."""
+"""Telegram-бот для клиента wctk: кнопки, список треков, логи в группу, /info."""
 import os
 import sys
 import json
@@ -32,7 +32,7 @@ def load_config():
     env.setdefault('BOT_TOKEN', os.environ.get('BOT_TOKEN', ''))
     env.setdefault('CHAT_ID', os.environ.get('CHAT_ID', ''))
     env.setdefault('LOG_GROUP_ID', os.environ.get('LOG_GROUP_ID', ''))
-    env.setdefault('DIR_KAMRAN', '/home/client1/Media/Kamran Music')
+    env.setdefault('DIR_KAMRAN', '/home/wctk/Media/Kamran Music')
     env.setdefault('SERVER_HOST', '10.10.4.120')
     env.setdefault('WCTK_HOST', '10.70.0.41')
     env.setdefault('SSH_KEY', os.environ.get('SSH_KEY', ''))
@@ -40,7 +40,7 @@ def load_config():
     return env
 
 def get_tracks_total():
-    d = load_config().get('DIR_KAMRAN', '/home/client1/Media/Kamran Music')
+    d = load_config().get('DIR_KAMRAN', '/home/wctk/Media/Kamran Music')
     if not os.path.isdir(d):
         return 500
     n = 0
@@ -51,7 +51,7 @@ def get_tracks_total():
 TRACKS_TOTAL = get_tracks_total()
 
 def api(token, method, **kwargs):
-    url = f'https://api.telegram.org/bot{token}/{method}'
+    url = 'https://api.telegram.org/bot{}/{}'.format(token, method)
     for k, v in list(kwargs.items()):
         if isinstance(v, (dict, list)):
             kwargs[k] = json.dumps(v)
@@ -83,7 +83,7 @@ def run(cmd, capture=True):
     env = os.environ.copy()
     env['PATH'] = '/usr/local/bin:/usr/bin:/bin'
     if capture:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, env=env, timeout=30)
+        r = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, env=env, timeout=30)
         return r.returncode, (r.stdout or '').strip() + (r.stderr or '').strip()
     else:
         subprocess.Popen(cmd, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -92,7 +92,7 @@ def run(cmd, capture=True):
 def mpv_cmd(cmd_json):
     if not os.path.exists(MPV_SOCK):
         return None
-    code, out = run(f'echo {json.dumps(cmd_json)!r} | socat - {MPV_SOCK} 2>/dev/null')
+    code, out = run('echo {!r} | socat - {} 2>/dev/null'.format(json.dumps(cmd_json), MPV_SOCK))
     if code != 0:
         return None
     try:
@@ -119,7 +119,7 @@ def vol_up():
         return False, "Плеер недоступен"
     new_v = min(100, v + 10)
     set_volume(new_v)
-    return True, f"Громкость {int(new_v)}%"
+    return True, "Громкость {}%".format(int(new_v))
 
 def vol_down():
     v = get_volume()
@@ -127,15 +127,15 @@ def vol_down():
         return False, "Плеер недоступен"
     new_v = max(0, v - 10)
     set_volume(new_v)
-    return True, f"Громкость {int(new_v)}%"
+    return True, "Громкость {}%".format(int(new_v))
 
 _log_dedup = {}  # (msg_key, log_group) -> last_time
 
 def log_action(token, log_group_id, msg, also_file=True, chat_id=None):
     """Пишем в файл. В Telegram — только если это НЕ та же группа.
-    Формат: [ЧЧ:ММ:СС] [client1] действие | @user"""
+    Формат: [ЧЧ:ММ:СС] [wctk] действие | @user"""
     ts = datetime.now().strftime('%H:%M:%S %d.%m')
-    line = f"[{ts}] [client1] {msg}"
+    line = "[{}] [wctk] {}".format(ts, msg)
     if also_file:
         try:
             with open(LOG_FILE, 'a', encoding='utf-8') as f:
@@ -154,7 +154,7 @@ def log_action(token, log_group_id, msg, also_file=True, chat_id=None):
     if len(_log_dedup) > 100:
         _log_dedup.clear()
     try:
-        send(token, log_group_id, f"📌 {line}")
+        send(token, log_group_id, "📌 {}".format(line))
     except Exception:
         pass
 
@@ -170,7 +170,7 @@ def get_current_track_num():
 def add_to_history(num, username):
     try:
         with open(HISTORY_FILE, 'a', encoding='utf-8') as f:
-            f.write(f"{num}\t{username}\t{datetime.now().isoformat()}\n")
+            f.write("{}\t{}\t{}\n".format(num, username, datetime.now().isoformat()))
         lines = open(HISTORY_FILE, encoding='utf-8').readlines()
         if len(lines) > MAX_HISTORY:
             with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
@@ -199,9 +199,9 @@ def get_history():
         return []
 
 def get_track_path(num):
-    d = load_config().get('DIR_KAMRAN', '/home/client1/Media/Kamran Music')
+    d = load_config().get('DIR_KAMRAN', '/home/wctk/Media/Kamran Music')
     for ext in ('mp3', 'mp4', 'mpeg'):
-        p = os.path.join(d, f'{num}.{ext}')
+        p = os.path.join(d, '{}.{}'.format(num, ext))
         if os.path.isfile(p):
             return p
     return None
@@ -209,20 +209,20 @@ def get_track_path(num):
 def play_track(token, log_group_id, chat_id, num, username, log=True):
     path = get_track_path(num)
     if not path:
-        return False, f'Трек {num} не найден.'
-    run(f'campus-playerctl vol 70 && campus-playerctl play "{path}"', capture=False)
+        return False, 'Трек {} не найден.'.format(num)
+    run('campus-playerctl vol 70 && campus-playerctl play "{}"'.format(path), capture=False)
     ext = os.path.splitext(path)[1]
     add_to_history(num, username)
     if log:
-        log_action(token, log_group_id, f"▶ Воспроизведение: трек {num}{ext} | {username}", also_file=True, chat_id=chat_id)
-    return True, f'▶ Играет: {num}{ext}'
+        log_action(token, log_group_id, "▶ Воспроизведение: трек {}{} | {}".format(num, ext, username), also_file=True, chat_id=chat_id)
+    return True, '▶ Играет: {}{}'.format(num, ext)
 
 def get_time_remote(host, user, key=None):
     if not host or not user:
         return '—'
     opts = '-o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=3'
-    key_opt = f'-i {key}' if key and os.path.isfile(key) else ''
-    cmd = f'ssh {key_opt} {opts} {user}@{host} "date +\'%H:%M:%S %d.%m.%Y\'" 2>/dev/null'
+    key_opt = '-i {}'.format(key) if key and os.path.isfile(key) else ''
+    cmd = 'ssh {} {} {}@{} "date +\'%H:%M:%S %d.%m.%Y\'" 2>/dev/null'.format(key_opt, opts, user, host)
     code, out = run(cmd)
     return out.strip() if code == 0 and out else '—'
 
@@ -232,17 +232,17 @@ def get_time_all_machines(update_date_ts=None):
     wctk_host = cfg.get('WCTK_HOST', '10.70.0.41')
     key = cfg.get('SSH_KEY') or cfg.get('SSH_KEY_FOR_TIME')
     lines = []
-    lines.append(f"🖥 Server (centos): {get_time_remote(srv, 'kamran', key)}")
-    lines.append(f"🖥 client1 (эта машина): {datetime.now().strftime('%H:%M:%S %d.%m.%Y')}")
-    lines.append(f"🖥 wctk: {get_time_remote(wctk_host, 'wctk', key)}")
+    lines.append("🖥 Server (centos): {}".format(get_time_remote(srv, 'kamran', key)))
+    lines.append("🖥 wctk (эта машина): {}".format(datetime.now().strftime('%H:%M:%S %d.%m.%Y')))
+    lines.append("🖥 wctk: {}".format(get_time_remote(wctk_host, 'wctk', key)))
     if update_date_ts:
         try:
             dt = datetime.fromtimestamp(update_date_ts)
-            lines.append(f"📱 Телефон (при нажатии): {dt.strftime('%H:%M:%S %d.%m.%Y')}")
+            lines.append("📱 Телефон (при нажатии): {}".format(dt.strftime('%H:%M:%S %d.%m.%Y')))
         except Exception:
             pass
     else:
-        lines.append(f"📱 Телефон: нажмите ещё раз для обновления")
+        lines.append("📱 Телефон: нажмите ещё раз для обновления")
     return "\n".join(lines)
 
 def _run_sysinfo_cmd(cmd):
@@ -259,8 +259,8 @@ def _ssh_sysinfo(host, user, key, cmd):
         r = subprocess.run(
             ['ssh', '-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
              '-o', 'StrictHostKeyChecking=no', '-o', 'LogLevel=ERROR',
-             f'{user}@{host}', cmd],
-            capture_output=True, text=True, timeout=10,
+             '{}@{}'.format(user, host), cmd],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=10,
         )
         return (r.stdout or '').strip() if r.returncode == 0 else None
     except Exception:
@@ -268,9 +268,9 @@ def _ssh_sysinfo(host, user, key, cmd):
 
 def _format_machine_status(name, raw):
     if not raw:
-        return f"🖥 <b>{name}</b>\n  ❌ Недоступен"
+        return "🖥 <b>{}</b>\n  ❌ Недоступен".format(name)
     lines = [l.strip() for l in raw.split('\n') if l.strip() and not l.strip().startswith('Warning')]
-    return f"🖥 <b>{name}</b>\n  " + "\n  ".join(lines[:12])
+    return "🖥 <b>{}</b>\n  ".format(name) + "\n  ".join(lines[:12])
 
 def get_server_status():
     cfg = load_config()
@@ -285,15 +285,15 @@ def get_server_status():
         "echo \"${t:-0}\" | awk '{if($1>0) printf \"%.0f°C\", $1/1000; else print \"N/A\"}'"
     )
     local_out = _run_sysinfo_cmd(sysinfo_cmd)
-    results.append(_format_machine_status("client1 (локально)", local_out or "Ошибка"))
+    results.append(_format_machine_status("wctk (локально)", local_out or "Ошибка"))
     srv = cfg.get('SERVER_HOST', '10.10.4.120')
     if srv:
         out = _ssh_sysinfo(srv, 'kamran', key, sysinfo_cmd)
-        results.append(_format_machine_status(f"Сервер ({srv})", out))
+        results.append(_format_machine_status("Сервер ({})".format(srv), out))
     wctk_host = cfg.get('WCTK_HOST', '10.70.0.41')
     if wctk_host:
         out = _ssh_sysinfo(wctk_host, 'wctk', key, sysinfo_cmd)
-        results.append(_format_machine_status(f"wctk ({wctk_host})", out))
+        results.append(_format_machine_status("wctk ({})".format(wctk_host), out))
     return "🖥 <b>Статус серверов</b>\n\n" + "\n\n".join(results)
 
 def main_keyboard():
@@ -310,7 +310,7 @@ def inline_list_page(offset=0):
     offset = max(0, min(offset, TRACKS_TOTAL - PAGE_SIZE))
     buttons, row = [], []
     for i in range(offset + 1, min(offset + PAGE_SIZE + 1, TRACKS_TOTAL + 1)):
-        row.append({"text": str(i), "callback_data": f"play_{i}"})
+        row.append({"text": str(i), "callback_data": "play_{}".format(i)})
         if len(row) >= 5:
             buttons.append(row)
             row = []
@@ -318,9 +318,9 @@ def inline_list_page(offset=0):
         buttons.append(row)
     nav = []
     if offset > 0:
-        nav.append({"text": "◀ Назад", "callback_data": f"list_{max(0, offset - PAGE_SIZE)}"})
+        nav.append({"text": "◀ Назад", "callback_data": "list_{}".format(max(0, offset - PAGE_SIZE))})
     if offset + PAGE_SIZE < TRACKS_TOTAL:
-        nav.append({"text": "Вперёд ▶", "callback_data": f"list_{offset + PAGE_SIZE}"})
+        nav.append({"text": "Вперёд ▶", "callback_data": "list_{}".format(offset + PAGE_SIZE)})
     if nav:
         buttons.append(nav)
     return {"inline_keyboard": buttons}
@@ -331,7 +331,7 @@ def inline_history_keyboard():
         return {"inline_keyboard": [[{"text": "История пуста", "callback_data": "noop"}]]}
     buttons, row = [], []
     for n in nums[:15]:
-        row.append({"text": f"▶ {n}", "callback_data": f"play_{n}"})
+        row.append({"text": "▶ {}".format(n), "callback_data": "play_{}".format(n)})
         if len(row) >= 5:
             buttons.append(row)
             row = []
@@ -346,7 +346,7 @@ def download_file(token, file_id):
     file_path = data.get('result', {}).get('file_path')
     if not file_path:
         return None
-    url = f'https://api.telegram.org/file/bot{token}/{file_path}'
+    url = 'https://api.telegram.org/file/bot{}/{}'.format(token, file_path)
     suf = os.path.splitext(file_path)[1] or '.ogg'
     fd, path = tempfile.mkstemp(suffix=suf, prefix='tg_')
     os.close(fd)
@@ -374,9 +374,7 @@ def info_text():
 /volup, /voldown — громкость
 play N или просто число — играть трек N
 
-<b>Текст:</b> меню, инфо, громче, тише, стоп.
-
-Aue, Ala bura Təhsil olaçııııııgıdır"""
+<b>Текст:</b> меню, инфо, громче, тише, стоп."""
 
 def menu_text():
     return """📋 Управление звуком — используйте кнопки ниже.
@@ -412,7 +410,7 @@ def handle_callback(token, log_group_id, chat_id, callback_query, user):
         except ValueError:
             offset = 0
         a, b = offset + 1, min(offset + PAGE_SIZE, TRACKS_TOTAL)
-        send(token, chat_id, f"📂 Треки {a}–{b} (всего {TRACKS_TOTAL}). Нажмите номер:", reply_markup=inline_list_page(offset))
+        send(token, chat_id, "📂 Треки {}–{} (всего {}). Нажмите номер:".format(a, b, TRACKS_TOTAL), reply_markup=inline_list_page(offset))
         return
 
 def handle_update(token, chat_id, log_group_id, update):
@@ -452,7 +450,7 @@ def handle_update(token, chat_id, log_group_id, update):
     if text in ('🕐 Время', '/time', 'время', 'time'):
         ts = msg.get('date') if msg else None
         time_text = get_time_all_machines(ts)
-        send(token, chat_id, f"🕐 Время на машинах:\n\n{time_text}", reply_markup=kb)
+        send(token, chat_id, "🕐 Время на машинах:\n\n{}".format(time_text), reply_markup=kb)
         return
 
     if text in ('🖥 Сервер', '/server', 'сервер', 'server'):
@@ -468,7 +466,7 @@ def handle_update(token, chat_id, log_group_id, update):
         return
 
     if text == '📂 Список треков' or text == '/list':
-        send(token, chat_id, f"📂 Треки 1–{PAGE_SIZE} (всего {TRACKS_TOTAL}). Нажмите номер:", reply_markup=inline_list_page(0))
+        send(token, chat_id, "📂 Треки 1–{} (всего {}). Нажмите номер:".format(PAGE_SIZE, TRACKS_TOTAL), reply_markup=inline_list_page(0))
         return
 
     if text == '📋 История' or text == '/history':
@@ -514,7 +512,7 @@ def handle_update(token, chat_id, log_group_id, update):
 
     if text == '/status':
         cur = get_current_track_num()
-        send(token, chat_id, f"Сейчас: трек {cur}." if cur else "Ничего не играет.", reply_markup=kb)
+        send(token, chat_id, "Сейчас: трек {}.".format(cur) if cur else "Ничего не играет.", reply_markup=kb)
         return
 
     voice = msg.get('voice') or msg.get('audio')
@@ -525,14 +523,14 @@ def handle_update(token, chat_id, log_group_id, update):
             try:
                 local = download_file(token, file_id)
                 if local:
-                    run(f'campus-playerctl vol 70 && campus-playerctl play "{local}"', capture=False)
+                    run('campus-playerctl vol 70 && campus-playerctl play "{}"'.format(local), capture=False)
                     send(token, chat_id, '▶ Воспроизведение из чата.', reply_markup=kb)
                     try: os.unlink(local)
                     except Exception: pass
                 else:
                     send(token, chat_id, 'Ошибка загрузки.', reply_markup=kb)
             except Exception as e:
-                send(token, chat_id, f'Ошибка: {e}', reply_markup=kb)
+                send(token, chat_id, 'Ошибка: {}'.format(e), reply_markup=kb)
         else:
             send(token, chat_id, 'Пришлите голос/MP3/OGG/M4A.', reply_markup=kb)
         return
@@ -566,15 +564,15 @@ def main():
     log_group_id = env.get('LOG_GROUP_ID', '').strip()
     if log_group_id:
         try:
-            send(token, log_group_id, f"🤖 [client1] Бот запущен {datetime.now().strftime('%H:%M %d.%m')}")
+            send(token, log_group_id, "🤖 [wctk] Бот запущен {}".format(datetime.now().strftime('%H:%M %d.%m')))
         except Exception:
             pass
-    url = f'https://api.telegram.org/bot{token}/getUpdates'
+    url = 'https://api.telegram.org/bot{}/getUpdates'.format(token)
     offset = 0
     global _PROCESSED_UPDATES
     while True:
         try:
-            req = urllib.request.Request(f'{url}?offset={offset}&timeout=50')
+            req = urllib.request.Request('{}?offset={}&timeout=50'.format(url, offset))
             with urllib.request.urlopen(req, timeout=60) as r:
                 data = json.loads(r.read().decode())
             if not data.get('ok'):
@@ -599,7 +597,7 @@ def main():
                         handle_update(token, chat_id, log_group_id, upd)
                     except Exception as e:
                         try:
-                            send(token, chat_id, f'Ошибка: {e}', reply_markup=main_keyboard())
+                            send(token, chat_id, 'Ошибка: {}'.format(e), reply_markup=main_keyboard())
                         except Exception:
                             pass
         except urllib.error.HTTPError as e:
