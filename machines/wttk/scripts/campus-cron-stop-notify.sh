@@ -14,7 +14,10 @@ esac
 ENV_FILE="${HOME}/cron_notify.env"
 [[ -f "$ENV_FILE" ]] && { set -a; source "$ENV_FILE"; set +a; }
 if [[ -n "$BOT_TOKEN" && -n "$LOG_GROUP_ID" ]]; then
-    MSG="⏹ [ZƏNG] Dayandırıldı | ${DAY_AZ} $(date +%H:%M)
+    LABEL_PREFIX=""
+    [[ -n "$CAMPUS_LABEL" ]] && LABEL_PREFIX="🏫 ${CAMPUS_LABEL}
+"
+    MSG="${LABEL_PREFIX}⏹ [ZƏNG] Dayandırıldı | ${DAY_AZ} $(date +%H:%M)
 🕒 $(date '+%H:%M:%S %d.%m.%Y')"
     curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
         -d "chat_id=${LOG_GROUP_ID}" \

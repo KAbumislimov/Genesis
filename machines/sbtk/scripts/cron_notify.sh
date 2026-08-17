@@ -19,10 +19,15 @@ SUCCESS="${10:-}"        # end üçün: ok / fail
 [[ -z "$BOT_TOKEN" || -z "$LOG_GROUP_ID" ]] && exit 0
 
 TS="$(date '+%H:%M:%S %d.%m.%Y')"
+# CAMPUS_LABEL из cron_notify.env — обязателен теперь, когда все кампусы
+# шлют через одного общего бота (иначе не понять, о какой машине речь).
+LABEL_PREFIX=""
+[[ -n "$CAMPUS_LABEL" ]] && LABEL_PREFIX="🏫 ${CAMPUS_LABEL}
+"
 
 case "$EVENT" in
   start)
-    MSG="🔔 [ZƏNG] Başladı | ${DAY_AZ} ${TIME}
+    MSG="${LABEL_PREFIX}🔔 [ZƏNG] Başladı | ${DAY_AZ} ${TIME}
 🔄 Fasilə: ${SLOT_NAME}
 📂 Fayl: ${TRACK}
 📦 Ölçü: ${SIZE_H}
@@ -33,14 +38,14 @@ case "$EVENT" in
   end)
     STATUS="✅ Uğurla oxudu"
     [[ "$SUCCESS" != "ok" ]] && STATUS="❌ Xəta — səs çıxmadı"
-    MSG="⏹ [ZƏNG] Bitdi | ${DAY_AZ} ${TIME}
+    MSG="${LABEL_PREFIX}⏹ [ZƏNG] Bitdi | ${DAY_AZ} ${TIME}
 🔄 Fasilə: ${SLOT_NAME}
 📂 Fayl: ${TRACK}
 ${STATUS}
 🕒 ${TS}"
     ;;
   skip)
-    MSG="⏸ [ZƏNG] Buraxıldı | ${DAY_AZ} ${TIME}
+    MSG="${LABEL_PREFIX}⏸ [ZƏNG] Buraxıldı | ${DAY_AZ} ${TIME}
 🔄 Fasilə: ${SLOT_NAME}
 ❗ Səbəb: ${REASON}
 🕒 ${TS}"
