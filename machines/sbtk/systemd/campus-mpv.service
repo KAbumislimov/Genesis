@@ -1,0 +1,32 @@
+[Unit]
+Description=Campus MP3 player (mpv idle) — sbtk
+After=sound.target network.target pulseaudio.service
+
+[Service]
+Type=simple
+User=sbtk
+Group=audio
+PermissionsStartOnly=true
+ExecStartPre=/bin/bash -c 'mkdir -p /run/campus-player && chown sbtk:audio /run/campus-player && chmod 775 /run/campus-player'
+Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+# Кросс-scope зависимость (system-сервис → user-сервис pulseaudio) не
+# отслеживается по-настоящему через After= на этой старой systemd (16.04) —
+# socket-активация иногда не успевает/не срабатывает к моменту старта mpv.
+# Стартуем PulseAudio явно и ждём готовности сокета перед запуском mpv.
+ExecStartPre=-/bin/systemctl --user start pulseaudio.service
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 15); do [ -S /run/user/1000/pulse/native ] && exit 0; sleep 1; done'
+ExecStart=/usr/bin/mpv \
+  --no-video \
+  --idle=yes \
+  --force-window=no \
+  --input-unix-socket=/run/campus-player/mpv.sock \
+  --ao=pulse
+Restart=always
+RestartSec=3
+StartLimitIntervalSec=0
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
