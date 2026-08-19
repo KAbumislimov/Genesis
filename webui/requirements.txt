@@ -8,3 +8,4 @@ pyOpenSSL
 faster-whisper
 edge-tts
 mutagen
+gunicorn==22.0.0

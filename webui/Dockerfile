@@ -20,4 +20,6 @@ ENV XDG_CACHE_HOME=/data/cache
 
 EXPOSE 8080 8443
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--certfile=/app/ssl.crt", "--keyfile=/app/ssl.key", \
+     "--bind=0.0.0.0:8080", "--workers=1", "--worker-class=gthread", \
+     "--threads=8", "--timeout=300", "--log-level=info", "app:app"]

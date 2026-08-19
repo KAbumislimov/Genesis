@@ -4415,8 +4415,9 @@ def api_bug_reports_status():
         c.execute('UPDATE bug_reports SET status=? WHERE id=?', (status, rid))
     return jsonify({'ok': True})
 
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     ssl_ctx = None
     if os.path.exists('/app/ssl.crt') and os.path.exists('/app/ssl.key'):
         ssl_ctx = ('/app/ssl.crt', '/app/ssl.key')

@@ -14,8 +14,9 @@
 <!-- Prevent flash -->
 <script>(function(){
   window._themeIsAdmin = {{ 'true' if current_user.is_authenticated and current_user.role == 'admin' else 'false' }};
+  window._themeCanPersonalize = {{ 'true' if current_user.is_authenticated and current_user.role != 'guest' else 'false' }};
   window._themeServerDefault = {{ theme_default|tojson }};
-  var t = window._themeIsAdmin
+  var t = window._themeCanPersonalize
     ? (localStorage.getItem('theme') || window._themeServerDefault || 'dark')
     : (window._themeServerDefault || 'dark');
   if(t==='light') document.documentElement.classList.add('light-theme');
@@ -33,11 +34,7 @@
   var _ff=localStorage.getItem('fontFamily')||'Roboto';
   document.documentElement.style.setProperty('--font',_ff+',system-ui,sans-serif');
   {% if current_user.is_authenticated and current_user.role != 'guest' %}
-  {% if current_user.role == 'admin' %}
   var bm=localStorage.getItem('bgMode')||{{ wallpaper_default|tojson }};
-  {% else %}
-  var bm={{ wallpaper_default|tojson }};
-  {% endif %}
   if(bm&&bm!=='off') document.documentElement.classList.add('has-wallpaper');
   {% endif %}
 })()</script>
@@ -1424,8 +1421,9 @@ var _bgTimer = null, _bgIdx = 0;
 var _bgIsAdmin = {{ 'true' if current_user.role == 'admin' else 'false' }};
 var _bgIsGuest = {{ 'true' if current_user.role == 'guest' else 'false' }};
 var _bgServerDefault = {{ wallpaper_default | tojson }};
-// Non-admins always follow server default; admins use their own localStorage choice
-var _bgMode = _bgIsAdmin
+// Everyone but guests picks their own wallpaper; admins additionally get to
+// set the org-wide default (via the separate "set for everyone" button).
+var _bgMode = (!_bgIsGuest)
   ? (localStorage.getItem('bgMode') || _bgServerDefault)
   : _bgServerDefault;
 
