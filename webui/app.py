@@ -1906,13 +1906,15 @@ MINUTA_PATHS = {
 }
 MINUTA_VOL = 100
 
-def _play_via_ipc(host, user, filepath, vol):
+def _play_via_ipc(host, user, filepath, vol, loop=False):
     file_esc = filepath.replace('\\', '\\\\').replace('"', '\\"')
+    loop_val = '"inf"' if loop else 'false'
     cmd = (
         'SOCK=/run/campus-player/mpv.sock; '
         f'[ -S "$SOCK" ] || {{ echo "no socket"; exit 1; }}; '
         f'[ -f "{filepath}" ] || {{ echo "no file"; exit 1; }}; '
         f'echo \'{{"command":["set_property","volume",{vol}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+        f'echo \'{{"command":["set_property","loop-file",{loop_val}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
         f'echo \'{{"command":["loadfile","{file_esc}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"'
     )
     return ssh_run_on(host, user, cmd, timeout=10)
@@ -2007,6 +2009,78 @@ def api_minuta(campus):
             event_type='minuta'
         )
         return jsonify({'ok': True})
+    err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
+    return jsonify({'ok': False, 'error': err})
+
+# ── "Тревога" — набор звуков-сирен, живёт как файлы вне ротации Media.
+# Библиотека звуков лежит централизованно на сервере webui (alarm_sounds/);
+# при первом проигрывании на кампусе файл сам подтягивается по SFTP и
+# кешируется там же — повторные вызовы того же звука уже не грузят SFTP.
+# Играет в цикле (loop-file=inf), пока кто-то не нажмёт обычный STOP —
+# тот же mpv "stop" по IPC, что останавливает любое другое воспроизведение.
+ALARM_DIR  = os.environ.get('ALARM_SOUNDS_DIR', '/data/alarm_sounds')
+ALARM_VOL  = 170
+_ALARM_EXTS = ('.mp3', '.wav', '.ogg', '.m4a')
+
+def _list_alarm_sounds():
+    if not os.path.isdir(ALARM_DIR):
+        return []
+    return sorted(f for f in os.listdir(ALARM_DIR) if f.lower().endswith(_ALARM_EXTS))
+
+def _push_and_play_alarm(host, user, fname, vol):
+    local_path  = os.path.join(ALARM_DIR, fname)
+    remote_path = f'/home/{user}/special/alarm_{fname}'
+    s = paramiko.SSHClient()
+    s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        s.connect(host, username=user, key_filename=SSH_KEY, timeout=8)
+        _, chk, _ = s.exec_command(f'test -f "{remote_path}" && echo y || echo n', timeout=5)
+        exists = chk.read().decode().strip() == 'y'
+        if not exists:
+            s.exec_command(f"mkdir -p \"$(dirname '{remote_path}')\"", timeout=5)
+            sftp = s.open_sftp()
+            sftp.put(local_path, remote_path)
+            sftp.close()
+    finally:
+        s.close()
+    return _play_via_ipc(host, user, remote_path, vol, loop=True)
+
+@app.route('/api/alarm/sounds')
+@login_required
+def api_alarm_sounds():
+    return jsonify({'ok': True, 'sounds': _list_alarm_sounds()})
+
+@app.route('/api/alarm/<campus>', methods=['POST'])
+@login_required
+def api_alarm(campus):
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    if campus not in ('client1', 'client2', 'cgtk'):
+        return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
+    sounds = _list_alarm_sounds()
+    if not sounds:
+        return jsonify({'ok': False, 'error': 'Звуки тревоги ещё не загружены'})
+    fname = os.path.basename((request.get_json(silent=True) or {}).get('sound', ''))
+    if fname not in sounds:
+        fname = sounds[0]
+    host, user = _machine_ssh(campus)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{campus} не подключен'})
+    try:
+        r = _push_and_play_alarm(host, user, fname, ALARM_VOL)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+    if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
+        log_action(current_user.username, 'alarm', campus, fname)
+        tg_notify(
+            f'🚨 <b>ТРЕВОГА</b>\n'
+            f'🏫 Кампус: <b>{_MINUTA_LABEL.get(campus, campus)}</b>\n'
+            f'🔊 Звук: <b>{fname}</b>\n'
+            f'👤 Запустил: <b>{current_user.username}</b>\n'
+            f'🕐 {_tg_fmt_time()}',
+            event_type='alarm'
+        )
+        return jsonify({'ok': True, 'sound': fname})
     err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
     return jsonify({'ok': False, 'error': err})
 

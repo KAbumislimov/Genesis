@@ -44,6 +44,8 @@ const I18N = {
     'wamp.mik_desc': 'Живое объявление по громкой связи — выбери кампус',
     'wamp.minuta_desc': 'Запустить минуту молчания вне расписания',
     'wamp.cron_desc': 'Остановить/включить автоматические звонки по расписанию',
+    'wamp.trevoga_group': 'Тревога', 'wamp.trevoga_desc': 'Сигнал тревоги в цикле — остановить обычной кнопкой СТОП',
+    'wamp.trevoga_none': 'Звуки не загружены',
     'player.staff_only': 'только Staff / Admin',
     /* Now playing */
     'np.now':         'Сейчас',
@@ -264,6 +266,8 @@ const I18N = {
     'wamp.mik_desc': 'Live PA announcement — pick a campus',
     'wamp.minuta_desc': 'Trigger the minute of silence outside the schedule',
     'wamp.cron_desc': 'Stop/enable the automatic scheduled bells',
+    'wamp.trevoga_group': 'Alarm', 'wamp.trevoga_desc': 'Alarm signal on loop — stop with the regular STOP button',
+    'wamp.trevoga_none': 'No sounds uploaded yet',
     'player.staff_only': 'Staff / Admin only',
     /* Now playing */
     'np.now':         'Now',
@@ -480,6 +484,8 @@ const I18N = {
     'wamp.mik_desc': 'Canlı radio elanı — kampus seç',
     'wamp.minuta_desc': 'Sükut dəqiqəsini cədvəldən kənar işə sal',
     'wamp.cron_desc': 'Avtomatik zəngləri dayandır/işə sal',
+    'wamp.trevoga_group': 'Təhlükə', 'wamp.trevoga_desc': 'Təhlükə siqnalı dövr ilə — adi DAYAN düyməsi ilə saxla',
+    'wamp.trevoga_none': 'Səslər yüklənməyib',
     'player.staff_only': 'Yalnız Staff / Admin',
     /* Now playing */
     'np.now':         'İndi',
