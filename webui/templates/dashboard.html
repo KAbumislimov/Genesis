@@ -722,7 +722,12 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 }
 .wamp2-logo{font-size:10px;font-weight:900;letter-spacing:.28em;color:#c0d8f8;
   text-shadow:0 0 8px rgba(80,140,240,.7),0 1px 2px rgba(0,0,0,.9)}
-.wamp2-camp-grp{display:flex;gap:2px;margin-left:6px}
+.wamp2-camp-grp{display:flex;gap:4px;align-items:center;margin-left:6px}
+.wamp2-camp-lbl{font-size:8px;font-weight:900;letter-spacing:.08em;color:rgba(180,210,255,.6);
+  text-transform:uppercase}
+.wamp2-camp-select{height:15px;padding:0 3px;font-size:8px;font-weight:900;letter-spacing:.05em;
+  background:rgba(30,80,160,.7);color:#d0e8ff;border:1px solid rgba(80,140,240,.6);
+  box-shadow:0 0 6px rgba(60,120,255,.3);cursor:pointer;border-radius:2px}
 .wamp2-camp{height:15px;padding:0 6px;font-size:8px;font-weight:900;letter-spacing:.08em;
   background:rgba(0,0,0,.4);color:rgba(180,210,255,.5);border:1px solid rgba(40,80,160,.4);
   cursor:pointer;border-radius:2px}
@@ -1270,9 +1275,13 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <div class="wamp2-tb" id="wa-titlebar">
     <span class="wamp2-logo wa-float-drag" id="wa-drag-handle" title="Перетащить плеер">WINAMP</span>
     <div class="wamp2-camp-grp">
-      <button class="wamp2-camp active" id="wa-tab-client1" onclick="setActiveCampus('client1')">NAR</button>
-      <button class="wamp2-camp" id="wa-tab-client2" onclick="setActiveCampus('client2')">GËNC</button>
-      <button class="wamp2-camp" id="wa-tab-cgtk" onclick="setActiveCampus('cgtk')">CG</button>
+      <label class="wamp2-camp-lbl" for="campusSelect" data-i18n="wamp.campus_label">Кампус</label>
+      <select class="wamp2-camp-select" id="campusSelect" onchange="setActiveCampus(this.value)">
+        <option value="client1">NAR</option>
+        <option value="client2">GËNC</option>
+        <option value="cgtk">CG</option>
+        <option value="all" data-i18n="wamp.campus_all">ВСЕ</option>
+      </select>
     </div>
     <div class="wamp2-wm" style="margin-left:auto;display:flex;align-items:center;gap:3px">
       <label title="NAR цвет" style="cursor:pointer"><input type="color" id="hclr-client1" value="#00e8c0" oninput="setDualColor('client1',this.value)" style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none"></label>
@@ -1349,10 +1358,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     {% endif %}
     <div class="w2b-gap"></div>
     {% if perms.stop %}
-    <span class="w2b-grouplbl" data-i18n="wamp.stop_group">Стоп:</span>
-    <button class="w2b w2b-snar" onclick="stopCampus('client1')" title="Стоп только Client1">■ NAR</button>
-    <button class="w2b w2b-sgenc" onclick="stopCampus('client2')" title="Стоп только Client2">■ GNC</button>
-    <button class="w2b w2b-scg" onclick="stopCampus('cgtk')" title="Стоп только City Garden">■ CG</button>
+    <button class="w2b w2b-snar" onclick="doStopActive()" title="Стоп — выбранный в шапке кампус">■ <span data-i18n="wamp.stop_group">Стоп</span></button>
     {% endif %}
     <div class="w2b-gap"></div>
     <button class="w2b w2b-help" onclick="toggleFP('wa-help-panel', this)" title="Что означают кнопки?">❓</button>
@@ -1365,10 +1371,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🎖️</span><span class="wa-special-title" data-i18n="wamp.himn_group">Гимн</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_doPlayHimn('client1')" title="Гимн — Client1">NAR</button>
-          <button class="wa-special-btn" onclick="_doPlayHimn('client2')" title="Гимн — Client2">GNC</button>
-          <button class="wa-special-btn" onclick="_doPlayHimn('cgtk')" title="Гимн — City Garden">CG</button>
-          <button class="wa-special-btn wa-special-all" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)" title="Гимн на всех кампусах одновременно">ВСЕ</button>
+          <button class="wa-special-btn" onclick="_doPlayHimnActive()" title="Гимн — выбранный в шапке кампус">▶ <span data-i18n="wamp.himn_group">Гимн</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.himn_desc">Включить гимн — на одном кампусе или сразу везде</div>
@@ -1377,10 +1380,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🎤</span><span class="wa-special-title" data-i18n="wamp.mik_group">Мик</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_openMicFor('client1')" title="Объявление — Client1">NAR</button>
-          <button class="wa-special-btn" onclick="_openMicFor('client2')" title="Объявление — Client2">GNC</button>
-          <button class="wa-special-btn" onclick="_openMicFor('cgtk')" title="Объявление — City Garden">CG</button>
-          <button class="wa-special-btn wa-special-all" onclick="_openMicFor('all')" title="Объявление на всех кампусах">ВСЕ</button>
+          <button class="wa-special-btn" onclick="_openMicFor(_activeCampus)" title="Объявление — выбранный в шапке кампус">🎤 <span data-i18n="wamp.mik_group">Мик</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.mik_desc">Живое объявление по громкой связи — выбери кампус</div>
@@ -1389,10 +1389,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🕯️</span><span class="wa-special-title" data-i18n="wamp.minuta">Минута молчания</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_doPlayMinuta('client1',this)" title="Минута молчания — Client1">NAR</button>
-          <button class="wa-special-btn" onclick="_doPlayMinuta('client2',this)" title="Минута молчания — Client2">GNC</button>
-          <button class="wa-special-btn" onclick="_doPlayMinuta('cgtk',this)" title="Минута молчания — City Garden">CG</button>
-          <button class="wa-special-btn wa-special-all" onclick="_doPlayMinutaAll(this)" title="Минута молчания на всех кампусах одновременно">ВСЕ</button>
+          <button class="wa-special-btn" onclick="_doPlayMinutaActive(this)" title="Минута молчания — выбранный в шапке кампус">🕯 <span data-i18n="wamp.minuta">Минута молчания</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.minuta_desc">Запустить минуту молчания вне расписания</div>
@@ -1401,10 +1398,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🚨</span><span class="wa-special-title" data-i18n="wamp.trevoga_group">Тревога</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_doPlayAlarm('client1',this)" title="Тревога — Client1">NAR</button>
-          <button class="wa-special-btn" onclick="_doPlayAlarm('client2',this)" title="Тревога — Client2">GNC</button>
-          <button class="wa-special-btn" onclick="_doPlayAlarm('cgtk',this)" title="Тревога — City Garden">CG</button>
-          <button class="wa-special-btn wa-special-all" onclick="_doPlayAlarmAll(this)" title="Тревога на всех кампусах одновременно">ВСЕ</button>
+          <button class="wa-special-btn" onclick="_doPlayAlarmActive(this)" title="Тревога — выбранный в шапке кампус">🚨 <span data-i18n="wamp.trevoga_group">Тревога</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.trevoga_desc">Сигнал тревоги в цикле — остановить обычной кнопкой СТОП</div>
@@ -1420,10 +1414,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
           <span class="wa-special-title" data-i18n="wamp.cron_group">Крон</span>
         </div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" id="btn-cron-client1" onclick="cronToggle('client1')" title="Пауза/включить крон — Client1">NAR</button>
-          <button class="wa-special-btn" id="btn-cron-client2" onclick="cronToggle('client2')" title="Пауза/включить крон — Client2">GNC</button>
-          <button class="wa-special-btn" id="btn-cron-cgtk" onclick="cronToggle('cgtk')" title="Пауза/включить крон — City Garden">CG</button>
-          <button class="wa-special-btn wa-special-all" id="btn-cron-all" onclick="_cronToggleAll()" title="Пауза/включить крон на всех кампусах">ВСЕ</button>
+          <button class="wa-special-btn" id="btn-cron-active" onclick="_cronToggleActive()" title="Пауза/включить крон — выбранный в шапке кампус">⏸ <span data-i18n="wamp.cron_group">Крон</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.cron_desc">Остановить/включить автоматические звонки по расписанию</div>
@@ -1782,13 +1773,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wa-help-row"><b>🔀 ШАФ / 🔁 ПОВТ</b><span>Перемешать треки / повторять текущий трек</span></div>
     <div class="wa-help-row"><b>🎚 EQ / 📋 PL</b><span>Эквалайзер / список треков</span></div>
     <div class="wa-help-row"><b>🔇 МЬЮ</b><span>Выключить/включить звук на активном кампусе</span></div>
-    <div class="wa-help-row"><b>🎤 МИК</b><span>Живое объявление по громкой связи (выбор кампуса — внутри)</span></div>
-    <div style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 6px">По каждому кампусу отдельно</div>
-    <div class="wa-help-row"><b>■ NAR / ■ GNC / ■ CG</b><span>Стоп только на этом одном кампусе</span></div>
-    <div class="wa-help-row"><b>♪ NAR / ♪ GNC / ♪ CG</b><span>Проиграть гимн только на этом кампусе</span></div>
-    <div class="wa-help-row"><b>♪ ALL</b><span>Гимн сразу на всех кампусах</span></div>
-    <div style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 6px">Вкладки NAR / GËNC / CG вверху</div>
-    <div class="wa-help-row"><b>Вкладка кампуса</b><span>Выбирает, какой кампус сейчас «активный» — команды PLAY/ПАУЗА/МЬЮ/ИГРАТЬ ВСЁ действуют именно на него</span></div>
+    <div class="wa-help-row"><b>🎤 МИК</b><span>Живое объявление по громкой связи на выбранный в шапке кампус</span></div>
+    <div class="wa-help-row"><b>■ СТОП (отдельный)</b><span>Остановить только выбранный в шапке кампус</span></div>
+    <div class="wa-help-row"><b>🎖️ ГИМН / 🕯️ МИНУТА / 🚨 ТРЕВОГА / 🌙 КРОН</b><span>Действуют на кампус, выбранный в выпадающем списке «Кампус» — либо на ВСЕ сразу, если выбрано «ВСЕ»</span></div>
+    <div style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 6px">Выпадающий список «Кампус» вверху</div>
+    <div class="wa-help-row"><b>Кампус</b><span>Выбирает, какой кампус сейчас «активный» — все команды выше (PLAY/ПАУЗА/МЬЮ/ИГРАТЬ ВСЁ/Гимн/Мик/Минута/Тревога/Крон/Стоп) действуют именно на него. Пункт «ВСЕ» доступен для церемониальных действий и стопа</span></div>
   </div>
 </div>
 
@@ -1807,10 +1796,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <div class="perem-qa-main">
           <span class="perem-qa-label">{{ s.label }}</span>
           <div class="perem-qa-btns">
-            <button class="perem-qa-btn c-client1" onclick="_doPlayPerem('client1','{{ s.id }}',this)" title="{{ s.label }} — только Client1">NAR</button>
-            <button class="perem-qa-btn c-client2" onclick="_doPlayPerem('client2','{{ s.id }}',this)" title="{{ s.label }} — только Client2">GNC</button>
-            <button class="perem-qa-btn c-cgtk" onclick="_doPlayPerem('cgtk','{{ s.id }}',this)" title="{{ s.label }} — только City Garden">CG</button>
-            <button class="perem-qa-btn c-all" onclick="_doPlayPeremAll('{{ s.id }}',this)" title="{{ s.label }} — сразу на всех кампусах">ВСЕ</button>
+            <button class="perem-qa-btn c-all" onclick="_doPlayPeremActive('{{ s.id }}',this)" title="{{ s.label }} — выбранный в шапке кампус">▶</button>
             <button class="perem-qa-editbtn" onclick="_togglePeremEdit('{{ s.id }}',this)" title="Редактировать время/громкость по кампусам">✏️</button>
           </div>
         </div>
@@ -3164,6 +3150,7 @@ _startAudioSSE();
 var _wampShuffle = false, _wampRepeat = false;
 
 function doPlay() {
+  if (_needSingleCampus()) return;
   fetch('/api/pause',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:_activeCampus,action:'play'})
   }).then(function(r){return r.json();}).then(function(d){
@@ -3171,6 +3158,7 @@ function doPlay() {
   }).catch(function(){toast(t('toast.err_no_conn'));});
 }
 function doPause() {
+  if (_needSingleCampus()) return;
   fetch('/api/pause',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:_activeCampus})
   }).then(function(r){return r.json();}).then(function(d){
@@ -3503,6 +3491,7 @@ function _wampPlPlay(tr, el, ampIdx) {
     return;
   }
   // Normal click → play on campus speakers (SFTP upload ~5-30s, show spinner first)
+  if (_needSingleCampus()) return;
   var shortName = tr.name.replace(/\.(mp3|flac|ogg|m4a|wav)$/i,'').slice(0,38);
   toast('⏳ ' + shortName + '…');
   fetch('/api/play',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -3543,6 +3532,7 @@ function wampPlayAll() {
   toast('▶ ALL — ' + songs.length + ' треков');
 }
 function wampPlayAllOshhaya() {
+  if (_needSingleCampus()) return;
   var btn = document.querySelector('.w2b-playall');
   if(btn) btn.textContent = '⏳ Запуск...';
   fetch('/api/play-all', {
@@ -3571,11 +3561,13 @@ function _escHtml(s) {
 }
 
 function doStop() {
+  if (_needSingleCampus()) return;
   fetch('/api/stop',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:_activeCampus})
   }).then(function(r){return r.json();});
 }
 function _plNavigate(dir) {
+  if (_needSingleCampus()) return;
   if(!_plTracks || _plTracks.length === 0) { toast('Плейлист пуст'); return; }
   // Navigate through full _plTracks (not filtered DOM list)
   var cur  = _currentPlIdx < 0 ? 0 : _currentPlIdx;
@@ -3893,6 +3885,15 @@ function _doPlayHimn(machine) {
       } else { toast('⚠️ ' + (d.error || 'нет прав')); }
     }).catch(function(){ toast('⚠️ нет связи'); });
 }
+function _doPlayHimnActive() {
+  if (_activeCampus === 'all') {
+    _doPlayHimn('client1');
+    setTimeout(function(){ _doPlayHimn('client2'); }, 600);
+    setTimeout(function(){ _doPlayHimn('cgtk'); }, 1200);
+  } else {
+    _doPlayHimn(_activeCampus);
+  }
+}
 
 // ──── МИНУТА МОЛЧАНИЯ ────
 var _MINUTA_LABELS = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
@@ -3913,6 +3914,9 @@ function _doPlayMinutaAll(btn) {
   setTimeout(function(){ _doPlayMinuta('client2'); }, 600);
   setTimeout(function(){ _doPlayMinuta('cgtk'); }, 1200);
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
+}
+function _doPlayMinutaActive(btn) {
+  if (_activeCampus === 'all') { _doPlayMinutaAll(btn); } else { _doPlayMinuta(_activeCampus, btn); }
 }
 
 // ──── ТРЕВОГА ────
@@ -3956,6 +3960,9 @@ function _doPlayAlarmAll(btn) {
   setTimeout(function(){ _doPlayAlarm('cgtk'); }, 1200);
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
 }
+function _doPlayAlarmActive(btn) {
+  if (_activeCampus === 'all') { _doPlayAlarmAll(btn); } else { _doPlayAlarm(_activeCampus, btn); }
+}
 
 // ──── PEREM QUICK-ACCESS (dashboard "⚡ быстрый запуск") ────
 var _PEREM_LABELS = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
@@ -3980,6 +3987,9 @@ function _doPlayPeremAll(slot, btn) {
   setTimeout(function(){ _doPlayPerem('client2', slot); }, 600);
   setTimeout(function(){ _doPlayPerem('cgtk', slot); }, 1200);
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
+}
+function _doPlayPeremActive(slot, btn) {
+  if (_activeCampus === 'all') { _doPlayPeremAll(slot, btn); } else { _doPlayPerem(_activeCampus, slot, btn); }
 }
 
 // ──── PEREM SCHEDULE EDIT (per-campus время/громкость, реально в crontab) ────
@@ -4152,10 +4162,20 @@ function _cronApplyUI() {
   });
   var allBtn = document.getElementById('btn-cron-all');
   if (allBtn) allBtn.classList.toggle('paused', bothPaused);
+  var activeBtn = document.getElementById('btn-cron-active');
+  if (activeBtn) {
+    var isPaused = _activeCampus === 'all' ? bothPaused : !!_cronState[_activeCampus];
+    activeBtn.classList.toggle('paused', isPaused);
+    activeBtn.innerHTML = (isPaused ? '▶' : '⏸') + ' <span>' + (t('wamp.cron_group') || 'Крон') + '</span>';
+  }
 }
 function _cronToggleAll() {
   var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
   if (bothPaused) cronResume('both'); else cronToggle('both');
+}
+function _cronToggleActive() {
+  if (_activeCampus === 'all') { _cronToggleAll(); return; }
+  if (_cronState[_activeCampus]) cronResume(_activeCampus); else cronToggle(_activeCampus);
 }
 function pollCron() {
   fetch('/api/cron/pause').then(function(r){return r.json();}).then(function(d){
@@ -4494,19 +4514,35 @@ setInterval(function(){_updateProgress('client1');_updateProgress('client2');_up
 
 // ──── ACTIVE CAMPUS (Winamp unified LCD + seek bar) ──────
 var _activeCampus = 'client1';
+var _campusSelectEl = document.getElementById('campusSelect');
 function setActiveCampus(c) {
   _activeCampus = c;
-  ['client1','client2','cgtk'].forEach(function(id){
-    var b = document.getElementById('wa-tab-'+id);
-    if(b) b.classList.toggle('active', id===c);
-  });
+  if (_campusSelectEl) _campusSelectEl.value = c;
+  if (typeof _cronApplyUI === 'function') _cronApplyUI();
 }
-function doStopActive() { stopCampus(_activeCampus); }
+function doStopActive() {
+  if (_activeCampus === 'all') { doStopAll(); return; }
+  stopCampus(_activeCampus);
+}
+// Actions bound to the main transport (Play/Pause/Next/Prev/Играть всё) always need
+// exactly one host — "ВСЕ" only makes sense for the ceremonial one-shot buttons below.
+function _needSingleCampus() {
+  if (_activeCampus === 'all') {
+    toast('⚠️ ' + (t('toast.pick_single_campus') || 'Выберите конкретный кампус (не ВСЕ) для этого действия'));
+    return true;
+  }
+  return false;
+}
 
 // Sync LCD + unified seek bar with active campus progress (skipped when AmplitudeJS is active)
 setInterval(function(){
   if(_ampIsPlaying) return;
   var ck = _activeCampus;
+  if (ck === 'all') {
+    var lcdI0 = document.getElementById('wa-lcd-info');
+    if (lcdI0) lcdI0.textContent = 'ВСЕ КАМПУСЫ';
+    return;
+  }
   var st = _progState[ck];
   var pos = st.pos, dur = st.dur, pct = 0;
   if(st.playing && dur > 0){
@@ -4541,6 +4577,7 @@ function wampSeekActive(evt) {
   }
   // Otherwise seek on campus player
   var ck = _activeCampus;
+  if (ck === 'all') return;
   var st = _progState[ck]; if(!st.playing||st.dur<=0) return;
   var newPos = Math.round(pct * st.dur);
   fetch('/api/seek',{method:'POST',headers:{'Content-Type':'application/json'},
