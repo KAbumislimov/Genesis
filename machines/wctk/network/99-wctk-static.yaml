@@ -1,0 +1,27 @@
+# Статический IP для wctk (White City) на её боевой сети.
+# НЕ применять, пока клиент не подключён физически к сети White City —
+# на сейчас (staging/офис) он должен оставаться на DHCP, иначе потеряем
+# к нему доступ.
+#
+# Перед копированием на машину:
+#   1. `ip a` на самой машине — узнать реальное имя интерфейса
+#      (enp2s0/eth0/... — заменить ниже wctk-eth0-PLACEHOLDER).
+#   2. Уточнить шлюз сети White City, если 10.103.0.1 — не он
+#      (взято по аналогии с client1: 10.20.0.41/24 → шлюз 10.20.0.1).
+#
+# Установка на месте:
+#   sudo cp 99-wctk-static.yaml /etc/netplan/99-wctk-static.yaml
+#   sudo netplan apply
+#   ip a   # проверить что адрес встал
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    wctk-eth0-PLACEHOLDER:
+      dhcp4: no
+      addresses: [10.103.0.41/24]
+      routes:
+        - to: default
+          via: 10.103.0.1
+      nameservers:
+        addresses: [1.1.1.1, 8.8.8.8]
