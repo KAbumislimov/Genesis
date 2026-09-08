@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Campus audio analyzer — PulseAudio monitor → FFT → /tmp/campus-audio-level.json
-Runs as a persistent background process on client1/client2.
+Runs as a persistent background process on client1/wctk/client2 (AUDIO_MONITOR env overrides auto-detect on client1).
 """
 import subprocess, struct, json, time, os, signal, sys, math
 OUTPUT = '/tmp/campus-audio-level.json'
@@ -11,25 +11,35 @@ BANDS  = 16     # output bands for visualizer
 
 def find_monitor():
     # mpv запускается с --ao=pulse (без --audio-device) — значит звук всегда
-    # идёт через ТЕКУЩИЙ default sink PulseAudio. Раньше здесь был хардкод
-    # "ищем monitor с 'usb' в имени" — работало только пока default sink это
-    # и есть USB-карта; если он сменится (или на другой машине его нет),
-    # find_monitor() возвращал None, и сервис падал в restart-loop.
+    # идёт через ТЕКУЩИЙ default sink PulseAudio, каким бы он ни был на этой
+    # машине (USB-звук, встроенный analog, HDMI — неважно). Раньше здесь был
+    # хардкод "ищем monitor с 'usb' в имени" — работало только на client1 (у
+    # него реально USB-звуковая карта), а на любой другой машине без USB-звука
+    # (например wctk — только встроенный аудиочип) find_monitor() всегда
+    # возвращал None, и весь сервис падал в бесконечный restart-loop.
+    # get-default-sink появился в поздних версиях pactl — на старом
+    # PulseAudio (например Ubuntu 16.04) его нет, парсим `pactl info` вместо
+    # этого (стабильная, давно существующая команда).
     try:
-        default_sink = subprocess.check_output(['pactl', 'get-default-sink'],
-                                                 stderr=subprocess.DEVNULL, text=True).strip()
+        info = subprocess.check_output(['pactl', 'info'],
+                                        stderr=subprocess.DEVNULL, universal_newlines=True)
+        default_sink = None
+        for line in info.splitlines():
+            if line.startswith('Default Sink:'):
+                default_sink = line.split(':', 1)[1].strip()
+                break
         if default_sink:
             monitor = default_sink + '.monitor'
             out = subprocess.check_output(['pactl', 'list', 'sources', 'short'],
-                                           stderr=subprocess.DEVNULL, text=True)
+                                           stderr=subprocess.DEVNULL, universal_newlines=True)
             if monitor in out:
                 return monitor
     except Exception:
         pass
-    # Фолбэк — старое поведение (USB-звук)
+    # Фолбэк — старое поведение (USB-звук, как на client1)
     try:
         out = subprocess.check_output(['pactl','list','sources','short'],
-                                       stderr=subprocess.DEVNULL, text=True)
+                                       stderr=subprocess.DEVNULL, universal_newlines=True)
         for line in out.splitlines():
             if "monitor" in line and "usb" in line.lower():
                 cols = line.split('\t')
@@ -64,8 +74,8 @@ def run(monitor):
         HAS_NP = False
 
     proc = subprocess.Popen(
-        ['pacat', '--record', f'--device={monitor}',
-         f'--rate={RATE}', f'--channels={CH}', '--format=s16le', '--latency-msec=30', '--raw'],
+        ['pacat', '--record', '--device={}'.format(monitor),
+         '--rate={}'.format(RATE), '--channels={}'.format(CH), '--format=s16le', '--latency-msec=30', '--raw'],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
     )
 
@@ -85,12 +95,22 @@ def run(monitor):
         window = np.hanning(CHUNK).astype(np.float32)
         band_groups = make_log_bands(CHUNK, RATE, BANDS)
 
+    buf = b''
     while True:
         try:
-            data = proc.stdout.read(BYTES)
-            if not data or len(data) < BYTES:
+            # pacat может отдавать данные меньшими кусками, чем latency-msec
+            # предполагает (особенно на старых версиях) — накапливаем буфер,
+            # а не отбрасываем частичное чтение, иначе полный BYTES-чанк
+            # может вообще никогда не набраться.
+            chunk = proc.stdout.read(BYTES - len(buf))
+            if not chunk:
                 time.sleep(0.02)
                 continue
+            buf += chunk
+            if len(buf) < BYTES:
+                continue
+            data = buf[:BYTES]
+            buf = buf[BYTES:]
 
             if HAS_NP:
                 samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
@@ -104,7 +124,7 @@ def run(monitor):
             else:
                 # Pure-Python fallback: time-domain RMS with rough frequency simulation
                 n = len(data) // 2
-                samps = struct.unpack(f'{n}h', data)
+                samps = struct.unpack('{}h'.format(n), data)
                 rms = math.sqrt(sum(s*s for s in samps) / n) / 32768.0
                 raw = [rms * math.exp(-i * 0.13) * (0.8 + 0.2 * abs(math.sin(i * 1.7 + time.time())))
                        for i in range(BANDS)]
@@ -129,5 +149,5 @@ if __name__ == '__main__':
     if not mon:
         print("No PulseAudio monitor found", file=sys.stderr)
         sys.exit(1)
-    print(f"Analyzer started: {mon}", flush=True)
+    print("Analyzer started: {}".format(mon), flush=True)
     run(mon)

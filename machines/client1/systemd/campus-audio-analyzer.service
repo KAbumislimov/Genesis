@@ -10,6 +10,13 @@ Restart=always
 RestartSec=5
 Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+# client1: сломан jack-sense на встроенном аналоговом выходе (Front Headphone
+# Jack всегда "off", даже с реально воткнутым кабелем) — PulseAudio из-за
+# этого не держит его "default sink" (постоянно откатывает на USB-звук),
+# поэтому и mpv (campus-mpv.service), и анализатор целятся в это устройство
+# явно, а не полагаются на default sink. 2026-09-08: колонки перевешаны с
+# USB-адаптера на встроенный разъём (AUX IN 2 на усилителе).
+Environment=AUDIO_MONITOR=alsa_output.pci-0000_00_1b.0.analog-stereo.monitor
 
 [Install]
 WantedBy=multi-user.target

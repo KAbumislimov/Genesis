@@ -1,13 +1,25 @@
 [Unit]
 Description=Campus MP3 player (mpv idle) — client1
-After=sound.target network.target
+After=sound.target network.target pulseaudio.service
 
 [Service]
 Type=simple
 User=client1
 Group=audio
+
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
+Environment="PULSE_SERVER=unix:/run/user/1000/pulse/native"
+
 PermissionsStartOnly=true
+
 ExecStartPre=/bin/bash -c 'mkdir -p /run/campus-player && chown client1:audio /run/campus-player && chmod 775 /run/campus-player'
+
+# --audio-device указан явно (не полагаемся на default sink PulseAudio):
+# на этой машине jack-sense встроенного аналогового выхода сломан (см.
+# campus-audio-analyzer.service) и default sink откатывается на старый
+# USB-адаптер. 2026-09-08: колонки перевешаны с USB-адаптера на встроенный
+# аудиоразъём (AUX IN 2 на усилителе) — если ещё раз меняется аудиовыход,
+# правь audio-device здесь и AUDIO_MONITOR в campus-audio-analyzer.service.
 ExecStart=/usr/bin/mpv \
   --no-video \
   --idle=yes \
@@ -15,10 +27,12 @@ ExecStart=/usr/bin/mpv \
   --audio-display=no \
   --volume-max=160 \
   --input-ipc-server=/run/campus-player/mpv.sock \
-  --audio-device=alsa/default
+  --ao=pulse \
+  --audio-device=pulse/alsa_output.pci-0000_00_1b.0.analog-stereo
+
 Restart=always
 RestartSec=3
-StartLimitIntervalSec=0
+
 StandardOutput=journal
 StandardError=journal
 
