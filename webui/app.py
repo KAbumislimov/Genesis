@@ -651,12 +651,18 @@ def mpv_set(prop, val):
     return mpv_cmd({'command': ['set_property', prop, val]})
 
 def mpv_set_all(prop, val):
-    """Set mpv property on client1 and all additional machines."""
+    """Set mpv property on client1 (waited on, response depends on it) and all
+    additional machines (fired in background threads — an offline campus
+    otherwise stalls the whole request behind an SSH connect timeout, which
+    is exactly why the volume knob felt frozen for several seconds whenever
+    any one campus was down)."""
     cmd = {'command': ['set_property', prop, val]}
     r = mpv_cmd(cmd)
     for m in MACHINES:
         if m['host'] != CLIENT1_HOST:
-            mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+            threading.Thread(
+                target=mpv_cmd_on, args=(m['host'], m.get('user', CLIENT1_USER), cmd), daemon=True
+            ).start()
     return r
 
 # ── Wake-on-LAN / host ping ──────────────────────
@@ -1832,7 +1838,9 @@ def api_stop():
     _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
     for m in MACHINES:
         if m['host'] != CLIENT1_HOST:
-            _mpv_stop_on(m['host'], m.get('user', CLIENT1_USER))
+            threading.Thread(
+                target=_mpv_stop_on, args=(m['host'], m.get('user', CLIENT1_USER)), daemon=True
+            ).start()
     log_action(current_user.username, 'stop', 'all')
     return jsonify({'ok': True})
 
@@ -2521,7 +2529,9 @@ def api_play_radio():
     if campus in ('client2', 'both'):
         for m in MACHINES:
             if m['host'] != CLIENT1_HOST:
-                mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+                threading.Thread(
+                    target=mpv_cmd_on, args=(m['host'], m.get('user', CLIENT1_USER), cmd), daemon=True
+                ).start()
     log_action(current_user.username, 'play_radio', campus, station)
     return jsonify({'ok': True, 'station': station})
 
@@ -2658,7 +2668,9 @@ def api_mute():
         r = mpv_cmd(cycle_cmd)
         for m in MACHINES:
             if m['host'] != CLIENT1_HOST:
-                mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cycle_cmd)
+                threading.Thread(
+                    target=mpv_cmd_on, args=(m['host'], m.get('user', CLIENT1_USER), cycle_cmd), daemon=True
+                ).start()
         return jsonify(r)
     return jsonify(mpv_set_all('mute', bool(state)))
 
