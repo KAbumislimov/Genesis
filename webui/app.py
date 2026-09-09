@@ -2391,14 +2391,18 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
             names = [t['name'] for t in folder_tracks]
             start_idx = names.index(name) if name in names else -1
             if start_idx >= 0 and len(folder_tracks) > 1:
-                import base64 as _b64
+                import base64 as _b64, uuid as _uuid
                 seq_paths = [
                     os.path.join(media_base, os.path.relpath(t['path'], MUSIC_DIR))
                     for t in folder_tracks[start_idx:]
                 ]
                 m3u = '#EXTM3U\n' + '\n'.join(seq_paths) + '\n'
                 b64 = _b64.b64encode(m3u.encode('utf-8')).decode()
-                playlist_path = '/tmp/campus-track-sequence.m3u'
+                # Unique filename per request — two people clicking different
+                # tracks on the same campus at the same moment must not race
+                # on a shared temp file (one write could clobber the other's
+                # playlist before its own loadlist reads it back).
+                playlist_path = f'/tmp/campus-seq-{_uuid.uuid4().hex}.m3u'
                 cmd_j = json.dumps({'command': ['loadlist', playlist_path, 'replace']})
                 escaped = cmd_j.replace('"', '\\"')
                 # One round trip instead of two: write the m3u and load it in
