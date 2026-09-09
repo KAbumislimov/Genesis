@@ -1347,7 +1347,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     {% endif %}
     <div class="w2b-gap"></div>
     <button class="w2b w2b-shf tog" id="wa-shf-btn" onclick="wampToggleShuffle()" data-i18n-title="wamp.shuffle_t" title="Перемешать треки">🔀 <span data-i18n="wamp.shuffle">ШАФ</span></button>
-    <button class="w2b w2b-rep tog" id="wa-rep-btn" onclick="wampToggleRepeat()" data-i18n-title="wamp.repeat_t" title="Повтор текущего трека">🔁 <span data-i18n="wamp.repeat">ПОВТ</span></button>
+    <button class="w2b w2b-rep tog" id="wa-rep-btn" onclick="wampToggleRepeat()" data-i18n-title="wamp.repeat_t" title="Зациклить текущий трек — будет играть только он, пока не выключишь">🔁 <span data-i18n="wamp.repeat">ПОВТ</span></button>
     <div class="w2b-gap"></div>
     {% if perms.vol %}
     <button class="w2b w2b-eq" id="wa-eq-btn" onclick="wampShowTab('eq')" data-i18n-title="wamp.eq_t" title="Эквалайзер">🎚 EQ</button>
@@ -1770,7 +1770,8 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wa-help-row"><b>▶ PLAY / ⏸ ПАУЗА</b><span>Играть / пауза на активном (выбранном) кампусе</span></div>
     <div class="wa-help-row"><b>⏹ СТОП</b><span>Остановить звук сразу на всех кампусах</span></div>
     <div class="wa-help-row"><b>▶ ИГРАТЬ ВСЁ</b><span>Играть всю папку «Общая» вперемешку на активном кампусе</span></div>
-    <div class="wa-help-row"><b>🔀 ШАФ / 🔁 ПОВТ</b><span>Перемешать треки / повторять текущий трек</span></div>
+    <div class="wa-help-row"><b>🔀 ШАФ / 🔁 ПОВТ</b><span>Перемешать треки / зациклить текущий трек — играет только он, пока не выключишь</span></div>
+    <div class="wa-help-row"><b>Клик по треку в списке</b><span>Играет этот трек и дальше сам продолжает по порядку остальные треки папки</span></div>
     <div class="wa-help-row"><b>🎚 EQ / 📋 PL</b><span>Эквалайзер / список треков</span></div>
     <div class="wa-help-row"><b>🔇 МЬЮ</b><span>Выключить/включить звук на активном кампусе</span></div>
     <div class="wa-help-row"><b>🎤 МИК</b><span>Живое объявление по громкой связи на выбранный в шапке кампус</span></div>
@@ -3176,8 +3177,14 @@ function wampToggleRepeat() {
   _wampRepeat = !_wampRepeat;
   var b = document.getElementById('wa-rep-btn');
   if(b) { b.classList.add('tog'); b.classList.toggle('on', _wampRepeat); }
-  Amplitude.setRepeat(_wampRepeat);
-  toast(_wampRepeat ? '🔁 Repeat ON' : '🔁 Repeat OFF');
+  Amplitude.setRepeat(_wampRepeat);  // local browser preview (Ctrl+click)
+  // Real campus speakers — zациклить именно текущий играющий трек
+  if (_activeCampus && _activeCampus !== 'all') {
+    fetch('/api/loop', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({machine: _activeCampus, state: _wampRepeat})
+    }).catch(function(){});
+  }
+  toast(_wampRepeat ? '🔁 Зациклено — играет только этот трек' : '🔁 Повтор выключен');
 }
 
 // ──── WINAMP TAB SYSTEM ───────────────────────────────
@@ -3703,6 +3710,7 @@ function pollStatus() {
 
     // Update progress bar
     _progState.client1.playing = d.playing || false;
+    _progState.client1.paused  = d.paused  || false;
     if (d.position !== undefined && d.position !== null) {
       _progState.client1.pos = d.position;
       _progState.client1.ts  = Date.now();
@@ -3780,6 +3788,7 @@ function pollVm1() {
       if (dualWave) dualWave.setActiveR(d.playing || false);
       // Update client2 progress bar
       _progState.client2.playing = d.playing || false;
+      _progState.client2.paused  = d.paused  || false;
       if (d.position !== undefined && d.position !== null) {
         _progState.client2.pos = d.position; _progState.client2.ts = Date.now();
       }
@@ -3843,6 +3852,7 @@ function pollCgtk() {
       }
       // Update cgtk progress bar
       _progState.cgtk.playing = d.playing || false;
+      _progState.cgtk.paused  = d.paused  || false;
       if (d.position !== undefined && d.position !== null) {
         _progState.cgtk.pos = d.position; _progState.cgtk.ts = Date.now();
       }
@@ -4489,7 +4499,7 @@ function closeFP(panelId, btnId) {
 })();
 
 // ──── PROGRESS BAR + POSITION TRACKING ────────────────
-var _progState={client1:{pos:0,dur:0,playing:false,ts:0},client2:{pos:0,dur:0,playing:false,ts:0},cgtk:{pos:0,dur:0,playing:false,ts:0}};
+var _progState={client1:{pos:0,dur:0,playing:false,paused:false,ts:0},client2:{pos:0,dur:0,playing:false,paused:false,ts:0},cgtk:{pos:0,dur:0,playing:false,paused:false,ts:0}};
 
 function _fmtTime(s){
   s=Math.max(0,Math.round(s));
@@ -4557,7 +4567,7 @@ setInterval(function(){
   if(lcdTr && trackEl) lcdTr.textContent = trackEl.textContent||'CAMPUS PLAYER';
   var lcdI = document.getElementById('wa-lcd-info');
   var _lcdCampusName = (ck==='client1'?'CLIENT1':(ck==='client2'?'GƏNCLIK':'CITY GARDEN'));
-  if(lcdI) lcdI.textContent = _lcdCampusName + ' · ' + (st.playing?'PLAYING':'STOPPED');
+  if(lcdI) lcdI.textContent = _lcdCampusName + ' · ' + (st.playing?'PLAYING':(st.paused?'PAUSED':'STOPPED'));
   var sf = document.getElementById('wa-seek-fill');
   var sb = document.getElementById('wa-seek-thumb');
   if(sf){ sf.style.width = pct.toFixed(1)+'%'; sf.style.transition = st.playing?'width .4s linear':'none'; }

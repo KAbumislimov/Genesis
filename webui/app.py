@@ -2354,8 +2354,15 @@ def api_audio_fft():
 
 PLAYER_INBOX = os.environ.get('CLIENT1_INBOX', '/var/lib/campus-player/inbox')
 
-def _play_track_on(host, user, local_path, name, machine_id, username):
-    """Background worker: SSH/SFTP to campus machine then start mpv playback."""
+def _play_track_on(host, user, local_path, name, machine_id, username, folder=''):
+    """Background worker: SSH/SFTP to campus machine then start mpv playback.
+
+    When the campus machine has the file locally synced, this loads the REST
+    of that track's folder (from this track onward, same A-Z order as the
+    browser list) as an mpv playlist — so mpv keeps playing the next tracks
+    on its own once this one ends, instead of going silent after one track.
+    Falls back to the old single-file replace if the folder can't be
+    resolved (e.g. only 1 track, or file isn't on the campus machine yet)."""
     s = None
     try:
         media_base = _MEDIA_PATHS.get(machine_id, '/mnt/music/Media')
@@ -2368,7 +2375,39 @@ def _play_track_on(host, user, local_path, name, machine_id, username):
 
         # Try direct play from campus machine's local path first (instant)
         _, chk, _ = s.exec_command(f'test -f "{remote_path}" && echo y || echo n', timeout=5)
-        if chk.read().decode().strip() == 'y':
+        have_local = chk.read().decode().strip() == 'y'
+
+        played_sequence = False
+        if have_local and folder:
+            folder_tracks = scan_tracks(folder_filter=folder)
+            names = [t['name'] for t in folder_tracks]
+            start_idx = names.index(name) if name in names else -1
+            if start_idx >= 0 and len(folder_tracks) > 1:
+                import base64 as _b64
+                seq_paths = [
+                    os.path.join(media_base, os.path.relpath(t['path'], MUSIC_DIR))
+                    for t in folder_tracks[start_idx:]
+                ]
+                m3u = '#EXTM3U\n' + '\n'.join(seq_paths) + '\n'
+                b64 = _b64.b64encode(m3u.encode('utf-8')).decode()
+                playlist_path = '/tmp/campus-track-sequence.m3u'
+                cmd_j = json.dumps({'command': ['loadlist', playlist_path, 'replace']})
+                escaped = cmd_j.replace('"', '\\"')
+                # One round trip instead of two: write the m3u and load it in
+                # the same remote shell invocation (extra SSH exec_command
+                # round trips were making single-track clicks noticeably slower).
+                _, out, _ = s.exec_command(
+                    f"echo '{b64}' | base64 -d > {playlist_path} && "
+                    f'echo "{escaped}" | socat - {MPV_SOCK} 2>/dev/null; '
+                    f'echo "{remote_path}" > /run/campus-player/lastfile 2>/dev/null || true',
+                    timeout=5
+                )
+                out.read()
+                played_sequence = True
+
+        if played_sequence:
+            pass
+        elif have_local:
             cmd_j = json.dumps({'command': ['loadfile', remote_path, 'replace']})
             escaped = cmd_j.replace('"', '\\"')
             _, out, _ = s.exec_command(
@@ -2449,7 +2488,7 @@ def api_play():
     # Start SFTP/SSH in background — respond immediately so UI doesn't freeze
     threading.Thread(
         target=_play_track_on,
-        args=(host, user, local_path, name, mid, username),
+        args=(host, user, local_path, name, mid, username, folder),
         daemon=True
     ).start()
     return jsonify({'ok': True})
@@ -2622,6 +2661,28 @@ def api_mute():
                 mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cycle_cmd)
         return jsonify(r)
     return jsonify(mpv_set_all('mute', bool(state)))
+
+@app.route('/api/loop', methods=['POST'])
+@login_required
+def api_loop():
+    """Toggle mpv's own loop-file on the real campus player (not just the
+    local browser preview) — repeats only the currently loaded track forever
+    until STOP or another track is chosen."""
+    if not has_perm('play'):
+        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
+    data    = request.get_json() or {}
+    machine = data.get('machine', 'client1')
+    state   = bool(data.get('state'))
+    cmd = {'command': ['set_property', 'loop-file', 'inf' if state else 'no']}
+    if machine == 'client1':
+        r = mpv_cmd(cmd)
+    else:
+        m = _resolve_machine(machine, strict=True)
+        if not m:
+            return jsonify({'ok': False, 'error': f'машина {machine} не настроена'})
+        r = mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+    log_action(current_user.username, 'loop', machine, 'on' if state else 'off')
+    return jsonify(r if isinstance(r, dict) else {'ok': True, 'loop': state})
 
 @app.route('/api/terminal', methods=['POST'])
 @login_required
