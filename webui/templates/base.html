@@ -74,8 +74,12 @@ html.has-wallpaper body::before{
 .top-nav{
   position:sticky;top:0;z-index:100;
   background:var(--bg2);border-bottom:1px solid var(--border);
-  backdrop-filter:blur(16px);padding:0 20px;height:80px;
-  display:flex;align-items:center;gap:16px;
+  backdrop-filter:blur(16px);padding:10px 20px;min-height:80px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;row-gap:6px;
+}
+@media (max-width:1100px){
+  .nav-clock-box .nav-clock-date{display:none}
+  .nav-right{gap:8px}
 }
 .nav-logo-left,.nav-logo-right{
   display:flex;align-items:center;justify-content:center;
