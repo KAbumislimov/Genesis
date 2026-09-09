@@ -162,6 +162,32 @@ select.field-input option{background:var(--bg2)}
       </div>
     </div>
 
+    <!-- Player skin -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hd">
+        <i class="bi bi-palette-fill text-blue"></i>
+        <span class="card-hd-title">Оформление плеера</span>
+      </div>
+      <div class="card-body">
+        <div class="field-label" style="margin-bottom:8px">Скин</div>
+        <div style="display:flex;gap:8px;margin-bottom:18px">
+          <button type="button" class="btn btn-sm {{ 'btn-primary' if ui_skin=='classic' else 'btn-outline-secondary' }}"
+                  id="skin-btn-classic" onclick="setUiPref('skin','classic')" style="flex:1">Классический</button>
+          <button type="button" class="btn btn-sm {{ 'btn-primary' if ui_skin=='modern' else 'btn-outline-secondary' }}"
+                  id="skin-btn-modern" onclick="setUiPref('skin','modern')" style="flex:1">Современный</button>
+        </div>
+        <div class="field-label" style="margin-bottom:8px">Акцентный цвет</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          {% for a, hex in [('amber','#ffa657'),('blue','#58a6ff'),('green','#3fb950'),('magenta','#e0529a'),('red','#f85149'),('teal','#2bb3a3')] %}
+          <button type="button" class="ui-accent-swatch {{ 'active' if ui_accent==a else '' }}" data-accent="{{ a }}"
+                  onclick="setUiPref('accent','{{ a }}')"
+                  style="width:30px;height:30px;border-radius:50%;background:{{ hex }};border:2px solid {{ 'var(--text)' if ui_accent==a else 'transparent' }};cursor:pointer;padding:0"></button>
+          {% endfor %}
+        </div>
+        <span id="ui-pref-msg" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+
     <!-- Change password -->
     <div class="card">
       <div class="card-hd">
@@ -303,6 +329,27 @@ select.field-input option{background:var(--bg2)}
 
 {% block scripts %}
 <script>
+// ── Player skin / accent ──
+function setUiPref(key, value) {
+  var msg = document.getElementById('ui-pref-msg');
+  msg.style.color = 'var(--muted)'; msg.textContent = 'Сохраняю...';
+  var body = {}; body[key] = value;
+  fetch('/api/ui-prefs', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok) { msg.style.color = 'var(--red)'; msg.textContent = d.error || 'Ошибка'; return; }
+      if (key === 'skin') {
+        location.reload();
+        return;
+      }
+      msg.style.color = 'var(--green)'; msg.textContent = '✓ Сохранено';
+      document.querySelectorAll('.ui-accent-swatch').forEach(function(b){
+        b.style.borderColor = (b.dataset.accent === value) ? 'var(--text)' : 'transparent';
+      });
+    })
+    .catch(function(){ msg.style.color = 'var(--red)'; msg.textContent = 'Нет связи'; });
+}
+
 // ── Password match ──
 const newPw = document.getElementById('new-pw');
 const confPw = document.getElementById('confirm-pw');

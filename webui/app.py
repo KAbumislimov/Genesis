@@ -416,6 +416,8 @@ def init_db():
             'ALTER TABLE users ADD COLUMN avatar     TEXT NOT NULL DEFAULT ""',
             'ALTER TABLE messages ADD COLUMN to_user TEXT DEFAULT NULL',
             'ALTER TABLE messages ADD COLUMN voice_file TEXT DEFAULT NULL',
+            'ALTER TABLE users ADD COLUMN ui_skin   TEXT NOT NULL DEFAULT "classic"',
+            'ALTER TABLE users ADD COLUMN ui_accent TEXT NOT NULL DEFAULT "amber"',
         ]:
             try:
                 c.execute(col_sql)
@@ -1399,6 +1401,12 @@ def dashboard():
     _DOW_RU = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
     tomorrow_events = [e for e in SCHEDULE if e['play'] and tdow in e.get('dow', [])]
 
+    with get_db() as c:
+        _prefs_row = c.execute('SELECT ui_skin, ui_accent FROM users WHERE username=?',
+                                (current_user.username,)).fetchone()
+    ui_skin   = (_prefs_row['ui_skin'] if _prefs_row else 'classic') or 'classic'
+    ui_accent = (_prefs_row['ui_accent'] if _prefs_row else 'amber') or 'amber'
+
     return render_template('dashboard.html',
         schedule=SCHEDULE, next_ev=next_ev, now=now,
         tomorrow_date=tomorrow.strftime('%d.%m'),
@@ -1409,6 +1417,7 @@ def dashboard():
         perms=user_perms(),
         music_folders=all_music_folders(),
         perem_slots=[{'id': s, 'label': PEREM_SLOT_LABELS.get(s, s)} for s in PEREM_SLOTS],
+        ui_skin=ui_skin, ui_accent=ui_accent,
     )
 
 @app.route('/tracks')
@@ -2798,7 +2807,11 @@ def profile():
         history = c.execute(
             'SELECT username, track_name, played_at FROM play_log ORDER BY id DESC LIMIT 30'
         ).fetchall()
-    return render_template('profile.html', history=history)
+        _prefs = c.execute('SELECT ui_skin, ui_accent FROM users WHERE username=?',
+                            (current_user.username,)).fetchone()
+    return render_template('profile.html', history=history,
+        ui_skin=(_prefs['ui_skin'] if _prefs else 'classic') or 'classic',
+        ui_accent=(_prefs['ui_accent'] if _prefs else 'amber') or 'amber')
 
 @app.route('/settings')
 @login_required
@@ -4096,6 +4109,39 @@ def api_kamran_unlock():
 def api_kamran_lock():
     session.pop('kamran_unlocked', None)
     session['unlocked_folders'] = [f for f in session.get('unlocked_folders', []) if f != KAMRAN_FOLDER]
+    return jsonify({'ok': True})
+
+_UI_SKINS   = ('classic', 'modern')
+_UI_ACCENTS = ('amber', 'blue', 'green', 'magenta', 'red', 'teal')
+
+@app.route('/api/ui-prefs', methods=['GET', 'POST'])
+@login_required
+def api_ui_prefs():
+    """Personal player skin/accent — each employee picks their own, saved on
+    their account so it follows them to any device they log in on."""
+    if request.method == 'GET':
+        with get_db() as c:
+            row = c.execute('SELECT ui_skin, ui_accent FROM users WHERE username=?',
+                             (current_user.username,)).fetchone()
+        return jsonify({'ok': True, 'skin': (row['ui_skin'] if row else 'classic'),
+                        'accent': (row['ui_accent'] if row else 'amber')})
+    data   = request.get_json() or {}
+    skin   = data.get('skin')
+    accent = data.get('accent')
+    updates, params = [], []
+    if skin is not None:
+        if skin not in _UI_SKINS:
+            return jsonify({'ok': False, 'error': 'Неизвестный скин'})
+        updates.append('ui_skin=?'); params.append(skin)
+    if accent is not None:
+        if accent not in _UI_ACCENTS:
+            return jsonify({'ok': False, 'error': 'Неизвестный акцент'})
+        updates.append('ui_accent=?'); params.append(accent)
+    if not updates:
+        return jsonify({'ok': False, 'error': 'Нечего сохранять'})
+    params.append(current_user.username)
+    with get_db() as c:
+        c.execute(f'UPDATE users SET {", ".join(updates)} WHERE username=?', params)
     return jsonify({'ok': True})
 
 @app.route('/api/kamran/status', methods=['GET'])

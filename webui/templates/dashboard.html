@@ -842,7 +842,13 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 /* ═══ SPECIAL CEREMONIAL BAR — Гимн / Минута молчания ═══
    Крупные, отдельные от обычного тулбара, каждая группа — свой характер:
    Гимн = золото/торжество, Минута молчания = свеча/тишина. */
-.wa-special-bar{display:flex;gap:12px;padding:12px 14px;margin:2px 0 8px;flex-wrap:wrap}
+.wa-special-zone-label{display:flex;align-items:center;gap:8px;margin:10px 14px 2px;padding:6px 12px;
+  border-radius:8px 8px 0 0;background:repeating-linear-gradient(135deg,#3a2c00 0 10px,#241c00 10px 20px);
+  color:#ffd766;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  border:1px solid rgba(255,200,60,.35);border-bottom:none}
+.wa-special-zone-label span{font-size:13px}
+.wa-special-bar{display:flex;gap:12px;padding:14px;margin:0 14px 10px;flex-wrap:wrap;
+  border:1px solid rgba(255,200,60,.35);border-radius:0 0 12px 12px;background:rgba(255,190,50,.03)}
 .wa-special-group{flex:1;min-width:230px;border-radius:14px;padding:12px 14px;
   display:flex;flex-direction:column;gap:6px;
   position:relative;overflow:hidden;transition:transform .15s}
@@ -1280,6 +1286,9 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 {% endif %}
 
 <!-- ═══ HERO STRIP: big digital clock + info chips ═══ -->
+{% if ui_skin == 'modern' %}
+{% include 'player_modern.html' %}
+{% else %}
 <!-- ═══════ WINAMP 2.x CAMPUS PLAYER ═══════ -->
 <div class="wa-skin wamp2" id="wa-skin">
 
@@ -1378,6 +1387,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 
   {% if perms.himn %}
   <!-- ── Special ceremonial actions: Гимн / Минута молчания — большие, отдельные от обычного тулбара ── -->
+  <div class="wa-special-zone-label"><span>⚠</span> Слышно на весь кампус — сначала подумай, потом жми</div>
   <div class="wa-special-bar">
     <div class="wa-special-group wa-himn-group">
       <div class="wa-special-top">
@@ -1641,28 +1651,6 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       {% endif %}
     </div>
 
-    <!-- Right-click track menu -->
-    <div id="wamp2-ctx" class="wamp2-ctx">
-      <div class="wamp2-ctx-info">
-        <div class="wamp2-ctx-name" id="ctx-name"></div>
-        <div class="wamp2-ctx-meta" id="ctx-meta"></div>
-      </div>
-      <div class="wamp2-ctx-sep"></div>
-      <button class="wamp2-ctx-item" id="ctx-fav-btn"><span id="ctx-fav-icon">☆</span> <span id="ctx-fav-label">В избранное</span></button>
-      {% if current_user.role == 'admin' %}
-      <button class="wamp2-ctx-item" id="ctx-rename-btn">✎ Переименовать</button>
-      <div class="wamp2-ctx-item wamp2-ctx-submenu-trigger" id="ctx-move-btn">📁 Переместить в… <span class="wamp2-ctx-arrow">›</span>
-        <div class="wamp2-ctx-submenu" id="ctx-move-submenu"></div>
-      </div>
-      <div class="wamp2-ctx-sep"></div>
-      <button class="wamp2-ctx-item wamp2-ctx-danger" id="ctx-delete-btn">🗑 Удалить файл</button>
-      {% endif %}
-    </div>
-    <!-- Per-row "move to" popup -->
-    <div id="wamp2-movepop" class="wamp2-movepop">
-      <div class="wamp2-movepop-hd">Переместить в…</div>
-      <div id="wamp2-movepop-list"></div>
-    </div>
     <!-- Toolbar -->
     <div class="wamp2-pl-hdr">
       <input id="pl-search" class="wamp2-pl-search" type="search" placeholder="🔍 Поиск..." oninput="wampPlFilter(this.value)" style="flex:1;width:auto">
@@ -1681,6 +1669,30 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   </div>
 
 </div><!-- /wa-skin -->
+{% endif %}
+
+<!-- Right-click track menu — shared by both skins -->
+<div id="wamp2-ctx" class="wamp2-ctx">
+  <div class="wamp2-ctx-info">
+    <div class="wamp2-ctx-name" id="ctx-name"></div>
+    <div class="wamp2-ctx-meta" id="ctx-meta"></div>
+  </div>
+  <div class="wamp2-ctx-sep"></div>
+  <button class="wamp2-ctx-item" id="ctx-fav-btn"><span id="ctx-fav-icon">☆</span> <span id="ctx-fav-label">В избранное</span></button>
+  {% if current_user.role == 'admin' %}
+  <button class="wamp2-ctx-item" id="ctx-rename-btn">✎ Переименовать</button>
+  <div class="wamp2-ctx-item wamp2-ctx-submenu-trigger" id="ctx-move-btn">📁 Переместить в… <span class="wamp2-ctx-arrow">›</span>
+    <div class="wamp2-ctx-submenu" id="ctx-move-submenu"></div>
+  </div>
+  <div class="wamp2-ctx-sep"></div>
+  <button class="wamp2-ctx-item wamp2-ctx-danger" id="ctx-delete-btn">🗑 Удалить файл</button>
+  {% endif %}
+</div>
+<!-- Per-row "move to" popup — shared by both skins -->
+<div id="wamp2-movepop" class="wamp2-movepop">
+  <div class="wamp2-movepop-hd">Переместить в…</div>
+  <div id="wamp2-movepop-list"></div>
+</div>
 
 
 <!-- ═══ FLOATING PANELS ═══ -->
@@ -2862,7 +2874,8 @@ function updateClock() {
   var now = new Date();
   var t = now.toTimeString().slice(0, 8);
   var m = t.slice(0, 5);
-  document.getElementById('clock').textContent = t;
+  var clockEl = document.getElementById('clock');
+  if (clockEl) clockEl.textContent = t;
   var dateEl = document.getElementById('chip-date');
   if (dateEl) {
     var dd = String(now.getDate()).padStart(2,'0');
@@ -3968,6 +3981,8 @@ function _doPlayHimn(machine) {
     }).catch(function(){ toast('⚠️ нет связи'); });
 }
 function _doPlayHimnActive() {
+  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[_activeCampus] || _activeCampus) + '»';
+  if (!confirm('🎖️ Гимн будет включён на ' + label + '.\n\nПродолжить?')) return;
   if (_activeCampus === 'all') {
     _doPlayHimn('client1');
     setTimeout(function(){ _doPlayHimn('client2'); }, 600);
@@ -3998,6 +4013,8 @@ function _doPlayMinutaAll(btn) {
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
 }
 function _doPlayMinutaActive(btn) {
+  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_MINUTA_LABELS[_activeCampus] || _activeCampus) + '»';
+  if (!confirm('🕯 Минута молчания будет запущена на ' + label + ' вне расписания.\n\nПродолжить?')) return;
   if (_activeCampus === 'all') { _doPlayMinutaAll(btn); } else { _doPlayMinuta(_activeCampus, btn); }
 }
 
@@ -4043,6 +4060,8 @@ function _doPlayAlarmAll(btn) {
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
 }
 function _doPlayAlarmActive(btn) {
+  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_ALARM_LABELS[_activeCampus] || _activeCampus) + '»';
+  if (!confirm('🚨 Сигнал ТРЕВОГИ будет запущен на ' + label + ' и будет играть в цикле, пока не нажмёшь обычный СТОП.\n\nПродолжить?')) return;
   if (_activeCampus === 'all') { _doPlayAlarmAll(btn); } else { _doPlayAlarm(_activeCampus, btn); }
 }
 
@@ -4256,8 +4275,16 @@ function _cronToggleAll() {
   if (bothPaused) cronResume('both'); else cronToggle('both');
 }
 function _cronToggleActive() {
-  if (_activeCampus === 'all') { _cronToggleAll(); return; }
-  if (_cronState[_activeCampus]) cronResume(_activeCampus); else cronToggle(_activeCampus);
+  if (_activeCampus === 'all') {
+    var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
+    if (!bothPaused && !confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ВСЕХ кампусах.\nНе забудь включить обратно.\n\nПродолжить?')) return;
+    _cronToggleAll();
+    return;
+  }
+  var label = 'кампусе «' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[_activeCampus] || _activeCampus) + '»';
+  if (_cronState[_activeCampus]) { cronResume(_activeCampus); return; }
+  if (!confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ' + label + '.\nНе забудь включить обратно.\n\nПродолжить?')) return;
+  cronToggle(_activeCampus);
 }
 function pollCron() {
   fetch('/api/cron/pause').then(function(r){return r.json();}).then(function(d){
@@ -4329,6 +4356,7 @@ function annVolChange(v) {
 
 function annToggle() {
   if (!_annRec) {
+    if (!confirm('🎤 То, что ты сейчас скажешь, будет проиграно на громкой связи кампуса.\n\nПродолжить?')) return;
     // check HTTPS
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
       var warn = document.getElementById('ann-https-warn');
@@ -4679,7 +4707,7 @@ function wampSeekActive(evt) {
     var ck=_activeCampus;
     var d=_audioSSE&&_audioSSE[ck];
     var bands=d&&d.bands?d.bands:null;
-    var n=18, bw=Math.floor(W/n)-1, t=_vizTime();
+    var n=18, bw=Math.floor(W/n)-1, t=(typeof _vizTime==='function' ? _vizTime() : Date.now()/1000);
     for(var i=0;i<n;i++){
       var tgt;
       if(bands){ tgt=Math.min(1,bands[Math.floor(i/n*bands.length)]||0)*H*0.92; }

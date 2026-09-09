@@ -1,0 +1,303 @@
+<style>
+.cp-modern{
+  --cpm-accent:var(--orange); --cpm-accent-ink:#1a0f04;
+  background:var(--bg2); border:1px solid var(--border); border-radius:16px;
+  overflow:hidden; margin-bottom:16px; font-family:var(--font-body,'Roboto'),system-ui,sans-serif;
+}
+.cp-modern[data-accent="amber"]  { --cpm-accent:var(--orange); --cpm-accent-ink:#1a0f04; }
+.cp-modern[data-accent="blue"]   { --cpm-accent:var(--blue);   --cpm-accent-ink:#ffffff; }
+.cp-modern[data-accent="green"]  { --cpm-accent:var(--green);  --cpm-accent-ink:#04180c; }
+.cp-modern[data-accent="magenta"]{ --cpm-accent:#e0529a;       --cpm-accent-ink:#ffffff; }
+.cp-modern[data-accent="red"]    { --cpm-accent:var(--red);    --cpm-accent-ink:#ffffff; }
+.cp-modern[data-accent="teal"]   { --cpm-accent:#2bb3a3;       --cpm-accent-ink:#041a17; }
+
+.cp-modern .tabular{font-variant-numeric:tabular-nums}
+.cp-modern button{font-family:inherit;cursor:pointer}
+
+.cpm-top{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.cpm-brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px;color:var(--text)}
+.cpm-brand-mark{width:26px;height:26px;border-radius:8px;background:var(--cpm-accent);color:var(--cpm-accent-ink);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cpm-campus-switch{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;padding:3px}
+.cpm-campus-pill{padding:8px 16px;border-radius:8px;border:none;background:none;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.cpm-campus-pill.active{background:var(--cpm-accent);color:var(--cpm-accent-ink)}
+.cpm-skin-link{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none}
+.cpm-skin-link:hover{color:var(--cpm-accent)}
+
+.cpm-campus-strip{display:flex;flex-direction:column;gap:2px;padding:10px 20px}
+.cpm-campus-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:9px;font-size:12.5px}
+.cpm-campus-row:hover{background:var(--bg3)}
+.cpm-dot{font-size:8px;color:var(--green);line-height:1;flex-shrink:0}
+.cpm-dot.off{color:var(--muted)}
+.cpm-conn{color:var(--muted);font-size:11px;flex-shrink:0}
+.cpm-campus-name{font-weight:700;width:84px;flex-shrink:0;color:var(--text)}
+.cpm-campus-track{flex:1;min-width:0;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpm-campus-prog{width:110px;height:4px;border-radius:100px;background:var(--bg3);position:relative;flex-shrink:0;cursor:pointer}
+.cpm-campus-prog-fill{position:absolute;inset:0 auto 0 0;border-radius:100px;background:var(--muted)}
+.cpm-campus-time{font-size:10.5px;color:var(--muted);width:34px;text-align:right;flex-shrink:0}
+
+.cpm-special-label{display:flex;align-items:center;gap:8px;margin:8px 20px 0;padding:6px 12px;
+  border-radius:8px 8px 0 0;background:repeating-linear-gradient(135deg,#3a2c00 0 10px,#241c00 10px 20px);
+  color:#ffd766;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  border:1px solid rgba(255,200,60,.35);border-bottom:none}
+.cpm-special-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 14px;padding:12px;
+  border:1px solid rgba(255,200,60,.35);border-radius:0 0 12px 12px;background:rgba(255,190,50,.03)}
+.cpm-pill{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600}
+.cpm-pill:hover{border-color:var(--cpm-accent);color:var(--cpm-accent)}
+.cpm-pill.danger{color:var(--red)}
+.cpm-pill.busy{opacity:.45;pointer-events:none}
+.cpm-alarm-select{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;
+  padding:8px 10px;font-size:12px;max-width:200px}
+#btn-cron-active.paused{border-color:var(--orange);color:var(--orange)}
+
+.cpm-body{display:flex;min-height:360px;border-top:1px solid var(--border)}
+.cpm-sidebar{width:190px;flex-shrink:0;border-right:1px solid var(--border);padding:14px 10px;overflow-y:auto}
+.cpm-fol-tabs{display:flex;flex-direction:column;gap:2px}
+.cpm-fol-tab{text-align:left;padding:9px 12px;border-radius:9px;border:none;background:none;
+  color:var(--muted);font-size:13px;font-weight:600}
+.cpm-fol-tab:hover{background:var(--bg3);color:var(--text)}
+.cpm-fol-tab.active{background:var(--bg3);color:var(--cpm-accent)}
+.cpm-fol-tab-new{border:1px dashed var(--border);color:var(--muted)}
+
+.cpm-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:16px 20px}
+.cpm-pl-hdr{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cpm-pl-search{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:9px;
+  padding:9px 12px;color:var(--text);font-size:13px}
+.cpm-pl-sort{background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);
+  padding:9px 10px;font-size:12.5px}
+.cpm-pl-playall{background:var(--cpm-accent);color:var(--cpm-accent-ink);border:none;border-radius:9px;
+  padding:9px 16px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.cpm-pl-list{flex:1;overflow-y:auto;min-height:200px}
+.cpm-pl-status{font-size:11px;color:var(--muted);margin-top:8px}
+/* the shared _wampPlRender() JS builds generic .wamp2-pli rows into #pl-list — restyle them here */
+.cp-modern .wamp2-pli{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font-size:13px}
+.cp-modern .wamp2-pli:nth-child(even){background:transparent}
+.cp-modern .wamp2-pli:hover{background:var(--bg3)!important}
+.cp-modern .wamp2-pli.pl-active{background:var(--bg3)!important}
+.cp-modern .wamp2-pli.pl-active .wamp2-pnm{color:var(--cpm-accent);font-weight:700}
+.cp-modern .wamp2-pin{color:var(--muted);font-size:11px;width:22px;flex-shrink:0}
+.cp-modern .wamp2-pnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-weight:500}
+.cp-modern .wamp2-pfol{font-size:9px;padding:2px 7px;border-radius:100px;background:var(--bg3);color:var(--muted);flex-shrink:0}
+.cp-modern .wamp2-pmeta{font-size:10.5px;color:var(--muted);flex-shrink:0}
+.cp-modern .wamp2-pdu{font-size:11px;color:var(--muted);flex-shrink:0;min-width:34px;text-align:right}
+.cp-modern .wamp2-pfav{color:var(--muted);flex-shrink:0;cursor:pointer}
+.cp-modern .wamp2-pfav.on{color:#ffd24a}
+.cp-modern .wamp2-pren{color:var(--muted);flex-shrink:0;cursor:pointer;padding:0 4px}
+.cp-modern .wamp2-pmovebtn{color:var(--muted);flex-shrink:0;background:none;border:none;font-size:12px;padding:0 4px}
+
+.cpm-eq-wrap{padding:16px 20px;border-top:1px solid var(--border)}
+.cpm-eq-hd{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.cp-modern .wamp2-eq-bands{display:flex;gap:8px;justify-content:center}
+
+.cpm-bottom{display:flex;align-items:center;gap:16px;padding:14px 20px;border-top:1px solid var(--border);background:var(--bg3)}
+.cpm-bottom-art{width:44px;height:44px;border-radius:9px;flex-shrink:0;background:linear-gradient(155deg,color-mix(in srgb,var(--cpm-accent) 40%,var(--bg2)),var(--bg2));
+  display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--cpm-accent) 60%,white 10%);opacity:.8;font-size:16px}
+.cpm-bottom-meta{width:170px;flex-shrink:0;min-width:0}
+.cpm-bottom-title{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpm-bottom-sub{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpm-bottom-transport{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.cpm-bottom-transport button{background:none;border:none;color:var(--muted);padding:5px;display:flex}
+.cpm-bottom-transport button:hover{color:var(--text)}
+.cpm-play{width:34px;height:34px;border-radius:50%!important;background:var(--cpm-accent)!important;
+  color:var(--cpm-accent-ink)!important;align-items:center;justify-content:center}
+.cpm-bottom-seek{flex:1;display:flex;align-items:center;gap:10px;min-width:120px}
+.cpm-seek-groove{flex:1;height:4px;border-radius:100px;background:var(--border);position:relative;cursor:pointer}
+.cpm-seek-fill{position:absolute;inset:0 auto 0 0;width:0%;border-radius:100px;background:var(--cpm-accent)}
+.cpm-seek-thumb{display:none}
+.cpm-seek-time{font-size:11px;color:var(--muted);flex-shrink:0}
+.cpm-bottom-toggles{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.cpm-toggle{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);
+  color:var(--muted);display:flex;align-items:center;justify-content:center}
+.cpm-toggle.on,.cpm-toggle.tog.on{background:var(--cpm-accent);border-color:var(--cpm-accent);color:var(--cpm-accent-ink)}
+.cpm-bottom-vol{display:flex;align-items:center;gap:8px;color:var(--muted);flex-shrink:0}
+.cpm-vol-range{width:80px;accent-color:var(--cpm-accent)}
+.cpm-vol-num{font-size:11px;width:26px;color:var(--muted)}
+
+@media (max-width:900px){
+  .cpm-body{flex-direction:column}
+  .cpm-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border)}
+  .cpm-fol-tabs{flex-direction:row;flex-wrap:wrap}
+  .cpm-bottom{flex-wrap:wrap}
+  .cpm-bottom-meta{width:auto}
+}
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODERN PLAYER SKIN — "Вариант Б" (командная панель).
+     Переиспользует ID/функции из dashboard.html <script> напрямую —
+     своей бизнес-логики тут почти нет, только разметка + вид.
+     Опущено намеренно (не подходит под современный минимализм и не
+     было явно запрошено): галерея визуализаторов milkdrop, баланс
+     L/R, плавающее/сворачиваемое окно, вкладки темы/фона плеера —
+     всё это осталось только в классическом скине.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="cp-modern" id="wa-skin" data-accent="{{ ui_accent }}">
+
+  <div class="cpm-top">
+    <div class="cpm-brand">
+      <span class="cpm-brand-mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+      Campus Player
+    </div>
+    <div class="cpm-campus-switch" id="cpm-campus-switch">
+      <button class="cpm-campus-pill active" data-campus="client1">Client1</button>
+      <button class="cpm-campus-pill" data-campus="client2">Client2</button>
+      <button class="cpm-campus-pill" data-campus="cgtk">City Garden</button>
+    </div>
+    <a href="{{ url_for('profile') }}" class="cpm-skin-link" title="Сменить оформление плеера">🎨 Оформление</a>
+  </div>
+
+  <!-- campus status strip — same ids the shared polling functions already update -->
+  <div class="cpm-campus-strip">
+    <div class="cpm-campus-row" id="wamp2-row-client1">
+      <span class="cpm-dot" id="live-client1">●</span>
+      <span class="cpm-dot off" id="stop-client1" style="display:none">●</span>
+      <span class="cpm-conn" id="conn-client1"><i class="bi bi-wifi"></i></span>
+      <span class="cpm-campus-name">Client1</span>
+      <span class="cpm-campus-track" id="mini-name-client1">Не играет</span>
+      <div class="cpm-campus-prog" onclick="_cpmSeek('client1',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-client1" style="width:0%"></div></div>
+      <span class="cpm-campus-time" id="wamp-pos-client1">0:00</span>
+      <span class="cpm-campus-time" id="wamp-dur-client1"></span>
+    </div>
+    <div class="cpm-campus-row" id="wamp2-row-client2">
+      <span class="cpm-dot" id="live-client2">●</span>
+      <span class="cpm-dot off" id="stop-client2" style="display:none">●</span>
+      <span class="cpm-conn" id="conn-client2"><i class="bi bi-wifi"></i></span>
+      <span class="cpm-campus-name">Client2</span>
+      <span class="cpm-campus-track" id="mini-name-client2">Не играет</span>
+      <div class="cpm-campus-prog" onclick="_cpmSeek('client2',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-client2" style="width:0%"></div></div>
+      <span class="cpm-campus-time" id="wamp-pos-client2">0:00</span>
+      <span class="cpm-campus-time" id="wamp-dur-client2"></span>
+    </div>
+    <div class="cpm-campus-row" id="wamp2-row-cgtk">
+      <span class="cpm-dot" id="live-cgtk">●</span>
+      <span class="cpm-dot off" id="stop-cgtk" style="display:none">●</span>
+      <span class="cpm-conn" id="conn-cgtk"><i class="bi bi-wifi"></i></span>
+      <span class="cpm-campus-name">City Garden</span>
+      <span class="cpm-campus-track" id="mini-name-cgtk">Не играет</span>
+      <div class="cpm-campus-prog" onclick="_cpmSeek('cgtk',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-cgtk" style="width:0%"></div></div>
+      <span class="cpm-campus-time" id="wamp-pos-cgtk">0:00</span>
+      <span class="cpm-campus-time" id="wamp-dur-cgtk"></span>
+    </div>
+  </div>
+
+  {% if perms.himn %}
+  <div class="cpm-special-label"><span>⚠</span> Слышно на весь кампус — сначала подумай, потом жми</div>
+  <div class="cpm-special-row">
+    <button class="cpm-pill" onclick="_doPlayHimnActive()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>Гимн</button>
+    <button class="cpm-pill" onclick="_openMicFor(_activeCampus)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>Мик — на весь кампус</button>
+    <button class="cpm-pill" onclick="_doPlayMinutaActive(this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-6 6c0 4-2 6-2 6h16s-2-2-2-6a6 6 0 0 0-6-6z"/></svg>Минута тишины</button>
+    <button class="cpm-pill danger" onclick="_doPlayAlarmActive(this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Тревога</button>
+    <select id="alarmSoundSelect" class="cpm-alarm-select"></select>
+    {% if perms.admin %}
+    <button class="cpm-pill" id="btn-cron-active" onclick="_cronToggleActive()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Крон</button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="cpm-body">
+    <div class="cpm-sidebar">
+      <div class="cpm-fol-tabs" id="pl-folder-tabs">
+        <button class="cpm-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">Все</button>
+        {% for f in music_folders %}
+          {% if f == 'KAMRAN' %}
+          <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
+          {% else %}
+          <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f }}</button>
+          {% endif %}
+        {% endfor %}
+        <button class="cpm-fol-tab cpm-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ Избранное</button>
+        {% if current_user.role == 'admin' %}
+        <button class="cpm-fol-tab cpm-fol-tab-new" data-folder="__new__" onclick="wampCreateFolder()" title="Создать папку">+ папка</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="cpm-main">
+      <div class="cpm-pl-hdr">
+        <input id="pl-search" class="cpm-pl-search" type="search" placeholder="🔍 Поиск..." oninput="wampPlFilter(this.value)">
+        <select id="pl-sort" class="cpm-pl-sort" onchange="wampPlSort(this.value)" title="Сортировка">
+          <option value="name">A-Z</option>
+          <option value="dur">⏱ Длит.</option>
+          <option value="size">💾 Размер</option>
+        </select>
+        <button class="cpm-pl-playall" onclick="wampPlayAll()" title="Перемешать и воспроизвести всё">▶ Играть всё</button>
+      </div>
+      <div class="cpm-pl-list" id="pl-list">
+        <div class="wamp2-pl-loading">Загрузка треков…</div>
+      </div>
+      <div class="cpm-pl-status" id="pl-status">…</div>
+    </div>
+  </div>
+
+  <!-- EQ drawer — same #eq-bands-row the shared script auto-builds sliders into -->
+  <div class="cpm-eq-wrap" id="eq-panel" style="display:none">
+    <div class="cpm-eq-hd">Эквалайзер</div>
+    <div class="wamp2-eq-bands" id="eq-bands-row"></div>
+  </div>
+
+  <div class="cpm-bottom">
+    <div class="cpm-bottom-art"><span>♪</span></div>
+    <div class="cpm-bottom-meta">
+      <div class="cpm-bottom-title" id="wa-lcd-track">CAMPUS PLAYER</div>
+      <div class="cpm-bottom-sub" id="wa-lcd-info">—</div>
+    </div>
+
+    <div class="cpm-bottom-transport">
+      <button onclick="doPrev()" title="Предыдущий" aria-label="Предыдущий"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+      <button class="cpm-play" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg></button>
+      <button id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg></button>
+      <button onclick="doNext()" title="Следующий" aria-label="Следующий"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg></button>
+      <button onclick="doStopActive()" title="Стоп — активный кампус" aria-label="Стоп"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14"/></svg></button>
+    </div>
+
+    <div class="cpm-bottom-seek">
+      <div class="cpm-seek-groove" id="wa-seek-groove" onclick="wampSeekActive(event)">
+        <div class="cpm-seek-fill" id="wa-seek-fill"></div>
+        <div class="cpm-seek-thumb" id="wa-seek-thumb"></div>
+      </div>
+      <span class="cpm-seek-time tabular" id="wa-lcd-time">0:00</span>
+    </div>
+
+    <div class="cpm-bottom-toggles">
+      <button class="cpm-toggle" id="wa-shf-btn" onclick="wampToggleShuffle()" title="Перемешать"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></button>
+      <button class="cpm-toggle" id="wa-rep-btn" onclick="wampToggleRepeat()" title="Зациклить трек"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+      <button class="cpm-toggle" id="wa-eq-btn" onclick="wampShowTab('eq')" title="Эквалайзер"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg></button>
+      <button class="cpm-toggle" id="wa-mute-btn" onclick="toggleMute(); this.classList.toggle('on')" title="Тишина"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></button>
+    </div>
+
+    <div class="cpm-bottom-vol">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      <input type="range" class="cpm-vol-range" min="0" max="160" value="100" oninput="onVolInput(this.value)">
+      <span class="cpm-vol-num tabular" id="vol-num">100</span>
+    </div>
+  </div>
+
+  <select id="campusSelect" style="display:none" onchange="setActiveCampus(this.value)">
+    <option value="client1">NAR</option><option value="client2">GËNC</option><option value="cgtk">CG</option>
+  </select>
+</div>
+
+<script>
+(function(){
+  var pills = document.querySelectorAll('.cpm-campus-pill');
+  pills.forEach(function(p){
+    p.addEventListener('click', function(){
+      pills.forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+      setActiveCampus(p.dataset.campus);
+    });
+  });
+})();
+
+function _cpmSeek(ck, evt, wrap) {
+  var st = _progState[ck]; if (!st.playing || st.dur <= 0) return;
+  var r = wrap.getBoundingClientRect();
+  var pct = Math.max(0, Math.min(1, (evt.clientX - r.left) / r.width));
+  var newPos = Math.round(pct * st.dur);
+  fetch('/api/seek', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({machine: ck, pos: newPos})
+  }).catch(function(){});
+  st.pos = newPos; st.ts = Date.now();
+  _updateProgress(ck);
+}
+</script>
