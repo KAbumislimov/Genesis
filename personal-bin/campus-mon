@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+"""Multi-host live resource monitor: local + client1 + proxmox in one screen."""
+import curses
+import subprocess
+import time
+import sys
+import threading
+
+HOSTS = [
+    ("centos (local)", None),
+    ("client1", "client1"),
+    ("proxmox", "proxmox"),
+]
+
+REMOTE_CMD = (
+    "read _ u n s i io irq sirq st _ < /proc/stat; "
+    "mem=$(free -m | awk 'NR==2{printf \"%s %s\", $3,$2}'); "
+    "disk=$(df -P / | awk 'NR==2{printf \"%s %s\", $3,$2}'); "
+    "load=$(cut -d' ' -f1-3 /proc/loadavg); "
+    "echo \"$u $n $s $i $io $irq $sirq $st|$mem|$disk|$load\""
+)
+
+REFRESH = 2.0
+lock = threading.Lock()
+state = {name: {"raw": None, "prev": None, "err": None} for name, _ in HOSTS}
+
+
+def fetch(alias):
+    if alias is None:
+        cmd = ["bash", "-c", REMOTE_CMD]
+    else:
+        cmd = [
+            "ssh", "-o", "ConnectTimeout=3",
+            "-o", "ControlMaster=auto", "-o", "ControlPersist=60s",
+            "-o", f"ControlPath=/tmp/ssh-mux-campusmon-{alias}",
+            alias, REMOTE_CMD,
+        ]
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        if out.returncode != 0:
+            return None, out.stderr.strip()[:60]
+        return out.stdout.strip(), None
+    except Exception as e:
+        return None, str(e)[:60]
+
+
+def poll_loop():
+    while True:
+        for name, alias in HOSTS:
+            out, err = fetch(alias)
+            with lock:
+                s = state[name]
+                if out:
+                    s["prev"] = s["raw"]
+                    s["raw"] = out
+                    s["err"] = None
+                else:
+                    s["err"] = err or "no data"
+        time.sleep(REFRESH)
+
+
+def parse(raw):
+    cpu_part, mem_part, disk_part, load_part = raw.split("|")
+    cpu = [int(x) for x in cpu_part.split()]
+    mem_used, mem_total = (int(x) for x in mem_part.split())
+    disk_used, disk_total = (int(x) for x in disk_part.split())
+    load = load_part.split()
+    return cpu, mem_used, mem_total, disk_used, disk_total, load
+
+
+def cpu_pct(prev, cur):
+    if prev is None:
+        return None
+    pu, pn, ps, pi, pio, pirq, psirq, pst = prev
+    cu, cn, cs, ci, cio, cirq, csirq, cst = cur
+    prev_idle = pi + pio
+    cur_idle = ci + cio
+    prev_total = pu + pn + ps + pi + pio + pirq + psirq + pst
+    cur_total = cu + cn + cs + ci + cio + cirq + csirq + cst
+    dt = cur_total - prev_total
+    di = cur_idle - prev_idle
+    if dt <= 0:
+        return None
+    return max(0.0, min(100.0, (dt - di) * 100.0 / dt))
+
+
+def bar(pct, width):
+    if pct is None:
+        return "?" * width
+    filled = int(width * pct / 100.0)
+    return "█" * filled + "░" * (width - filled)
+
+
+def color_for(win, pct):
+    if pct is None:
+        return win.attron
+    if pct < 60:
+        return 1
+    if pct < 85:
+        return 2
+    return 3
+
+
+def draw(stdscr):
+    curses.curs_set(0)
+    curses.start_color()
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_GREEN, -1)
+    curses.init_pair(2, curses.COLOR_YELLOW, -1)
+    curses.init_pair(3, curses.COLOR_RED, -1)
+    curses.init_pair(4, curses.COLOR_CYAN, -1)
+    curses.init_pair(5, curses.COLOR_WHITE, -1)
+    stdscr.nodelay(True)
+    stdscr.timeout(300)
+
+    while True:
+        ch = stdscr.getch()
+        if ch in (ord("q"), 27):
+            return
+
+        stdscr.erase()
+        maxy, maxx = stdscr.getmaxyx()
+        n = len(HOSTS)
+        col_w = max(30, maxx // n)
+
+        title = " campus-mon — q для выхода "
+        stdscr.addstr(0, max(0, (maxx - len(title)) // 2), title, curses.color_pair(4) | curses.A_BOLD)
+
+        for idx, (name, alias) in enumerate(HOSTS):
+            x0 = idx * col_w
+            if x0 + 10 > maxx:
+                break
+            with lock:
+                s = dict(state[name])
+
+            y = 2
+            stdscr.addstr(y, x0, f"■ {name}", curses.color_pair(4) | curses.A_BOLD)
+            y += 1
+
+            if s["err"]:
+                stdscr.addstr(y, x0, f"  offline: {s['err']}", curses.color_pair(3))
+                continue
+            if not s["raw"]:
+                stdscr.addstr(y, x0, "  подключение...", curses.color_pair(5))
+                continue
+
+            cpu, mem_used, mem_total, disk_used, disk_total, load = parse(s["raw"])
+            prev_cpu = None
+            if s["prev"]:
+                prev_cpu, _, _, _, _, _ = parse(s["prev"])
+
+            pct_cpu = cpu_pct(prev_cpu, cpu)
+            mem_pct = (mem_used / mem_total * 100.0) if mem_total else None
+            disk_pct = (disk_used / disk_total * 100.0) if disk_total else None
+
+            bw = max(10, col_w - 16)
+
+            for label, pct, extra in (
+                ("CPU", pct_cpu, f"{pct_cpu:5.1f}%" if pct_cpu is not None else "  ?  "),
+                ("MEM", mem_pct, f"{mem_used:>5}/{mem_total}MB"),
+                ("DSK", disk_pct, f"{disk_used:>5}/{disk_total}MB"),
+            ):
+                cpair = 1 if (pct is None or pct < 60) else (2 if pct < 85 else 3)
+                stdscr.addstr(y, x0, f"{label} ")
+                stdscr.addstr(y, x0 + 4, bar(pct, bw), curses.color_pair(cpair))
+                stdscr.addstr(y, x0 + 4 + bw + 1, extra, curses.color_pair(5))
+                y += 1
+
+            y += 1
+            stdscr.addstr(y, x0, f"load {load[0]} {load[1]} {load[2]}", curses.color_pair(5))
+
+        stdscr.refresh()
+
+
+def main():
+    if "--once" in sys.argv:
+        for name, alias in HOSTS:
+            out, err = fetch(alias)
+            print(name, "->", "OK" if out else f"ERR: {err}")
+        return
+    t = threading.Thread(target=poll_loop, daemon=True)
+    t.start()
+    time.sleep(0.3)
+    try:
+        curses.wrapper(draw)
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()
