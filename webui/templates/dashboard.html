@@ -1079,6 +1079,18 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wamp2-pren{font-size:10px;flex-shrink:0;color:rgba(150,170,200,.4);cursor:pointer;
   padding:0 3px;border-radius:3px;transition:.12s}
 .wamp2-pren:hover{color:#88bbff;background:rgba(80,140,240,.18)}
+.wamp2-pmovebtn{font-size:12px;flex-shrink:0;color:rgba(150,170,200,.4);cursor:pointer;
+  padding:0 4px;border-radius:3px;transition:.12s;background:none;border:none;font-family:inherit}
+.wamp2-pmovebtn:hover{color:#88bbff;background:rgba(80,140,240,.18)}
+.wamp2-movepop{display:none;position:fixed;z-index:9500;min-width:180px;max-height:280px;overflow-y:auto;
+  background:#141a26;border:1px solid rgba(80,120,200,.4);border-radius:8px;
+  box-shadow:0 10px 34px rgba(0,0,0,.55);padding:6px;font-family:'JetBrains Mono',monospace}
+.wamp2-movepop.open{display:block}
+.wamp2-movepop-hd{font-size:10.5px;color:rgba(140,170,220,.6);padding:4px 9px 6px;
+  text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:4px}
+.wamp2-movepop-item{display:block;width:100%;text-align:left;background:none;border:none;
+  color:#dbe6fa;font-family:inherit;font-size:13px;padding:8px 10px;border-radius:5px;cursor:pointer}
+.wamp2-movepop-item:hover{background:rgba(60,110,220,.25);color:#fff}
 
 /* Right-click context menu */
 .wamp2-ctx{display:none;position:fixed;z-index:9000;min-width:210px;
@@ -1617,7 +1629,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wamp2-fol-tabs" id="pl-folder-tabs">
       <button class="wamp2-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">ВСЕ</button>
       {% for f in music_folders %}
+      {% if f == 'KAMRAN' %}
+      <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" title="Личная папка — защищена PIN-кодом">🔒 {{ f|upper }}</button>
+      {% else %}
       <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f|upper }}</button>
+      {% endif %}
       {% endfor %}
       <button class="wamp2-fol-tab wamp2-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ ИЗБРАННОЕ</button>
       {% if current_user.role == 'admin' %}
@@ -1641,6 +1657,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wamp2-ctx-sep"></div>
       <button class="wamp2-ctx-item wamp2-ctx-danger" id="ctx-delete-btn">🗑 Удалить файл</button>
       {% endif %}
+    </div>
+    <!-- Per-row "move to" popup -->
+    <div id="wamp2-movepop" class="wamp2-movepop">
+      <div class="wamp2-movepop-hd">Переместить в…</div>
+      <div id="wamp2-movepop-list"></div>
     </div>
     <!-- Toolbar -->
     <div class="wamp2-pl-hdr">
@@ -3221,6 +3242,21 @@ function wampFolderTab(btn, folder) {
   if (sel) sel.value = folder;
   wampPlLoad();
 }
+function wampKamranTab(btn) {
+  fetch('/api/kamran/status').then(function(r){return r.json();}).then(function(d){
+    if (d.unlocked) { wampFolderTab(btn, 'KAMRAN'); return; }
+    if (!d.pin_set) { toast('⚠️ PIN не установлен — обратитесь к администратору'); return; }
+    var pin = prompt('PIN для личной папки KAMRAN:');
+    if (pin === null) return;
+    fetch('/api/kamran/unlock', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pin: pin})
+    }).then(function(r){return r.json();}).then(function(d2){
+      if (!d2.ok) { toast('⚠️ '+(d2.error||'Неверный PIN')); return; }
+      toast('🔓 Разблокировано');
+      wampFolderTab(btn, 'KAMRAN');
+    });
+  });
+}
 function wampFavTab(btn) {
   _plFavOnly = true;
   _plFolder = '';
@@ -3368,6 +3404,7 @@ function _wampPlRender() {
       (showFolderBadge && tr.folder ? '<span class="wamp2-pfol">'+_escHtml(tr.folder)+'</span>' : '') +
       (meta ? '<span class="wamp2-pmeta">'+_escHtml(meta)+'</span>' : '') +
       '<span class="wamp2-pdu">'+dur+'</span>' +
+      (IS_ADMIN ? '<button class="wamp2-pmovebtn" title="Переместить в другой альбом">📁→</button>' : '') +
       (IS_ADMIN ? '<span class="wamp2-pren" title="Переименовать">✎</span>' : '');
     div.onclick = (function(t, ri){ return function(){ _wampPlPlay(t, div, ri); }; })(tr, realIdx);
     var favEl = div.querySelector('.wamp2-pfav');
@@ -3375,6 +3412,8 @@ function _wampPlRender() {
     if (IS_ADMIN) {
       var renEl = div.querySelector('.wamp2-pren');
       renEl.onclick = (function(t){ return function(ev){ ev.stopPropagation(); wampRenameTrack(t); }; })(tr);
+      var moveBtn = div.querySelector('.wamp2-pmovebtn');
+      moveBtn.onclick = (function(t, btn){ return function(ev){ ev.stopPropagation(); wampShowMovePop(ev, t, btn); }; })(tr, moveBtn);
     }
     div.oncontextmenu = (function(t, fe){ return function(ev){ ev.preventDefault(); wampShowContextMenu(ev, t, fe); }; })(tr, favEl);
     list.appendChild(div);
@@ -3451,6 +3490,39 @@ function wampCtxClose() {
   var menu = document.getElementById('wamp2-ctx');
   if (menu) menu.classList.remove('open');
 }
+function wampShowMovePop(ev, tr, btn) {
+  var pop = document.getElementById('wamp2-movepop');
+  var list = document.getElementById('wamp2-movepop-list');
+  if (!pop || !list) return;
+  list.innerHTML = '';
+  var cur = tr.folder || '';
+  var any = false;
+  ALL_FOLDERS.forEach(function(f){
+    if (f === cur) return;
+    any = true;
+    var b = document.createElement('button');
+    b.className = 'wamp2-movepop-item';
+    b.textContent = f;
+    b.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); wampMoveTrack(tr, f); };
+    list.appendChild(b);
+  });
+  if (!any) list.innerHTML = '<div style="padding:8px 10px;font-size:12px;color:rgba(140,160,200,.5)">Нет других папок</div>';
+
+  pop.classList.add('open');
+  var r = btn.getBoundingClientRect();
+  var pw = pop.offsetWidth || 180, ph = pop.offsetHeight || 200;
+  var x = r.left, y = r.bottom + 4;
+  if (x + pw > window.innerWidth)  x = window.innerWidth  - pw - 8;
+  if (y + ph > window.innerHeight) y = r.top - ph - 4;
+  pop.style.left = x + 'px';
+  pop.style.top  = y + 'px';
+}
+document.addEventListener('click', function(ev){
+  var pop = document.getElementById('wamp2-movepop');
+  if (pop && pop.classList.contains('open') && !pop.contains(ev.target) && !ev.target.classList.contains('wamp2-pmovebtn')) {
+    pop.classList.remove('open');
+  }
+});
 function wampMoveTrack(tr, destFolder) {
   fetch('/api/tracks/move', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({name: tr.name, folder: tr.folder||'', dest_folder: destFolder})
