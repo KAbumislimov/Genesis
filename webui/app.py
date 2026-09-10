@@ -1416,6 +1416,7 @@ def dashboard():
         tomorrow_events=tomorrow_events,
         perms=user_perms(),
         music_folders=all_music_folders(),
+        fixed_folders=MUSIC_FOLDERS,
         perem_slots=[{'id': s, 'label': PEREM_SLOT_LABELS.get(s, s)} for s in PEREM_SLOTS],
         ui_skin=ui_skin, ui_accent=ui_accent,
     )
@@ -3564,6 +3565,93 @@ def api_tracks_move():
         c.execute('UPDATE favorites SET folder=? WHERE folder=? AND name=?', (dst_folder, src_folder, name))
     log_action(current_user.username, 'move_track', 'local', f'{name}: {src_folder or "—"} → {dst_folder}')
     return jsonify({'ok': True})
+
+@app.route('/api/tracks/bulk-move', methods=['POST'])
+@login_required
+def api_tracks_bulk_move():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data       = request.get_json() or {}
+    items      = data.get('items') or []
+    dst_folder = os.path.basename((data.get('dest_folder') or '').strip())
+    folders = all_music_folders()
+    if dst_folder not in folders:
+        return jsonify({'ok': False, 'error': 'Папка назначения не найдена'})
+    if (dst_folder == KAMRAN_FOLDER) and not _kamran_unlocked():
+        return jsonify({'ok': False, 'error': 'PIN требуется для KAMRAN'})
+    moved, failed = 0, []
+    for it in items[:500]:
+        name       = os.path.basename((it.get('name') or '').strip())
+        src_folder = os.path.basename((it.get('folder') or '').strip())
+        if not name or '..' in name:
+            failed.append(name or '?'); continue
+        if (src_folder == KAMRAN_FOLDER) and not _kamran_unlocked():
+            failed.append(name); continue
+        src_path = os.path.join(MUSIC_DIR, src_folder, name) if src_folder else os.path.join(MUSIC_DIR, name)
+        dst_dir  = os.path.join(MUSIC_DIR, dst_folder)
+        dst_path = os.path.join(dst_dir, name)
+        if src_path == dst_path:
+            continue
+        if not os.path.isfile(src_path) or os.path.exists(dst_path):
+            failed.append(name); continue
+        os.makedirs(dst_dir, exist_ok=True)
+        os.rename(src_path, dst_path)
+        with get_db() as c:
+            c.execute('UPDATE favorites SET folder=? WHERE folder=? AND name=?', (dst_folder, src_folder, name))
+        moved += 1
+    log_action(current_user.username, 'bulk_move_tracks', 'local', f'{moved} → {dst_folder}')
+    return jsonify({'ok': True, 'moved': moved, 'failed': failed})
+
+@app.route('/api/tracks/bulk-delete', methods=['POST'])
+@login_required
+def api_tracks_bulk_delete():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data  = request.get_json() or {}
+    items = data.get('items') or []
+    deleted, failed = 0, []
+    for it in items[:500]:
+        name   = os.path.basename((it.get('name') or '').strip())
+        folder = os.path.basename((it.get('folder') or '').strip())
+        if not name or '..' in name:
+            failed.append(name or '?'); continue
+        if (folder == KAMRAN_FOLDER) and not _kamran_unlocked():
+            failed.append(name); continue
+        path = os.path.join(MUSIC_DIR, folder, name) if folder else os.path.join(MUSIC_DIR, name)
+        if not os.path.isfile(path):
+            failed.append(name); continue
+        os.remove(path)
+        deleted += 1
+    log_action(current_user.username, 'bulk_delete_tracks', 'local', f'{deleted} треков')
+    return jsonify({'ok': True, 'deleted': deleted, 'failed': failed})
+
+@app.route('/api/tracks/delete-folder', methods=['POST'])
+@login_required
+def api_tracks_delete_folder():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data = request.get_json() or {}
+    name = os.path.basename((data.get('name') or '').strip())
+    if not name or '..' in name:
+        return jsonify({'ok': False, 'error': 'Недопустимое название'})
+    if name in MUSIC_FOLDERS:
+        return jsonify({'ok': False, 'error': 'Это системная папка — её нельзя удалить'})
+    if name not in all_music_folders():
+        return jsonify({'ok': False, 'error': 'Папка не найдена'})
+    path = os.path.join(MUSIC_DIR, name)
+    try:
+        entries = os.listdir(path)
+    except OSError:
+        return jsonify({'ok': False, 'error': 'Папка не найдена'})
+    tracks = [f for f in entries if f.lower().endswith(AUDIO_EXTS)]
+    if tracks:
+        return jsonify({'ok': False, 'error': f'В папке ещё {len(tracks)} треков — сначала перемести или удали их'})
+    try:
+        os.rmdir(path)
+    except OSError as e:
+        return jsonify({'ok': False, 'error': f'Не удалось удалить: {e}'})
+    log_action(current_user.username, 'delete_music_folder', 'local', name)
+    return jsonify({'ok': True, 'folders': all_music_folders()})
 
 # ══════════════════════════════════════════════════
 @app.route('/machines')
