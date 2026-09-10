@@ -1809,10 +1809,19 @@ def _mpv_stop_on(host, user):
     ssh_run_on(host, user,
         f'printf \'{{"command":["stop"]}}\\n\' | socat - {MPV_SOCK} 2>/dev/null || true; '
         f'printf \'{{"command":["playlist-clear"]}}\\n\' | socat - {MPV_SOCK} 2>/dev/null || true; '
-        'pkill -9 ffmpeg 2>/dev/null || true; '
-        'pkill -9 aplay  2>/dev/null || true; '
-        'pkill -9 paplay 2>/dev/null || true; '
-        'pkill -9 edge-tts 2>/dev/null || true; true')
+        'pkill -9 ffmpeg  2>/dev/null || true; '
+        'pkill -9 aplay   2>/dev/null || true; '
+        'pkill -9 paplay  2>/dev/null || true; '
+        'pkill -9 edge-tts 2>/dev/null || true; '
+        'pkill -9 mplayer 2>/dev/null || true; '
+        'pkill -9 vlc     2>/dev/null || true; '
+        'pkill -9 cvlc    2>/dev/null || true; '
+        'pkill -9 play    2>/dev/null || true; '
+        'pkill -9 festival 2>/dev/null || true; '
+        # Last-resort: force-release the audio device itself, in case
+        # something still holds it open after the process kills above
+        # ("панический стоп" — освободить устройство любой ценой).
+        'fuser -k /dev/snd/* 2>/dev/null || true; true')
 
 @app.route('/api/pause', methods=['POST'])
 @login_required
@@ -1852,6 +1861,12 @@ def api_stop():
                 target=_mpv_stop_on, args=(m['host'], m.get('user', CLIENT1_USER)), daemon=True
             ).start()
     log_action(current_user.username, 'stop', 'all')
+    tg_notify(
+        f'⏹ <b>СТОП — остановлено всё, на всех кампусах</b>\n'
+        f'👤 {current_user.username}\n'
+        f'🕐 {_tg_fmt_time()}',
+        event_type='stop'
+    )
     return jsonify({'ok': True})
 
 @app.route('/api/stop/client1', methods=['POST'])

@@ -84,6 +84,25 @@
 .cp-modern .wamp2-pfav.on{color:#ffd24a}
 .cp-modern .wamp2-pren{color:var(--muted);flex-shrink:0;cursor:pointer;padding:0 4px}
 .cp-modern .wamp2-pmovebtn{color:var(--muted);flex-shrink:0;background:none;border:none;font-size:12px;padding:0 4px}
+.cp-modern .wamp2-psel{width:14px;height:14px;flex-shrink:0;border-radius:4px;cursor:pointer;
+  border:1.5px solid var(--border);background:none;position:relative}
+.cp-modern .wamp2-psel:hover{border-color:var(--cpm-accent)}
+.cp-modern .wamp2-psel.checked{background:var(--cpm-accent);border-color:var(--cpm-accent)}
+.cp-modern .wamp2-psel.checked::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-size:10px;color:var(--cpm-accent-ink);line-height:1}
+.cp-modern .wamp2-bulk-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:10px;
+  background:color-mix(in srgb,var(--cpm-accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--cpm-accent) 40%,transparent);
+  border-radius:9px;font-size:12px}
+.cp-modern .wamp2-bulk-bar .wamp2-bulk-count{color:var(--text);font-weight:700;margin-right:auto}
+.cp-modern .wamp2-bulk-bar button{background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:6px 12px;font-size:11.5px;cursor:pointer;font-family:inherit}
+.cp-modern .wamp2-bulk-bar button:hover{border-color:var(--cpm-accent);color:var(--cpm-accent)}
+.cp-modern .wamp2-bulk-bar button.danger{color:var(--red)}
+.cpm-fol-tab-wrap{position:relative;display:flex;align-items:center}
+.cpm-fol-tab-wrap .cpm-fol-tab{flex:1}
+.cpm-fol-del{display:flex;align-items:center;justify-content:center;width:22px;flex-shrink:0;
+  font-size:11px;cursor:pointer;color:var(--muted);opacity:.5}
+.cpm-fol-del:hover{color:var(--red);opacity:1}
 
 .cpm-eq-wrap{padding:16px 20px;border-top:1px solid var(--border)}
 .cpm-eq-hd{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
@@ -201,6 +220,11 @@
         {% for f in music_folders %}
           {% if f == 'KAMRAN' %}
           <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
+          {% elif f not in fixed_folders and current_user.role == 'admin' %}
+          <div class="cpm-fol-tab-wrap">
+            <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f }}</button>
+            <span class="cpm-fol-del" title="Удалить папку (должна быть пустой)" onclick="event.stopPropagation();wampDeleteFolder('{{ f }}')">🗑</span>
+          </div>
           {% else %}
           <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f }}</button>
           {% endif %}
@@ -222,6 +246,15 @@
         </select>
         <button class="cpm-pl-playall" onclick="wampPlayAll()" title="Перемешать и воспроизвести всё">▶ Играть всё</button>
       </div>
+      {% if current_user.role == 'admin' %}
+      <div class="wamp2-bulk-bar" style="display:none">
+        <span class="wamp2-bulk-count">0 треков</span>
+        <button onclick="wampShowBulkMovePop(event, this)">📁 Переместить в…</button>
+        <button class="danger" onclick="wampBulkDelete()">🗑 Удалить</button>
+        <button onclick="wampSelectAllVisible()">Выбрать все</button>
+        <button onclick="wampClearSelection()">✕ Отмена</button>
+      </div>
+      {% endif %}
       <div class="cpm-pl-list" id="pl-list">
         <div class="wamp2-pl-loading">Загрузка треков…</div>
       </div>
@@ -247,7 +280,7 @@
       <button class="cpm-play" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg></button>
       <button id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg></button>
       <button onclick="doNext()" title="Следующий" aria-label="Следующий"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg></button>
-      <button onclick="doStopActive()" title="Стоп — активный кампус" aria-label="Стоп"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14"/></svg></button>
+      <button onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах" aria-label="Стоп всё" style="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14"/></svg></button>
     </div>
 
     <div class="cpm-bottom-seek">

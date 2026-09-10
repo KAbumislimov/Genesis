@@ -1078,6 +1078,24 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   white-space:nowrap;flex-shrink:0}
 .wamp2-pdu{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--wt-pl-num);
   min-width:34px;text-align:right;flex-shrink:0;opacity:.75;font-variant-numeric:tabular-nums}
+.wamp2-psel{width:13px;height:13px;flex-shrink:0;border-radius:3px;cursor:pointer;
+  border:1.5px solid rgba(150,170,200,.4);background:none;position:relative;transition:.12s}
+.wamp2-psel:hover{border-color:#88bbff}
+.wamp2-psel.checked{background:#3a7dde;border-color:#3a7dde}
+.wamp2-psel.checked::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:#fff;line-height:1}
+.wamp2-bulk-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:0 0 6px;
+  background:rgba(58,125,222,.14);border:1px solid rgba(58,125,222,.4);border-radius:6px;font-size:11px}
+.wamp2-bulk-bar .wamp2-bulk-count{color:#a8c8ff;font-weight:700;margin-right:auto}
+.wamp2-bulk-bar button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+  color:#c8d6f0;border-radius:5px;padding:5px 10px;font-size:10.5px;cursor:pointer;font-family:inherit}
+.wamp2-bulk-bar button:hover{background:rgba(255,255,255,.12)}
+.wamp2-bulk-bar button.danger{color:#ff8f95;border-color:rgba(220,60,70,.4)}
+.wamp2-bulk-bar button.danger:hover{background:rgba(220,60,70,.18)}
+.wamp2-fol-tab-wrap{position:relative;display:inline-flex}
+.wamp2-fol-del{display:flex;align-items:center;justify-content:center;width:14px;height:18px;
+  font-size:9px;cursor:pointer;color:rgba(255,140,140,.5);flex-shrink:0}
+.wamp2-fol-del:hover{color:#ff5c5c}
 .wamp2-pfav{font-size:12px;flex-shrink:0;color:rgba(150,170,200,.35);cursor:pointer;
   line-height:1;padding:0 1px;transition:color .12s,transform .12s}
 .wamp2-pfav:hover{color:#ffd24a;transform:scale(1.15)}
@@ -1641,6 +1659,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       {% for f in music_folders %}
       {% if f == 'KAMRAN' %}
       <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" title="Личная папка — защищена PIN-кодом">🔒 {{ f|upper }}</button>
+      {% elif f not in fixed_folders and current_user.role == 'admin' %}
+      <span class="wamp2-fol-tab-wrap">
+        <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f|upper }}</button>
+        <span class="wamp2-fol-del" title="Удалить папку (должна быть пустой)" onclick="event.stopPropagation();wampDeleteFolder('{{ f }}')">🗑</span>
+      </span>
       {% else %}
       <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f|upper }}</button>
       {% endif %}
@@ -1661,6 +1684,16 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       </select>
       <button class="wamp2-pl-close" onclick="wampPlayAll()" style="background:linear-gradient(180deg,#1a4090,#0c2050);color:#70b8ff;border-color:#1a4080;min-width:52px;font-weight:900" title="Перемешать и воспроизвести всё">▶ ВСЕ</button>
     </div>
+    {% if current_user.role == 'admin' %}
+    <!-- Bulk selection bar — shown when 1+ tracks selected -->
+    <div class="wamp2-bulk-bar" id="pl-bulk-bar-classic" style="display:none">
+      <span class="wamp2-bulk-count">0 треков</span>
+      <button onclick="wampShowBulkMovePop(event, this)">📁 Переместить в…</button>
+      <button class="danger" onclick="wampBulkDelete()">🗑 Удалить</button>
+      <button onclick="wampSelectAllVisible()">Выбрать все</button>
+      <button onclick="wampClearSelection()">✕ Отмена</button>
+    </div>
+    {% endif %}
     <!-- Song list -->
     <div class="wamp2-pl-list" id="pl-list">
       <div class="wamp2-pl-loading">Загрузка треков…</div>
@@ -1684,6 +1717,9 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <div class="wamp2-ctx-item wamp2-ctx-submenu-trigger" id="ctx-move-btn">📁 Переместить в… <span class="wamp2-ctx-arrow">›</span>
     <div class="wamp2-ctx-submenu" id="ctx-move-submenu"></div>
   </div>
+  <div class="wamp2-ctx-sep"></div>
+  <button class="wamp2-ctx-item" id="ctx-select-btn">☑ Выбрать</button>
+  <button class="wamp2-ctx-item" id="ctx-select-all-btn">☑ Выбрать все</button>
   <div class="wamp2-ctx-sep"></div>
   <button class="wamp2-ctx-item wamp2-ctx-danger" id="ctx-delete-btn">🗑 Удалить файл</button>
   {% endif %}
@@ -3410,7 +3446,9 @@ function _wampPlRender() {
     if(realIdx === _currentPlIdx) div.classList.add('pl-active');
     // Strip extension from display name for cleanliness
     var dispNm = nm.replace(/\.(mp3|ogg|flac|wav|aac|m4a|wma|opus)$/i,'');
+    var selKey = _plKey(tr);
     div.innerHTML =
+      (IS_ADMIN ? '<span class="wamp2-psel'+(_plSelected[selKey]?' checked':'')+'" title="Выбрать"></span>' : '') +
       '<span class="wamp2-pfav'+(tr.fav?' on':'')+'" title="'+(tr.fav?'Убрать из избранного':'В избранное')+'">'+(tr.fav?'★':'☆')+'</span>' +
       '<span class="wamp2-pin">'+(i+1)+'.</span>' +
       '<span class="wamp2-pnm" title="'+_escHtml(nm)+'">'+_escHtml(dispNm)+'</span>' +
@@ -3427,11 +3465,106 @@ function _wampPlRender() {
       renEl.onclick = (function(t){ return function(ev){ ev.stopPropagation(); wampRenameTrack(t); }; })(tr);
       var moveBtn = div.querySelector('.wamp2-pmovebtn');
       moveBtn.onclick = (function(t, btn){ return function(ev){ ev.stopPropagation(); wampShowMovePop(ev, t, btn); }; })(tr, moveBtn);
+      var selEl = div.querySelector('.wamp2-psel');
+      selEl.onclick = (function(t, se){ return function(ev){ wampToggleSelect(t, se, ev); }; })(tr, selEl);
     }
     div.oncontextmenu = (function(t, fe){ return function(ev){ ev.preventDefault(); wampShowContextMenu(ev, t, fe); }; })(tr, favEl);
     list.appendChild(div);
   });
   if(stat) stat.textContent = tracks.length + ' треков' + (_plFavOnly ? ' · избранное' : (_plFolder ? ' · ' + _plFolder : ''));
+}
+
+// ──── Multi-select + bulk actions (admin) ──────────────
+var _plSelected = {};
+function _plKey(tr) { return (tr.folder||'') + '|' + tr.name; }
+function _plSelectedCount() { return Object.keys(_plSelected).length; }
+function _plUpdateBulkBar() {
+  var n = _plSelectedCount();
+  document.querySelectorAll('.wamp2-bulk-bar').forEach(function(bar){ bar.style.display = n>0 ? 'flex' : 'none'; });
+  document.querySelectorAll('.wamp2-bulk-count').forEach(function(el){
+    el.textContent = n + (n%10===1 && n%100!==11 ? ' трек' : (n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? ' трека' : ' треков'));
+  });
+}
+function wampToggleSelect(tr, el, ev) {
+  if (ev) ev.stopPropagation();
+  var k = _plKey(tr);
+  if (_plSelected[k]) { delete _plSelected[k]; if (el) el.classList.remove('checked'); }
+  else { _plSelected[k] = tr; if (el) el.classList.add('checked'); }
+  _plUpdateBulkBar();
+}
+function wampIsSelected(tr) { return !!_plSelected[_plKey(tr)]; }
+function wampSelectAllVisible() {
+  var list = document.getElementById('pl-list');
+  if (!list) return;
+  list.querySelectorAll('.wamp2-pli').forEach(function(div){
+    var idx = parseInt(div.dataset.trackIdx, 10);
+    var tr = _plTracks[idx];
+    if (!tr) return;
+    _plSelected[_plKey(tr)] = tr;
+    var cb = div.querySelector('.wamp2-psel');
+    if (cb) cb.classList.add('checked');
+  });
+  _plUpdateBulkBar();
+}
+function wampClearSelection() {
+  _plSelected = {};
+  document.querySelectorAll('.wamp2-psel.checked').forEach(function(el){ el.classList.remove('checked'); });
+  _plUpdateBulkBar();
+}
+function wampBulkDelete() {
+  var items = Object.values(_plSelected).map(function(tr){ return {name: tr.name, folder: tr.folder||''}; });
+  if (!items.length) return;
+  if (!confirm('Удалить безвозвратно ' + items.length + ' треков? Это нельзя отменить.')) return;
+  fetch('/api/tracks/bulk-delete', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({items: items})
+  }).then(function(r){return r.json();}).then(function(d){
+    toast(d.ok ? ('✔ Удалено: ' + d.deleted) : ('⚠️ ' + (d.error||'ошибка')));
+    wampClearSelection();
+    wampPlLoad();
+  });
+}
+function wampBulkMove(destFolder) {
+  var items = Object.values(_plSelected).map(function(tr){ return {name: tr.name, folder: tr.folder||''}; });
+  if (!items.length) return;
+  fetch('/api/tracks/bulk-move', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({items: items, dest_folder: destFolder})
+  }).then(function(r){return r.json();}).then(function(d){
+    toast(d.ok ? ('✔ Перемещено: ' + d.moved) : ('⚠️ ' + (d.error||'ошибка')));
+    wampClearSelection();
+    wampPlLoad();
+  });
+}
+function wampShowBulkMovePop(ev, btn) {
+  if (ev) ev.stopPropagation();
+  var pop = document.getElementById('wamp2-movepop');
+  var list = document.getElementById('wamp2-movepop-list');
+  if (!pop || !list || !_plSelectedCount()) return;
+  list.innerHTML = '';
+  ALL_FOLDERS.forEach(function(f){
+    var b = document.createElement('button');
+    b.className = 'wamp2-movepop-item';
+    b.textContent = f;
+    b.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); wampBulkMove(f); };
+    list.appendChild(b);
+  });
+  pop.classList.add('open');
+  var r = btn.getBoundingClientRect();
+  var pw = pop.offsetWidth || 180, ph = pop.offsetHeight || 200;
+  var x = r.left, y = r.top - ph - 6;
+  if (x + pw > window.innerWidth)  x = window.innerWidth - pw - 8;
+  if (y < 4) y = r.bottom + 6;
+  pop.style.left = x + 'px';
+  pop.style.top  = y + 'px';
+}
+function wampDeleteFolder(name) {
+  if (!confirm('Удалить папку «' + name + '»? Она должна быть пустой.')) return;
+  fetch('/api/tracks/delete-folder', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name})
+  }).then(function(r){return r.json();}).then(function(d){
+    if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
+    toast('✔ Папка удалена: ' + name);
+    location.reload();
+  });
 }
 function wampToggleFavorite(tr, favEl) {
   var willFav = !tr.fav;
@@ -3476,6 +3609,8 @@ function wampShowContextMenu(ev, tr, favEl) {
   var favLabel = document.getElementById('ctx-fav-label');
   favIcon.textContent = tr.fav ? '★' : '☆';
   favLabel.textContent = tr.fav ? 'Убрать из избранного' : 'В избранное';
+  var selBtn = document.getElementById('ctx-select-btn');
+  if (selBtn) selBtn.textContent = wampIsSelected(tr) ? '☒ Убрать из выбранных' : '☑ Выбрать';
 
   var moveSubmenu = document.getElementById('ctx-move-submenu');
   if (moveSubmenu) {
@@ -3564,6 +3699,17 @@ document.addEventListener('DOMContentLoaded', function(){
   if (renBtn) renBtn.onclick = function(){ wampCtxClose(); if(_ctxTrack) wampRenameTrack(_ctxTrack); };
   var delBtn = document.getElementById('ctx-delete-btn');
   if (delBtn) delBtn.onclick = function(){ if(_ctxTrack) wampDeleteTrack(_ctxTrack); };
+  var selBtn = document.getElementById('ctx-select-btn');
+  if (selBtn) selBtn.onclick = function(){
+    if (_ctxTrack) {
+      var div = document.querySelector('.wamp2-pli[data-track-idx="'+_plTracks.indexOf(_ctxTrack)+'"]');
+      var cb = div ? div.querySelector('.wamp2-psel') : null;
+      wampToggleSelect(_ctxTrack, cb, null);
+    }
+    wampCtxClose();
+  };
+  var selAllBtn = document.getElementById('ctx-select-all-btn');
+  if (selAllBtn) selAllBtn.onclick = function(){ wampSelectAllVisible(); wampCtxClose(); };
   document.addEventListener('click', function(ev){
     var menu = document.getElementById('wamp2-ctx');
     if (menu && menu.classList.contains('open') && !menu.contains(ev.target)) wampCtxClose();
