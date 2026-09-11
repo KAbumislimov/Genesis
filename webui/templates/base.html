@@ -67,7 +67,8 @@ body::before{
   100%{transform:scale(1)    translateX(0)    translateY(0)}
 }
 html.has-wallpaper body::before{
-  animation:kenBurns 40s ease-in-out infinite;
+  /* Ken Burns zoom-pan disabled by request — static wallpaper only */
+  animation:none;
 }
 
 /* ── Navbar ── */
@@ -1540,6 +1541,13 @@ function _buildPts(N, W, H, speed) {
 }
 
 function startAnimatedBg() {
+  // Disabled by request — animated particle-network background was
+  // distracting (visible through semi-transparent panels/cards) and
+  // costs CPU/GPU for no real benefit. Kept as a no-op (not deleted)
+  // so any stale 'animated' choice in someone's localStorage, or a
+  // future click on the "✦ Живой" picker button, quietly does nothing
+  // instead of erroring.
+  return;
   stopAnimatedBg();
   var cv = _makeBgCanvas(-1);
   _animBgCanvas = cv;
@@ -1600,6 +1608,9 @@ function stopAnimatedBg() {
 
 // Light particle overlay for image wallpapers
 function startParticleOverlay() {
+  // Disabled by request, same as startAnimatedBg() above — no-op so
+  // callers (image/slide wallpaper modes) don't need to change.
+  return;
   stopParticleOverlay();
   var cv = _makeBgCanvas(0);
   _overlayCanvas = cv;

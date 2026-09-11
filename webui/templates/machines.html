@@ -106,9 +106,21 @@
       <label class="form-label">SSH-пользователь</label>
       <input type="text" id="f-user" class="form-control" placeholder="client1" value="client1" autocomplete="off">
     </div>
-    <div class="mb-4">
+    <div class="mb-3">
       <label class="form-label">Cockpit URL <span class="text-muted">(авто: http://IP:1991)</span></label>
       <input type="text" id="f-cockpit" class="form-control" placeholder="http://10.20.0.55:1991" autocomplete="off">
+    </div>
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="f-audio" checked>
+      <label class="form-check-label" for="f-audio">Это кампус с аудио-плеером</label>
+      <div class="text-muted" style="font-size:11.5px;margin-top:2px">
+        Включено — появится в переключателе кампусов, статусе, эквалайзере и спецдействиях плеера.
+        Выключено — только мониторинг/SSH (например сервер, а не колонки).
+      </div>
+    </div>
+    <div class="mb-4" id="f-music-path-wrap">
+      <label class="form-label">Путь к музыке на устройстве <span class="text-muted">(необязательно)</span></label>
+      <input type="text" id="f-music-path" class="form-control" placeholder="/home/<SSH-пользователь>/Media — так по умолчанию" autocomplete="off">
     </div>
     <div style="display:flex;gap:10px;align-items:center">
       <button class="btn btn-primary" onclick="save()">
@@ -165,6 +177,7 @@ function load(){
             <div class="machine-sub">${escHtml(m.host)}</div>
           </div>
           <span class="machine-badge"><i class="bi bi-pencil-square"></i> вручную</span>
+          ${m.is_audio_client===0?`<span class="machine-badge" style="background:rgba(139,148,158,.12);color:var(--muted);border-color:rgba(139,148,158,.25)" title="Не показывается в плеере — только мониторинг"><i class="bi bi-eye-slash"></i> без плеера</span>`:''}
           ${m.has_mac?`<button class="btn btn-ghost btn-sm" title="Wake-on-LAN" onclick="wol('${m.id}',this)"><i class="bi bi-power"></i></button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="edit(${dbId})" title="Редактировать"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-danger btn-sm" onclick="del(${dbId},'${escHtml(m.name)}')" title="Удалить"><i class="bi bi-trash3"></i></button>
@@ -191,6 +204,8 @@ function openModal(data){
   document.getElementById('f-mac').value    = data ? (data.mac||'') : '';
   document.getElementById('f-user').value   = data ? (data.user||'client1') : 'client1';
   document.getElementById('f-cockpit').value= data ? (data.cockpit_url||'') : '';
+  document.getElementById('f-audio').checked = data ? !!Number(data.is_audio_client ?? 1) : true;
+  document.getElementById('f-music-path').value = data ? (data.music_path||'') : '';
   document.getElementById('save-msg').textContent = '';
   document.getElementById('m-modal').classList.add('open');
   document.getElementById('f-host').focus();
@@ -211,11 +226,14 @@ function save(){
   const mac    = document.getElementById('f-mac').value.trim();
   const user   = document.getElementById('f-user').value.trim() || 'client1';
   const cockpit= document.getElementById('f-cockpit').value.trim() || `http://${host}:1991`;
+  const isAudio = document.getElementById('f-audio').checked;
+  const musicPath = document.getElementById('f-music-path').value.trim();
   const msg    = document.getElementById('save-msg');
   if(!host||!name){msg.textContent='IP и имя обязательны';msg.style.color='var(--red)';return;}
   const url = dbId ? `/api/machines/edit/${dbId}` : '/api/machines/add';
   fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({host,name,mac,user,cockpit_url:cockpit})
+    body:JSON.stringify({host,name,mac,user,cockpit_url:cockpit,
+                          is_audio_client:isAudio,music_path:musicPath})
   }).then(r=>r.json()).then(d=>{
     if(d.ok){closeModal();load();}
     else{msg.textContent=d.error||'Ошибка';msg.style.color='var(--red)';}

@@ -158,45 +158,27 @@
       Campus Player
     </div>
     <div class="cpm-campus-switch" id="cpm-campus-switch">
-      <button class="cpm-campus-pill active" data-campus="client1">Client1</button>
-      <button class="cpm-campus-pill" data-campus="client2">Client2</button>
-      <button class="cpm-campus-pill" data-campus="cgtk">City Garden</button>
+      {% for m in music_machines %}
+      <button class="cpm-campus-pill{{ ' active' if loop.first else '' }}" data-campus="{{ m.key }}">{{ m.name }}</button>
+      {% endfor %}
     </div>
     <a href="{{ url_for('profile') }}" class="cpm-skin-link" title="Сменить оформление плеера">🎨 Оформление</a>
   </div>
 
   <!-- campus status strip — same ids the shared polling functions already update -->
   <div class="cpm-campus-strip">
-    <div class="cpm-campus-row" id="wamp2-row-client1">
-      <span class="cpm-dot" id="live-client1">●</span>
-      <span class="cpm-dot off" id="stop-client1" style="display:none">●</span>
-      <span class="cpm-conn" id="conn-client1"><i class="bi bi-wifi"></i></span>
-      <span class="cpm-campus-name">Client1</span>
-      <span class="cpm-campus-track" id="mini-name-client1">Не играет</span>
-      <div class="cpm-campus-prog" onclick="_cpmSeek('client1',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-client1" style="width:0%"></div></div>
-      <span class="cpm-campus-time" id="wamp-pos-client1">0:00</span>
-      <span class="cpm-campus-time" id="wamp-dur-client1"></span>
+    {% for m in music_machines %}
+    <div class="cpm-campus-row" id="wamp2-row-{{ m.key }}">
+      <span class="cpm-dot" id="live-{{ m.key }}">●</span>
+      <span class="cpm-dot off" id="stop-{{ m.key }}" style="display:none">●</span>
+      <span class="cpm-conn" id="conn-{{ m.key }}"><i class="bi bi-wifi"></i></span>
+      <span class="cpm-campus-name">{{ m.name }}</span>
+      <span class="cpm-campus-track" id="mini-name-{{ m.key }}">Не играет</span>
+      <div class="cpm-campus-prog" onclick="_cpmSeek('{{ m.key }}',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div></div>
+      <span class="cpm-campus-time" id="wamp-pos-{{ m.key }}">0:00</span>
+      <span class="cpm-campus-time" id="wamp-dur-{{ m.key }}"></span>
     </div>
-    <div class="cpm-campus-row" id="wamp2-row-client2">
-      <span class="cpm-dot" id="live-client2">●</span>
-      <span class="cpm-dot off" id="stop-client2" style="display:none">●</span>
-      <span class="cpm-conn" id="conn-client2"><i class="bi bi-wifi"></i></span>
-      <span class="cpm-campus-name">Client2</span>
-      <span class="cpm-campus-track" id="mini-name-client2">Не играет</span>
-      <div class="cpm-campus-prog" onclick="_cpmSeek('client2',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-client2" style="width:0%"></div></div>
-      <span class="cpm-campus-time" id="wamp-pos-client2">0:00</span>
-      <span class="cpm-campus-time" id="wamp-dur-client2"></span>
-    </div>
-    <div class="cpm-campus-row" id="wamp2-row-cgtk">
-      <span class="cpm-dot" id="live-cgtk">●</span>
-      <span class="cpm-dot off" id="stop-cgtk" style="display:none">●</span>
-      <span class="cpm-conn" id="conn-cgtk"><i class="bi bi-wifi"></i></span>
-      <span class="cpm-campus-name">City Garden</span>
-      <span class="cpm-campus-track" id="mini-name-cgtk">Не играет</span>
-      <div class="cpm-campus-prog" onclick="_cpmSeek('cgtk',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-cgtk" style="width:0%"></div></div>
-      <span class="cpm-campus-time" id="wamp-pos-cgtk">0:00</span>
-      <span class="cpm-campus-time" id="wamp-dur-cgtk"></span>
-    </div>
+    {% endfor %}
   </div>
 
   {% if perms.himn %}
@@ -306,7 +288,7 @@
   </div>
 
   <select id="campusSelect" style="display:none" onchange="setActiveCampus(this.value)">
-    <option value="client1">NAR</option><option value="client2">GËNC</option><option value="cgtk">CG</option>
+    {% for m in music_machines %}<option value="{{ m.key }}">{{ m.short }}</option>{% endfor %}
   </select>
 </div>
 

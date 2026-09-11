@@ -110,8 +110,19 @@ os.makedirs(ANNOUNCE_DIR, exist_ok=True)
 # ── Machines ──────────────────────────────────────
 MACHINES = []   # rebuilt by reload_machines() after DB init
 
+def _default_music_path(user, host):
+    """Best-guess remote Media music folder for a machine that never had
+    one explicitly set — matches the convention every machine added so far
+    has used (client1 is the one historical exception, hardcoded below)."""
+    return f'/home/{user or host}/Media'
+
 def reload_machines():
-    """Rebuild MACHINES from env vars + DB thin_clients table."""
+    """Rebuild MACHINES from env vars + DB thin_clients table. Every entry
+    now also carries is_audio_client (should it show up as a campus in the
+    player — tabs, status strip, EQ, special actions — or is it monitoring-
+    only infra like a Proxmox host) and music_path (remote Media folder
+    used for playback), so a machine added via /machines is fully wired
+    into the player without touching any other code."""
     global MACHINES
     machines = []
     for _i in range(1, 6):
@@ -120,9 +131,11 @@ def reload_machines():
         _m = os.environ.get(f'MACHINE{_i}_MAC', '')
         _u = os.environ.get(f'MACHINE{_i}_USER', CLIENT1_USER)
         _c = os.environ.get(f'MACHINE{_i}_COCKPIT', '')
+        _mp = os.environ.get(f'MACHINE{_i}_MUSIC_PATH', '') or _default_music_path(_u, _h)
         if _h and _n:
             machines.append({'id': f'm{_i}', 'host': _h, 'name': _n, 'mac': _m,
-                              'user': _u, 'cockpit_url': _c, 'from_db': False})
+                              'user': _u, 'cockpit_url': _c, 'from_db': False,
+                              'is_audio_client': True, 'music_path': _mp})
     if not any(m['host'] == CLIENT1_HOST for m in machines):
         machines.insert(0, {
             'id': 'client1', 'host': CLIENT1_HOST,
@@ -131,11 +144,14 @@ def reload_machines():
             'user': CLIENT1_USER,
             'cockpit_url': f'http://{CLIENT1_HOST}:1991',
             'from_db': False,
+            'is_audio_client': True,
+            'music_path': os.environ.get('CLIENT1_MUSIC_PATH', '/mnt/music/Media'),
         })
     try:
         with get_db() as c:
             rows = c.execute('SELECT * FROM thin_clients ORDER BY id').fetchall()
         for row in rows:
+            row_d = dict(row)
             machines.append({
                 'id':          f'db_{row["id"]}',
                 'host':        row['host'],
@@ -145,10 +161,57 @@ def reload_machines():
                 'cockpit_url': row['cockpit_url'],
                 'from_db':     True,
                 'db_id':       row['id'],
+                'is_audio_client': bool(row_d.get('is_audio_client', 1)),
+                'music_path': row_d.get('music_path') or _default_music_path(row['user'], row['host']),
             })
     except Exception:
         pass
     MACHINES = machines
+
+def music_machines():
+    """MACHINES entries that should appear as a campus in the player."""
+    return [m for m in MACHINES if m.get('is_audio_client')]
+
+def _campus_key(m):
+    """The short slug used everywhere (URLs, _activeCampus, api calls) to
+    refer to a campus — 'client1' for the main machine, otherwise its `user`
+    (the SSH login, already a short readable slug like 'client2'/'cgtk'/'sbtk'
+    by convention for every machine added so far)."""
+    return 'client1' if m['host'] == CLIENT1_HOST else (m.get('user') or m['id'])
+
+_CAMPUS_SHORT_LABELS = {'client1': 'NAR', 'client2': 'GNC', 'cgtk': 'CG'}
+
+def music_machines_json():
+    """[{key,name,short}, ...] for every player-visible campus — feeds the
+    campus switcher/status-strip/labels in the frontend, so a machine
+    added via /machines shows up everywhere without template changes.
+    `short` is a compact badge label (NAR/GNC/CG for the original three,
+    kept for familiarity; auto-derived from the key for anything newer)."""
+    out = []
+    for m in music_machines():
+        key = _campus_key(m)
+        short = _CAMPUS_SHORT_LABELS.get(key) or key[:4].upper()
+        out.append({'key': key, 'name': m['name'], 'short': short})
+    return out
+
+def _music_path_for(machine_key):
+    """Remote Media music folder for any machine key (id/user/name/host),
+    including client1 and anything added later via /machines — replaces the
+    old hardcoded _MEDIA_PATHS 3-entry dict."""
+    if not machine_key or machine_key == 'client1':
+        m = next((x for x in MACHINES if x['host'] == CLIENT1_HOST), None)
+        return (m and m.get('music_path')) or '/mnt/music/Media'
+    m = _resolve_machine(machine_key, strict=True)
+    if m and m.get('music_path'):
+        return m['music_path']
+    return _default_music_path(machine_key, machine_key)
+
+def _is_known_campus(machine_key):
+    """True for client1 or any machine _resolve_machine can find — the dynamic
+    replacement for `campus in _MEDIA_PATHS`."""
+    if machine_key == 'client1':
+        return True
+    return _resolve_machine(machine_key, strict=True) is not None
 
 PROMETHEUS_CONFIG = os.environ.get('PROMETHEUS_CONFIG', '')
 PROMETHEUS_RELOAD_URL = os.environ.get('PROMETHEUS_RELOAD_URL', '')
@@ -460,6 +523,14 @@ def init_db():
             cockpit_url TEXT NOT NULL DEFAULT "",
             created_at  TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
+        for col_sql in [
+            'ALTER TABLE thin_clients ADD COLUMN is_audio_client INTEGER NOT NULL DEFAULT 1',
+            'ALTER TABLE thin_clients ADD COLUMN music_path TEXT NOT NULL DEFAULT ""',
+        ]:
+            try:
+                c.execute(col_sql)
+            except Exception:
+                pass
         c.execute('''CREATE TABLE IF NOT EXISTS bug_reports (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             username    TEXT DEFAULT "anonymous",
@@ -652,6 +723,21 @@ def mpv_get_on(host, user, prop):
 def mpv_set(prop, val):
     return mpv_cmd({'command': ['set_property', prop, val]})
 
+def _mpv_cmd_to_campus(campus, cmd):
+    """Send an mpv IPC command (e.g. the EQ filter) to 'client1', one specific
+    campus key, or every player-visible campus ('both' — kept as the
+    historical name for 'all', not just the original two)."""
+    if campus in ('client1', 'both'):
+        mpv_cmd(cmd)
+    if campus == 'both':
+        for m in music_machines():
+            if m['host'] != CLIENT1_HOST:
+                mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+    elif campus != 'client1':
+        m = _resolve_machine(campus, strict=True)
+        if m:
+            mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+
 def mpv_set_all(prop, val):
     """Set mpv property on client1 (waited on, response depends on it) and all
     additional machines (fired in background threads — an offline campus
@@ -735,11 +821,14 @@ def api_machines_add():
     mac  = data.get('mac',  '').strip()
     user = data.get('user', CLIENT1_USER).strip() or CLIENT1_USER
     cockpit = data.get('cockpit_url', f'http://{host}:1991').strip()
+    is_audio = bool(data.get('is_audio_client', True))
+    music_path = data.get('music_path', '').strip() or _default_music_path(user, host)
     if not host or not name:
         return jsonify({'ok': False, 'error': 'IP-адрес и имя обязательны'})
     with get_db() as c:
-        c.execute('INSERT INTO thin_clients (host,name,mac,user,cockpit_url) VALUES (?,?,?,?,?)',
-                  (host, name, mac, user, cockpit))
+        c.execute('''INSERT INTO thin_clients (host,name,mac,user,cockpit_url,is_audio_client,music_path)
+                     VALUES (?,?,?,?,?,?,?)''',
+                  (host, name, mac, user, cockpit, int(is_audio), music_path))
     reload_machines()
     sync_prometheus_targets()
     log_action(current_user.username, 'machine_add', 'webui', f'{name} ({host})')
@@ -755,11 +844,14 @@ def api_machines_edit(db_id):
     mac  = data.get('mac',  '').strip()
     user = data.get('user', CLIENT1_USER).strip() or CLIENT1_USER
     cockpit = data.get('cockpit_url', '').strip()
+    is_audio = bool(data.get('is_audio_client', True))
+    music_path = data.get('music_path', '').strip() or _default_music_path(user, host)
     if not host or not name:
         return jsonify({'ok': False, 'error': 'IP-адрес и имя обязательны'})
     with get_db() as c:
-        c.execute('UPDATE thin_clients SET host=?,name=?,mac=?,user=?,cockpit_url=? WHERE id=?',
-                  (host, name, mac, user, cockpit, db_id))
+        c.execute('''UPDATE thin_clients SET host=?,name=?,mac=?,user=?,cockpit_url=?,
+                     is_audio_client=?,music_path=? WHERE id=?''',
+                  (host, name, mac, user, cockpit, int(is_audio), music_path, db_id))
     reload_machines()
     sync_prometheus_targets()
     log_action(current_user.username, 'machine_edit', 'webui', f'{name} ({host})')
@@ -1419,6 +1511,7 @@ def dashboard():
         fixed_folders=MUSIC_FOLDERS,
         perem_slots=[{'id': s, 'label': PEREM_SLOT_LABELS.get(s, s)} for s in PEREM_SLOTS],
         ui_skin=ui_skin, ui_accent=ui_accent,
+        music_machines=music_machines_json(),
     )
 
 @app.route('/tracks')
@@ -1686,13 +1779,11 @@ def _cron_is_paused(host, user):
 def api_cron_pause_get():
     if not has_perm('admin'):
         return jsonify({'ok': False, 'error': 'forbidden'}), 403
-    client2  = _client2_conn('client2')
-    cgtk = _client2_conn('cgtk')
     result = {'client1': _cron_is_paused(CLIENT1_HOST, CLIENT1_USER)}
-    if client2:
-        result['client2'] = _cron_is_paused(client2['host'], client2.get('user', 'client2'))
-    if cgtk:
-        result['cgtk'] = _cron_is_paused(cgtk['host'], cgtk.get('user', 'cgtk'))
+    for m in music_machines():
+        if m['host'] == CLIENT1_HOST:
+            continue
+        result[_campus_key(m)] = _cron_is_paused(m['host'], m.get('user', CLIENT1_USER))
     return jsonify({'ok': True, **result})
 
 @app.route('/api/cron/pause', methods=['POST'])
@@ -1704,15 +1795,18 @@ def api_cron_pause_set():
     machine = data.get('machine', 'both')
     paused  = bool(data.get('paused', True))
     cmd     = f'touch ~/{_CRON_PAUSE_FILE}' if paused else f'rm -f ~/{_CRON_PAUSE_FILE}'
-    client2     = _client2_conn('client2')
-    cgtk    = _client2_conn('cgtk')
     if machine in ('client1', 'both'):
         ssh_run_on(CLIENT1_HOST, CLIENT1_USER, cmd)
-    if machine in ('client2', 'both') and client2:
-        ssh_run_on(client2['host'], client2.get('user', 'client2'), cmd)
-    # 'both' now means "all registered campuses" (client1 + client2 + cgtk), not just two
-    if machine in ('cgtk', 'both') and cgtk:
-        ssh_run_on(cgtk['host'], cgtk.get('user', 'cgtk'), cmd)
+    # 'both' means "all registered audio campuses", not just client1+client2+cgtk —
+    # covers any thin client added later via /machines
+    if machine == 'both':
+        for m in music_machines():
+            if m['host'] != CLIENT1_HOST:
+                ssh_run_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+    elif machine != 'client1':
+        m = _resolve_machine(machine, strict=True)
+        if m:
+            ssh_run_on(m['host'], m.get('user', CLIENT1_USER), cmd)
     return jsonify({'ok': True, 'paused': paused, 'machine': machine})
 
 # ── API ───────────────────────────────────────────
@@ -2128,12 +2222,12 @@ def api_perem_trigger(campus, slot):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if slot not in PEREM_SLOTS:
         return jsonify({'ok': False, 'error': 'Неизвестный слот'}), 400
-    if campus not in _MEDIA_PATHS:
+    if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
     host, user = _machine_ssh(campus)
     if not host:
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
-    media = _MEDIA_PATHS.get(campus, '/home/client1/Media')
+    media = _music_path_for(campus)
     vol = _perem_vol(campus, slot)
     home = f'/home/{campus}'
     cmd = (f'FORCE_PLAY=1 MEDIA_ROOT="{media}" LOG_FILE="{home}/action.log" '
@@ -2158,7 +2252,8 @@ def api_perem_schedule_get():
     if not has_himn_perm():
         return jsonify({'ok': False, 'error': 'Нет прав'})
     out = {}
-    for campus in ('client1', 'client2', 'cgtk'):
+    for _m in music_machines():
+        campus = 'client1' if _m['host'] == CLIENT1_HOST else (_m.get('user') or _m['id'])
         host, user = _machine_ssh(campus)
         if not host:
             out[campus] = {'ok': False, 'error': 'не подключен'}
@@ -2186,7 +2281,7 @@ def api_perem_schedule_get():
 def api_perem_schedule_edit(campus, slot):
     if not has_himn_perm():
         return jsonify({'ok': False, 'error': 'Нет прав'})
-    if campus not in _MEDIA_PATHS:
+    if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
     if slot not in PEREM_SLOTS:
         return jsonify({'ok': False, 'error': 'Неизвестный слот'}), 400
@@ -2292,12 +2387,7 @@ def api_eq():
     while len(bands) < 10:
         bands.append(0.0)
     cmd = _eq_af_cmd(bands)
-    if campus in ('client1', 'both'):
-        mpv_cmd(cmd)
-    if campus in ('client2', 'both'):
-        client2m = _client2_conn()
-        if client2m:
-            mpv_cmd_on(client2m['host'], client2m.get('user', CLIENT1_USER), cmd)
+    _mpv_cmd_to_campus(campus, cmd)
     _eq_state['bands'] = bands
     log_action(current_user.username, 'eq', campus, str(bands))
     return jsonify({'ok': True, 'bands': bands})
@@ -2309,10 +2399,7 @@ def api_eq_reset():
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     campus = (request.get_json() or {}).get('campus', 'both')
     cmd = {'command': ['af', 'set', '']}
-    if campus in ('client1', 'both'): mpv_cmd(cmd)
-    if campus in ('client2', 'both'):
-        client2m = _client2_conn()
-        if client2m: mpv_cmd_on(client2m['host'], client2m.get('user', CLIENT1_USER), cmd)
+    _mpv_cmd_to_campus(campus, cmd)
     _eq_state['bands'] = [0.0] * 10
     return jsonify({'ok': True})
 
@@ -2398,7 +2485,7 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
     resolved (e.g. only 1 track, or file isn't on the campus machine yet)."""
     s = None
     try:
-        media_base = _MEDIA_PATHS.get(machine_id, '/mnt/music/Media')
+        media_base = _music_path_for(machine_id)
         relative    = os.path.relpath(local_path, MUSIC_DIR)
         remote_path = os.path.join(media_base, relative)
 
@@ -2594,7 +2681,7 @@ def api_play_all():
 
     # Scan the campus machine's local music library over SSH.
     # Network streaming is not possible (campus machine can't reach this server).
-    music_root = _MEDIA_PATHS.get(machine, '/mnt/music/Media')
+    music_root = _music_path_for(machine)
     find_cmd = (f"find {music_root} -type f \\("
                 f" -name '*.mp3' -o -name '*.flac'"
                 f" -o -name '*.ogg' -o -name '*.m4a' \\) 2>/dev/null | sort")
@@ -2602,9 +2689,9 @@ def api_play_all():
     if machine == 'client1':
         raw = ssh_run(find_cmd)
     else:
-        vm = next((x for x in MACHINES if x['host'] != CLIENT1_HOST), None)
+        vm = _resolve_machine(machine, strict=True)
         if not vm:
-            return jsonify({'ok': False, 'error': 'client2 не настроен'})
+            return jsonify({'ok': False, 'error': f'{machine} не настроен'})
         h, u = vm['host'], vm.get('user', CLIENT2_USER)
         raw = ssh_run_on(h, u, find_cmd)
 
@@ -3028,13 +3115,6 @@ import re as _re
 
 _file_meta_cache = {}   # (machine, folder, filename) -> {size, duration, format}
 
-# Пути к Media на каждой машине
-_MEDIA_PATHS = {
-    'client1': '/mnt/music/Media',
-    'client2':  '/home/client2/Media',
-    'cgtk': '/home/cgtk/Media',
-}
-
 def _machine_ssh(machine):
     """Вернуть (host, user) для машины. 'client1' — основная (env-переменные);
     'client2' сохраняет исторический lenient-фоллбек (первая не-client1 машина);
@@ -3054,7 +3134,7 @@ def _machine_ssh(machine):
 
 def _load_folder_meta(folder, machine='client1'):
     folder = str(folder)
-    media = _MEDIA_PATHS.get(machine, '/home/client1/Media')
+    media = _music_path_for(machine)
     host, user = _machine_ssh(machine)
     cmd = (
         f'for f in {media}/{folder}/*.mp3 {media}/{folder}/*.wav; do '

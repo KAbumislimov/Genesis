@@ -1316,9 +1316,9 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wamp2-camp-grp">
       <label class="wamp2-camp-lbl" for="campusSelect" data-i18n="wamp.campus_label">Кампус</label>
       <select class="wamp2-camp-select" id="campusSelect" onchange="setActiveCampus(this.value)">
-        <option value="client1">NAR</option>
-        <option value="client2">GËNC</option>
-        <option value="cgtk">CG</option>
+        {% for m in music_machines %}
+        <option value="{{ m.key }}">{{ m.short }}</option>
+        {% endfor %}
         <option value="all" data-i18n="wamp.campus_all">ВСЕ</option>
       </select>
     </div>
@@ -1465,43 +1465,21 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 
   <!-- ── Campus status rows ── -->
   <div class="wamp2-cs-strip">
-    <div class="wamp2-cs-row" id="wamp2-row-client1">
-      <span class="wamp2-cs-dot" id="live-client1" style="color:var(--wt-led)">▶</span>
-      <span class="wamp2-cs-dot" id="stop-client1" style="display:none;color:#f87060">■</span>
-      <span class="wamp2-cs-campus" style="color:var(--c-client1,#00e8c0)">NAR</span>
-      <span id="conn-client1" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
-      <span class="wamp2-cs-track" id="mini-name-client1">Не играет</span>
-      <span id="mute-badge" style="display:none;color:#f87060">🔇</span>
-      <div class="wamp2-cs-prog" onclick="wampSeek('client1',event,this)" title="Перемотка">
-        <div class="wamp2-cs-fill" id="prog-fill-client1" style="width:0%"></div>
+    {% for m in music_machines %}
+    <div class="wamp2-cs-row" id="wamp2-row-{{ m.key }}">
+      <span class="wamp2-cs-dot" id="live-{{ m.key }}" style="color:var(--wt-led)">▶</span>
+      <span class="wamp2-cs-dot" id="stop-{{ m.key }}" style="display:none;color:#f87060">■</span>
+      <span class="wamp2-cs-campus" style="color:var(--c-{{ m.key }},#8fb8ff)">{{ m.short }}</span>
+      <span id="conn-{{ m.key }}" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
+      <span class="wamp2-cs-track" id="mini-name-{{ m.key }}">Не играет</span>
+      {% if loop.first %}<span id="mute-badge" style="display:none;color:#f87060">🔇</span>{% endif %}
+      <div class="wamp2-cs-prog" onclick="wampSeek('{{ m.key }}',event,this)" title="Перемотка">
+        <div class="wamp2-cs-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div>
       </div>
-      <span class="wamp2-cs-time" id="wamp-pos-client1">0:00</span>
-      <span class="wamp2-cs-dur" id="wamp-dur-client1"></span>
+      <span class="wamp2-cs-time" id="wamp-pos-{{ m.key }}">0:00</span>
+      <span class="wamp2-cs-dur" id="wamp-dur-{{ m.key }}"></span>
     </div>
-    <div class="wamp2-cs-row" id="wamp2-row-client2">
-      <span class="wamp2-cs-dot" id="live-client2" style="color:var(--wt-led)">▶</span>
-      <span class="wamp2-cs-dot" id="stop-client2" style="display:none;color:#f87060">■</span>
-      <span class="wamp2-cs-campus" style="color:var(--c-client2,#c090ff)">GNC</span>
-      <span id="conn-client2" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
-      <span class="wamp2-cs-track" id="mini-name-client2">Не играет</span>
-      <div class="wamp2-cs-prog" onclick="wampSeek('client2',event,this)" title="Перемотка">
-        <div class="wamp2-cs-fill" id="prog-fill-client2" style="width:0%"></div>
-      </div>
-      <span class="wamp2-cs-time" id="wamp-pos-client2">0:00</span>
-      <span class="wamp2-cs-dur" id="wamp-dur-client2"></span>
-    </div>
-    <div class="wamp2-cs-row" id="wamp2-row-cgtk">
-      <span class="wamp2-cs-dot" id="live-cgtk" style="color:var(--wt-led)">▶</span>
-      <span class="wamp2-cs-dot" id="stop-cgtk" style="display:none;color:#f87060">■</span>
-      <span class="wamp2-cs-campus" style="color:var(--c-cgtk,#ff6ec7)">CG</span>
-      <span id="conn-cgtk" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
-      <span class="wamp2-cs-track" id="mini-name-cgtk">Не играет</span>
-      <div class="wamp2-cs-prog" onclick="wampSeek('cgtk',event,this)" title="Перемотка">
-        <div class="wamp2-cs-fill" id="prog-fill-cgtk" style="width:0%"></div>
-      </div>
-      <span class="wamp2-cs-time" id="wamp-pos-cgtk">0:00</span>
-      <span class="wamp2-cs-dur" id="wamp-dur-cgtk"></span>
-    </div>
+    {% endfor %}
   </div>
 
   <!-- ── Visualizer ── -->
@@ -1566,10 +1544,10 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <!-- BANDS tab -->
     <div id="eqtab-eq" class="wamp2-eqtab-body">
       <div class="wamp2-eq-campus-sel">
-        <button class="wamp2-eqcs active" id="eqcs-both" onclick="eqSetCampus('both')">Оба</button>
-        <button class="wamp2-eqcs" id="eqcs-client1" onclick="eqSetCampus('client1')">Client1</button>
-        <button class="wamp2-eqcs" id="eqcs-client2"  onclick="eqSetCampus('client2')">Client2</button>
-        <button class="wamp2-eqcs" id="eqcs-cgtk" onclick="eqSetCampus('cgtk')">City Garden</button>
+        <button class="wamp2-eqcs active" id="eqcs-both" onclick="eqSetCampus('both')">Все</button>
+        {% for m in music_machines %}
+        <button class="wamp2-eqcs" id="eqcs-{{ m.key }}" onclick="eqSetCampus('{{ m.key }}')">{{ m.name }}</button>
+        {% endfor %}
       </div>
       <div class="wamp2-eq-bands" id="eq-bands-row"></div>
       <div class="wamp2-eq-presets">
@@ -1904,6 +1882,15 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 <script src="/static/butterchurn.min.js"></script>
 <script src="/static/butterchurn-presets.min.js"></script>
 <script>
+// Every campus the player should show — tabs, status strip, EQ selector,
+// special-actions labels — all driven from this instead of a hardcoded
+// client1/client2/cgtk list, so adding a client on /machines shows up everywhere
+// without touching this file. Declared first — everything below relies on it.
+var MUSIC_MACHINES = {{ music_machines|tojson }};
+var CAMPUS_LABELS = {};
+MUSIC_MACHINES.forEach(function(m){ CAMPUS_LABELS[m.key] = m.name; });
+function campusLabel(key) { return CAMPUS_LABELS[key] || key; }
+
 // ──── AUDIO ENGINE — real mic spectrum analyzer ────────
 var AudioEngine = (function() {
   var _ctx = null, _analyser = null, _src = null, _stream = null;
@@ -2889,7 +2876,8 @@ function setDualColor(campus, hex) {
 }
 
 // ──── HUB STATE ───────────────────────────────────────
-var _hubStatus = { client1: {}, client2: {}, cgtk: {} };
+var _hubStatus = {};
+MUSIC_MACHINES.forEach(function(m){ _hubStatus[m.key] = {}; });
 var dualWave = makeVisualizer('hub-canvas');
 (function(){
   ['client1','client2','cgtk'].forEach(function(id){
@@ -3148,7 +3136,8 @@ function toggleEqPanel() { wampShowTab('eq'); }
 
 function eqSetCampus(c) {
   _eqCampus = c;
-  ['both','client1','client2','cgtk'].forEach(function(id){
+  var ids = ['both'].concat(MUSIC_MACHINES.map(function(m){ return m.key; }));
+  ids.forEach(function(id){
     var b = document.getElementById('eqcs-'+id);
     if(b) b.classList.toggle('active', id===c);
   });
@@ -3780,7 +3769,7 @@ function wampPlayAllOshhaya() {
   }).then(function(r){ return r.json(); }).then(function(d){
     if(btn) btn.textContent = '▶ ИГРАТЬ ВСЁ';
     if(d.ok) {
-      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[_activeCampus]||_activeCampus));
+      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + campusLabel(_activeCampus));
       // Switch playlist view to Общая folder
       var tab = document.querySelector('.wamp2-fol-tab[data-folder="Общая"]');
       if(tab) wampFolderTab(tab, 'Общая');
@@ -3845,7 +3834,7 @@ function setMuteUI(muted) {
 }
 
 function stopCampus(campus) {
-  var labels = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
+  var labels = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
   fetch('/api/stop/' + campus, {method:'POST'})
     .then(function(r){ return r.json(); })
     .then(function(d){
@@ -3908,212 +3897,92 @@ function setIdleNctk() {
   if (dualWave) dualWave.setActiveL(false);
 }
 
-function pollStatus() {
-  fetch('/api/status').then(function(r){return r.json();}).then(function(d) {
-    _hubStatus.client1 = d;
-    var conn = document.getElementById('conn-client1');
-    var live = document.getElementById('live-client1');
-    var stop = document.getElementById('stop-client1');
-    var dot  = document.getElementById('htab-dot-client1');
-    var hconn= document.getElementById('htab-conn-client1');
-    var mn   = document.getElementById('mini-name-client1');
+function pollMachine(key, idx) {
+  var conn = document.getElementById('conn-'+key);
+  if (!conn) return;
+  fetch('/api/status?machine='+encodeURIComponent(key),
+    {signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      _hubStatus[key] = d;
+      var live = document.getElementById('live-'+key);
+      var stop = document.getElementById('stop-'+key);
+      var mn   = document.getElementById('mini-name-'+key);
+      if (d.error && !d.playing) {
+        conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
+        if (live) live.style.display = 'none';
+        if (stop) stop.style.display = '';
+        if (mn)   mn.textContent = t('np.idle');
+        if (idx===0 && dualWave) dualWave.setActiveL(false);
+        if (idx===1 && dualWave) dualWave.setActiveR(false);
+        return;
+      }
+      conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
+      if (d.playing) {
+        if (live) live.style.display = '';
+        if (stop) stop.style.display = 'none';
+        if (mn)   mn.textContent = d.track || '—';
+      } else if (d.paused) {
+        if (live) live.style.display = 'none';
+        if (stop) stop.style.display = '';
+        if (mn)   mn.textContent = d.track || t('np.paused');
+      } else {
+        if (live) live.style.display = 'none';
+        if (stop) stop.style.display = '';
+        if (mn)   mn.textContent = t('np.idle');
+      }
+      if (idx===0 && dualWave) dualWave.setActiveL(d.playing || false);
+      if (idx===1 && dualWave) dualWave.setActiveR(d.playing || false);
 
-    if (conn) { conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>'; }
-    if (hconn){ hconn.className='htab-conn'; hconn.innerHTML='<i class="bi bi-wifi"></i>'; }
+      var st = _progState[key];
+      if (st) {
+        st.playing = d.playing || false;
+        st.paused  = d.paused  || false;
+        if (d.position !== undefined && d.position !== null) { st.pos = d.position; st.ts = Date.now(); }
+        if (d.duration !== undefined && d.duration !== null) st.dur = d.duration;
+        if (!d.playing) { st.pos = 0; st.dur = 0; }
+        _updateProgress(key);
+      }
 
-    if (d.playing) {
-      if (live) live.style.display = '';
-      if (stop) stop.style.display = 'none';
-      if (dot)  dot.className = 'htab-dot live';
-      if (mn)   mn.textContent = d.track || '—';
-    } else if (d.paused) {
-      if (live) live.style.display = 'none';
-      if (stop) stop.style.display = '';
-      if (dot)  dot.className = 'htab-dot';
-      if (mn)   mn.textContent = d.track || t('np.paused');
-    } else {
-      if (live) live.style.display = 'none';
-      if (stop) stop.style.display = '';
-      if (dot)  dot.className = 'htab-dot';
-      if (mn)   mn.textContent = t('np.idle');
-    }
-    if (dualWave) dualWave.setActiveL(d.playing || false);
-
-    // Update progress bar
-    _progState.client1.playing = d.playing || false;
-    _progState.client1.paused  = d.paused  || false;
-    if (d.position !== undefined && d.position !== null) {
-      _progState.client1.pos = d.position;
-      _progState.client1.ts  = Date.now();
-    }
-    if (d.duration !== undefined && d.duration !== null) {
-      _progState.client1.dur = d.duration;
-    }
-    if (!d.playing) { _progState.client1.pos=0; _progState.client1.dur=0; }
-    _updateProgress('client1');
-
-    if (d.volume !== null && d.volume !== undefined) {
-      _knob.setVal(d.volume, true);
-    }
-    if (d.muted !== undefined) setMuteUI(d.muted);
-  }).catch(function() {
-    var conn = document.getElementById('conn-client1');
-    if (conn) { conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-    var hconn= document.getElementById('htab-conn-client1');
-    if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-    var liveEl=document.getElementById('live-client1');
-    var stopEl=document.getElementById('stop-client1');
-    var dotEl=document.getElementById('htab-dot-client1');
-    var mn=document.getElementById('mini-name-client1');
-    if (liveEl) liveEl.style.display='none';
-    if (stopEl) stopEl.style.display='';
-    if (dotEl)  dotEl.className='htab-dot';
-    if (mn)     mn.textContent=t('np.idle');
-  });
+      if (idx === 0) {
+        if (d.volume !== null && d.volume !== undefined) _knob.setVal(d.volume, true);
+        if (d.muted !== undefined) setMuteUI(d.muted);
+      }
+    }).catch(function() {
+      conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
+      var liveEl = document.getElementById('live-'+key);
+      var stopEl = document.getElementById('stop-'+key);
+      var mn     = document.getElementById('mini-name-'+key);
+      if (liveEl) liveEl.style.display = 'none';
+      if (stopEl) stopEl.style.display = '';
+      if (mn) mn.textContent = t('np.idle');
+    });
 }
+// Back-compat shims — several older call sites (doStopAll, perem schedule
+// edits, etc.) still call these three names directly for an immediate
+// refresh right after an action; they just forward to the generic poller
+// now. 4th+ campuses beyond these three still catch up on the next regular
+// interval tick, which is an acceptable gap for an immediate-refresh nicety.
+function pollStatus() { if (MUSIC_MACHINES[0]) pollMachine(MUSIC_MACHINES[0].key, 0); }
+function pollVm1()    { if (MUSIC_MACHINES[1]) pollMachine(MUSIC_MACHINES[1].key, 1); }
+function pollCgtk()   { if (MUSIC_MACHINES[2]) pollMachine(MUSIC_MACHINES[2].key, 2); }
+// client1 (index 0) polls fast and alone drives the shared volume knob/mute UI;
+// every other campus polls slower, and only for admins — same cadence and
+// gating the old pollStatus/pollVm1/pollCgtk trio had, just generalized to
+// however many campuses MUSIC_MACHINES actually has.
 _knob.init();
-pollStatus();
-setInterval(pollStatus, 5000);
-
-// ──── STATUS POLL — CLIENT2 ───────────────────────────────
-function pollVm1() {
-  var conn = document.getElementById('conn-client2');
-  if (!conn) return;
-  fetch('/api/status?machine=client2', {signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined})
-    .then(function(r){ return r.json(); })
-    .then(function(d) {
-      _hubStatus.client2 = d;
-      var live  = document.getElementById('live-client2');
-      var stop  = document.getElementById('stop-client2');
-      var dot   = document.getElementById('htab-dot-client2');
-      var hconn = document.getElementById('htab-conn-client2');
-      var mn    = document.getElementById('mini-name-client2');
-      if (d.error && !d.playing) {
-        conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
-        if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (dot)  dot.className = 'htab-dot';
-        if (mn)   mn.textContent = t('np.idle');
-        if (dualWave) dualWave.setActiveR(false);
-        return;
-      }
-      conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
-      if (hconn){ hconn.className='htab-conn'; hconn.innerHTML='<i class="bi bi-wifi"></i>'; }
-      if (d.playing) {
-        if (live) live.style.display = '';
-        if (stop) stop.style.display = 'none';
-        if (dot)  dot.className = 'htab-dot client2live';
-        if (mn)   mn.textContent = d.track || '—';
-      } else if (d.paused) {
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (dot)  dot.className = 'htab-dot';
-        if (mn)   mn.textContent = d.track || t('np.paused');
-      } else {
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (dot)  dot.className = 'htab-dot';
-        if (mn)   mn.textContent = t('np.idle');
-      }
-      if (dualWave) dualWave.setActiveR(d.playing || false);
-      // Update client2 progress bar
-      _progState.client2.playing = d.playing || false;
-      _progState.client2.paused  = d.paused  || false;
-      if (d.position !== undefined && d.position !== null) {
-        _progState.client2.pos = d.position; _progState.client2.ts = Date.now();
-      }
-      if (d.duration !== undefined && d.duration !== null) _progState.client2.dur = d.duration;
-      if (!d.playing) { _progState.client2.pos=0; _progState.client2.dur=0; }
-      _updateProgress('client2');
-    }).catch(function() {
-      if (conn) { conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-      var hconn=document.getElementById('htab-conn-client2');
-      if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-      var stopEl=document.getElementById('stop-client2');
-      var liveEl=document.getElementById('live-client2');
-      var dotEl=document.getElementById('htab-dot-client2');
-      var mn=document.getElementById('mini-name-client2');
-      if (liveEl) liveEl.style.display='none';
-      if (stopEl) stopEl.style.display='';
-      if (dotEl)  dotEl.className='htab-dot';
-      if (mn) mn.textContent = t('np.idle');
-    });
-}
-
-// ──── STATUS POLL — CGTK (City Garden) ─────────────────
-function pollCgtk() {
-  var conn = document.getElementById('conn-cgtk');
-  if (!conn) return;
-  fetch('/api/status?machine=cgtk', {signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined})
-    .then(function(r){ return r.json(); })
-    .then(function(d) {
-      _hubStatus.cgtk = d;
-      var live  = document.getElementById('live-cgtk');
-      var stop  = document.getElementById('stop-cgtk');
-      var dot   = document.getElementById('htab-dot-cgtk');
-      var hconn = document.getElementById('htab-conn-cgtk');
-      var mn    = document.getElementById('mini-name-cgtk');
-      if (d.error && !d.playing) {
-        conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
-        if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (dot)  dot.className = 'htab-dot';
-        if (mn)   mn.textContent = t('np.idle');
-        return;
-      }
-      conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
-      if (hconn){ hconn.className='htab-conn'; hconn.innerHTML='<i class="bi bi-wifi"></i>'; }
-      if (d.playing) {
-        if (live) live.style.display = '';
-        if (stop) stop.style.display = 'none';
-        if (dot)  dot.className = 'htab-dot cgtklive';
-        if (mn)   mn.textContent = d.track || '—';
-      } else if (d.paused) {
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (dot)  dot.className = 'htab-dot';
-        if (mn)   mn.textContent = d.track || t('np.paused');
-      } else {
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (dot)  dot.className = 'htab-dot';
-        if (mn)   mn.textContent = t('np.idle');
-      }
-      // Update cgtk progress bar
-      _progState.cgtk.playing = d.playing || false;
-      _progState.cgtk.paused  = d.paused  || false;
-      if (d.position !== undefined && d.position !== null) {
-        _progState.cgtk.pos = d.position; _progState.cgtk.ts = Date.now();
-      }
-      if (d.duration !== undefined && d.duration !== null) _progState.cgtk.dur = d.duration;
-      if (!d.playing) { _progState.cgtk.pos=0; _progState.cgtk.dur=0; }
-      _updateProgress('cgtk');
-    }).catch(function() {
-      if (conn) { conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-      var hconn=document.getElementById('htab-conn-cgtk');
-      if (hconn){ hconn.className='htab-conn err'; hconn.innerHTML='<i class="bi bi-wifi-off"></i>'; }
-      var stopEl=document.getElementById('stop-cgtk');
-      var liveEl=document.getElementById('live-cgtk');
-      var dotEl=document.getElementById('htab-dot-cgtk');
-      var mn=document.getElementById('mini-name-cgtk');
-      if (liveEl) liveEl.style.display='none';
-      if (stopEl) stopEl.style.display='';
-      if (dotEl)  dotEl.className='htab-dot';
-      if (mn) mn.textContent = t('np.idle');
-    });
-}
+if (MUSIC_MACHINES[0]) pollMachine(MUSIC_MACHINES[0].key, 0);
+setInterval(function(){ if (MUSIC_MACHINES[0]) pollMachine(MUSIC_MACHINES[0].key, 0); }, 5000);
 {% if current_user.role == 'admin' %}
-pollVm1();
-setInterval(pollVm1, 15000);
-pollCgtk();
-setInterval(pollCgtk, 15000);
+MUSIC_MACHINES.slice(1).forEach(function(m, i){ pollMachine(m.key, i+1); });
+setInterval(function(){
+  MUSIC_MACHINES.slice(1).forEach(function(m, i){ pollMachine(m.key, i+1); });
+}, 15000);
 {% endif %}
 
 // ──── HIMN ────────────────────────────────────────────
 function _doPlayHimn(machine) {
-  var labels = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
+  var labels = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
   toast('⏳ ' + t('toast.himn_start') + ' → ' + (labels[machine] || machine));
   fetch('/api/himn/' + machine, {method:'POST'})
     .then(function(r){ return r.json(); })
@@ -4127,7 +3996,7 @@ function _doPlayHimn(machine) {
     }).catch(function(){ toast('⚠️ нет связи'); });
 }
 function _doPlayHimnActive() {
-  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[_activeCampus] || _activeCampus) + '»';
+  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + campusLabel(_activeCampus) + '»';
   if (!confirm('🎖️ Гимн будет включён на ' + label + '.\n\nПродолжить?')) return;
   if (_activeCampus === 'all') {
     _doPlayHimn('client1');
@@ -4139,7 +4008,7 @@ function _doPlayHimnActive() {
 }
 
 // ──── МИНУТА МОЛЧАНИЯ ────
-var _MINUTA_LABELS = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
+var _MINUTA_LABELS = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
 function _doPlayMinuta(campus, btn) {
   if (btn) btn.classList.add('busy');
   toast('🕯 ' + t('wamp.minuta') + ' → ' + (_MINUTA_LABELS[campus] || campus));
@@ -4165,7 +4034,7 @@ function _doPlayMinutaActive(btn) {
 }
 
 // ──── ТРЕВОГА ────
-var _ALARM_LABELS = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
+var _ALARM_LABELS = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
 (function _loadAlarmSounds(){
   var sel = document.getElementById('alarmSoundSelect');
   if (!sel) return;
@@ -4212,7 +4081,7 @@ function _doPlayAlarmActive(btn) {
 }
 
 // ──── PEREM QUICK-ACCESS (dashboard "⚡ быстрый запуск") ────
-var _PEREM_LABELS = {client1:'Client1', client2:'Client2', cgtk:'City Garden'};
+var _PEREM_LABELS = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
 function _doPlayPerem(campus, slot, btn) {
   if (btn) btn.classList.add('busy');
   fetch('/api/perem/' + campus + '/' + slot, {method:'POST'})
@@ -4296,7 +4165,7 @@ function _savePeremEdit(campus, slot, btn) {
           _peremSchedule[campus].slots[slot] = d.new;
         }
         if (status) status.textContent = '✅';
-        toast('✅ ' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[campus]||campus) + ' — расписание обновлено');
+        toast('✅ ' + campusLabel(campus) + ' — расписание обновлено');
         setTimeout(function(){ if (status) status.textContent = ''; }, 3000);
       } else {
         if (status) status.textContent = '⚠️';
@@ -4427,7 +4296,7 @@ function _cronToggleActive() {
     _cronToggleAll();
     return;
   }
-  var label = 'кампусе «' + ({client1:'Client1',client2:'Client2',cgtk:'City Garden'}[_activeCampus] || _activeCampus) + '»';
+  var label = 'кампусе «' + campusLabel(_activeCampus) + '»';
   if (_cronState[_activeCampus]) { cronResume(_activeCampus); return; }
   if (!confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ' + label + '.\nНе забудь включить обратно.\n\nПродолжить?')) return;
   cronToggle(_activeCampus);
@@ -4745,7 +4614,8 @@ function closeFP(panelId, btnId) {
 })();
 
 // ──── PROGRESS BAR + POSITION TRACKING ────────────────
-var _progState={client1:{pos:0,dur:0,playing:false,paused:false,ts:0},client2:{pos:0,dur:0,playing:false,paused:false,ts:0},cgtk:{pos:0,dur:0,playing:false,paused:false,ts:0}};
+var _progState={};
+MUSIC_MACHINES.forEach(function(m){ _progState[m.key]={pos:0,dur:0,playing:false,paused:false,ts:0}; });
 
 function _fmtTime(s){
   s=Math.max(0,Math.round(s));
