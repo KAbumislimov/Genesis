@@ -396,13 +396,20 @@ function escHtml(s) {
 }
 
 // ── Track sync ──────────────────────────────────
-// client1's local library is the master; client2/cgtk each keep their own copy on
-// their own machine (no network streaming), so each is compared against
-// client1 independently — add a row here to support a future spoke campus.
-const SYNC_CAMPUSES = [
-  { key:'client2',  label:'Client2',     icon:'bi-pc-display', color:'#bc82ff', bg:'rgba(188,130,255,.06)', border:'rgba(188,130,255,.2)' },
-  { key:'cgtk', label:'City Garden', icon:'bi-flower1',    color:'#ff6ec7', bg:'rgba(255,110,199,.06)', border:'rgba(255,110,199,.2)' },
+// client1's local library is the master; every other audio campus keeps its own
+// copy on its own machine (no network streaming), so each is compared against
+// client1 independently. The list itself comes from the server (music_machines,
+// minus client1) so a client added/removed via /machines shows up here too —
+// only the icon/color cycle is picked client-side.
+const _SYNC_PALETTE = [
+  { icon:'bi-pc-display',  color:'#bc82ff', bg:'rgba(188,130,255,.06)', border:'rgba(188,130,255,.2)' },
+  { icon:'bi-flower1',     color:'#ff6ec7', bg:'rgba(255,110,199,.06)', border:'rgba(255,110,199,.2)' },
+  { icon:'bi-building',    color:'#58a6ff', bg:'rgba(88,166,255,.06)',  border:'rgba(88,166,255,.2)' },
+  { icon:'bi-hdd-network', color:'#3fb950', bg:'rgba(63,185,80,.06)',   border:'rgba(63,185,80,.2)' },
 ];
+const SYNC_CAMPUSES = ({{ sync_machines|tojson }}).map((m, i) => ({
+  key: m.key, label: m.name, ..._SYNC_PALETTE[i % _SYNC_PALETTE.length]
+}));
 
 let _syncData = null; // last /api/tracks/sync/status response
 

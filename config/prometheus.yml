@@ -49,6 +49,10 @@ scrape_configs:
         labels:
           nodename: wctk
           host_ip: 10.103.0.41
+      - targets: ['10.10.4.250:9100']
+        labels:
+          nodename: client1
+          host_ip: 10.10.4.250
     relabel_configs:
       - source_labels: [nodename]
         regex: (.+)

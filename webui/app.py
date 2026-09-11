@@ -180,6 +180,12 @@ def _campus_key(m):
     return 'client1' if m['host'] == CLIENT1_HOST else (m.get('user') or m['id'])
 
 _CAMPUS_SHORT_LABELS = {'client1': 'NAR', 'client2': 'GNC', 'cgtk': 'CG'}
+# The original three machines' `name` field is whatever MACHINE1_NAME/etc
+# happens to be set to in .env (e.g. "client2 Campus" — a generic ops label, not
+# what staff actually call the place) — everywhere in the UI has always shown
+# the real campus name instead, so keep that override here rather than
+# leaking the env label once name display started coming from this function.
+_CAMPUS_DISPLAY_OVERRIDE = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
 
 def music_machines_json():
     """[{key,name,short}, ...] for every player-visible campus — feeds the
@@ -191,7 +197,8 @@ def music_machines_json():
     for m in music_machines():
         key = _campus_key(m)
         short = _CAMPUS_SHORT_LABELS.get(key) or key[:4].upper()
-        out.append({'key': key, 'name': m['name'], 'short': short})
+        name = _CAMPUS_DISPLAY_OVERRIDE.get(key) or m['name']
+        out.append({'key': key, 'name': name, 'short': short})
     return out
 
 def _music_path_for(machine_key):
@@ -1054,7 +1061,6 @@ def _perem_vol(campus, slot):
 # напрямую в реальный crontab машины (не в декоративный SCHEDULE), чтобы
 # изменение реально что-то меняло, а не только отображалось в UI.
 _HHMM_RE = re.compile(r'^([01]?\d|2[0-3]):([0-5]\d)$')
-_CAMPUS_LABEL_RU = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
 
 def _crontab_find_slot_lines(lines, slot):
     """Индексы (start_idx, stop_idx) для строк слота в списке строк crontab."""
@@ -1934,12 +1940,10 @@ def api_pause():
     if machine == 'client1':
         r = mpv_cmd(cmd)
     else:
-        client2 = next((m for m in MACHINES if m['host'] != CLIENT1_HOST), None)
-        host = client2['host'] if client2 else CLIENT2_HOST
-        user = client2.get('user', CLIENT2_USER) if client2 else CLIENT2_USER
-        if not host:
-            return jsonify({'ok': False, 'error': 'client2 не настроен'})
-        r = mpv_cmd_on(host, user, cmd)
+        m = _resolve_machine(machine, strict=True)
+        if not m:
+            return jsonify({'ok': False, 'error': 'машина не настроена'})
+        r = mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
     log_action(current_user.username, 'pause', machine)
     return jsonify(r if isinstance(r, dict) else {'ok': True})
 
@@ -1949,7 +1953,7 @@ def api_stop():
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
-    for m in MACHINES:
+    for m in music_machines():
         if m['host'] != CLIENT1_HOST:
             threading.Thread(
                 target=_mpv_stop_on, args=(m['host'], m.get('user', CLIENT1_USER)), daemon=True
@@ -1963,37 +1967,19 @@ def api_stop():
     )
     return jsonify({'ok': True})
 
-@app.route('/api/stop/client1', methods=['POST'])
+@app.route('/api/stop/<machine>', methods=['POST'])
 @login_required
-def api_stop_client1():
+def api_stop_machine(machine):
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
-    log_action(current_user.username, 'stop', 'client1')
-    return jsonify({'ok': True})
-
-@app.route('/api/stop/client2', methods=['POST'])
-@login_required
-def api_stop_client2():
-    if not has_perm('stop'):
-        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    client2 = next((m for m in MACHINES if m['host'] != CLIENT1_HOST), None)
-    host = client2['host'] if client2 else CLIENT2_HOST
-    user = client2.get('user', CLIENT2_USER) if client2 else CLIENT2_USER
-    if host:
-        _mpv_stop_on(host, user)
-    log_action(current_user.username, 'stop', 'client2')
-    return jsonify({'ok': True})
-
-@app.route('/api/stop/cgtk', methods=['POST'])
-@login_required
-def api_stop_cgtk():
-    if not has_perm('stop'):
-        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    cgtk = _client2_conn('cgtk')
-    if cgtk:
-        _mpv_stop_on(cgtk['host'], cgtk.get('user', 'cgtk'))
-    log_action(current_user.username, 'stop', 'cgtk')
+    if machine == 'client1':
+        _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
+    else:
+        m = _resolve_machine(machine, strict=True)
+        if not m:
+            return jsonify({'ok': False, 'error': 'машина не настроена'})
+        _mpv_stop_on(m['host'], m.get('user', CLIENT1_USER))
+    log_action(current_user.username, 'stop', machine)
     return jsonify({'ok': True})
 
 @app.route('/api/seek', methods=['POST'])
@@ -2017,6 +2003,16 @@ def api_seek():
 HIMN_CLIENT1 = '/mnt/music/Media/1/HIMN.mp3'
 HIMN_CLIENT2  = '/home/client2/Media/1/himn.mp3'
 HIMN_CGTK = '/home/cgtk/Media/1/himn.mp3'
+# Any other campus (including ones added later via /machines): same
+# convention as client2/cgtk — himn.mp3 inside folder "1" of its Media root.
+def _himn_path_for(campus):
+    if campus == 'client1':
+        return HIMN_CLIENT1
+    if campus == 'client2':
+        return HIMN_CLIENT2
+    if campus == 'cgtk':
+        return HIMN_CGTK
+    return _music_path_for(campus).rstrip('/') + '/1/himn.mp3'
 
 def _play_himn(host, user, filepath, vol):
     r = ssh_run_on(host, user,
@@ -2054,78 +2050,54 @@ def _log_himn_play(username, machine, filename):
         c.execute('INSERT INTO play_log (username, track_name, played_at) VALUES (?,?,?)',
                   (username, f'[гимн] {filename}', ts))
 
-@app.route('/api/himn/client1', methods=['POST'])
+@app.route('/api/himn/<campus>', methods=['POST'])
 @login_required
-def api_himn_client1():
+def api_himn(campus):
     if not has_himn_perm():
         return jsonify({'ok': False, 'error': 'Нет прав на гимн'})
-    r = _play_himn(CLIENT1_HOST, CLIENT1_USER, HIMN_CLIENT1, 160)
-    if r['ok']:
-        _log_himn_play(current_user.username, 'client1', os.path.basename(HIMN_CLIENT1))
-        tg_notify(
-            f'🎼 <b>Государственный гимн</b>\n'
-            f'🏫 Кампус: <b>Client1</b>\n'
-            f'👤 Запустил: <b>{current_user.username}</b>\n'
-            f'🕐 {_tg_fmt_time()}',
-            event_type='himn'
-        )
-    return jsonify({'ok': r['ok'], 'error': r.get('error')})
-
-@app.route('/api/himn/client2', methods=['POST'])
-@login_required
-def api_himn_client2():
-    if not has_himn_perm():
-        return jsonify({'ok': False, 'error': 'Нет прав на гимн'})
-    client2 = _client2_conn()
-    host = client2['host'] if client2 else CLIENT2_HOST
-    user = client2.get('user', CLIENT2_USER) if client2 else CLIENT2_USER
-    r = _play_himn(host, user, HIMN_CLIENT2, 150)
-    if r['ok']:
-        _log_himn_play(current_user.username, 'client2', os.path.basename(HIMN_CLIENT2))
-        tg_notify(
-            f'🎼 <b>Государственный гимн</b>\n'
-            f'🏫 Кампус: <b>Client2</b>\n'
-            f'👤 Запустил: <b>{current_user.username}</b>\n'
-            f'🕐 {_tg_fmt_time()}',
-            event_type='himn'
-        )
-    return jsonify({'ok': r['ok'], 'error': r.get('error')})
-
-@app.route('/api/himn/cgtk', methods=['POST'])
-@login_required
-def api_himn_cgtk():
-    if not has_himn_perm():
-        return jsonify({'ok': False, 'error': 'Нет прав на гимн'})
-    cgtk = _client2_conn('cgtk')
-    host = cgtk['host'] if cgtk else None
-    user = cgtk.get('user', 'cgtk') if cgtk else 'cgtk'
+    if not _is_known_campus(campus):
+        return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
+    host, user = _machine_ssh(campus)
     if not host:
-        return jsonify({'ok': False, 'error': 'City Garden не подключен'})
-    r = _play_himn(host, user, HIMN_CGTK, 150)
+        return jsonify({'ok': False, 'error': f'{campus} не подключен'})
+    vol = 160 if campus == 'client1' else 150
+    filepath = _himn_path_for(campus)
+    r = _play_himn(host, user, filepath, vol)
     if r['ok']:
-        _log_himn_play(current_user.username, 'cgtk', os.path.basename(HIMN_CGTK))
+        _log_himn_play(current_user.username, campus, os.path.basename(filepath))
         tg_notify(
             f'🎼 <b>Государственный гимн</b>\n'
-            f'🏫 Кампус: <b>City Garden</b>\n'
+            f'🏫 Кампус: <b>{_MINUTA_LABEL.get(campus, campus)}</b>\n'
             f'👤 Запустил: <b>{current_user.username}</b>\n'
             f'🕐 {_tg_fmt_time()}',
             event_type='himn'
         )
     return jsonify({'ok': r['ok'], 'error': r.get('error')})
 
-_MINUTA_LABEL = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
+_MINUTA_LABEL_FALLBACK = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
+class _CampusLabelDict(dict):
+    """Same .get(campus, campus) call sites as before, but resolves any
+    campus added later via /machines to its real display name instead of
+    falling back to the raw slug."""
+    def get(self, campus, default=None):
+        if campus in _MINUTA_LABEL_FALLBACK:
+            return _MINUTA_LABEL_FALLBACK[campus]
+        m = _resolve_machine(campus, strict=True)
+        return (m and m.get('name')) or default
+_MINUTA_LABEL = _CampusLabelDict()
 
 @app.route('/api/minuta/<campus>', methods=['POST'])
 @login_required
 def api_minuta(campus):
     if not has_himn_perm():
         return jsonify({'ok': False, 'error': 'Нет прав'})
-    if campus not in MINUTA_PATHS:
+    if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
     host, user = _machine_ssh(campus)
     if not host:
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
-    r = _play_via_ipc(host, user, MINUTA_PATHS[campus], MINUTA_VOL)
+    filepath = MINUTA_PATHS.get(campus, f'/home/{user}/special/minuta_molchaniya.mp3')
+    r = _play_via_ipc(host, user, filepath, MINUTA_VOL)
     if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
         log_action(current_user.username, 'minuta', campus, 'Минута молчания')
         tg_notify(
@@ -2182,7 +2154,7 @@ def api_alarm_sounds():
 def api_alarm(campus):
     if not has_himn_perm():
         return jsonify({'ok': False, 'error': 'Нет прав'})
-    if campus not in ('client1', 'client2', 'cgtk'):
+    if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
     sounds = _list_alarm_sounds()
     if not sounds:
@@ -2334,7 +2306,7 @@ def api_perem_schedule_edit(campus, slot):
         pass
 
     label = PEREM_SLOT_LABELS.get(slot, slot)
-    campus_label = _CAMPUS_LABEL_RU.get(campus, campus)
+    campus_label = _MINUTA_LABEL.get(campus, campus)
     detail = (f'{label} [{campus}]: время {old_start}→{new_start}'
               + (f', стоп {old_stop}→{new_stop}' if old_stop else '')
               + f', громкость {old_vol}→{new_vol}')
@@ -2409,18 +2381,23 @@ def api_eq_state():
     return jsonify(_eq_state)
 
 # ── Audio FFT polling (background thread → SSE) ──────────────────────────────
-_audio_cache = {'client1': None, 'client2': None}
+_audio_cache = {'client1': None}
 _audio_lock  = threading.Lock()
 _audio_thread_started = False
 
 def _audio_poll_loop():
-    """Read /tmp/campus-audio-level.json via SSH exec every 100ms (faster than SFTP)."""
+    """Read /tmp/campus-audio-level.json via SSH exec every 100ms (faster than SFTP).
+    Target list is rebuilt from music_machines() every cycle so a client added or
+    removed via /machines starts/stops getting polled without a restart — the
+    analyzer script itself still needs to be deployed on the machine, same as
+    any brand-new physical campus."""
     conns = {}
     while True:
-        targets = [
-            ('client1', CLIENT1_HOST, CLIENT1_USER),
-            ('client2',  CLIENT2_HOST,  CLIENT2_USER),
-        ]
+        targets = [('client1', CLIENT1_HOST, CLIENT1_USER)]
+        for _m in music_machines():
+            if _m['host'] != CLIENT1_HOST:
+                targets.append((_campus_key(_m), _m['host'], _m.get('user', CLIENT1_USER)))
+        live_ids = {cid for cid, _, _ in targets}
         for cid, host, user in targets:
             if not host:
                 continue
@@ -2446,6 +2423,14 @@ def _audio_poll_loop():
                 with _audio_lock:
                     _audio_cache[cid] = None
                 conns.pop(cid, None)
+        for stale in [cid for cid in conns if cid not in live_ids]:
+            try:
+                conns[stale].close()
+            except Exception:
+                pass
+            conns.pop(stale, None)
+            with _audio_lock:
+                _audio_cache.pop(stale, None)
         time.sleep(0.1)
 
 def _start_audio_poll_thread():
@@ -2640,14 +2625,7 @@ def api_play_radio():
         return jsonify({'ok': False, 'error': f'Неизвестная станция: {station}'})
 
     cmd = {'command': ['loadfile', url, 'replace']}
-    if campus in ('client1', 'both'):
-        mpv_cmd(cmd)
-    if campus in ('client2', 'both'):
-        for m in MACHINES:
-            if m['host'] != CLIENT1_HOST:
-                threading.Thread(
-                    target=mpv_cmd_on, args=(m['host'], m.get('user', CLIENT1_USER), cmd), daemon=True
-                ).start()
+    _mpv_cmd_to_campus(campus, cmd)
     log_action(current_user.username, 'play_radio', campus, station)
     return jsonify({'ok': True, 'station': station})
 
@@ -3492,7 +3470,8 @@ def upload_page():
     return render_template('upload.html', perms=user_perms(),
                            used_mb=used_mb, count=count,
                            folders=MUSIC_FOLDERS,
-                           kamran_unlocked=_kamran_unlocked())
+                           kamran_unlocked=_kamran_unlocked(),
+                           sync_machines=[m for m in music_machines_json() if m['key'] != 'client1'])
 
 @app.route('/api/upload', methods=['POST'])
 @login_required
@@ -4031,10 +4010,11 @@ def api_schedule_reset():
 # ══════════════════════════════════════════════════
 # TRACKS SYNC  (client1 local library ⇄ each spoke campus's own copy)
 # ══════════════════════════════════════════════════
-# client1's local MUSIC_DIR is the master library; client2/cgtk each keep their own
-# local copy (they can't stream over the network) that needs periodic sync.
-# Add a key here when a new spoke campus needs the same treatment.
-SYNC_CAMPUSES = ['client2', 'cgtk']
+# client1's local MUSIC_DIR is the master library; every other audio campus keeps
+# its own local copy (they can't stream over the network) that needs periodic
+# sync. Any client added later via /machines gets the same treatment for free.
+def SYNC_CAMPUSES():
+    return [_campus_key(m) for m in music_machines() if m['host'] != CLIENT1_HOST]
 CLIENT2_MUSIC_DIR = os.environ.get('CLIENT2_MUSIC_DIR', '/var/lib/campus-player/inbox/music')
 
 def _remote_music_dir(campus):
@@ -4067,7 +4047,7 @@ def api_tracks_sync_status():
     local = set(f for f in os.listdir(MUSIC_DIR)
                 if os.path.splitext(f)[1].lower() in ALLOWED_AUDIO)
     campuses = {}
-    for campus in SYNC_CAMPUSES:
+    for campus in SYNC_CAMPUSES():
         conn = _client2_conn(campus)
         if not conn:
             campuses[campus] = {'ok': False, 'error': f'{campus} не настроен'}
@@ -4094,7 +4074,7 @@ def api_tracks_sync():
     campus    = (data.get('campus') or 'client2').strip()
     direction = data.get('direction', 'client1_to_remote')  # 'client1_to_remote' | 'remote_to_client1'
     files     = data.get('files', [])
-    if campus not in SYNC_CAMPUSES:
+    if campus not in SYNC_CAMPUSES():
         return jsonify({'ok': False, 'error': f'Неизвестный кампус: {campus}'})
     if not files:
         return jsonify({'ok': False, 'error': 'Список файлов пуст'})
@@ -4137,7 +4117,7 @@ def api_tracks_sync():
         if s:
             try: s.close()
             except Exception: pass
-    campus_label = {'client2': 'Client2', 'cgtk': 'City Garden'}.get(campus, campus)
+    campus_label = _MINUTA_LABEL.get(campus, campus)
     log_action(current_user.username, f'sync_{direction}', campus, f'{len(copied)} файлов')
     if copied:
         tg_notify(
@@ -4384,12 +4364,9 @@ def api_timesync_status():
         ('client1',   CLIENT1_HOST,   CLIENT1_USER,   SSH_KEY),
         ('centos', CENTOS_HOST, CENTOS_USER, CENTOS_SSH_KEY),
     ]
-    client2 = _client2_conn()
-    if client2:
-        targets.append(('client2', client2['host'], client2.get('user', CLIENT1_USER), SSH_KEY))
-    cgtk_host, cgtk_user = _machine_ssh('cgtk')
-    if cgtk_host:
-        targets.append(('cgtk', cgtk_host, cgtk_user, SSH_KEY))
+    for m in music_machines():
+        if m['host'] != CLIENT1_HOST:
+            targets.append((_campus_key(m), m['host'], m.get('user', CLIENT1_USER), SSH_KEY))
 
     for label, host, user, key in targets:
         t = threading.Thread(target=collect, args=(label, host, user, key))
@@ -4436,14 +4413,14 @@ def api_timesync_sync():
     targets = []
     if machine in ('all', 'client1'):
         targets.append(('client1', CLIENT1_HOST, CLIENT1_USER, SSH_KEY))
-    if machine in ('all', 'client2'):
-        client2 = _client2_conn()
-        if client2:
-            targets.append(('client2', client2['host'], client2.get('user', CLIENT1_USER), SSH_KEY))
-    if machine in ('all', 'cgtk'):
-        cgtk_host, cgtk_user = _machine_ssh('cgtk')
-        if cgtk_host:
-            targets.append(('cgtk', cgtk_host, cgtk_user, SSH_KEY))
+    if machine == 'all':
+        for m in music_machines():
+            if m['host'] != CLIENT1_HOST:
+                targets.append((_campus_key(m), m['host'], m.get('user', CLIENT1_USER), SSH_KEY))
+    elif machine != 'client1':
+        m = _resolve_machine(machine, strict=True)
+        if m:
+            targets.append((machine, m['host'], m.get('user', CLIENT1_USER), SSH_KEY))
 
     def do_sync(label, host, user, key):
         s = None
@@ -4507,10 +4484,15 @@ def _backup_scan():
     machines = {}
     if entries:
         latest_path = entries[0]['path']
-        for key, fname in [('client1', 'client1-config.tar.gz'),
-                            ('client2',  'client2-config.tar.gz'),
-                            ('cgtk', 'cgtk-config.tar.gz'),
-                            ('centos', 'centos.tar.gz')]:
+        # client1/centos are fixed; every other audio campus is expected to have
+        # its own <key>-config.tar.gz produced by the (external, not part of
+        # this app) backup cron job — a client added later only shows up here
+        # once that job is updated to include it too.
+        backup_keys = [('client1', 'client1-config.tar.gz')]
+        backup_keys += [(_campus_key(m), f'{_campus_key(m)}-config.tar.gz')
+                         for m in music_machines() if m['host'] != CLIENT1_HOST]
+        backup_keys.append(('centos', 'centos.tar.gz'))
+        for key, fname in backup_keys:
             fp = os.path.join(latest_path, fname)
             if os.path.isfile(fp):
                 sz = os.path.getsize(fp)
@@ -4678,7 +4660,7 @@ def cheatsheet_page():
 def announce_page():
     if current_user.role not in ('admin', 'staff'):
         return '', 403
-    return render_template('announce.html')
+    return render_template('announce.html', music_machines=music_machines_json())
 
 @app.route('/api/announce', methods=['POST'])
 @login_required
@@ -4717,22 +4699,22 @@ def api_announce():
                 try: s.close()
                 except Exception: pass
 
+    # 'all' means "every registered audio campus" — any client added later via
+    # /machines gets announcements automatically, same convention as the
+    # cron-pause 'both' handling above
     results = {}
-    if campuses in ('client1', 'all'):
+    if campuses == 'all':
+        for m in music_machines():
+            ck = _campus_key(m)
+            results[ck] = _play_on(m['host'], m.get('user', CLIENT1_USER), ck)
+    elif campuses == 'client1':
         results['client1'] = _play_on(CLIENT1_HOST, CLIENT1_USER, 'client1')
-    if campuses in ('client2', 'all'):
-        client2 = _client2_conn('client2')
-        if client2:
-            results['client2'] = _play_on(client2['host'], client2.get('user', 'client2'), 'client2')
-    # 'all' now means "all registered campuses" (client1 + client2 + cgtk), same
-    # convention as the cron-pause 'both' handling above
-    if campuses in ('cgtk', 'all'):
-        cgtk = _client2_conn('cgtk')
-        if cgtk:
-            results['cgtk'] = _play_on(cgtk['host'], cgtk.get('user', 'cgtk'), 'cgtk')
+    else:
+        m = _resolve_machine(campuses, strict=True)
+        if m:
+            results[campuses] = _play_on(m['host'], m.get('user', CLIENT1_USER), campuses)
 
-    campus_label = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden',
-                     'all': 'Все кампусы'}.get(campuses, campuses)
+    campus_label = {'all': 'Все кампусы'}.get(campuses) or _MINUTA_LABEL.get(campuses, campuses)
     tg_notify(
         f'📢 <b>Объявление по радио</b>\n'
         f'🏫 {campus_label}\n'

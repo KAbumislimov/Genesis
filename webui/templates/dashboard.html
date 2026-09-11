@@ -1563,39 +1563,27 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <!-- OPTIONS tab -->
     <div id="eqtab-opt" class="wamp2-eqtab-body" style="display:none">
       {% if perms.stop %}
+      {% for m in music_machines %}
       <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Стоп Client1</span>
-        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('client1')">■ STOP NAR</button>
+        <span class="wamp2-opt-lbl">Стоп {{ m.name }}</span>
+        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('{{ m.key }}')">■ STOP {{ m.short }}</button>
       </div>
-      <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Стоп Client2</span>
-        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('client2')">■ STOP GƏNC</button>
-      </div>
-      <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Стоп City Garden</span>
-        <button class="wamp2-opt-btn wamp2-opt-stop" onclick="stopCampus('cgtk')">■ STOP CG</button>
-      </div>
+      {% endfor %}
       <div class="wamp2-opt-row">
         <span class="wamp2-opt-lbl">Стоп Все</span>
         <button class="wamp2-opt-btn wamp2-opt-stop" onclick="doStopAll()">■ STOP ALL</button>
       </div>
       {% endif %}
       {% if perms.himn %}
+      {% for m in music_machines %}
       <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Гимн Client1</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client1')">♪ HIMN NAR</button>
+        <span class="wamp2-opt-lbl">Гимн {{ m.name }}</span>
+        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('{{ m.key }}')">♪ HIMN {{ m.short }}</button>
       </div>
-      <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Гимн Client2</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client2')">♪ HIMN GƏNC</button>
-      </div>
-      <div class="wamp2-opt-row">
-        <span class="wamp2-opt-lbl">Гимн City Garden</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('cgtk')">♪ HIMN CG</button>
-      </div>
+      {% endfor %}
       <div class="wamp2-opt-row">
         <span class="wamp2-opt-lbl">Гимн Все</span>
-        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="_doPlayHimn('client1');setTimeout(function(){_doPlayHimn('client2')},600);setTimeout(function(){_doPlayHimn('cgtk')},1200)">♪ HIMN ALL</button>
+        <button class="wamp2-opt-btn wamp2-opt-himn" onclick="playAllCampuses(_doPlayHimn)">♪ HIMN ALL</button>
       </div>
       {% endif %}
     </div>
@@ -1721,9 +1709,9 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <div class="float-panel-body">
     <div class="ann-chips" style="margin-bottom:10px">
       <div class="ann-chip active" data-campus="all" onclick="selectCampus(this)">📡 Все</div>
-      <div class="ann-chip" data-campus="client1" onclick="selectCampus(this)">🏫 Client1</div>
-      <div class="ann-chip" data-campus="client2" onclick="selectCampus(this)">🏫 Client2</div>
-      <div class="ann-chip" data-campus="cgtk" onclick="selectCampus(this)">🏫 City Garden</div>
+      {% for m in music_machines %}
+      <div class="ann-chip" data-campus="{{ m.key }}" onclick="selectCampus(this)">🏫 {{ m.name }}</div>
+      {% endfor %}
     </div>
     <div id="ann-https-warn" class="ann-https-warn" style="display:none">
       <i class="bi bi-shield-exclamation"></i> Микрофон работает только по HTTPS.
@@ -1779,19 +1767,15 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   </div>
   <div class="float-panel-body">
     <div style="display:flex;flex-direction:column;gap:8px">
+      {% for pair in music_machines|batch(2) %}
       <div style="display:flex;gap:8px">
-        <button id="btn-cron-client1" class="cron-btn" onclick="cronToggle('client1')" style="flex:1">
-          <i class="bi bi-building"></i> Client1 <span id="cron-client1-lbl"><i class="bi bi-play-fill"></i> вкл</span>
+        {% for m in pair %}
+        <button id="btn-cron-{{ m.key }}" class="cron-btn" onclick="cronToggle('{{ m.key }}')" style="flex:1">
+          <i class="bi bi-building"></i> {{ m.name }} <span id="cron-{{ m.key }}-lbl"><i class="bi bi-play-fill"></i> вкл</span>
         </button>
-        <button id="btn-cron-client2" class="cron-btn" onclick="cronToggle('client2')" style="flex:1">
-          <i class="bi bi-pc-display"></i> Client2 <span id="cron-client2-lbl"><i class="bi bi-play-fill"></i> вкл</span>
-        </button>
+        {% endfor %}
       </div>
-      <div style="display:flex;gap:8px">
-        <button id="btn-cron-cgtk" class="cron-btn" onclick="cronToggle('cgtk')" style="flex:1">
-          <i class="bi bi-flower1"></i> City Garden <span id="cron-cgtk-lbl"><i class="bi bi-play-fill"></i> вкл</span>
-        </button>
-      </div>
+      {% endfor %}
       <div style="display:flex;gap:8px">
         <button class="cron-btn" onclick="cronToggle('both')" style="flex:1;background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.25);color:var(--red)">
           <i class="bi bi-pause-circle"></i> Стоп все
@@ -1890,6 +1874,19 @@ var MUSIC_MACHINES = {{ music_machines|tojson }};
 var CAMPUS_LABELS = {};
 MUSIC_MACHINES.forEach(function(m){ CAMPUS_LABELS[m.key] = m.name; });
 function campusLabel(key) { return CAMPUS_LABELS[key] || key; }
+// Fan a per-campus action (himn/minuta/alarm/perem) out to every registered
+// music machine, staggered 600ms apart — same convention the old hardcoded
+// client1→client2→cgtk chains used, just built from MUSIC_MACHINES so a client
+// added via /machines is included without touching this file.
+function playAllCampuses(fn) {
+  var extra = Array.prototype.slice.call(arguments, 1);
+  MUSIC_MACHINES.forEach(function(m, i) {
+    setTimeout(function(){ fn.apply(null, [m.key].concat(extra)); }, i * 600);
+  });
+}
+function pollAllCampuses() {
+  MUSIC_MACHINES.forEach(function(m, i){ pollMachine(m.key, i); });
+}
 
 // ──── AUDIO ENGINE — real mic spectrum analyzer ────────
 var AudioEngine = (function() {
@@ -3989,9 +3986,7 @@ function _doPlayHimn(machine) {
     .then(function(d) {
       if (d.ok) {
         toast('🎵 ' + t('toast.himn_playing') + ' — ' + (labels[machine] || machine));
-        setTimeout(pollStatus, 1200);
-        setTimeout(pollVm1, 1200);
-        setTimeout(pollCgtk, 1200);
+        setTimeout(pollAllCampuses, 1200);
       } else { toast('⚠️ ' + (d.error || 'нет прав')); }
     }).catch(function(){ toast('⚠️ нет связи'); });
 }
@@ -3999,9 +3994,7 @@ function _doPlayHimnActive() {
   var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + campusLabel(_activeCampus) + '»';
   if (!confirm('🎖️ Гимн будет включён на ' + label + '.\n\nПродолжить?')) return;
   if (_activeCampus === 'all') {
-    _doPlayHimn('client1');
-    setTimeout(function(){ _doPlayHimn('client2'); }, 600);
-    setTimeout(function(){ _doPlayHimn('cgtk'); }, 1200);
+    playAllCampuses(_doPlayHimn);
   } else {
     _doPlayHimn(_activeCampus);
   }
@@ -4022,10 +4015,8 @@ function _doPlayMinuta(campus, btn) {
 }
 function _doPlayMinutaAll(btn) {
   if (btn) btn.classList.add('busy');
-  _doPlayMinuta('client1');
-  setTimeout(function(){ _doPlayMinuta('client2'); }, 600);
-  setTimeout(function(){ _doPlayMinuta('cgtk'); }, 1200);
-  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
+  playAllCampuses(_doPlayMinuta);
+  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
 }
 function _doPlayMinutaActive(btn) {
   var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_MINUTA_LABELS[_activeCampus] || _activeCampus) + '»';
@@ -4069,10 +4060,8 @@ function _doPlayAlarm(campus, btn) {
 }
 function _doPlayAlarmAll(btn) {
   if (btn) btn.classList.add('busy');
-  _doPlayAlarm('client1');
-  setTimeout(function(){ _doPlayAlarm('client2'); }, 600);
-  setTimeout(function(){ _doPlayAlarm('cgtk'); }, 1200);
-  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
+  playAllCampuses(_doPlayAlarm);
+  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
 }
 function _doPlayAlarmActive(btn) {
   var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_ALARM_LABELS[_activeCampus] || _activeCampus) + '»';
@@ -4089,9 +4078,7 @@ function _doPlayPerem(campus, slot, btn) {
     .then(function(d) {
       if (d.ok) {
         toast('⚡ ' + (_PEREM_LABELS[campus] || campus));
-        setTimeout(pollStatus, 1200);
-        setTimeout(pollVm1, 1200);
-        setTimeout(pollCgtk, 1200);
+        setTimeout(pollAllCampuses, 1200);
       } else { toast('⚠️ ' + (d.error || 'ошибка')); }
     })
     .catch(function(){ toast('⚠️ нет связи'); })
@@ -4099,10 +4086,8 @@ function _doPlayPerem(campus, slot, btn) {
 }
 function _doPlayPeremAll(slot, btn) {
   if (btn) btn.classList.add('busy');
-  _doPlayPerem('client1', slot);
-  setTimeout(function(){ _doPlayPerem('client2', slot); }, 600);
-  setTimeout(function(){ _doPlayPerem('cgtk', slot); }, 1200);
-  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, 1400);
+  playAllCampuses(_doPlayPerem, slot);
+  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
 }
 function _doPlayPeremActive(slot, btn) {
   if (_activeCampus === 'all') { _doPlayPeremAll(slot, btn); } else { _doPlayPerem(_activeCampus, slot, btn); }
@@ -4126,18 +4111,21 @@ function _togglePeremEdit(slot, btn) {
   _peremSchedule = null; // всегда свежие данные при открытии
   _loadPeremSchedule(function(){ _renderPeremEdit(slot, el); });
 }
+var _PEREM_PALETTE = ['#00e8c0','#c090ff','#ff6ec7','#58a6ff','#3fb950','#ffa657'];
 function _renderPeremEdit(slot, el) {
-  el.innerHTML = ['client1','client2','cgtk'].map(function(campus){
+  el.innerHTML = MUSIC_MACHINES.map(function(mm, mi){
+    var campus = mm.key;
     var c = _peremSchedule && _peremSchedule[campus];
     var d = c && c.ok ? c.slots[slot] : null;
-    var short = {client1:'NAR', client2:'GNC', cgtk:'CG'}[campus];
+    var short = mm.short;
+    var clr = _PEREM_PALETTE[mi % _PEREM_PALETTE.length];
     if (!d) {
-      return '<div class="perem-edit-row"><span class="perem-edit-campus c-'+campus+'">'+short+'</span>' +
+      return '<div class="perem-edit-row"><span class="perem-edit-campus c-'+campus+'" style="color:'+clr+'">'+short+'</span>' +
         '<span style="color:var(--muted)">'+(c && !c.ok ? 'нет связи' : 'слот не найден')+'</span></div>';
     }
     var uid = slot + '_' + campus;
     return '<div class="perem-edit-row">' +
-      '<span class="perem-edit-campus c-'+campus+'">'+short+'</span>' +
+      '<span class="perem-edit-campus c-'+campus+'" style="color:'+clr+'">'+short+'</span>' +
       '<input type="time" class="perem-edit-inp" id="pe-start-'+uid+'" value="'+d.start+'" title="Время старта">' +
       '<input type="time" class="perem-edit-inp" id="pe-stop-'+uid+'" value="'+(d.stop||'')+'" title="Время стопа"' + (d.stop ? '' : ' disabled') + '>' +
       '<input type="number" class="perem-edit-inp perem-edit-vol" id="pe-vol-'+uid+'" value="'+d.vol+'" min="0" max="160" title="Громкость">' +
@@ -4189,12 +4177,16 @@ function toast(msg) {
 
 // ──── MACHINE TIME ────────────────────────────────────
 {% if perms.role in ('admin','staff') %}
-const TIME_LABELS = {
-  client1:{label:'Client1',color:'#58a6ff',icon:'bi-building'},
-  client2:{label:'Client2',color:'#bc8cff',icon:'bi-pc-display'},
-  cgtk:{label:'City Garden',color:'#ff6ec7',icon:'bi-flower1'},
-  centos:{label:'CentOS',color:'#ffa657',icon:'bi-server'},
-};
+var TIME_LABELS = { centos:{label:'CentOS',color:'#ffa657',icon:'bi-server'} };
+(function(){
+  var palette = [
+    {color:'#58a6ff',icon:'bi-building'}, {color:'#bc8cff',icon:'bi-pc-display'},
+    {color:'#ff6ec7',icon:'bi-flower1'},  {color:'#3fb950',icon:'bi-hdd-network'},
+  ];
+  MUSIC_MACHINES.forEach(function(m, i){
+    TIME_LABELS[m.key] = {label:m.name, color:palette[i%palette.length].color, icon:palette[i%palette.length].icon};
+  });
+})();
 var _timeOffsets = {}, _timeOnline = {};
 
 function _parseServerTime(str) {
@@ -4268,31 +4260,31 @@ setInterval(fetchMachineTimes, 30000);
 
 // ──── CRON ────────────────────────────────────────────
 {% if perms.admin %}
-var _cronState = {client1:false, client2:false, cgtk:false};
+var _cronState = {};
+MUSIC_MACHINES.forEach(function(m){ _cronState[m.key] = false; });
+function _cronAllPaused() { return MUSIC_MACHINES.every(function(m){ return _cronState[m.key]; }); }
 function _cronApplyUI() {
-  var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
-  ['client1','client2','cgtk'].forEach(function(m) {
-    var btn = document.getElementById('btn-cron-'+m);
+  var allPaused = _cronAllPaused();
+  MUSIC_MACHINES.forEach(function(m) {
+    var btn = document.getElementById('btn-cron-'+m.key);
     if (!btn) return;
-    btn.classList.toggle('paused', !!_cronState[m]);
+    btn.classList.toggle('paused', !!_cronState[m.key]);
   });
   var allBtn = document.getElementById('btn-cron-all');
-  if (allBtn) allBtn.classList.toggle('paused', bothPaused);
+  if (allBtn) allBtn.classList.toggle('paused', allPaused);
   var activeBtn = document.getElementById('btn-cron-active');
   if (activeBtn) {
-    var isPaused = _activeCampus === 'all' ? bothPaused : !!_cronState[_activeCampus];
+    var isPaused = _activeCampus === 'all' ? allPaused : !!_cronState[_activeCampus];
     activeBtn.classList.toggle('paused', isPaused);
     activeBtn.innerHTML = (isPaused ? '▶' : '⏸') + ' <span>' + (t('wamp.cron_group') || 'Крон') + '</span>';
   }
 }
 function _cronToggleAll() {
-  var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
-  if (bothPaused) cronResume('both'); else cronToggle('both');
+  if (_cronAllPaused()) cronResume('both'); else cronToggle('both');
 }
 function _cronToggleActive() {
   if (_activeCampus === 'all') {
-    var bothPaused = _cronState.client1 && _cronState.client2 && _cronState.cgtk;
-    if (!bothPaused && !confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ВСЕХ кампусах.\nНе забудь включить обратно.\n\nПродолжить?')) return;
+    if (!_cronAllPaused() && !confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ВСЕХ кампусах.\nНе забудь включить обратно.\n\nПродолжить?')) return;
     _cronToggleAll();
     return;
   }
@@ -4304,7 +4296,7 @@ function _cronToggleActive() {
 function pollCron() {
   fetch('/api/cron/pause').then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
-    _cronState.client1=!!d.client1; _cronState.client2=!!d.client2; _cronState.cgtk=!!d.cgtk;
+    MUSIC_MACHINES.forEach(function(m){ _cronState[m.key] = !!d[m.key]; });
     _cronApplyUI();
   }).catch(function(){});
 }
@@ -4636,7 +4628,7 @@ function _updateProgress(ck){
   if(posEl) posEl.textContent=_fmtTime(pos);
   if(durEl) durEl.textContent=dur>0?' / '+_fmtTime(dur):'';
 }
-setInterval(function(){_updateProgress('client1');_updateProgress('client2');_updateProgress('cgtk');},500);
+setInterval(function(){ MUSIC_MACHINES.forEach(function(m){ _updateProgress(m.key); }); },500);
 
 // ──── ACTIVE CAMPUS (Winamp unified LCD + seek bar) ──────
 var _activeCampus = 'client1';
@@ -4682,7 +4674,7 @@ setInterval(function(){
   var trackEl = document.getElementById('mini-name-'+ck);
   if(lcdTr && trackEl) lcdTr.textContent = trackEl.textContent||'CAMPUS PLAYER';
   var lcdI = document.getElementById('wa-lcd-info');
-  var _lcdCampusName = (ck==='client1'?'CLIENT1':(ck==='client2'?'GƏNCLIK':'CITY GARDEN'));
+  var _lcdCampusName = campusLabel(ck).toUpperCase();
   if(lcdI) lcdI.textContent = _lcdCampusName + ' · ' + (st.playing?'PLAYING':(st.paused?'PAUSED':'STOPPED'));
   var sf = document.getElementById('wa-seek-fill');
   var sb = document.getElementById('wa-seek-thumb');
