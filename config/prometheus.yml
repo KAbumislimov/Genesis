@@ -53,6 +53,10 @@ scrape_configs:
         labels:
           nodename: client1
           host_ip: 10.10.4.250
+      - targets: ['10.10.4.251:9100']
+        labels:
+          nodename: qatest2
+          host_ip: 10.10.4.251
     relabel_configs:
       - source_labels: [nodename]
         regex: (.+)

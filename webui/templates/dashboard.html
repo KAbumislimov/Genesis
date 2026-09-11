@@ -1887,6 +1887,12 @@ function playAllCampuses(fn) {
 function pollAllCampuses() {
   MUSIC_MACHINES.forEach(function(m, i){ pollMachine(m.key, i); });
 }
+// Declared this early (not down by _startAudioSSE) because makeVisualizer()
+// below calls fd() synchronously on first draw, which indexes _audioSSE[key]
+// — if that ran before this existed it threw "Cannot read properties of
+// undefined" on every first page load.
+var _audioSSE = {};
+MUSIC_MACHINES.forEach(function(m){ _audioSSE[m.key] = null; });
 
 // ──── AUDIO ENGINE — real mic spectrum analyzer ────────
 var AudioEngine = (function() {
@@ -3187,7 +3193,9 @@ function eqReset() {
 }
 
 // ──── AUDIO FFT SSE ───────────────────────────────────
-var _audioSSE = {client1: null, client2: null, cgtk: null};
+// _audioSSE itself is declared up top (see MUSIC_MACHINES block) — makeVisualizer()
+// runs synchronously before this point and indexes into it on first draw, so it
+// can't be declared here or it's still undefined during that first call.
 var _audioSSESrc = null;
 
 function _startAudioSSE() {

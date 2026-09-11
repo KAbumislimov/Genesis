@@ -176,8 +176,15 @@ def _campus_key(m):
     """The short slug used everywhere (URLs, _activeCampus, api calls) to
     refer to a campus — 'client1' for the main machine, otherwise its `user`
     (the SSH login, already a short readable slug like 'client2'/'cgtk'/'sbtk'
-    by convention for every machine added so far)."""
-    return 'client1' if m['host'] == CLIENT1_HOST else (m.get('user') or m['id'])
+    by convention for every machine added so far). 'client1' is reserved for the
+    real Client1 host — _resolve_machine() never searches MACHINES for it,
+    so a thin_client whose `user` was (mis)typed as literally "client1" must not
+    collide with that slug, or it silently becomes an unreachable duplicate
+    (falls back to its own MACHINES-list id instead)."""
+    if m['host'] == CLIENT1_HOST:
+        return 'client1'
+    key = m.get('user') or m['id']
+    return m['id'] if key == 'client1' else key
 
 _CAMPUS_SHORT_LABELS = {'client1': 'NAR', 'client2': 'GNC', 'cgtk': 'CG'}
 # The original three machines' `name` field is whatever MACHINE1_NAME/etc
@@ -787,16 +794,22 @@ def host_online(host, port=22, timeout=2):
 @app.route('/api/machines')
 @login_required
 def api_machines():
-    result = []
-    for m in MACHINES:
-        result.append({
+    result = [None] * len(MACHINES)
+    def _check(i, m):
+        result[i] = {
             'id':     m['id'],
             'name':   m['name'],
             'host':   m['host'],
             'has_mac': bool(m['mac']),
+            'is_audio_client': bool(m.get('is_audio_client', True)),
             'online': host_online(m['host']),
-        })
-    return jsonify({'ok': True, 'machines': result})
+        }
+    # host_online() blocks up to 2s per machine — run them in parallel so the
+    # page doesn't stall for N*2s once there are more than 2-3 machines
+    threads = [threading.Thread(target=_check, args=(i, m)) for i, m in enumerate(MACHINES)]
+    for t in threads: t.start()
+    for t in threads: t.join(timeout=5)
+    return jsonify({'ok': True, 'machines': [r for r in result if r]})
 
 @app.route('/api/wol/<mid>', methods=['POST'])
 @login_required
@@ -826,12 +839,18 @@ def api_machines_add():
     host = data.get('host', '').strip()
     name = data.get('name', '').strip()
     mac  = data.get('mac',  '').strip()
-    user = data.get('user', CLIENT1_USER).strip() or CLIENT1_USER
+    user = data.get('user', '').strip()
     cockpit = data.get('cockpit_url', f'http://{host}:1991').strip()
     is_audio = bool(data.get('is_audio_client', True))
     music_path = data.get('music_path', '').strip() or _default_music_path(user, host)
     if not host or not name:
         return jsonify({'ok': False, 'error': 'IP-адрес и имя обязательны'})
+    # "client1" is the reserved slug for the real Client1 host everywhere in
+    # the app (URLs, campus switcher, _resolve_machine) — a thin_client with
+    # a different host but user="client1" would silently collide with it and
+    # become an unreachable duplicate in the player (see _campus_key).
+    if user == 'client1' and host != CLIENT1_HOST:
+        return jsonify({'ok': False, 'error': '"client1" зарезервирован за настоящим Client1 — укажите другой SSH-логин'})
     with get_db() as c:
         c.execute('''INSERT INTO thin_clients (host,name,mac,user,cockpit_url,is_audio_client,music_path)
                      VALUES (?,?,?,?,?,?,?)''',
@@ -849,12 +868,14 @@ def api_machines_edit(db_id):
     host = data.get('host', '').strip()
     name = data.get('name', '').strip()
     mac  = data.get('mac',  '').strip()
-    user = data.get('user', CLIENT1_USER).strip() or CLIENT1_USER
+    user = data.get('user', '').strip()
     cockpit = data.get('cockpit_url', '').strip()
     is_audio = bool(data.get('is_audio_client', True))
     music_path = data.get('music_path', '').strip() or _default_music_path(user, host)
     if not host or not name:
         return jsonify({'ok': False, 'error': 'IP-адрес и имя обязательны'})
+    if user == 'client1' and host != CLIENT1_HOST:
+        return jsonify({'ok': False, 'error': '"client1" зарезервирован за настоящим Client1 — укажите другой SSH-логин'})
     with get_db() as c:
         c.execute('''UPDATE thin_clients SET host=?,name=?,mac=?,user=?,cockpit_url=?,
                      is_audio_client=?,music_path=? WHERE id=?''',

@@ -104,7 +104,10 @@
     </div>
     <div class="mb-3">
       <label class="form-label">SSH-пользователь</label>
-      <input type="text" id="f-user" class="form-control" placeholder="client1" value="client1" autocomplete="off">
+      <input type="text" id="f-user" class="form-control" placeholder="например sbtk — своё для каждой машины" autocomplete="off">
+      <div class="text-muted" style="font-size:11.5px;margin-top:2px">
+        "client1" зарезервирован за настоящим Client1 — не используйте его для других машин.
+      </div>
     </div>
     <div class="mb-3">
       <label class="form-label">Cockpit URL <span class="text-muted">(авто: http://IP:1991)</span></label>
@@ -177,7 +180,7 @@ function load(){
             <div class="machine-sub">${escHtml(m.host)}</div>
           </div>
           <span class="machine-badge"><i class="bi bi-pencil-square"></i> вручную</span>
-          ${m.is_audio_client===0?`<span class="machine-badge" style="background:rgba(139,148,158,.12);color:var(--muted);border-color:rgba(139,148,158,.25)" title="Не показывается в плеере — только мониторинг"><i class="bi bi-eye-slash"></i> без плеера</span>`:''}
+          ${m.is_audio_client===false?`<span class="machine-badge" style="background:rgba(139,148,158,.12);color:var(--muted);border-color:rgba(139,148,158,.25)" title="Не показывается в плеере — только мониторинг"><i class="bi bi-eye-slash"></i> без плеера</span>`:''}
           ${m.has_mac?`<button class="btn btn-ghost btn-sm" title="Wake-on-LAN" onclick="wol('${m.id}',this)"><i class="bi bi-power"></i></button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="edit(${dbId})" title="Редактировать"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-danger btn-sm" onclick="del(${dbId},'${escHtml(m.name)}')" title="Удалить"><i class="bi bi-trash3"></i></button>
@@ -202,7 +205,7 @@ function openModal(data){
   document.getElementById('f-host').value   = data ? data.host : '';
   document.getElementById('f-name').value   = data ? data.name : '';
   document.getElementById('f-mac').value    = data ? (data.mac||'') : '';
-  document.getElementById('f-user').value   = data ? (data.user||'client1') : 'client1';
+  document.getElementById('f-user').value   = data ? (data.user||'') : '';
   document.getElementById('f-cockpit').value= data ? (data.cockpit_url||'') : '';
   document.getElementById('f-audio').checked = data ? !!Number(data.is_audio_client ?? 1) : true;
   document.getElementById('f-music-path').value = data ? (data.music_path||'') : '';
@@ -224,7 +227,7 @@ function save(){
   const host   = document.getElementById('f-host').value.trim();
   const name   = document.getElementById('f-name').value.trim();
   const mac    = document.getElementById('f-mac').value.trim();
-  const user   = document.getElementById('f-user').value.trim() || 'client1';
+  const user   = document.getElementById('f-user').value.trim();
   const cockpit= document.getElementById('f-cockpit').value.trim() || `http://${host}:1991`;
   const isAudio = document.getElementById('f-audio').checked;
   const musicPath = document.getElementById('f-music-path').value.trim();
