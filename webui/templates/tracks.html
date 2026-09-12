@@ -76,15 +76,15 @@
   display:flex;align-items:center;gap:4px;flex-shrink:0;transition:.15s;
   white-space:nowrap;padding:5px 11px;
 }
-.btn-play.client1{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
-.btn-play.client1:hover{background:rgba(88,166,255,.2)}
-.btn-play.client1.is-playing{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green)}
-.btn-play.client2{background:rgba(188,130,255,.1);border:1px solid rgba(188,130,255,.3);color:#bc82ff}
-.btn-play.client2:hover{background:rgba(188,130,255,.2)}
-.btn-play.client2.is-playing{background:rgba(188,130,255,.2);border-color:#bc82ff;color:#bc82ff}
-.btn-play.cgtk{background:rgba(255,110,199,.1);border:1px solid rgba(255,110,199,.3);color:#ff6ec7}
-.btn-play.cgtk:hover{background:rgba(255,110,199,.2)}
-.btn-play.cgtk.is-playing{background:rgba(255,110,199,.2);border-color:#ff6ec7;color:#ff6ec7}
+.btn-play.play-pick{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
+.btn-play.play-pick:hover{background:rgba(88,166,255,.2)}
+.btn-play.play-pick.is-playing{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green)}
+.track-campuspop{display:none;position:fixed;z-index:9500;min-width:190px;max-height:280px;overflow-y:auto;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:4px}
+.track-campuspop.open{display:block}
+.track-campuspop-item{display:block;width:100%;text-align:left;background:none;border:none;
+  color:var(--text);font-size:12.5px;padding:7px 10px;border-radius:7px;cursor:pointer}
+.track-campuspop-item:hover{background:rgba(88,166,255,.15);color:var(--blue)}
 .btn-stop-inline{
   background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.3);color:var(--red);
   padding:5px 10px;border-radius:7px;font-size:13px;cursor:pointer;
@@ -301,17 +301,9 @@
       <span class="track-name">{{ t.name }}</span>
       <div class="btn-group-play">
         {% if perms.play %}
-        <button class="btn-play client1"
-                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','client1',this)">
-          <i class="bi bi-building"></i> <span class="btn-lbl">Client1</span>
-        </button>
-        <button class="btn-play client2"
-                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','client2',this)">
-          <i class="bi bi-pc-display"></i> <span class="btn-lbl">Client2</span>
-        </button>
-        <button class="btn-play cgtk"
-                onclick="playTrack('{{ t.name|replace("'","\\'") }}','{{ t.folder }}','cgtk',this)">
-          <i class="bi bi-flower1"></i> <span class="btn-lbl">City Garden</span>
+        <button class="btn-play play-pick" data-name="{{ t.name|replace("'","\\'") }}" data-folder="{{ t.folder }}"
+                onclick="showTrackCampusPicker(event,this)">
+          <i class="bi bi-play-fill"></i> <span class="btn-lbl">Играть на…</span>
         </button>
         {% else %}
         <span style="font-size:12px;color:var(--muted);padding:4px 8px">
@@ -339,6 +331,9 @@
   {% endif %}
 </div>
 {% endif %}
+
+<!-- Campus picker for the per-track "Играть на…" button -->
+<div id="track-campuspop" class="track-campuspop"></div>
 
 {# ── PIN modal (always present) ────────────────── #}
 <div class="pin-modal-bg" id="pin-modal">
@@ -415,11 +410,14 @@ let currentPlayBtn = null;
 const FOLDER = '{{ folder }}';
 const OPEN_FOR = '{{ open_pin_for }}';
 
-const ML = {
-  client1:{icon:'bi-building',lbl:'Client1'},
-  client2:{icon:'bi-pc-display',lbl:'Client2'},
-  cgtk:{icon:'bi-flower1',lbl:'City Garden'},
-};
+// Built from music_machines (server) so a client added via /machines shows
+// up here too, instead of a hardcoded client1/client2/cgtk list.
+const MUSIC_MACHINES = {{ music_machines|tojson }};
+const ML = {};
+(function(){
+  var icons = ['bi-building','bi-pc-display','bi-flower1','bi-hdd-network','bi-shop','bi-mortarboard'];
+  MUSIC_MACHINES.forEach(function(m,i){ ML[m.key] = {icon: icons[i % icons.length], lbl: m.name}; });
+})();
 
 /* ── PIN modal ────────────────────────────────── */
 let _pinFolder = '';
@@ -526,6 +524,36 @@ function stopAll(btn) {
   }).catch(()=>{btn.innerHTML=orig;});
 }
 
+function showTrackCampusPicker(ev, btn) {
+  ev.stopPropagation();
+  const pop = document.getElementById('track-campuspop');
+  if (!pop) return;
+  pop.innerHTML = '';
+  MUSIC_MACHINES.forEach(function(m){
+    const b = document.createElement('button');
+    b.className = 'track-campuspop-item';
+    b.textContent = m.name;
+    b.onclick = function(e){
+      e.stopPropagation();
+      pop.classList.remove('open');
+      playTrack(btn.dataset.name, btn.dataset.folder, m.key, btn);
+    };
+    pop.appendChild(b);
+  });
+  pop.classList.add('open');
+  const r = btn.getBoundingClientRect();
+  let x = r.left, y = r.bottom + 4;
+  const pw = pop.offsetWidth || 190, ph = pop.offsetHeight || 200;
+  if (x + pw > window.innerWidth) x = window.innerWidth - pw - 8;
+  if (y + ph > window.innerHeight) y = r.top - ph - 4;
+  pop.style.left = x + 'px';
+  pop.style.top = y + 'px';
+}
+document.addEventListener('click', function(ev){
+  const pop = document.getElementById('track-campuspop');
+  if (pop && pop.classList.contains('open') && !pop.contains(ev.target)) pop.classList.remove('open');
+});
+
 function playTrack(name,folder,machine,btn){
   machine=machine||'client1';
   btn.dataset.machine=machine;
@@ -600,12 +628,8 @@ function refreshTracks(){
         <i class="bi bi-music-note text-muted" style="font-size:14px;flex-shrink:0"></i>
         <span class="track-name">${dn}</span>
         <div class="btn-group-play">
-          <button class="btn-play client1" data-machine="client1" onclick="playTrack('${fn}','${fo}','client1',this)">
-            <i class="bi bi-building"></i><span class="btn-lbl"> Client1</span></button>
-          <button class="btn-play client2" data-machine="client2" onclick="playTrack('${fn}','${fo}','client2',this)">
-            <i class="bi bi-pc-display"></i><span class="btn-lbl"> Client2</span></button>
-          <button class="btn-play cgtk" data-machine="cgtk" onclick="playTrack('${fn}','${fo}','cgtk',this)">
-            <i class="bi bi-flower1"></i><span class="btn-lbl"> City Garden</span></button>
+          <button class="btn-play play-pick" data-name="${fn}" data-folder="${fo}" onclick="showTrackCampusPicker(event,this)">
+            <i class="bi bi-play-fill"></i> <span class="btn-lbl">Играть на…</span></button>
           <button class="btn-stop-inline" onclick="stopAll(this)"><i class="bi bi-stop-fill"></i></button>
         </div></div>`;
     }).join('');

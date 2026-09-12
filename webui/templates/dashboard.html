@@ -967,8 +967,21 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 
 /* ── Campus status strip ── */
 .wamp2-cs-strip{background:var(--wt-lcd-bg);padding:3px 8px;border-bottom:1px solid rgba(0,0,0,.6);
-  display:flex;flex-direction:column;gap:2px}
-.wamp2-cs-row{display:flex;align-items:center;gap:4px;height:16px;font-size:9px}
+  display:flex;flex-direction:row;flex-wrap:wrap;gap:4px 14px}
+.wamp2-cs-row{display:flex;flex-direction:column;align-items:stretch;gap:2px;font-size:9px;flex:0 1 240px;min-width:180px;padding-bottom:2px}
+.wamp2-cs-line1{display:flex;align-items:center;gap:4px;height:16px}
+.wamp2-cs-vol-row{display:flex;align-items:center;gap:5px;padding-left:14px}
+.wamp2-cs-vol{-webkit-appearance:none;appearance:none;flex:1;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.12);outline:none;cursor:pointer}
+.wamp2-cs-vol::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;
+  background:var(--wt-accent);cursor:pointer}
+.wamp2-cs-vol::-moz-range-thumb{width:10px;height:10px;border-radius:50%;border:none;
+  background:var(--wt-accent);cursor:pointer}
+.wamp2-cs-vol-val{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--wt-led2);
+  min-width:22px;text-align:right;flex-shrink:0}
+.wamp2-cs-vol-all-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  color:var(--wt-txt);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer}
+.wamp2-cs-vol-all-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25)}
 .wamp2-cs-dot{font-size:8px;width:10px;flex-shrink:0}
 .wamp2-cs-campus{font-size:8px;font-weight:900;letter-spacing:.06em;min-width:28px;
   color:var(--wt-led2);flex-shrink:0}
@@ -1169,8 +1182,9 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .w2b-gap::after{content:'';display:block;width:1px;height:16px;background:var(--wt-sh);margin:0 auto}
 
 /* ─── NEW campus status rows ─── */
-.wamp2-cs-strip{background:var(--wt-lcd);padding:2px 6px;border-bottom:1px solid rgba(0,0,0,.5);display:flex;flex-direction:column;gap:2px}
-.wamp2-cs-row{display:flex;align-items:center;gap:3px;height:16px;font-size:9px}
+.wamp2-cs-strip{background:var(--wt-lcd);padding:2px 6px;border-bottom:1px solid rgba(0,0,0,.5);display:flex;flex-direction:row;flex-wrap:wrap;gap:4px 14px}
+.wamp2-cs-row{display:flex;flex-direction:column;align-items:stretch;gap:2px;font-size:9px;flex:0 1 240px;min-width:180px;padding-bottom:2px}
+.wamp2-cs-line1{display:flex;align-items:center;gap:3px;height:16px}
 .wamp2-cs-dot{font-size:8px;width:10px;flex-shrink:0}
 .wamp2-cs-campus{font-size:8px;font-weight:900;letter-spacing:.05em;min-width:26px;flex-shrink:0}
 .wamp2-conn{font-size:9px;color:var(--wt-led2);flex-shrink:0}
@@ -1467,20 +1481,37 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <div class="wamp2-cs-strip">
     {% for m in music_machines %}
     <div class="wamp2-cs-row" id="wamp2-row-{{ m.key }}">
-      <span class="wamp2-cs-dot" id="live-{{ m.key }}" style="color:var(--wt-led)">▶</span>
-      <span class="wamp2-cs-dot" id="stop-{{ m.key }}" style="display:none;color:#f87060">■</span>
-      <span class="wamp2-cs-campus" style="color:var(--c-{{ m.key }},#8fb8ff)">{{ m.short }}</span>
-      <span id="conn-{{ m.key }}" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
-      <span class="wamp2-cs-track" id="mini-name-{{ m.key }}">Не играет</span>
-      {% if loop.first %}<span id="mute-badge" style="display:none;color:#f87060">🔇</span>{% endif %}
-      <div class="wamp2-cs-prog" onclick="wampSeek('{{ m.key }}',event,this)" title="Перемотка">
-        <div class="wamp2-cs-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div>
+      <div class="wamp2-cs-line1">
+        <span class="wamp2-cs-dot" id="live-{{ m.key }}" style="color:var(--wt-led)">▶</span>
+        <span class="wamp2-cs-dot" id="stop-{{ m.key }}" style="display:none;color:#f87060">■</span>
+        <span class="wamp2-cs-campus" style="color:var(--c-{{ m.key }},#8fb8ff)">{{ m.short }}</span>
+        <span id="conn-{{ m.key }}" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
+        <span class="wamp2-cs-track" id="mini-name-{{ m.key }}">Не играет</span>
+        {% if loop.first %}<span id="mute-badge" style="display:none;color:#f87060">🔇</span>{% endif %}
+        <div class="wamp2-cs-prog" onclick="wampSeek('{{ m.key }}',event,this)" title="Перемотка">
+          <div class="wamp2-cs-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div>
+        </div>
+        <span class="wamp2-cs-time" id="wamp-pos-{{ m.key }}">0:00</span>
+        <span class="wamp2-cs-dur" id="wamp-dur-{{ m.key }}"></span>
       </div>
-      <span class="wamp2-cs-time" id="wamp-pos-{{ m.key }}">0:00</span>
-      <span class="wamp2-cs-dur" id="wamp-dur-{{ m.key }}"></span>
+      {% if perms.vol %}
+      <div class="wamp2-cs-vol-row">
+        <i class="bi bi-volume-down" style="font-size:8px;opacity:.6;flex-shrink:0"></i>
+        <input type="range" class="wamp2-cs-vol" id="vol-{{ m.key }}" min="0" max="160" value="100"
+               oninput="wampCsVolInput('{{ m.key }}',this.value)"
+               onchange="wampSetCampusVolume('{{ m.key }}',this.value)" title="Громкость {{ m.name }}">
+        <span class="wamp2-cs-vol-val" id="vol-val-{{ m.key }}">100</span>
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
+  {% if perms.vol %}
+  <div style="display:flex;justify-content:flex-end;padding:2px 8px 4px">
+    <button class="wamp2-cs-vol-all-btn" onclick="wampSetAllVolume(150)"
+            title="Выставить громкость 150 на всех кампусах одновременно">🔊 Все → 150</button>
+  </div>
+  {% endif %}
 
   <!-- ── Visualizer ── -->
   <div class="wa-viz-section">
@@ -3911,9 +3942,12 @@ function _escHtml(s) {
 
 function doStop() {
   if (_needSingleCampus()) return;
+  toast('⏳ Останавливаю…');
   fetch('/api/stop',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:_activeCampus})
-  }).then(function(r){return r.json();});
+  }).then(function(r){return r.json();})
+    .then(function(d){ if(d.ok) toast('⏹ Остановлено'); else toast('⚠️ ' + (d.error||'ошибка')); })
+    .catch(function(){ toast('⚠️ Нет связи с сервером — попробуй ещё раз'); });
 }
 function _plNavigate(dir) {
   if (_needSingleCampus()) return;
@@ -3957,17 +3991,21 @@ function setMuteUI(muted) {
 
 function stopCampus(campus) {
   var labels = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
+  toast('⏳ Останавливаю ' + (labels[campus]||campus) + '…');
   fetch('/api/stop/' + campus, {method:'POST'})
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d.ok) { toast('■ Стоп — ' + (labels[campus]||campus)); setTimeout(pollStatus,600); setTimeout(pollVm1,600); setTimeout(pollCgtk,600); }
+      if (d.ok) { toast('■ Стоп — ' + (labels[campus]||campus)); setTimeout(pollAllCampuses,600); }
       else toast('⚠️ ' + (d.error||'Ошибка'));
-    });
+    })
+    .catch(function(){ toast('⚠️ Нет связи с сервером — попробуй ещё раз'); });
 }
 function doStopAll() {
   // Stop campus machines
+  toast('⏳ Останавливаю всё…');
   fetch('/api/stop', {method:'POST'}).then(function(r){return r.json();})
-    .then(function(d){ if(d.ok) toast('⏹ СТОП — выключено всё'); });
+    .then(function(d){ if(d.ok) toast('⏹ СТОП — выключено всё'); else toast('⚠️ ' + (d.error||'ошибка')); })
+    .catch(function(){ toast('⚠️ Нет связи с сервером — попробуй ещё раз'); });
   // Also stop local AmplitudeJS if playing
   try { if(typeof Amplitude !== 'undefined') Amplitude.stop(); } catch(e){}
   _ampIsPlaying = false;
@@ -4017,6 +4055,41 @@ function setIdleNctk() {
   if (dot) dot.className = 'htab-dot';
   if (mn) mn.textContent = t('np.idle');
   if (dualWave) dualWave.setActiveL(false);
+}
+
+// ──── PER-CAMPUS VOLUME SLIDERS ────────────────────────
+var _csVolDragging = null;
+function wampCsVolInput(key, val) {
+  _csVolDragging = key;
+  var lbl = document.getElementById('vol-val-'+key);
+  if (lbl) lbl.textContent = val;
+  clearTimeout(window['_csVolClear_'+key]);
+  window['_csVolClear_'+key] = setTimeout(function(){ if (_csVolDragging === key) _csVolDragging = null; }, 1500);
+}
+function wampSetCampusVolume(key, val) {
+  fetch('/api/volume/' + key, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({value: val})
+  }).then(function(r){ return r.json(); })
+    .then(function(d){ if (!d.ok) toast('⚠️ ' + (d.error || 'ошибка громкости')); })
+    .catch(function(){ toast('⚠️ Нет связи с сервером'); })
+    .finally(function(){ _csVolDragging = null; });
+}
+function wampSetAllVolume(val) {
+  toast('⏳ Выставляю громкость ' + val + ' на всех кампусах…');
+  fetch('/api/volume', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({value: val})
+  }).then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok) { toast('⚠️ ' + (d.error || 'ошибка')); return; }
+      toast('🔊 Громкость ' + val + ' — на всех кампусах');
+      MUSIC_MACHINES.forEach(function(m){
+        var volEl = document.getElementById('vol-'+m.key);
+        var volValEl = document.getElementById('vol-val-'+m.key);
+        if (volEl) volEl.value = val;
+        if (volValEl) volValEl.textContent = val;
+      });
+    })
+    .catch(function(){ toast('⚠️ Нет связи с сервером'); });
 }
 
 function pollMachine(key, idx) {
@@ -4069,6 +4142,15 @@ function pollMachine(key, idx) {
       if (idx === 0) {
         if (d.volume !== null && d.volume !== undefined) _knob.setVal(d.volume, true);
         if (d.muted !== undefined) setMuteUI(d.muted);
+      }
+      // Sync this campus's own volume slider to its real current value —
+      // skip while the user is actively dragging it (_csVolDragging) so a
+      // poll landing mid-drag doesn't yank the thumb back.
+      if (d.volume !== null && d.volume !== undefined && _csVolDragging !== key) {
+        var volEl = document.getElementById('vol-'+key);
+        var volValEl = document.getElementById('vol-val-'+key);
+        if (volEl) volEl.value = d.volume;
+        if (volValEl) volValEl.textContent = Math.round(d.volume);
       }
     }).catch(function() {
       conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';

@@ -1590,6 +1590,7 @@ def tracks():
                                unlocked_folders=unlocked_folders,
                                folder_pin_set=folder_pin_set,
                                is_pin_owner=is_pin_owner,
+                               music_machines=music_machines_json(),
                                open_pin_for=folder)
 
     result = scan_tracks(q, folder_filter=folder) if folder else []
@@ -1601,6 +1602,7 @@ def tracks():
                            unlocked_folders=unlocked_folders,
                            folder_pin_set=folder_pin_set,
                            is_pin_owner=is_pin_owner,
+                           music_machines=music_machines_json(),
                            open_pin_for='')
 
 @app.route('/admin')
@@ -1841,6 +1843,32 @@ def api_cron_pause_set():
             ssh_run_on(m['host'], m.get('user', CLIENT1_USER), cmd)
     return jsonify({'ok': True, 'paused': paused, 'machine': machine})
 
+# A status poll used to open 6 separate SSH connections (one per mpv
+# property) — for an unreachable machine that meant up to 6× the connect
+# timeout before the request even returned, and with a dozen campuses often
+# offline at once it could stall the whole worker pool. This batches all 6
+# get_property calls into one SSH connection + one socat session (mpv answers
+# each newline-delimited IPC request in order on the same pipe), and uses a
+# short connect timeout so an offline machine fails fast instead of dragging
+# the default 5s.
+_STATUS_PROPS = ['path', 'pause', 'volume', 'mute', 'time-pos', 'duration']
+def _mpv_status_batch(host, user):
+    reqs = ' '.join("'" + json.dumps({'command': ['get_property', p]}) + "'" for p in _STATUS_PROPS)
+    cmd = f"printf '%s\\n' {reqs} | socat - UNIX-CONNECT:/run/campus-player/mpv.sock 2>/dev/null"
+    r = ssh_run_on(host, user, cmd, key=None, timeout=6)
+    out = {}
+    if not r['ok']:
+        return dict.fromkeys(_STATUS_PROPS)
+    lines = (r.get('data') or '').splitlines()
+    for prop, line in zip(_STATUS_PROPS, lines):
+        try:
+            out[prop] = json.loads(line).get('data')
+        except Exception:
+            out[prop] = None
+    for prop in _STATUS_PROPS:
+        out.setdefault(prop, None)
+    return out
+
 # ── API ───────────────────────────────────────────
 @app.route('/api/status')
 @login_required
@@ -1852,12 +1880,19 @@ def api_status():
                      (x.get('user','') == machine or x['host'].endswith(machine))), None)
         if m:
             host, user = m['host'], m.get('user', CLIENT1_USER)
-            path   = mpv_get_on(host, user, 'path')
-            paused = mpv_get_on(host, user, 'pause')
-            vol    = mpv_get_on(host, user, 'volume')
-            muted  = mpv_get_on(host, user, 'mute')
-            pos    = mpv_get_on(host, user, 'time-pos')
-            dur    = mpv_get_on(host, user, 'duration')
+            vals   = _mpv_status_batch(host, user)
+            path   = vals['path']
+            paused = vals['pause']
+            vol    = vals['volume']
+            muted  = vals['mute']
+            pos    = vals['time-pos']
+            dur    = vals['duration']
+            # A live mpv always answers `pause`/`volume` even when idle — if
+            # every property came back None, the machine is unreachable or
+            # the player service isn't running there, not just "not playing"
+            if path is None and paused is None and vol is None:
+                return jsonify({'playing': False, 'track': None, 'online': False,
+                                'error': 'offline'})
             raw_name = os.path.basename(path) if path else None
             if raw_name and raw_name.lower() in ('in.mp3','in.wav','in.ogg'):
                 with get_db() as c:
@@ -1868,11 +1903,11 @@ def api_status():
                     ).fetchone()
                 raw_name = last['track_name'] if last else raw_name
             return jsonify({'playing': bool(path) and not paused, 'track': raw_name,
-                            'paused': bool(paused), 'muted': bool(muted),
+                            'paused': bool(paused), 'muted': bool(muted), 'online': True,
                             'volume': round(vol) if vol is not None else None,
                             'position': round(pos, 1) if pos is not None else None,
                             'duration': round(dur, 1) if dur is not None else None})
-        return jsonify({'playing': False, 'track': None, 'error': 'not found'})
+        return jsonify({'playing': False, 'track': None, 'online': False, 'error': 'not found'})
 
     path     = mpv_get('path')
     vol      = mpv_get('volume')
@@ -2040,11 +2075,6 @@ def _himn_path_for(campus):
         return HIMN_CGTK
     return _music_path_for(campus).rstrip('/') + '/1/himn.mp3'
 
-def _play_himn(host, user, filepath, vol):
-    r = ssh_run_on(host, user,
-        f'/usr/local/bin/campus-playerctl play "{filepath}" {vol} 2>/dev/null')
-    return r
-
 # ── "Минута молчания" — специальный файл вне ротации Media, прямой IPC ─────
 # (не через campus-playerctl: у него play игнорирует громкость молча —
 # известный баг, здесь используем тот же безопасный сокет-путь, что и крон).
@@ -2068,6 +2098,9 @@ def _play_via_ipc(host, user, filepath, vol, loop=False):
     )
     return ssh_run_on(host, user, cmd, timeout=10)
 
+def _play_himn(host, user, filepath, vol):
+    return _play_via_ipc(host, user, filepath, vol)
+
 def _log_himn_play(username, machine, filename):
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     log_action(username, 'himn', machine, filename)
@@ -2086,10 +2119,11 @@ def api_himn(campus):
     host, user = _machine_ssh(campus)
     if not host:
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
-    vol = 160 if campus == 'client1' else 150
+    vol = 150
     filepath = _himn_path_for(campus)
     r = _play_himn(host, user, filepath, vol)
-    if r['ok']:
+    ok = r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or '')
+    if ok:
         _log_himn_play(current_user.username, campus, os.path.basename(filepath))
         tg_notify(
             f'🎼 <b>Государственный гимн</b>\n'
@@ -2098,7 +2132,8 @@ def api_himn(campus):
             f'🕐 {_tg_fmt_time()}',
             event_type='himn'
         )
-    return jsonify({'ok': r['ok'], 'error': r.get('error')})
+    err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
+    return jsonify({'ok': ok, 'error': None if ok else err})
 
 _MINUTA_LABEL_FALLBACK = {'client1': 'Client1'}
 class _CampusLabelDict(dict):
@@ -2360,6 +2395,23 @@ def api_volume():
     data = request.get_json() or {}
     val  = max(0, min(160, int(data.get('value', 100))))
     return jsonify(mpv_set_all('volume', val))
+
+@app.route('/api/volume/<machine>', methods=['POST'])
+@login_required
+def api_volume_machine(machine):
+    if not has_perm('volume'):
+        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
+    data = request.get_json() or {}
+    val  = max(0, min(160, int(data.get('value', 100))))
+    cmd  = {'command': ['set_property', 'volume', val]}
+    if machine == 'client1':
+        r = mpv_cmd(cmd)
+    else:
+        m = _resolve_machine(machine, strict=True)
+        if not m:
+            return jsonify({'ok': False, 'error': f'{machine} не настроен'})
+        r = mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
+    return jsonify({'ok': r.get('ok', False), 'value': val})
 
 # ── Equalizer ─────────────────────────────────────────
 # 10-band EQ — lavfi chained equalizer (31,62,125,250,500,1k,2k,4k,8k,16kHz)
@@ -4808,6 +4860,8 @@ def api_announce():
     volume = max(50, min(160, int(request.form.get('volume', 120))))
 
     def _play_on(host, user, campus_id):
+        # campus-playerctl's `play` silently ignores the volume arg (same
+        # known bug as himn/minuta) — set volume via direct mpv IPC instead.
         s = None
         try:
             s = paramiko.SSHClient()
@@ -4817,9 +4871,17 @@ def api_announce():
             remote_path = '/tmp/campus_announce.webm'
             sftp.put(fpath, remote_path)
             sftp.close()
-            _, out, err = s.exec_command(
-                f'/usr/local/bin/campus-playerctl play {remote_path} {volume} 2>/dev/null')
-            out.read(); err.read()
+            cmd = (
+                'SOCK=/run/campus-player/mpv.sock; '
+                f'[ -S "$SOCK" ] || {{ echo "no socket"; exit 1; }}; '
+                f'echo \'{{"command":["set_property","volume",{volume}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+                f'echo \'{{"command":["loadfile","{remote_path}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"'
+            )
+            _, out, err = s.exec_command(cmd, timeout=10)
+            out_data = out.read().decode('utf-8', 'replace')
+            err.read()
+            if 'no socket' in out_data:
+                return 'нет сокета mpv'
             log_action(current_user.username, 'announce', campus_id, fname)
             return True
         except Exception as e:
