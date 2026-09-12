@@ -132,10 +132,15 @@ def reload_machines():
         _u = os.environ.get(f'MACHINE{_i}_USER', CLIENT1_USER)
         _c = os.environ.get(f'MACHINE{_i}_COCKPIT', '')
         _mp = os.environ.get(f'MACHINE{_i}_MUSIC_PATH', '') or _default_music_path(_u, _h)
+        # Lets an env-configured machine (unlike a /machines thin_client row)
+        # be pulled out of the player's campus lists without deleting its
+        # connection info — e.g. a decommissioned campus still reachable for
+        # terminal/monitoring but no longer a playback target.
+        _ia = os.environ.get(f'MACHINE{_i}_IS_AUDIO_CLIENT', '1').strip().lower() not in ('0', 'false', '')
         if _h and _n:
             machines.append({'id': f'm{_i}', 'host': _h, 'name': _n, 'mac': _m,
                               'user': _u, 'cockpit_url': _c, 'from_db': False,
-                              'is_audio_client': True, 'music_path': _mp})
+                              'is_audio_client': _ia, 'music_path': _mp})
     if not any(m['host'] == CLIENT1_HOST for m in machines):
         machines.insert(0, {
             'id': 'client1', 'host': CLIENT1_HOST,
@@ -3779,6 +3784,78 @@ def api_tracks_rename_folder():
         c.execute('UPDATE favorites SET folder=? WHERE folder=?', (new_name, name))
     log_action(current_user.username, 'rename_music_folder', 'local', f'{name} → {new_name}')
     return jsonify({'ok': True, 'folders': all_music_folders(), 'new_name': new_name})
+
+@app.route('/api/tracks/copy-folder', methods=['POST'])
+@login_required
+def api_tracks_copy_folder():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data     = request.get_json() or {}
+    name     = os.path.basename((data.get('name') or '').strip())
+    new_name = os.path.basename((data.get('new_name') or '').strip())
+    if name == KAMRAN_FOLDER and not _kamran_unlocked():
+        return jsonify({'ok': False, 'error': 'PIN требуется для KAMRAN'})
+    if name not in all_music_folders():
+        return jsonify({'ok': False, 'error': 'Папка не найдена'})
+    if not new_name or '..' in new_name or not _FOLDER_NAME_RE.match(new_name):
+        return jsonify({'ok': False, 'error': 'Недопустимое название папки'})
+    if new_name == KAMRAN_FOLDER:
+        return jsonify({'ok': False, 'error': 'Это имя зарезервировано за защищённой папкой KAMRAN'})
+    existing = {f.lower() for f in all_music_folders()}
+    if new_name.lower() in existing:
+        return jsonify({'ok': False, 'error': 'Папка с таким именем уже есть'})
+    src_path = os.path.join(MUSIC_DIR, name)
+    dst_path = os.path.join(MUSIC_DIR, new_name)
+    if not os.path.isdir(src_path):
+        return jsonify({'ok': False, 'error': 'Папка не найдена'})
+    try:
+        shutil.copytree(src_path, dst_path)
+    except OSError as e:
+        return jsonify({'ok': False, 'error': f'Не удалось скопировать: {e}'})
+    log_action(current_user.username, 'copy_music_folder', 'local', f'{name} → {new_name}')
+    return jsonify({'ok': True, 'folders': all_music_folders(), 'new_name': new_name})
+
+@app.route('/api/tracks/move-folder-contents', methods=['POST'])
+@login_required
+def api_tracks_move_folder_contents():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data       = request.get_json() or {}
+    name       = os.path.basename((data.get('name') or '').strip())
+    dst_folder = os.path.basename((data.get('dest_folder') or '').strip())
+    if name == dst_folder:
+        return jsonify({'ok': False, 'error': 'Папка назначения совпадает с исходной'})
+    if (name == KAMRAN_FOLDER or dst_folder == KAMRAN_FOLDER) and not _kamran_unlocked():
+        return jsonify({'ok': False, 'error': 'PIN требуется для KAMRAN'})
+    folders = all_music_folders()
+    if name not in folders:
+        return jsonify({'ok': False, 'error': 'Исходная папка не найдена'})
+    if dst_folder not in folders:
+        return jsonify({'ok': False, 'error': 'Папка назначения не найдена'})
+    src_path = os.path.join(MUSIC_DIR, name)
+    dst_path = os.path.join(MUSIC_DIR, dst_folder)
+    try:
+        entries = os.listdir(src_path)
+    except OSError:
+        return jsonify({'ok': False, 'error': 'Папка не найдена'})
+    moved, failed = 0, []
+    for fname in entries:
+        if not fname.lower().endswith(AUDIO_EXTS):
+            continue
+        s = os.path.join(src_path, fname)
+        d = os.path.join(dst_path, fname)
+        if not os.path.isfile(s):
+            continue
+        if os.path.exists(d):
+            failed.append(fname); continue
+        os.makedirs(dst_path, exist_ok=True)
+        os.rename(s, d)
+        moved += 1
+    if moved:
+        with get_db() as c:
+            c.execute('UPDATE favorites SET folder=? WHERE folder=?', (dst_folder, name))
+    log_action(current_user.username, 'move_folder_contents', 'local', f'{name} → {dst_folder}: {moved} файлов')
+    return jsonify({'ok': True, 'moved': moved, 'failed': failed})
 
 # ══════════════════════════════════════════════════
 @app.route('/machines')

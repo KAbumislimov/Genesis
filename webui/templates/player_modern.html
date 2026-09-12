@@ -184,9 +184,9 @@
   {% if perms.himn %}
   <div class="cpm-special-label"><span>⚠</span> Слышно на весь кампус — сначала подумай, потом жми</div>
   <div class="cpm-special-row">
-    <button class="cpm-pill" onclick="_doPlayHimnActive()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>Гимн</button>
-    <button class="cpm-pill" onclick="_openMicFor(_activeCampus)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>Мик — на весь кампус</button>
-    <button class="cpm-pill" onclick="_doPlayMinutaActive(this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-6 6c0 4-2 6-2 6h16s-2-2-2-6a6 6 0 0 0-6-6z"/></svg>Минута тишины</button>
+    <button class="cpm-pill" onclick="wampShowCampusPicker(event,'himn',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>Гимн</button>
+    <button class="cpm-pill" onclick="wampShowCampusPicker(event,'mic',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>Мик — на весь кампус</button>
+    <button class="cpm-pill" onclick="wampShowCampusPicker(event,'minuta',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-6 6c0 4-2 6-2 6h16s-2-2-2-6a6 6 0 0 0-6-6z"/></svg>Минута тишины</button>
     <button class="cpm-pill danger" onclick="_doPlayAlarmActive(this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Тревога</button>
     <select id="alarmSoundSelect" class="cpm-alarm-select"></select>
     {% if perms.admin %}
@@ -200,7 +200,7 @@
       <div class="cpm-fol-tabs" id="pl-folder-tabs">
         <button class="cpm-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">Все</button>
         {% for f in music_folders %}
-          {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f in fixed_folders)|lower) if current_user.role == 'admin' else '' %}
+          {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f == 'KAMRAN')|lower) if current_user.role == 'admin' else '' %}
           {% if f == 'KAMRAN' %}
           <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" {{ fctx|safe }} title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
           {% elif f not in fixed_folders and current_user.role == 'admin' %}

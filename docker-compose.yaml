@@ -230,6 +230,9 @@ services:
       - MACHINE2_NAME=client2 Campus
       - MACHINE2_USER=client2
       - MACHINE2_MAC=98:ee:cb:28:c1:9f
+      # Client2 списан — больше не рабочий кампус, но SSH/host-инфо оставлена
+      # (терминал, мониторинг) на случай если понадобится позже.
+      - MACHINE2_IS_AUDIO_CLIENT=0
       # Сервер CentOS (терминал)
       - CENTOS_HOST=${CENTOS_HOST:-10.10.4.120}
       - CENTOS_USER=${CENTOS_USER:-kamran}

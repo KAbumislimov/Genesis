@@ -1411,7 +1411,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🎖️</span><span class="wa-special-title" data-i18n="wamp.himn_group">Гимн</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_doPlayHimnActive()" title="Гимн — выбранный в шапке кампус">▶ <span data-i18n="wamp.himn_group">Гимн</span></button>
+          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'himn',this)" title="Гимн — выбрать кампус">▶ <span data-i18n="wamp.himn_group">Гимн</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.himn_desc">Включить гимн — на одном кампусе или сразу везде</div>
@@ -1420,7 +1420,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🎤</span><span class="wa-special-title" data-i18n="wamp.mik_group">Мик</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_openMicFor(_activeCampus)" title="Объявление — выбранный в шапке кампус">🎤 <span data-i18n="wamp.mik_group">Мик</span></button>
+          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'mic',this)" title="Объявление — выбрать кампус">🎤 <span data-i18n="wamp.mik_group">Мик</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.mik_desc">Живое объявление по громкой связи — выбери кампус</div>
@@ -1429,7 +1429,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🕯️</span><span class="wa-special-title" data-i18n="wamp.minuta">Минута молчания</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_doPlayMinutaActive(this)" title="Минута молчания — выбранный в шапке кампус">🕯 <span data-i18n="wamp.minuta">Минута молчания</span></button>
+          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'minuta',this)" title="Минута молчания — выбрать кампус">🕯 <span data-i18n="wamp.minuta">Минута молчания</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.minuta_desc">Запустить минуту молчания вне расписания</div>
@@ -1623,7 +1623,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wamp2-fol-tabs" id="pl-folder-tabs">
       <button class="wamp2-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">ВСЕ</button>
       {% for f in music_folders %}
-      {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f in fixed_folders)|lower) if current_user.role == 'admin' else '' %}
+      {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f == 'KAMRAN')|lower) if current_user.role == 'admin' else '' %}
       {% if f == 'KAMRAN' %}
       <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" {{ fctx|safe }} title="Личная папка — защищена PIN-кодом">🔒 {{ f|upper }}</button>
       {% elif f not in fixed_folders and current_user.role == 'admin' %}
@@ -1698,8 +1698,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wamp2-ctx-name" id="fctx-name"></div>
   </div>
   <div class="wamp2-ctx-sep"></div>
-  <button class="wamp2-ctx-item" id="fctx-play-btn">▶ Играть всё из папки</button>
   <button class="wamp2-ctx-item" id="fctx-rename-btn">✎ Переименовать папку</button>
+  <button class="wamp2-ctx-item" id="fctx-copy-btn">📋 Копировать папку</button>
+  <div class="wamp2-ctx-item wamp2-ctx-submenu-trigger" id="fctx-move-btn">📁 Переместить содержимое в… <span class="wamp2-ctx-arrow">›</span>
+    <div class="wamp2-ctx-submenu" id="fctx-move-submenu"></div>
+  </div>
   <div class="wamp2-ctx-sep"></div>
   <button class="wamp2-ctx-item wamp2-ctx-danger" id="fctx-delete-btn">🗑 Удалить папку</button>
 </div>
@@ -1708,6 +1711,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 <div id="wamp2-movepop" class="wamp2-movepop">
   <div class="wamp2-movepop-hd">Переместить в…</div>
   <div id="wamp2-movepop-list"></div>
+</div>
+<!-- Campus picker — shared dropdown opened by Гимн/Мик/Минута buttons -->
+<div id="wamp2-campuspop" class="wamp2-movepop">
+  <div class="wamp2-movepop-hd" id="ccpop-title"></div>
+  <div id="ccpop-list"></div>
 </div>
 
 
@@ -3587,22 +3595,27 @@ function wampRenameFolder(name) {
     location.reload();
   });
 }
-function wampPlayFolder(folder) {
-  if (_needSingleCampus()) return;
-  toast('⏳ ' + folder + '…');
-  fetch('/api/play-all', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({folder: folder, machine: _activeCampus, shuffle: true})
-  }).then(function(r){ return r.json(); }).then(function(d){
-    if (d.ok) {
-      toast('▶ ' + folder + ' — ' + (d.tracks||'') + ' треков · ' + campusLabel(_activeCampus));
-      var tab = document.querySelector('.wamp2-fol-tab[data-folder="'+folder+'"]');
-      if (tab) wampFolderTab(tab, folder);
-      setTimeout(pollStatus, 1200);
-    } else {
-      toast('⚠️ ' + (d.error || 'Ошибка запуска'));
-    }
-  }).catch(function(){ toast('⚠️ Нет связи'); });
+function wampCopyFolder(name) {
+  var newName = prompt('Название новой папки-копии:', name + ' (копия)');
+  if (newName === null) return;
+  newName = newName.trim();
+  if (!newName) return;
+  fetch('/api/tracks/copy-folder', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name, new_name: newName})
+  }).then(function(r){return r.json();}).then(function(d){
+    if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
+    toast('✔ Папка скопирована: ' + name + ' → ' + newName);
+    location.reload();
+  });
+}
+function wampMoveFolderContents(name, destFolder) {
+  fetch('/api/tracks/move-folder-contents', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name, dest_folder: destFolder})
+  }).then(function(r){return r.json();}).then(function(d){
+    if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
+    toast('✔ Перемещено ' + d.moved + ' треков: ' + name + ' → ' + destFolder);
+    if (_plFolder === name || _plFolder === destFolder) wampPlLoad();
+  });
 }
 var _ctxFolder = null, _ctxFolderFixed = false;
 function wampShowFolderContextMenu(ev, folder, isFixed) {
@@ -3610,10 +3623,30 @@ function wampShowFolderContextMenu(ev, folder, isFixed) {
   if (!menu) return;
   _ctxFolder = folder; _ctxFolderFixed = isFixed;
   document.getElementById('fctx-name').textContent = folder;
+  // isFixed here means "this is KAMRAN" — the one folder that can't be
+  // renamed/copied/emptied/deleted because its name is hardcoded all over
+  // the PIN-unlock flow, not a general "system folder" restriction anymore
   var renBtn = document.getElementById('fctx-rename-btn');
+  var copyBtn = document.getElementById('fctx-copy-btn');
+  var moveBtn = document.getElementById('fctx-move-btn');
   var delBtn = document.getElementById('fctx-delete-btn');
   if (renBtn) renBtn.style.display = isFixed ? 'none' : '';
+  if (copyBtn) copyBtn.style.display = isFixed ? 'none' : '';
+  if (moveBtn) moveBtn.style.display = isFixed ? 'none' : '';
   if (delBtn) delBtn.style.display = isFixed ? 'none' : '';
+  var moveSubmenu = document.getElementById('fctx-move-submenu');
+  if (moveSubmenu) {
+    moveSubmenu.innerHTML = '';
+    ALL_FOLDERS.forEach(function(f){
+      if (f === folder) return;
+      var b = document.createElement('button');
+      b.className = 'wamp2-ctx-submenu-item';
+      b.textContent = f;
+      b.onclick = function(){ wampFctxClose(); wampMoveFolderContents(folder, f); };
+      moveSubmenu.appendChild(b);
+    });
+    if (!moveSubmenu.children.length) moveSubmenu.innerHTML = '<div style="padding:6px 9px;font-size:10px;color:rgba(140,160,200,.5)">Нет других папок</div>';
+  }
   menu.classList.add('open');
   var x = ev.clientX, y = ev.clientY;
   var mw = menu.offsetWidth || 210, mh = menu.offsetHeight || 160;
@@ -3627,10 +3660,10 @@ function wampFctxClose() {
   if (menu) menu.classList.remove('open');
 }
 document.addEventListener('DOMContentLoaded', function(){
-  var playBtn = document.getElementById('fctx-play-btn');
-  if (playBtn) playBtn.onclick = function(){ wampFctxClose(); if(_ctxFolder) wampPlayFolder(_ctxFolder); };
   var renBtn = document.getElementById('fctx-rename-btn');
   if (renBtn) renBtn.onclick = function(){ wampFctxClose(); if(_ctxFolder) wampRenameFolder(_ctxFolder); };
+  var copyBtn = document.getElementById('fctx-copy-btn');
+  if (copyBtn) copyBtn.onclick = function(){ wampFctxClose(); if(_ctxFolder) wampCopyFolder(_ctxFolder); };
   var delBtn = document.getElementById('fctx-delete-btn');
   if (delBtn) delBtn.onclick = function(){ wampFctxClose(); if(_ctxFolder) wampDeleteFolder(_ctxFolder); };
   document.addEventListener('click', function(ev){
@@ -4064,6 +4097,51 @@ setInterval(function(){
 }, 15000);
 {% endif %}
 
+// ──── CAMPUS PICKER — shared dropdown for Гимн/Мик/Минута buttons ────
+// Decouples these three special actions from the header's campus selector:
+// clicking the button itself now asks which campus (or "Все кампусы"),
+// instead of always acting on whatever _activeCampus happens to be.
+function wampShowCampusPicker(ev, kind, btn) {
+  var pop = document.getElementById('wamp2-campuspop');
+  var list = document.getElementById('ccpop-list');
+  var title = document.getElementById('ccpop-title');
+  if (!pop || !list) return;
+  ev.stopPropagation();
+  var titles = {himn: 'Гимн — куда?', minuta: 'Минута молчания — куда?', mic: 'Мик — куда?'};
+  if (title) title.textContent = titles[kind] || 'Выбрать кампус';
+  list.innerHTML = '';
+  var allBtn = document.createElement('button');
+  allBtn.className = 'wamp2-movepop-item';
+  allBtn.style.fontWeight = '900';
+  allBtn.textContent = '📡 Все кампусы';
+  allBtn.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); wampCampusPicked(kind, 'all'); };
+  list.appendChild(allBtn);
+  MUSIC_MACHINES.forEach(function(m){
+    var b = document.createElement('button');
+    b.className = 'wamp2-movepop-item';
+    b.textContent = m.name;
+    b.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); wampCampusPicked(kind, m.key); };
+    list.appendChild(b);
+  });
+  pop.classList.add('open');
+  var r = btn.getBoundingClientRect();
+  var pw = pop.offsetWidth || 180, ph = pop.offsetHeight || 240;
+  var x = r.left, y = r.bottom + 4;
+  if (x + pw > window.innerWidth)  x = window.innerWidth  - pw - 8;
+  if (y + ph > window.innerHeight) y = r.top - ph - 4;
+  pop.style.left = x + 'px';
+  pop.style.top  = y + 'px';
+}
+function wampCampusPicked(kind, campus) {
+  if (kind === 'himn')   _doPlayHimnFor(campus);
+  if (kind === 'minuta') _doPlayMinutaFor(campus);
+  if (kind === 'mic')    _openMicFor(campus);
+}
+document.addEventListener('click', function(ev){
+  var pop = document.getElementById('wamp2-campuspop');
+  if (pop && pop.classList.contains('open') && !pop.contains(ev.target)) pop.classList.remove('open');
+});
+
 // ──── HIMN ────────────────────────────────────────────
 function _doPlayHimn(machine) {
   var labels = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
@@ -4077,15 +4155,16 @@ function _doPlayHimn(machine) {
       } else { toast('⚠️ ' + (d.error || 'нет прав')); }
     }).catch(function(){ toast('⚠️ нет связи'); });
 }
-function _doPlayHimnActive() {
-  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + campusLabel(_activeCampus) + '»';
+function _doPlayHimnFor(campus) {
+  var label = campus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + campusLabel(campus) + '»';
   if (!confirm('🎖️ Гимн будет включён на ' + label + '.\n\nПродолжить?')) return;
-  if (_activeCampus === 'all') {
+  if (campus === 'all') {
     playAllCampuses(_doPlayHimn);
   } else {
-    _doPlayHimn(_activeCampus);
+    _doPlayHimn(campus);
   }
 }
+function _doPlayHimnActive() { _doPlayHimnFor(_activeCampus); }
 
 // ──── МИНУТА МОЛЧАНИЯ ────
 var _MINUTA_LABELS = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
@@ -4105,11 +4184,12 @@ function _doPlayMinutaAll(btn) {
   playAllCampuses(_doPlayMinuta);
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
 }
-function _doPlayMinutaActive(btn) {
-  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_MINUTA_LABELS[_activeCampus] || _activeCampus) + '»';
+function _doPlayMinutaFor(campus, btn) {
+  var label = campus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_MINUTA_LABELS[campus] || campus) + '»';
   if (!confirm('🕯 Минута молчания будет запущена на ' + label + ' вне расписания.\n\nПродолжить?')) return;
-  if (_activeCampus === 'all') { _doPlayMinutaAll(btn); } else { _doPlayMinuta(_activeCampus, btn); }
+  if (campus === 'all') { _doPlayMinutaAll(btn); } else { _doPlayMinuta(campus, btn); }
 }
+function _doPlayMinutaActive(btn) { _doPlayMinutaFor(_activeCampus, btn); }
 
 // ──── ТРЕВОГА ────
 var _ALARM_LABELS = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
