@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, jsonify, f
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-import sqlite3, os, re, json, glob, socket, threading, time
+import sqlite3, os, re, json, glob, socket, threading, time, shutil
 import urllib.request, urllib.error
 from functools import wraps
 from datetime import datetime, timedelta
@@ -3729,8 +3729,8 @@ def api_tracks_delete_folder():
     name = os.path.basename((data.get('name') or '').strip())
     if not name or '..' in name:
         return jsonify({'ok': False, 'error': 'Недопустимое название'})
-    if name in MUSIC_FOLDERS:
-        return jsonify({'ok': False, 'error': 'Это системная папка — её нельзя удалить'})
+    if name == KAMRAN_FOLDER:
+        return jsonify({'ok': False, 'error': 'KAMRAN — защищённая PIN-кодом папка, её нельзя удалить'})
     if name not in all_music_folders():
         return jsonify({'ok': False, 'error': 'Папка не найдена'})
     path = os.path.join(MUSIC_DIR, name)
@@ -3747,6 +3747,38 @@ def api_tracks_delete_folder():
         return jsonify({'ok': False, 'error': f'Не удалось удалить: {e}'})
     log_action(current_user.username, 'delete_music_folder', 'local', name)
     return jsonify({'ok': True, 'folders': all_music_folders()})
+
+@app.route('/api/tracks/rename-folder', methods=['POST'])
+@login_required
+def api_tracks_rename_folder():
+    if current_user.role not in ('admin',):
+        return jsonify({'ok': False, 'error': 'Только админ'})
+    data     = request.get_json() or {}
+    name     = os.path.basename((data.get('name') or '').strip())
+    new_name = os.path.basename((data.get('new_name') or '').strip())
+    if name == KAMRAN_FOLDER:
+        return jsonify({'ok': False, 'error': 'KAMRAN — защищённая PIN-кодом папка, её нельзя переименовать'})
+    if name not in all_music_folders():
+        return jsonify({'ok': False, 'error': 'Папка не найдена'})
+    if not new_name or '..' in new_name or not _FOLDER_NAME_RE.match(new_name):
+        return jsonify({'ok': False, 'error': 'Недопустимое название папки'})
+    if new_name == KAMRAN_FOLDER:
+        return jsonify({'ok': False, 'error': 'Это имя зарезервировано за защищённой папкой KAMRAN'})
+    existing = {f.lower() for f in all_music_folders() if f != name}
+    if new_name.lower() in existing:
+        return jsonify({'ok': False, 'error': 'Папка с таким именем уже есть'})
+    old_path = os.path.join(MUSIC_DIR, name)
+    new_path = os.path.join(MUSIC_DIR, new_name)
+    if not os.path.isdir(old_path):
+        return jsonify({'ok': False, 'error': 'Папка не найдена'})
+    try:
+        os.rename(old_path, new_path)
+    except OSError as e:
+        return jsonify({'ok': False, 'error': f'Не удалось переименовать: {e}'})
+    with get_db() as c:
+        c.execute('UPDATE favorites SET folder=? WHERE folder=?', (new_name, name))
+    log_action(current_user.username, 'rename_music_folder', 'local', f'{name} → {new_name}')
+    return jsonify({'ok': True, 'folders': all_music_folders(), 'new_name': new_name})
 
 # ══════════════════════════════════════════════════
 @app.route('/machines')

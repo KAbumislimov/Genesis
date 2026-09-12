@@ -200,15 +200,16 @@
       <div class="cpm-fol-tabs" id="pl-folder-tabs">
         <button class="cpm-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">Все</button>
         {% for f in music_folders %}
+          {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f in fixed_folders)|lower) if current_user.role == 'admin' else '' %}
           {% if f == 'KAMRAN' %}
-          <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
+          <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" {{ fctx|safe }} title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
           {% elif f not in fixed_folders and current_user.role == 'admin' %}
           <div class="cpm-fol-tab-wrap">
-            <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f }}</button>
+            <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f }}</button>
             <span class="cpm-fol-del" title="Удалить папку (должна быть пустой)" onclick="event.stopPropagation();wampDeleteFolder('{{ f }}')">🗑</span>
           </div>
           {% else %}
-          <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f }}</button>
+          <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f }}</button>
           {% endif %}
         {% endfor %}
         <button class="cpm-fol-tab cpm-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ Избранное</button>

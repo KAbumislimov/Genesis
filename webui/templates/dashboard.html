@@ -1623,15 +1623,16 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <div class="wamp2-fol-tabs" id="pl-folder-tabs">
       <button class="wamp2-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">ВСЕ</button>
       {% for f in music_folders %}
+      {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f in fixed_folders)|lower) if current_user.role == 'admin' else '' %}
       {% if f == 'KAMRAN' %}
-      <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" title="Личная папка — защищена PIN-кодом">🔒 {{ f|upper }}</button>
+      <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" {{ fctx|safe }} title="Личная папка — защищена PIN-кодом">🔒 {{ f|upper }}</button>
       {% elif f not in fixed_folders and current_user.role == 'admin' %}
       <span class="wamp2-fol-tab-wrap">
-        <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f|upper }}</button>
+        <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f|upper }}</button>
         <span class="wamp2-fol-del" title="Удалить папку (должна быть пустой)" onclick="event.stopPropagation();wampDeleteFolder('{{ f }}')">🗑</span>
       </span>
       {% else %}
-      <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')">{{ f|upper }}</button>
+      <button class="wamp2-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f|upper }}</button>
       {% endif %}
       {% endfor %}
       <button class="wamp2-fol-tab wamp2-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ ИЗБРАННОЕ</button>
@@ -1690,6 +1691,19 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   <button class="wamp2-ctx-item wamp2-ctx-danger" id="ctx-delete-btn">🗑 Удалить файл</button>
   {% endif %}
 </div>
+{% if current_user.role == 'admin' %}
+<!-- Folder/album context menu — right-click a folder tab -->
+<div id="wamp2-fctx" class="wamp2-ctx">
+  <div class="wamp2-ctx-info">
+    <div class="wamp2-ctx-name" id="fctx-name"></div>
+  </div>
+  <div class="wamp2-ctx-sep"></div>
+  <button class="wamp2-ctx-item" id="fctx-play-btn">▶ Играть всё из папки</button>
+  <button class="wamp2-ctx-item" id="fctx-rename-btn">✎ Переименовать папку</button>
+  <div class="wamp2-ctx-sep"></div>
+  <button class="wamp2-ctx-item wamp2-ctx-danger" id="fctx-delete-btn">🗑 Удалить папку</button>
+</div>
+{% endif %}
 <!-- Per-row "move to" popup — shared by both skins -->
 <div id="wamp2-movepop" class="wamp2-movepop">
   <div class="wamp2-movepop-hd">Переместить в…</div>
@@ -3560,6 +3574,71 @@ function wampDeleteFolder(name) {
     location.reload();
   });
 }
+function wampRenameFolder(name) {
+  var newName = prompt('Новое название папки:', name);
+  if (newName === null) return;
+  newName = newName.trim();
+  if (!newName || newName === name) return;
+  fetch('/api/tracks/rename-folder', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name, new_name: newName})
+  }).then(function(r){return r.json();}).then(function(d){
+    if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
+    toast('✔ Папка переименована: ' + name + ' → ' + newName);
+    location.reload();
+  });
+}
+function wampPlayFolder(folder) {
+  if (_needSingleCampus()) return;
+  toast('⏳ ' + folder + '…');
+  fetch('/api/play-all', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({folder: folder, machine: _activeCampus, shuffle: true})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.ok) {
+      toast('▶ ' + folder + ' — ' + (d.tracks||'') + ' треков · ' + campusLabel(_activeCampus));
+      var tab = document.querySelector('.wamp2-fol-tab[data-folder="'+folder+'"]');
+      if (tab) wampFolderTab(tab, folder);
+      setTimeout(pollStatus, 1200);
+    } else {
+      toast('⚠️ ' + (d.error || 'Ошибка запуска'));
+    }
+  }).catch(function(){ toast('⚠️ Нет связи'); });
+}
+var _ctxFolder = null, _ctxFolderFixed = false;
+function wampShowFolderContextMenu(ev, folder, isFixed) {
+  var menu = document.getElementById('wamp2-fctx');
+  if (!menu) return;
+  _ctxFolder = folder; _ctxFolderFixed = isFixed;
+  document.getElementById('fctx-name').textContent = folder;
+  var renBtn = document.getElementById('fctx-rename-btn');
+  var delBtn = document.getElementById('fctx-delete-btn');
+  if (renBtn) renBtn.style.display = isFixed ? 'none' : '';
+  if (delBtn) delBtn.style.display = isFixed ? 'none' : '';
+  menu.classList.add('open');
+  var x = ev.clientX, y = ev.clientY;
+  var mw = menu.offsetWidth || 210, mh = menu.offsetHeight || 160;
+  if (x + mw > window.innerWidth)  x = window.innerWidth  - mw - 8;
+  if (y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+}
+function wampFctxClose() {
+  var menu = document.getElementById('wamp2-fctx');
+  if (menu) menu.classList.remove('open');
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var playBtn = document.getElementById('fctx-play-btn');
+  if (playBtn) playBtn.onclick = function(){ wampFctxClose(); if(_ctxFolder) wampPlayFolder(_ctxFolder); };
+  var renBtn = document.getElementById('fctx-rename-btn');
+  if (renBtn) renBtn.onclick = function(){ wampFctxClose(); if(_ctxFolder) wampRenameFolder(_ctxFolder); };
+  var delBtn = document.getElementById('fctx-delete-btn');
+  if (delBtn) delBtn.onclick = function(){ wampFctxClose(); if(_ctxFolder) wampDeleteFolder(_ctxFolder); };
+  document.addEventListener('click', function(ev){
+    var menu = document.getElementById('wamp2-fctx');
+    if (menu && menu.classList.contains('open') && !menu.contains(ev.target)) wampFctxClose();
+  });
+  document.addEventListener('keydown', function(ev){ if(ev.key === 'Escape') wampFctxClose(); });
+});
 function wampToggleFavorite(tr, favEl) {
   var willFav = !tr.fav;
   fetch('/api/tracks/favorite', {method:'POST', headers:{'Content-Type':'application/json'},
