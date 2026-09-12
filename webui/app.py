@@ -1967,7 +1967,10 @@ def _mpv_stop_on(host, user):
     # 2. Kill remaining audio tools (ffmpeg announces, edge-tts TTS, bells).
     # Avoid pkill mpv: killing mpv causes systemd Restart=always to relaunch it,
     # which looks like "stop didn't work" — the IPC stop is instant and cleaner.
-    ssh_run_on(host, user,
+    # Retries once on a failed SSH attempt (transient network hiccups are common
+    # on this fleet) instead of silently doing nothing — a "panic button" that
+    # sometimes no-ops without telling anyone is worse than a slightly slower one.
+    cmd = (
         f'printf \'{{"command":["stop"]}}\\n\' | socat - {MPV_SOCK} 2>/dev/null || true; '
         f'printf \'{{"command":["playlist-clear"]}}\\n\' | socat - {MPV_SOCK} 2>/dev/null || true; '
         'pkill -9 ffmpeg  2>/dev/null || true; '
@@ -1983,6 +1986,10 @@ def _mpv_stop_on(host, user):
         # something still holds it open after the process kills above
         # ("панический стоп" — освободить устройство любой ценой).
         'fuser -k /dev/snd/* 2>/dev/null || true; true')
+    r = ssh_run_on(host, user, cmd, timeout=8)
+    if not r.get('ok'):
+        r = ssh_run_on(host, user, cmd, timeout=8)
+    return r
 
 @app.route('/api/pause', methods=['POST'])
 @login_required
@@ -2013,12 +2020,14 @@ def api_pause():
 def api_stop():
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
+    # Panic button — fire every campus (client1 included) in parallel and
+    # respond immediately instead of waiting on client1's SSH round-trip first;
+    # the UI shows "stopped" the instant the request is dispatched, not once
+    # the slowest campus's SSH call happens to finish.
     for m in music_machines():
-        if m['host'] != CLIENT1_HOST:
-            threading.Thread(
-                target=_mpv_stop_on, args=(m['host'], m.get('user', CLIENT1_USER)), daemon=True
-            ).start()
+        threading.Thread(
+            target=_mpv_stop_on, args=(m['host'], m.get('user', CLIENT1_USER)), daemon=True
+        ).start()
     log_action(current_user.username, 'stop', 'all')
     tg_notify(
         f'⏹ <b>СТОП — остановлено всё, на всех кампусах</b>\n'
@@ -2034,12 +2043,15 @@ def api_stop_machine(machine):
     if not has_perm('stop'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     if machine == 'client1':
-        _mpv_stop_on(CLIENT1_HOST, CLIENT1_USER)
+        host, user = CLIENT1_HOST, CLIENT1_USER
     else:
         m = _resolve_machine(machine, strict=True)
         if not m:
             return jsonify({'ok': False, 'error': 'машина не настроена'})
-        _mpv_stop_on(m['host'], m.get('user', CLIENT1_USER))
+        host, user = m['host'], m.get('user', CLIENT1_USER)
+    # Fire-and-forget, same as the global panic-stop — the button should feel
+    # instant, not wait on an SSH round-trip that may itself be retrying.
+    threading.Thread(target=_mpv_stop_on, args=(host, user), daemon=True).start()
     log_action(current_user.username, 'stop', machine)
     return jsonify({'ok': True})
 

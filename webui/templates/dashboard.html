@@ -641,7 +641,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .nc-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);line-height:1}
 .nc-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:900;line-height:1.1}
 .nc-sub{font-size:10px;color:var(--muted);line-height:1}
-.nc-chip-machines{gap:4px;padding:4px 8px}
+.nc-chip-machines{gap:4px;padding:4px 8px;white-space:normal;max-width:min(680px,52vw)}
 .nc-chip-machines .nc-val{font-size:11px}
 .mtime-chip{display:flex;align-items:center;gap:5px;font-size:12px;padding:2px 4px;white-space:nowrap}
 .mtime-lbl{color:var(--muted);margin-right:1px}
@@ -804,11 +804,18 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
 .w2b.tog.on{background:var(--wt-btn-on);color:var(--wt-btn-on-txt);
   border-color:rgba(40,80,200,.6);box-shadow:inset 0 2px 4px rgba(0,0,0,.4),0 0 6px var(--wt-accent)}
-/* СТОП — красная */
-.w2b-stop{background:linear-gradient(180deg,#5a1818 0%,#3a0c0c 100%)!important;
-  color:#ff7070!important;border-color:rgba(220,60,60,.45)!important;letter-spacing:.07em}
-.w2b-stop:hover{background:linear-gradient(180deg,#7a2020 0%,#5a1010 100%)!important;color:#ffaaaa!important}
-.w2b-stop:active{box-shadow:inset 0 2px 4px rgba(0,0,0,.5),0 0 8px rgba(255,60,60,.4)!important}
+/* СТОП — красная, заметно крупнее соседних кнопок — паник-кнопка */
+.w2b-stop{background:linear-gradient(180deg,#8a1f1f 0%,#4a0e0e 100%)!important;
+  color:#fff!important;border:1px solid rgba(255,90,90,.7)!important;letter-spacing:.08em;
+  height:30px!important;padding:0 14px!important;font-size:11.5px!important;font-weight:900;
+  border-radius:5px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 10px rgba(220,40,40,.55)!important;
+  animation:w2bStopPulse 2.2s ease-in-out infinite}
+.w2b-stop:hover{background:linear-gradient(180deg,#a52626 0%,#6a1414 100%)!important;color:#fff!important}
+.w2b-stop:active{box-shadow:inset 0 2px 4px rgba(0,0,0,.5),0 0 14px rgba(255,60,60,.7)!important;animation:none}
+@keyframes w2bStopPulse{
+  0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 8px rgba(220,40,40,.45)}
+  50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 16px rgba(255,60,60,.85)}
+}
 /* ИГРАТЬ ВСЁ — металлически зелёная */
 .w2b-playall{
   background:linear-gradient(180deg,#1a4a1a 0%,#0d2e0d 60%,#081808 100%)!important;
