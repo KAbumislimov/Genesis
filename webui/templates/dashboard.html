@@ -641,7 +641,20 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .nc-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);line-height:1}
 .nc-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:900;line-height:1.1}
 .nc-sub{font-size:10px;color:var(--muted);line-height:1}
-.nc-chip-machines{gap:4px;padding:4px 8px;white-space:normal;max-width:min(680px,52vw)}
+/* Moved into the empty left margin (same fixed column as the bug-report
+   button) instead of the header row, where a dozen campuses had nowhere
+   reasonable to fit. */
+.nc-chip-machines{position:fixed;top:146px;left:14px;z-index:790;
+  flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px;
+  width:186px;max-height:calc(100vh - 220px);overflow-y:auto;
+  background:rgba(20,20,40,.88);border:1.5px solid rgba(88,166,255,.3);
+  border-radius:12px;box-shadow:0 3px 16px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.4)}
+.nc-chip-machines #machine-times{flex-direction:column!important;flex-wrap:nowrap!important;
+  align-items:stretch;width:100%;gap:3px!important}
+.nc-chip-machines .mtime-chip{flex-shrink:0;justify-content:space-between;width:100%}
+.nc-chip-machines::-webkit-scrollbar{width:4px}
+.nc-chip-machines::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+@media (max-width:1100px){.nc-chip-machines{display:none}}
 .nc-chip-machines .nc-val{font-size:11px}
 .mtime-chip{display:flex;align-items:center;gap:5px;font-size:12px;padding:2px 4px;white-space:nowrap}
 .mtime-lbl{color:var(--muted);margin-right:1px}
@@ -927,6 +940,14 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wa-trevoga-group #alarmSoundSelect{background:#2a0a0a;color:#ffb0b0;border:1px solid rgba(255,90,90,.4)}
 @keyframes alarmPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.15)}}
 @media (prefers-reduced-motion:reduce){.wa-trevoga-group .wa-special-icon{animation:none}}
+
+.wa-zefer-group{background:radial-gradient(120% 160% at 0% 0%,#2a1c08 0%,#1c1204 55%,#100b02 100%);
+  border:1.5px solid rgba(212,175,55,.4);box-shadow:0 0 0 1px rgba(212,175,55,.08) inset,0 6px 22px -8px rgba(212,175,55,.3)}
+.wa-zefer-group .wa-special-title,.wa-zefer-group .wa-special-icon{color:#d4af37}
+.wa-zefer-group .wa-special-btn{background:linear-gradient(180deg,#5c3f10 0%,#332208 100%);
+  color:#e8c96a;border-color:rgba(212,175,55,.45)}
+.wa-zefer-group .wa-special-btn:hover{background:linear-gradient(180deg,#6f4e16 0%,#42300c 100%);
+  color:#f5deA0;box-shadow:0 4px 14px -4px rgba(212,175,55,.5)}
 
 .wa-cron-group{background:radial-gradient(120% 160% at 0% 0%,#132a1c 0%,#0d1e14 40%,#14141c 70%,#1a0f10 100%);
   border:1.5px solid rgba(120,160,255,.28);box-shadow:0 0 0 1px rgba(120,160,255,.06) inset,0 6px 22px -8px rgba(80,140,255,.25)}
@@ -1459,13 +1480,22 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       <div class="wa-special-top">
         <div class="wa-special-hd"><span class="wa-special-icon">🚨</span><span class="wa-special-title" data-i18n="wamp.trevoga_group">Тревога</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="_doPlayAlarmActive(this)" title="Тревога — выбранный в шапке кампус">🚨 <span data-i18n="wamp.trevoga_group">Тревога</span></button>
+          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'alarm',this)" title="Тревога — выбрать кампус">🚨 <span data-i18n="wamp.trevoga_group">Тревога</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.trevoga_desc">Сигнал тревоги в цикле — остановить обычной кнопкой СТОП</div>
       <div style="margin-top:6px;display:flex;align-items:center;gap:6px">
         <select id="alarmSoundSelect" class="form-select form-select-sm" style="max-width:220px"></select>
       </div>
+    </div>
+    <div class="wa-special-group wa-zefer-group">
+      <div class="wa-special-top">
+        <div class="wa-special-hd"><span class="wa-special-icon">🎖</span><span class="wa-special-title">Zəfər Günü</span></div>
+        <div class="wa-special-btns">
+          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'zefer',this)" title="Zəfər Günü — выбрать кампус">🎖 Zəfər Günü</button>
+        </div>
+      </div>
+      <div class="wa-special-desc">8 noyabr — Zəfər Günü trekini işə sal</div>
     </div>
     {% if perms.admin %}
     <div class="wa-special-group wa-cron-group">
@@ -4201,7 +4231,8 @@ function wampShowCampusPicker(ev, kind, btn) {
   var title = document.getElementById('ccpop-title');
   if (!pop || !list) return;
   ev.stopPropagation();
-  var titles = {himn: 'Гимн — куда?', minuta: 'Минута молчания — куда?', mic: 'Мик — куда?'};
+  var titles = {himn: 'Гимн — куда?', minuta: 'Минута молчания — куда?', mic: 'Мик — куда?',
+                alarm: 'Тревога — куда?', zefer: 'Zəfər Günü — куда?'};
   if (title) title.textContent = titles[kind] || 'Выбрать кампус';
   list.innerHTML = '';
   var allBtn = document.createElement('button');
@@ -4230,6 +4261,8 @@ function wampCampusPicked(kind, campus) {
   if (kind === 'himn')   _doPlayHimnFor(campus);
   if (kind === 'minuta') _doPlayMinutaFor(campus);
   if (kind === 'mic')    _openMicFor(campus);
+  if (kind === 'alarm')  _doPlayAlarmFor(campus);
+  if (kind === 'zefer')  _doPlayZeferFor(campus);
 }
 document.addEventListener('click', function(ev){
   var pop = document.getElementById('wamp2-campuspop');
@@ -4324,10 +4357,33 @@ function _doPlayAlarmAll(btn) {
   playAllCampuses(_doPlayAlarm);
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
 }
-function _doPlayAlarmActive(btn) {
-  var label = _activeCampus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_ALARM_LABELS[_activeCampus] || _activeCampus) + '»';
+function _doPlayAlarmFor(campus, btn) {
+  var label = campus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_ALARM_LABELS[campus] || campus) + '»';
   if (!confirm('🚨 Сигнал ТРЕВОГИ будет запущен на ' + label + ' и будет играть в цикле, пока не нажмёшь обычный СТОП.\n\nПродолжить?')) return;
-  if (_activeCampus === 'all') { _doPlayAlarmAll(btn); } else { _doPlayAlarm(_activeCampus, btn); }
+  if (campus === 'all') { _doPlayAlarmAll(btn); } else { _doPlayAlarm(campus, btn); }
+}
+function _doPlayAlarmActive(btn) { _doPlayAlarmFor(_activeCampus, btn); }
+
+// ──── ZƏFƏR GÜNÜ (8 noyabr) ────
+var _ZEFER_LABELS = CAMPUS_LABELS;  // dynamic — see MUSIC_MACHINES
+function _doPlayZefer(campus, btn) {
+  if (btn) btn.classList.add('busy');
+  toast('🎖 Zəfər Günü → ' + (_ZEFER_LABELS[campus] || campus));
+  fetch('/api/zefer/' + campus, {method:'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) { if (!d.ok) toast('⚠️ ' + (d.error || 'ошибка')); })
+    .catch(function(){ toast('⚠️ нет связи'); })
+    .finally(function(){ if (btn) btn.classList.remove('busy'); });
+}
+function _doPlayZeferAll(btn) {
+  if (btn) btn.classList.add('busy');
+  playAllCampuses(_doPlayZefer);
+  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
+}
+function _doPlayZeferFor(campus, btn) {
+  var label = campus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_ZEFER_LABELS[campus] || campus) + '»';
+  if (!confirm('🎖 Zəfər Günü будет запущен на ' + label + '.\n\nПродолжить?')) return;
+  if (campus === 'all') { _doPlayZeferAll(btn); } else { _doPlayZefer(campus, btn); }
 }
 
 // ──── PEREM QUICK-ACCESS (dashboard "⚡ быстрый запуск") ────

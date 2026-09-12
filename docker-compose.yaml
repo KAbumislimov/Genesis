@@ -233,6 +233,9 @@ services:
       # Client2 списан — больше не рабочий кампус, но SSH/host-инфо оставлена
       # (терминал, мониторинг) на случай если понадобится позже.
       - MACHINE2_IS_AUDIO_CLIENT=0
+      # Zəfər Günü (8 noyabr) — общий секрет для серверного крона, который
+      # раз в год дёргает /api/zefer-all без логина (см. scripts/zefer-gunu.sh)
+      - ZEFER_CRON_TOKEN=${ZEFER_CRON_TOKEN:-knT5FWZ6-MLfF6BCSyiOY6vh013df5VR_wvdbZ4FWy4}
       # Сервер CentOS (терминал)
       - CENTOS_HOST=${CENTOS_HOST:-10.10.4.120}
       - CENTOS_USER=${CENTOS_USER:-kamran}

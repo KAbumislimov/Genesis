@@ -23,17 +23,30 @@
 .cpm-skin-link{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none}
 .cpm-skin-link:hover{color:var(--cpm-accent)}
 
-.cpm-campus-strip{display:flex;flex-direction:column;gap:2px;padding:10px 20px}
-.cpm-campus-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:9px;font-size:12.5px}
+.cpm-campus-strip{display:flex;flex-direction:row;flex-wrap:wrap;gap:2px 12px;padding:10px 20px}
+.cpm-campus-row{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:6px 10px;
+  border-radius:9px;font-size:12.5px;flex:0 1 260px;min-width:200px}
 .cpm-campus-row:hover{background:var(--bg3)}
+.cpm-campus-line1{display:flex;align-items:center;gap:10px}
 .cpm-dot{font-size:8px;color:var(--green);line-height:1;flex-shrink:0}
 .cpm-dot.off{color:var(--muted)}
 .cpm-conn{color:var(--muted);font-size:11px;flex-shrink:0}
 .cpm-campus-name{font-weight:700;width:84px;flex-shrink:0;color:var(--text)}
 .cpm-campus-track{flex:1;min-width:0;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cpm-campus-prog{width:110px;height:4px;border-radius:100px;background:var(--bg3);position:relative;flex-shrink:0;cursor:pointer}
+.cpm-campus-prog{width:80px;height:4px;border-radius:100px;background:var(--bg3);position:relative;flex-shrink:0;cursor:pointer}
 .cpm-campus-prog-fill{position:absolute;inset:0 auto 0 0;border-radius:100px;background:var(--muted)}
 .cpm-campus-time{font-size:10.5px;color:var(--muted);width:34px;text-align:right;flex-shrink:0}
+.cpm-campus-vol-row{display:flex;align-items:center;gap:6px;padding-left:26px}
+.cpm-campus-vol{-webkit-appearance:none;appearance:none;flex:1;height:3px;border-radius:2px;
+  background:var(--bg3);outline:none;cursor:pointer}
+.cpm-campus-vol::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;
+  background:var(--cpm-accent);cursor:pointer}
+.cpm-campus-vol::-moz-range-thumb{width:11px;height:11px;border-radius:50%;border:none;
+  background:var(--cpm-accent);cursor:pointer}
+.cpm-campus-vol-val{font-size:10px;color:var(--muted);min-width:22px;text-align:right;flex-shrink:0}
+.cpm-vol-all-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  font-size:11px;font-weight:700;padding:5px 12px;border-radius:7px;cursor:pointer;margin:0 20px 8px}
+.cpm-vol-all-btn:hover{border-color:var(--cpm-accent);color:var(--cpm-accent)}
 
 .cpm-special-label{display:flex;align-items:center;gap:8px;margin:8px 20px 0;padding:6px 12px;
   border-radius:8px 8px 0 0;background:repeating-linear-gradient(135deg,#3a2c00 0 10px,#241c00 10px 20px);
@@ -169,17 +182,31 @@
   <div class="cpm-campus-strip">
     {% for m in music_machines %}
     <div class="cpm-campus-row" id="wamp2-row-{{ m.key }}">
-      <span class="cpm-dot" id="live-{{ m.key }}">●</span>
-      <span class="cpm-dot off" id="stop-{{ m.key }}" style="display:none">●</span>
-      <span class="cpm-conn" id="conn-{{ m.key }}"><i class="bi bi-wifi"></i></span>
-      <span class="cpm-campus-name">{{ m.name }}</span>
-      <span class="cpm-campus-track" id="mini-name-{{ m.key }}">Не играет</span>
-      <div class="cpm-campus-prog" onclick="_cpmSeek('{{ m.key }}',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div></div>
-      <span class="cpm-campus-time" id="wamp-pos-{{ m.key }}">0:00</span>
-      <span class="cpm-campus-time" id="wamp-dur-{{ m.key }}"></span>
+      <div class="cpm-campus-line1">
+        <span class="cpm-dot" id="live-{{ m.key }}">●</span>
+        <span class="cpm-dot off" id="stop-{{ m.key }}" style="display:none">●</span>
+        <span class="cpm-conn" id="conn-{{ m.key }}"><i class="bi bi-wifi"></i></span>
+        <span class="cpm-campus-name">{{ m.name }}</span>
+        <span class="cpm-campus-track" id="mini-name-{{ m.key }}">Не играет</span>
+        <div class="cpm-campus-prog" onclick="_cpmSeek('{{ m.key }}',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div></div>
+        <span class="cpm-campus-time" id="wamp-pos-{{ m.key }}">0:00</span>
+        <span class="cpm-campus-time" id="wamp-dur-{{ m.key }}"></span>
+      </div>
+      {% if perms.vol %}
+      <div class="cpm-campus-vol-row">
+        <i class="bi bi-volume-down" style="font-size:10px;color:var(--muted);flex-shrink:0"></i>
+        <input type="range" class="cpm-campus-vol" id="vol-{{ m.key }}" min="0" max="160" value="100"
+               oninput="wampCsVolInput('{{ m.key }}',this.value)"
+               onchange="wampSetCampusVolume('{{ m.key }}',this.value)" title="Громкость {{ m.name }}">
+        <span class="cpm-campus-vol-val" id="vol-val-{{ m.key }}">100</span>
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
+  {% if perms.vol %}
+  <button class="cpm-vol-all-btn" onclick="wampSetAllVolume(150)" title="Выставить громкость 150 на всех кампусах одновременно">🔊 Все → 150</button>
+  {% endif %}
 
   {% if perms.himn %}
   <div class="cpm-special-label"><span>⚠</span> Слышно на весь кампус — сначала подумай, потом жми</div>
@@ -187,8 +214,9 @@
     <button class="cpm-pill" onclick="wampShowCampusPicker(event,'himn',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>Гимн</button>
     <button class="cpm-pill" onclick="wampShowCampusPicker(event,'mic',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>Мик — на весь кампус</button>
     <button class="cpm-pill" onclick="wampShowCampusPicker(event,'minuta',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-6 6c0 4-2 6-2 6h16s-2-2-2-6a6 6 0 0 0-6-6z"/></svg>Минута тишины</button>
-    <button class="cpm-pill danger" onclick="_doPlayAlarmActive(this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Тревога</button>
+    <button class="cpm-pill danger" onclick="wampShowCampusPicker(event,'alarm',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Тревога</button>
     <select id="alarmSoundSelect" class="cpm-alarm-select"></select>
+    <button class="cpm-pill" onclick="wampShowCampusPicker(event,'zefer',this)" style="color:#d4af37;border-color:rgba(212,175,55,.4)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg>Zəfər Günü</button>
     {% if perms.admin %}
     <button class="cpm-pill" id="btn-cron-active" onclick="_cronToggleActive()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Крон</button>
     {% endif %}

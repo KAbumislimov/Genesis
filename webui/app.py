@@ -2199,23 +2199,33 @@ def _list_alarm_sounds():
         return []
     return sorted(f for f in os.listdir(ALARM_DIR) if f.lower().endswith(_ALARM_EXTS))
 
-def _push_and_play_alarm(host, user, fname, vol):
-    local_path  = os.path.join(ALARM_DIR, fname)
-    remote_path = f'/home/{user}/special/alarm_{fname}'
+def _push_and_play_special(host, user, local_path, remote_path, vol, loop=False):
+    """Push a centrally-stored file to a campus (only if missing/stale there)
+    and play it — same lazy-SFTP-on-first-play pattern as alarm sounds, but
+    generalized so any one-off "special" track (Zəfər Günü, a swapped-in
+    himn/minuta file, etc.) can reuse it instead of requiring the file to
+    already be sitting on the campus's disk ahead of time."""
     s = paramiko.SSHClient()
     s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         s.connect(host, username=user, key_filename=SSH_KEY, timeout=8)
-        _, chk, _ = s.exec_command(f'test -f "{remote_path}" && echo y || echo n', timeout=5)
-        exists = chk.read().decode().strip() == 'y'
-        if not exists:
+        local_sz = os.path.getsize(local_path)
+        _, chk, _ = s.exec_command(
+            f'stat -c%s "{remote_path}" 2>/dev/null || echo 0', timeout=5)
+        remote_sz = (chk.read().decode().strip() or '0')
+        if remote_sz != str(local_sz):
             s.exec_command(f"mkdir -p \"$(dirname '{remote_path}')\"", timeout=5)
             sftp = s.open_sftp()
             sftp.put(local_path, remote_path)
             sftp.close()
     finally:
         s.close()
-    return _play_via_ipc(host, user, remote_path, vol, loop=True)
+    return _play_via_ipc(host, user, remote_path, vol, loop=loop)
+
+def _push_and_play_alarm(host, user, fname, vol):
+    local_path  = os.path.join(ALARM_DIR, fname)
+    remote_path = f'/home/{user}/special/alarm_{fname}'
+    return _push_and_play_special(host, user, local_path, remote_path, vol, loop=True)
 
 @app.route('/api/alarm/sounds')
 @login_required
@@ -2255,6 +2265,75 @@ def api_alarm(campus):
         return jsonify({'ok': True, 'sound': fname})
     err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
     return jsonify({'ok': False, 'error': err})
+
+# ── "Zəfər Günü" (8 noyabr) — центрально хранимый трек, разносится по
+# кампусам лениво (при первом проигрывании), тем же путём что и alarm —
+# не нужно вручную копировать файл на каждую новую/будущую машину.
+ZEFER_FILE = os.path.join(os.environ.get('SPECIAL_SOUNDS_DIR', '/data/special_sounds'), 'zefer_gunu.mp3')
+ZEFER_VOL  = 150
+ZEFER_CRON_TOKEN = os.environ.get('ZEFER_CRON_TOKEN', '')
+
+def _play_zefer(host, user):
+    remote_path = f'/home/{user}/special/zefer_gunu.mp3'
+    return _push_and_play_special(host, user, ZEFER_FILE, remote_path, ZEFER_VOL, loop=False)
+
+@app.route('/api/zefer/<campus>', methods=['POST'])
+@login_required
+def api_zefer(campus):
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    if not os.path.isfile(ZEFER_FILE):
+        return jsonify({'ok': False, 'error': 'Файл Zəfər Günü ещё не загружен'})
+    if not _is_known_campus(campus):
+        return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
+    host, user = _machine_ssh(campus)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{campus} не подключен'})
+    try:
+        r = _play_zefer(host, user)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+    if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
+        log_action(current_user.username, 'zefer', campus, 'zefer_gunu.mp3')
+        tg_notify(
+            f'🎖 <b>Zəfər Günü</b>\n'
+            f'🏫 Кампус: <b>{_MINUTA_LABEL.get(campus, campus)}</b>\n'
+            f'👤 Запустил: <b>{current_user.username}</b>\n'
+            f'🕐 {_tg_fmt_time()}',
+            event_type='zefer'
+        )
+        return jsonify({'ok': True})
+    err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
+    return jsonify({'ok': False, 'error': err})
+
+@app.route('/api/zefer-all', methods=['POST'])
+def api_zefer_all():
+    """Broadcast Zəfər Günü to every registered audio campus. No @login_required —
+    this is the endpoint the server's own annual Nov 8 cron job calls (it isn't a
+    logged-in browser session), gated instead by a shared secret token so it can't
+    be triggered by a random request."""
+    token = request.headers.get('X-Cron-Token') or (request.get_json(silent=True) or {}).get('token')
+    if not ZEFER_CRON_TOKEN or token != ZEFER_CRON_TOKEN:
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
+    if not os.path.isfile(ZEFER_FILE):
+        return jsonify({'ok': False, 'error': 'Файл Zəfər Günü ещё не загружен'})
+    results = {}
+    for m in music_machines():
+        key = _campus_key(m)
+        try:
+            r = _play_zefer(m['host'], m.get('user', CLIENT1_USER))
+            results[key] = bool(r.get('ok') and 'no socket' not in (r.get('data') or '')
+                                 and 'no file' not in (r.get('data') or ''))
+        except Exception as e:
+            results[key] = str(e)
+    tg_notify(
+        f'🎖 <b>Zəfər Günü — 8 noyabr</b>\n'
+        f'Автоматически запущено на всех кампусах по расписанию\n'
+        f'🕐 {_tg_fmt_time()}',
+        event_type='zefer'
+    )
+    log_action('cron', 'zefer', 'all', json.dumps(results))
+    return jsonify({'ok': True, 'results': results})
 
 @app.route('/api/perem/<campus>/<slot>', methods=['POST'])
 @login_required
