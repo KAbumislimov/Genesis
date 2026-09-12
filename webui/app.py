@@ -197,7 +197,7 @@ _CAMPUS_SHORT_LABELS = {'client1': 'NAR', 'client2': 'GNC', 'cgtk': 'CG'}
 # what staff actually call the place) — everywhere in the UI has always shown
 # the real campus name instead, so keep that override here rather than
 # leaking the env label once name display started coming from this function.
-_CAMPUS_DISPLAY_OVERRIDE = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
+_CAMPUS_DISPLAY_OVERRIDE = {'client1': 'Client1'}
 
 def music_machines_json():
     """[{key,name,short}, ...] for every player-visible campus — feeds the
@@ -2100,7 +2100,7 @@ def api_himn(campus):
         )
     return jsonify({'ok': r['ok'], 'error': r.get('error')})
 
-_MINUTA_LABEL_FALLBACK = {'client1': 'Client1', 'client2': 'Client2', 'cgtk': 'City Garden'}
+_MINUTA_LABEL_FALLBACK = {'client1': 'Client1'}
 class _CampusLabelDict(dict):
     """Same .get(campus, campus) call sites as before, but resolves any
     campus added later via /machines to its real display name instead of

@@ -3574,48 +3574,53 @@ function wampShowBulkMovePop(ev, btn) {
 }
 function wampDeleteFolder(name) {
   if (!confirm('Удалить папку «' + name + '»? Она должна быть пустой.')) return;
+  toast('⏳ Удаляю «' + name + '»…');
   fetch('/api/tracks/delete-folder', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({name: name})
   }).then(function(r){return r.json();}).then(function(d){
     if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
     toast('✔ Папка удалена: ' + name);
     location.reload();
-  });
+  }).catch(function(){ toast('⚠️ Нет связи — попробуй ещё раз'); });
 }
 function wampRenameFolder(name) {
   var newName = prompt('Новое название папки:', name);
   if (newName === null) return;
   newName = newName.trim();
-  if (!newName || newName === name) return;
+  if (!newName) { toast('⚠️ Название не может быть пустым'); return; }
+  if (newName === name) { toast('Название не изменено'); return; }
+  toast('⏳ Переименовываю…');
   fetch('/api/tracks/rename-folder', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({name: name, new_name: newName})
   }).then(function(r){return r.json();}).then(function(d){
     if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
     toast('✔ Папка переименована: ' + name + ' → ' + newName);
     location.reload();
-  });
+  }).catch(function(){ toast('⚠️ Нет связи — попробуй ещё раз'); });
 }
 function wampCopyFolder(name) {
   var newName = prompt('Название новой папки-копии:', name + ' (копия)');
   if (newName === null) return;
   newName = newName.trim();
-  if (!newName) return;
+  if (!newName) { toast('⚠️ Название не может быть пустым'); return; }
+  toast('⏳ Копирую…');
   fetch('/api/tracks/copy-folder', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({name: name, new_name: newName})
   }).then(function(r){return r.json();}).then(function(d){
     if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
     toast('✔ Папка скопирована: ' + name + ' → ' + newName);
     location.reload();
-  });
+  }).catch(function(){ toast('⚠️ Нет связи — попробуй ещё раз'); });
 }
 function wampMoveFolderContents(name, destFolder) {
+  toast('⏳ Перемещаю…');
   fetch('/api/tracks/move-folder-contents', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({name: name, dest_folder: destFolder})
   }).then(function(r){return r.json();}).then(function(d){
     if (!d.ok) { toast('⚠️ ' + (d.error||'ошибка')); return; }
     toast('✔ Перемещено ' + d.moved + ' треков: ' + name + ' → ' + destFolder);
     if (_plFolder === name || _plFolder === destFolder) wampPlLoad();
-  });
+  }).catch(function(){ toast('⚠️ Нет связи — попробуй ещё раз'); });
 }
 var _ctxFolder = null, _ctxFolderFixed = false;
 function wampShowFolderContextMenu(ev, folder, isFixed) {
