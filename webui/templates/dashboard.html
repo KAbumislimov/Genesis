@@ -646,7 +646,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
    reasonable to fit. */
 .nc-chip-machines{position:fixed;top:146px;left:14px;z-index:790;
   flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px;
-  width:186px;max-height:calc(100vh - 220px);overflow-y:auto;
+  width:236px;max-height:calc(100vh - 220px);overflow-y:auto;
   background:rgba(20,20,40,.88);border:1.5px solid rgba(88,166,255,.3);
   border-radius:12px;box-shadow:0 3px 16px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.4)}
 .nc-chip-machines #machine-times{flex-direction:column!important;flex-wrap:nowrap!important;
@@ -1490,12 +1490,12 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     </div>
     <div class="wa-special-group wa-zefer-group">
       <div class="wa-special-top">
-        <div class="wa-special-hd"><span class="wa-special-icon">🎖</span><span class="wa-special-title">Zəfər Günü</span></div>
+        <div class="wa-special-hd"><span class="wa-special-icon">🎖</span><span class="wa-special-title" data-i18n="wamp.zefer_group">Zəfər Günü</span></div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'zefer',this)" title="Zəfər Günü — выбрать кампус">🎖 Zəfər Günü</button>
+          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'zefer',this)" data-i18n-title="wamp.zefer_group" title="Zəfər Günü — выбрать кампус">🎖 <span data-i18n="wamp.zefer_group">Zəfər Günü</span></button>
         </div>
       </div>
-      <div class="wa-special-desc">8 noyabr — Zəfər Günü trekini işə sal</div>
+      <div class="wa-special-desc" data-i18n="wamp.zefer_desc">8 noyabr — Zəfər Günü trekini işə sal</div>
     </div>
     {% if perms.admin %}
     <div class="wa-special-group wa-cron-group">
@@ -4231,14 +4231,15 @@ function wampShowCampusPicker(ev, kind, btn) {
   var title = document.getElementById('ccpop-title');
   if (!pop || !list) return;
   ev.stopPropagation();
-  var titles = {himn: 'Гимн — куда?', minuta: 'Минута молчания — куда?', mic: 'Мик — куда?',
-                alarm: 'Тревога — куда?', zefer: 'Zəfər Günü — куда?'};
-  if (title) title.textContent = titles[kind] || 'Выбрать кампус';
+  var groupKeys = {himn: 'wamp.himn_group', minuta: 'wamp.minuta', mic: 'wamp.mik_group',
+                    alarm: 'wamp.trevoga_group', zefer: 'wamp.zefer_group'};
+  var kindLabel = groupKeys[kind] ? t(groupKeys[kind]) : '';
+  if (title) title.textContent = kindLabel ? (kindLabel + ' — ' + t('wamp.pick_where')) : t('wamp.pick_campus_title');
   list.innerHTML = '';
   var allBtn = document.createElement('button');
   allBtn.className = 'wamp2-movepop-item';
   allBtn.style.fontWeight = '900';
-  allBtn.textContent = '📡 Все кампусы';
+  allBtn.textContent = '📡 ' + t('wamp.all_campuses');
   allBtn.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); wampCampusPicked(kind, 'all'); };
   list.appendChild(allBtn);
   MUSIC_MACHINES.forEach(function(m){

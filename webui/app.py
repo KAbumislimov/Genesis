@@ -2098,6 +2098,12 @@ MINUTA_PATHS = {
 MINUTA_VOL = 100
 
 def _play_via_ipc(host, user, filepath, vol, loop=False):
+    # `pause` is a sticky mpv property — it does NOT reset on loadfile, so if
+    # anything earlier left the player paused (a manual pause click, a prior
+    # stop, whatever), every play here would silently load-but-sit-paused:
+    # volume right, file right, device right, zero sound. Explicitly force
+    # pause off, both before and after loadfile (some mpv builds apply a
+    # queued loadfile before honoring a property set sent just ahead of it).
     file_esc = filepath.replace('\\', '\\\\').replace('"', '\\"')
     loop_val = '"inf"' if loop else 'false'
     cmd = (
@@ -2106,7 +2112,10 @@ def _play_via_ipc(host, user, filepath, vol, loop=False):
         f'[ -f "{filepath}" ] || {{ echo "no file"; exit 1; }}; '
         f'echo \'{{"command":["set_property","volume",{vol}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
         f'echo \'{{"command":["set_property","loop-file",{loop_val}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
-        f'echo \'{{"command":["loadfile","{file_esc}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"'
+        f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+        f'echo \'{{"command":["loadfile","{file_esc}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"; '
+        f'sleep 0.3; '
+        f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; true'
     )
     return ssh_run_on(host, user, cmd, timeout=10)
 
@@ -2674,9 +2683,14 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
                 # One round trip instead of two: write the m3u and load it in
                 # the same remote shell invocation (extra SSH exec_command
                 # round trips were making single-track clicks noticeably slower).
+                # `pause` is sticky in mpv — loadlist/loadfile don't reset it,
+                # so a player left paused by an earlier action would silently
+                # load-but-not-play forever. Force it off after loading.
+                unpause = f'echo "{{\\"command\\":[\\"set_property\\",\\"pause\\",false]}}" | socat - {MPV_SOCK} 2>/dev/null'
                 _, out, _ = s.exec_command(
                     f"echo '{b64}' | base64 -d > {playlist_path} && "
                     f'echo "{escaped}" | socat - {MPV_SOCK} 2>/dev/null; '
+                    f'{unpause}; '
                     f'echo "{remote_path}" > /run/campus-player/lastfile 2>/dev/null || true',
                     timeout=5
                 )
@@ -2688,8 +2702,10 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
         elif have_local:
             cmd_j = json.dumps({'command': ['loadfile', remote_path, 'replace']})
             escaped = cmd_j.replace('"', '\\"')
+            unpause = f'echo "{{\\"command\\":[\\"set_property\\",\\"pause\\",false]}}" | socat - {MPV_SOCK} 2>/dev/null'
             _, out, _ = s.exec_command(
                 f'echo "{escaped}" | socat - {MPV_SOCK} 2>/dev/null; '
+                f'{unpause}; '
                 f'echo "{remote_path}" > /run/campus-player/lastfile 2>/dev/null || true',
                 timeout=5
             )
@@ -2705,7 +2721,9 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
             sftp.put(local_path, remote_in)
             sftp.close()
             _, out, _ = s.exec_command(
-                f'/usr/local/bin/campus-playerctl play {remote_in}', timeout=8
+                f'/usr/local/bin/campus-playerctl play {remote_in} 2>/dev/null; '
+                f'echo "{{\\"command\\":[\\"set_property\\",\\"pause\\",false]}}" | socat - {MPV_SOCK} 2>/dev/null',
+                timeout=8
             )
             out.read()
 
@@ -2795,6 +2813,8 @@ def api_play_radio():
 
     cmd = {'command': ['loadfile', url, 'replace']}
     _mpv_cmd_to_campus(campus, cmd)
+    # pause is sticky — loadfile alone won't un-pause a player left paused
+    _mpv_cmd_to_campus(campus, {'command': ['set_property', 'pause', False]})
     log_action(current_user.username, 'play_radio', campus, station)
     return jsonify({'ok': True, 'station': station})
 
@@ -2856,6 +2876,9 @@ def api_play_all():
     playlist_path = '/tmp/campus-playlist.m3u'
     write_cmd = f"echo '{b64}' | base64 -d > {playlist_path}"
     load_cmd = (f"echo '{{\"command\":[\"loadlist\",\"{playlist_path}\",\"replace\"]}}'"
+                f" | socat - {MPV_SOCK} 2>/dev/null; "
+                # pause is sticky — loadlist alone won't un-pause a player left paused
+                f"echo '{{\"command\":[\"set_property\",\"pause\",false]}}'"
                 f" | socat - {MPV_SOCK} 2>/dev/null; true")
 
     if machine == 'client1':
@@ -4966,7 +4989,10 @@ def api_announce():
                 'SOCK=/run/campus-player/mpv.sock; '
                 f'[ -S "$SOCK" ] || {{ echo "no socket"; exit 1; }}; '
                 f'echo \'{{"command":["set_property","volume",{volume}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
-                f'echo \'{{"command":["loadfile","{remote_path}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"'
+                f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+                f'echo \'{{"command":["loadfile","{remote_path}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"; '
+                f'sleep 0.3; '
+                f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; true'
             )
             _, out, err = s.exec_command(cmd, timeout=10)
             out_data = out.read().decode('utf-8', 'replace')

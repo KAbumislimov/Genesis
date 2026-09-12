@@ -47,6 +47,8 @@ const I18N = {
     'wamp.cron_desc': 'Остановить/включить автоматические звонки по расписанию',
     'wamp.trevoga_group': 'Тревога', 'wamp.trevoga_desc': 'Сигнал тревоги в цикле — остановить обычной кнопкой СТОП',
     'wamp.trevoga_none': 'Звуки не загружены',
+    'wamp.zefer_group': 'Zəfər Günü', 'wamp.zefer_desc': '8 ноября — включить трек Zəfər Günü',
+    'wamp.pick_where': 'куда?', 'wamp.pick_campus_title': 'Выбрать кампус', 'wamp.all_campuses': 'Все кампусы',
     'player.staff_only': 'только Staff / Admin',
     /* Now playing */
     'np.now':         'Сейчас',
@@ -271,6 +273,8 @@ const I18N = {
     'wamp.cron_desc': 'Stop/enable the automatic scheduled bells',
     'wamp.trevoga_group': 'Alarm', 'wamp.trevoga_desc': 'Alarm signal on loop — stop with the regular STOP button',
     'wamp.trevoga_none': 'No sounds uploaded yet',
+    'wamp.zefer_group': 'Zəfər Günü', 'wamp.zefer_desc': 'November 8 — play the Zəfər Günü track',
+    'wamp.pick_where': 'where?', 'wamp.pick_campus_title': 'Pick a campus', 'wamp.all_campuses': 'All campuses',
     'player.staff_only': 'Staff / Admin only',
     /* Now playing */
     'np.now':         'Now',
@@ -491,6 +495,8 @@ const I18N = {
     'wamp.cron_desc': 'Avtomatik zəngləri dayandır/işə sal',
     'wamp.trevoga_group': 'Təhlükə', 'wamp.trevoga_desc': 'Təhlükə siqnalı dövr ilə — adi DAYAN düyməsi ilə saxla',
     'wamp.trevoga_none': 'Səslər yüklənməyib',
+    'wamp.zefer_group': 'Zəfər Günü', 'wamp.zefer_desc': '8 noyabr — Zəfər Günü trekini işə sal',
+    'wamp.pick_where': 'haraya?', 'wamp.pick_campus_title': 'Kampus seç', 'wamp.all_campuses': 'Bütün kampuslar',
     'player.staff_only': 'Yalnız Staff / Admin',
     /* Now playing */
     'np.now':         'İndi',
