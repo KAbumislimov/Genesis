@@ -317,6 +317,27 @@ TERMINAL_MACHINES = {
 _cron_track_cache: dict = {}  # machine_key → (track_name_or_None, unix_timestamp)
 _CRON_TTL = 5   # seconds (short so track switches appear quickly)
 
+# ── Play-request generation counter (per machine) ─────────────────────────────
+# A track click kicks off a background thread that may spend 5-30s SFTP-ing the
+# file to the campus before it ever calls loadfile. If the user clicks STOP (or
+# a different track) while that upload is still running, the old thread would
+# otherwise finish later and call loadfile anyway — playback "coming back from
+# the dead" seconds after STOP was pressed, which is exactly what looks like
+# "stop doesn't work". Every play/stop bumps this counter for its machine; a
+# background thread checks its own captured generation against the current one
+# right before actually issuing loadfile, and gives up quietly if it's stale.
+_play_gen: dict = {}
+_play_gen_lock = threading.Lock()
+
+def _bump_play_gen(machine_id):
+    with _play_gen_lock:
+        _play_gen[machine_id] = _play_gen.get(machine_id, 0) + 1
+        return _play_gen[machine_id]
+
+def _current_play_gen(machine_id):
+    with _play_gen_lock:
+        return _play_gen.get(machine_id, 0)
+
 # ── Brute-force login protection ──────────────────────────────────────────────
 _login_attempts: dict = {}   # IP → {'count': int, 'lockout_until': float}
 _MAX_ATTEMPTS  = 5
@@ -2637,7 +2658,7 @@ def api_audio_fft():
 
 PLAYER_INBOX = os.environ.get('CLIENT1_INBOX', '/var/lib/campus-player/inbox')
 
-def _play_track_on(host, user, local_path, name, machine_id, username, folder=''):
+def _play_track_on(host, user, local_path, name, machine_id, username, folder='', my_gen=None):
     """Background worker: SSH/SFTP to campus machine then start mpv playback.
 
     When the campus machine has the file locally synced, this loads the REST
@@ -2645,9 +2666,17 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
     browser list) as an mpv playlist — so mpv keeps playing the next tracks
     on its own once this one ends, instead of going silent after one track.
     Falls back to the old single-file replace if the folder can't be
-    resolved (e.g. only 1 track, or file isn't on the campus machine yet)."""
+    resolved (e.g. only 1 track, or file isn't on the campus machine yet).
+
+    `my_gen`: this request's play-generation snapshot (see _bump_play_gen) —
+    checked right before actually issuing loadfile/loadlist. If a newer play
+    or a stop landed on this machine while we were busy SFTP-ing (which can
+    take 5-30s), we abandon quietly instead of starting playback that the
+    user already tried to cancel."""
     s = None
     try:
+        if my_gen is not None and _current_play_gen(machine_id) != my_gen:
+            return
         media_base = _music_path_for(machine_id)
         relative    = os.path.relpath(local_path, MUSIC_DIR)
         remote_path = os.path.join(media_base, relative)
@@ -2782,9 +2811,10 @@ def api_play():
         host, user, mid = m['host'], m.get('user', CLIENT1_USER), m.get('user', machine)
 
     # Start SFTP/SSH in background — respond immediately so UI doesn't freeze
+    my_gen = _bump_play_gen(mid)
     threading.Thread(
         target=_play_track_on,
-        args=(host, user, local_path, name, mid, username, folder),
+        args=(host, user, local_path, name, mid, username, folder, my_gen),
         daemon=True
     ).start()
     return jsonify({'ok': True})
