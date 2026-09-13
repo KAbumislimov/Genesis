@@ -1514,7 +1514,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
           <span class="wa-special-title" data-i18n="wamp.cron_group">Крон</span>
         </div>
         <div class="wa-special-btns">
-          <button class="wa-special-btn" id="btn-cron-active" onclick="_cronToggleActive()" title="Пауза/включить крон — выбранный в шапке кампус">⏸ <span data-i18n="wamp.cron_group">Крон</span></button>
+          <button class="wa-special-btn" id="btn-cron-active" onclick="wampShowCampusPicker(event,'cron',this)" title="Пауза/включить крон — выбор кампуса">⏸ <span data-i18n="wamp.cron_group">Крон</span></button>
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.cron_desc">Остановить/включить автоматические звонки по расписанию</div>
@@ -4204,6 +4204,7 @@ function _applyMachineStatus(key, idx, d) {
   if (st) {
     st.playing = d.playing || false;
     st.paused  = d.paused  || false;
+    st.track   = d.track || null;
     if (d.position !== undefined && d.position !== null) { st.pos = d.position; st.ts = Date.now(); }
     if (d.duration !== undefined && d.duration !== null) st.dur = d.duration;
     if (!d.playing) { st.pos = 0; st.dur = 0; }
@@ -4298,7 +4299,7 @@ function wampShowCampusPicker(ev, kind, btn) {
   if (!pop || !list) return;
   ev.stopPropagation();
   var groupKeys = {himn: 'wamp.himn_group', minuta: 'wamp.minuta', mic: 'wamp.mik_group',
-                    alarm: 'wamp.trevoga_group', zefer: 'wamp.zefer_group'};
+                    alarm: 'wamp.trevoga_group', zefer: 'wamp.zefer_group', cron: 'wamp.cron_group'};
   var kindLabel = groupKeys[kind] ? t(groupKeys[kind]) : '';
   if (title) title.textContent = kindLabel ? (kindLabel + ' — ' + t('wamp.pick_where')) : t('wamp.pick_campus_title');
   list.innerHTML = '';
@@ -4330,6 +4331,18 @@ function wampCampusPicked(kind, campus) {
   if (kind === 'mic')    _openMicFor(campus);
   if (kind === 'alarm')  _doPlayAlarmFor(campus);
   if (kind === 'zefer')  _doPlayZeferFor(campus);
+  if (kind === 'cron')   _doCronToggleFor(campus);
+}
+function _doCronToggleFor(campus) {
+  if (campus === 'all') {
+    if (!_cronAllPaused() && !confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ВСЕХ кампусах.\nНе забудь включить обратно.\n\nПродолжить?')) return;
+    _cronToggleAll();
+    return;
+  }
+  var label = 'кампусе «' + campusLabel(campus) + '»';
+  if (_cronState[campus]) { cronResume(campus); return; }
+  if (!confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ' + label + '.\nНе забудь включить обратно.\n\nПродолжить?')) return;
+  cronToggle(campus);
 }
 document.addEventListener('click', function(ev){
   var pop = document.getElementById('wamp2-campuspop');
@@ -5088,8 +5101,7 @@ setInterval(function(){
   var lcdT = document.getElementById('wa-lcd-time');
   if(lcdT) lcdT.textContent = _fmtTime(pos);
   var lcdTr = document.getElementById('wa-lcd-track');
-  var trackEl = document.getElementById('mini-name-'+ck);
-  if(lcdTr && trackEl) lcdTr.textContent = trackEl.textContent||'CAMPUS PLAYER';
+  if(lcdTr) lcdTr.textContent = (st.playing && st.track) ? st.track : 'CAMPUS PLAYER';
   var lcdI = document.getElementById('wa-lcd-info');
   var _lcdCampusName = campusLabel(ck).toUpperCase();
   if(lcdI) lcdI.textContent = _lcdCampusName + ' · ' + (st.playing?'PLAYING':(st.paused?'PAUSED':'STOPPED'));

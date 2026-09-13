@@ -159,8 +159,8 @@
 
 .cpm-bottom{padding:0 0 14px;border-bottom:1px solid var(--border);background:var(--bg3)}
 .cpm-bottom-row{display:flex;align-items:center;gap:16px;padding:14px 20px 0}
-.cpm-viz-wrap{position:relative;width:100%;height:132px;overflow:hidden;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--cpm-accent) 6%,var(--bg3)),var(--bg3))}
-.cpm-viz{display:block;width:100%;height:100%;filter:blur(1px)}
+.cpm-viz-wrap{position:relative;width:100%;height:132px;overflow:hidden;background:#000}
+.cpm-viz{display:block;width:100%;height:100%}
 .cpm-bottom-art{width:44px;height:44px;border-radius:9px;flex-shrink:0;background:linear-gradient(155deg,color-mix(in srgb,var(--cpm-accent) 40%,var(--bg2)),var(--bg2));
   display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--cpm-accent) 60%,white 10%);opacity:.8;font-size:16px}
 .cpm-bottom-meta{width:170px;flex-shrink:0;min-width:0}
@@ -190,6 +190,39 @@
   .cpm-fol-tabs{flex-direction:row;flex-wrap:wrap}
   .cpm-bottom{flex-wrap:wrap}
   .cpm-bottom-meta{width:auto}
+}
+
+/* Phone — not just "doesn't overflow", actually sized like an app: one
+   column of full-width cards, bigger tap targets, track rows stripped
+   down to what fits a thumb-width screen. */
+@media (max-width:480px){
+  .cp-modern{border-radius:0;margin:0 -1px;border-left:none;border-right:none}
+  .cpm-top{padding:12px 14px;gap:10px}
+  .cpm-brand{font-size:13px}
+  .cpm-skin-link{font-size:11px}
+  .cpm-viz-wrap{height:96px}
+  .cpm-bottom-row{padding:12px 14px 0;gap:10px;flex-wrap:wrap}
+  .cpm-bottom-art{display:none}
+  .cpm-bottom-meta{width:auto;flex:1 1 100%;order:1}
+  .cpm-bottom-transport{order:2;gap:14px}
+  .cpm-bottom-transport button{padding:8px}
+  .cpm-bottom-seek{order:3;flex:1 1 100%}
+  .cpm-bottom-toggles{order:4}
+  .cpm-bottom-vol{order:5;flex:1 1 100%}
+  .cpm-campus-strip{padding:10px 14px;gap:8px}
+  .cpm-campus-row{flex:1 1 100%;min-width:0}
+  .cpm-special-label{margin:8px 14px 0;font-size:9.5px;padding:6px 10px}
+  .cpm-special-row{margin:0 14px 14px;padding:10px;gap:6px}
+  .cpm-pill{flex:1 1 calc(50% - 6px);justify-content:center;padding:11px 10px;font-size:11.5px}
+  .cpm-alarm-select{flex:1 1 100%;max-width:none}
+  .cpm-sidebar{padding:10px 14px}
+  .cp-modern .wamp2-pli{padding:11px 8px;font-size:13.5px}
+  .cp-modern .wamp2-pfol,
+  .cp-modern .wamp2-pmeta,
+  .cp-modern .wamp2-pren,
+  .cp-modern .wamp2-pmovebtn,
+  .cp-modern .wamp2-psel{display:none}
+  .cp-modern .wamp2-pdu{min-width:auto}
 }
 </style>
 
@@ -314,7 +347,7 @@
     <select id="alarmSoundSelect" class="cpm-alarm-select"></select>
     <button class="cpm-pill" onclick="wampShowCampusPicker(event,'zefer',this)" style="color:#d4af37;border-color:rgba(212,175,55,.4)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg><span data-i18n="wamp.zefer_group">Zəfər Günü</span></button>
     {% if perms.admin or perms.cron %}
-    <button class="cpm-pill" id="btn-cron-active" onclick="_cronToggleActive()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Крон</button>
+    <button class="cpm-pill" id="btn-cron-active" onclick="wampShowCampusPicker(event,'cron',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Крон</button>
     {% endif %}
   </div>
   {% endif %}
@@ -411,41 +444,24 @@ function toggleCampusDock() {
   } catch(e) {}
 })();
 
-// ── Visualizer — a soft colorful plasma blob over the transport bar.
-// Real bass/mid/treble come from _audioSSE when the per-campus audio-level
-// analyzer is deployed and reporting (same SSE feed the classic skin's
-// visualizer uses — see _startAudioSSE() in the shared script). Whichever
-// campus is actually playing right now (via _progState — same signal the
-// LCD auto-follow uses) drives which feed we read. Without a live feed
-// for that campus it falls back to a smooth simulated breathing motion —
-// alive-looking, but honestly not literal bass-sync until the analyzer
-// script is actually running on that machine.
+// ── Visualizer — classic Winamp-style LED spectrum bars, full width of
+// the strip. Real bass/mid/treble come from _audioSSE when the per-campus
+// audio-level analyzer is deployed and reporting (same SSE feed the
+// classic skin's visualizer uses — see _startAudioSSE() in the shared
+// script). Whichever campus is actually playing right now (via
+// _progState — same signal the LCD auto-follow uses) drives which feed we
+// read. Without a live feed for that campus it falls back to a smooth
+// simulated motion — alive-looking, but honestly not literal bass-sync
+// until the analyzer script is actually running on that machine.
 (function(){
   var cv = document.getElementById('cpm-viz-canvas');
   if (!cv || !cv.getContext) return;
   var ctx = cv.getContext('2d');
   var frozenT = 0;
-  var lobes = [
-    {hue: 0,   phase: 0.0, band: 'bass'},
-    {hue: 130, phase: 2.1, band: 'mid'},
-    {hue: 250, phase: 4.4, band: 'treble'}
-  ];
-  var smoothed = {bass: 0, mid: 0, treble: 0};
-
-  function accentHue(){
-    var root = document.querySelector('.cp-modern') || document.documentElement;
-    var hex = (getComputedStyle(root).getPropertyValue('--cpm-accent') || '#58a6ff').trim();
-    if (hex[0] === '#') hex = hex.slice(1);
-    if (hex.length === 3) hex = hex.split('').map(function(c){ return c+c; }).join('');
-    var num = parseInt(hex, 16); if (isNaN(num)) num = 0x58a6ff;
-    var r=(num>>16&255)/255, g=(num>>8&255)/255, b=(num&255)/255;
-    var mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn, h=0;
-    if (d) {
-      if (mx===r) h=((g-b)/d)%6; else if (mx===g) h=(b-r)/d+2; else h=(r-g)/d+4;
-      h*=60; if (h<0) h+=360;
-    }
-    return h;
-  }
+  var N = 56;
+  var heights = new Array(N).fill(0);
+  var peaks   = new Array(N).fill(0);
+  var peakHold = new Array(N).fill(0);
 
   function targetCampus(){
     try {
@@ -456,21 +472,18 @@ function toggleCampusDock() {
     return null;
   }
 
-  // Real per-band energy 0..1 from the SSE feed for this campus, or null
-  // if that campus has no live analyzer reporting right now.
-  function realBands(key){
+  // Real per-bar energy 0..1 from the SSE feed for this campus, resampled
+  // to N bars, or null if that campus has no live analyzer reporting.
+  function realBars(key){
     try {
       var d = (typeof _audioSSE !== 'undefined') ? _audioSSE[key] : null;
       if (!d || !d.active || !d.bands || !d.bands.length) return null;
-      var n = d.bands.length;
-      var third = Math.max(1, Math.floor(n/3));
-      function avg(from,to){ var s=0,c=0; for(var i=from;i<to;i++){s+=d.bands[i]||0;c++;} return c?s/c:0; }
-      var scale = 1800/255; // same scaling makeVisualizer() uses for its 0-255 convention
-      return {
-        bass:   Math.min(1, avg(0,third)*scale),
-        mid:    Math.min(1, avg(third,third*2)*scale),
-        treble: Math.min(1, avg(third*2,n)*scale)
-      };
+      var src = d.bands, n = src.length, scale = 1800/255;
+      var out = new Array(N);
+      for (var i = 0; i < N; i++) {
+        out[i] = Math.min(1, (src[Math.floor(i/N*n)] || 0) * scale);
+      }
+      return out;
     } catch(e) { return null; }
   }
 
@@ -483,51 +496,54 @@ function toggleCampusDock() {
     var now = Date.now() / 1000;
     if (playing) frozenT = now;
     var t = frozenT;
-    var cx = W/2, cy = H/2;
-    var baseHue = accentHue();
 
-    var real = playing ? realBands(key) : null;
-    var tgt = real || {
-      bass:   playing ? 0.35+0.45*Math.abs(Math.sin(t*2.4)) : 0.10+0.08*Math.abs(Math.sin(t*0.6)),
-      mid:    playing ? 0.30+0.40*Math.abs(Math.sin(t*3.1+1.3)) : 0.08+0.07*Math.abs(Math.sin(t*0.7+1)),
-      treble: playing ? 0.25+0.35*Math.abs(Math.sin(t*4.7+2.6)) : 0.06+0.06*Math.abs(Math.sin(t*0.9+2))
-    };
-    // Bass hits fast (feels percussive), highs drift slower — even the
-    // simulated fallback should feel like it's "listening", not just idly cycling.
-    smoothed.bass   += (tgt.bass   - smoothed.bass)   * (real ? 0.5 : 0.14);
-    smoothed.mid    += (tgt.mid    - smoothed.mid)    * (real ? 0.35 : 0.08);
-    smoothed.treble += (tgt.treble - smoothed.treble) * (real ? 0.3  : 0.06);
+    var real = playing ? realBars(key) : null;
 
     ctx.clearRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'lighter';
+    var topY = 4, botY = H - 4, maxBH = botY - topY;
+    var gap = 3;
+    var bw = Math.max(3, (W - (N-1)*gap) / N);
 
-    var minDim = Math.min(W, H);
-    var energies = [smoothed.bass, smoothed.mid, smoothed.treble];
-    for (var i = 0; i < lobes.length; i++) {
-      var lb = lobes[i], e = energies[i];
-      var ang = t * (0.5 + i*0.25) + lb.phase;
-      var orbit = minDim * (0.10 + 0.05*i);
-      var lx = cx + Math.cos(ang) * orbit * (0.5 + e*0.6);
-      var ly = cy + Math.sin(ang*1.3) * orbit * 0.4 * (0.5 + e*0.6);
-      var r = minDim * (0.20 + 0.30*e);
-      var hue = (baseHue + lb.hue) % 360;
-      var grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, r);
-      grad.addColorStop(0,   'hsla(' + hue + ',85%,' + (55+15*e) + '%,' + (0.55+0.35*e) + ')');
-      grad.addColorStop(0.6, 'hsla(' + hue + ',80%,50%,' + (0.22+0.18*e) + ')');
-      grad.addColorStop(1,   'hsla(' + hue + ',80%,50%,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath(); ctx.arc(lx, ly, r, 0, Math.PI*2); ctx.fill();
+    for (var i = 0; i < N; i++) {
+      var tgt;
+      if (real) {
+        tgt = real[i] * maxBH;
+      } else {
+        // Bass-heavy on the left like a real spectrum, fast percussive
+        // sim rather than a lazy sine idle — still honest that it's not
+        // literal audio, but it should feel alive.
+        var bassBoost = i < 10 ? 1.4 - i*0.03 : 1.0;
+        var a = Math.abs(Math.sin(t*(playing?3.0:0.7) + i*0.3));
+        var b = Math.abs(Math.sin(t*(playing?5.3:1.1) + i*0.55));
+        var base = playing ? (0.14+0.86*a*(0.45+0.55*b)) : (0.06+0.10*a);
+        tgt = Math.min(1, bassBoost*base) * maxBH;
+      }
+      heights[i] += (tgt - heights[i]) * (real ? 0.55 : 0.22);
+      var h = Math.max(2, heights[i]);
+      var x = i * (bw + gap);
+
+      // Winamp-style LED segments, green -> yellow -> red by height ratio
+      var SEG = 3, STEP = SEG + 1;
+      for (var sy = botY - SEG; sy >= botY - h; sy -= STEP) {
+        var hr = (botY - sy) / maxBH;
+        var rv, gv, bv;
+        if (hr < 0.55) { rv = Math.round(hr/0.55*255); gv = 255; bv = 0; }
+        else if (hr < 0.8) { rv = 255; gv = Math.round((1-(hr-0.55)/0.25)*220); bv = 0; }
+        else { rv = 255; gv = Math.round((1-(hr-0.8)/0.2)*70); bv = 0; }
+        ctx.fillStyle = 'rgba('+rv+','+gv+','+bv+','+(playing?1:0.5)+')';
+        ctx.fillRect(x, sy, bw, SEG);
+      }
+
+      // Peak-hold cap
+      if (h > peaks[i]) { peaks[i] = h; peakHold[i] = 0; }
+      else if (peakHold[i]++ > 22) peaks[i] = Math.max(h, peaks[i]-1.6);
+      if (peaks[i] > SEG*2) {
+        var pkY = botY - peaks[i];
+        pkY = Math.floor(pkY/STEP)*STEP;
+        ctx.fillStyle = playing ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.4)';
+        ctx.fillRect(x, pkY, bw, SEG);
+      }
     }
-
-    // Bright core — the one part that should feel like a percussive hit
-    var coreR = minDim * (0.09 + 0.10*smoothed.bass);
-    var coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
-    coreGrad.addColorStop(0, 'hsla(' + baseHue + ',20%,96%,' + (0.7+0.3*smoothed.bass) + ')');
-    coreGrad.addColorStop(1, 'hsla(' + baseHue + ',85%,65%,0)');
-    ctx.fillStyle = coreGrad;
-    ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI*2); ctx.fill();
-
-    ctx.globalCompositeOperation = 'source-over';
   }
   draw();
 })();

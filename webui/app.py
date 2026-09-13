@@ -2239,7 +2239,52 @@ MINUTA_PATHS = {
     'client2':  '/home/client2/special/minuta_molchaniya.mp3',
     'cgtk': '/home/cgtk/special/minuta_molchaniya.mp3',
 }
-MINUTA_VOL = 100
+MINUTA_VOL = 150
+
+# Adjustable volume for the special-action buttons (Гимн/Минута/Тревога) —
+# stored in `settings` (same key-value table silence_mode/wallpaper_default
+# already use), so a slider on the page actually persists and actually
+# takes effect on the very next play, not just a cosmetic UI value.
+_SPECIAL_VOL_DEFAULTS = {'himn': 150, 'minuta': MINUTA_VOL, 'alarm': 155}
+_SPECIAL_VOL_KEYS = ('himn', 'minuta', 'alarm')
+
+def _get_special_vol(kind):
+    default = _SPECIAL_VOL_DEFAULTS.get(kind, 100)
+    try:
+        with get_db() as c:
+            row = c.execute("SELECT value FROM settings WHERE key=?", (f'vol_{kind}',)).fetchone()
+        if row and row['value']:
+            return max(0, min(160, int(row['value'])))
+    except Exception:
+        pass
+    return default
+
+def _set_special_vol(kind, value):
+    value = max(0, min(160, int(value)))
+    with get_db() as c:
+        c.execute("INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)", (f'vol_{kind}', str(value)))
+    return value
+
+@app.route('/api/special-vol', methods=['GET'])
+@login_required
+def api_special_vol_get():
+    return jsonify({'ok': True, **{k: _get_special_vol(k) for k in _SPECIAL_VOL_KEYS}})
+
+@app.route('/api/special-vol/<kind>', methods=['POST'])
+@login_required
+def api_special_vol_set(kind):
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    if kind not in _SPECIAL_VOL_KEYS:
+        return jsonify({'ok': False, 'error': 'Неизвестный параметр'}), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        val = int(data.get('value'))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'Некорректное значение'})
+    val = _set_special_vol(kind, val)
+    log_action(current_user.username, 'set_vol', kind, str(val))
+    return jsonify({'ok': True, 'value': val})
 
 def _play_via_ipc(host, user, filepath, vol, loop=False):
     # `pause` is a sticky mpv property — it does NOT reset on loadfile, so if
@@ -2284,8 +2329,15 @@ def api_himn(campus):
     host, user = _machine_ssh(campus)
     if not host:
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
-    vol = 150
+    vol = _get_special_vol('himn')
     filepath = _himn_path_for(campus)
+    # Special actions (Гимн/Минута/Тревога/Zəfər) never bumped the play
+    # generation before — a regular track click still "in flight" (slow
+    # SFTP upload, checked against this counter in _play_track_on) could
+    # land its loadfile AFTER this one and silently replace/kill it a
+    # moment later, looking exactly like "this button doesn't work" even
+    # though it genuinely started playing first.
+    _bump_play_gen(campus)
     r = _play_himn(host, user, filepath, vol)
     ok = r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or '')
     if ok:
@@ -2323,7 +2375,8 @@ def api_minuta(campus):
     if not host:
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
     filepath = MINUTA_PATHS.get(campus, f'/home/{user}/special/minuta_molchaniya.mp3')
-    r = _play_via_ipc(host, user, filepath, MINUTA_VOL)
+    _bump_play_gen(campus)
+    r = _play_via_ipc(host, user, filepath, _get_special_vol('minuta'))
     if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
         log_action(current_user.username, 'minuta', campus, 'Минута молчания')
         tg_notify(
@@ -2344,7 +2397,7 @@ def api_minuta(campus):
 # Играет в цикле (loop-file=inf), пока кто-то не нажмёт обычный STOP —
 # тот же mpv "stop" по IPC, что останавливает любое другое воспроизведение.
 ALARM_DIR  = os.environ.get('ALARM_SOUNDS_DIR', '/data/alarm_sounds')
-ALARM_VOL  = 170
+ALARM_VOL  = 155
 _ALARM_EXTS = ('.mp3', '.wav', '.ogg', '.m4a')
 
 def _list_alarm_sounds():
@@ -2402,7 +2455,8 @@ def api_alarm(campus):
     if not host:
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
     try:
-        r = _push_and_play_alarm(host, user, fname, ALARM_VOL)
+        _bump_play_gen(campus)
+        r = _push_and_play_alarm(host, user, fname, _get_special_vol('alarm'))
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
     if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
@@ -2423,7 +2477,7 @@ def api_alarm(campus):
 # кампусам лениво (при первом проигрывании), тем же путём что и alarm —
 # не нужно вручную копировать файл на каждую новую/будущую машину.
 ZEFER_FILE = os.path.join(os.environ.get('SPECIAL_SOUNDS_DIR', '/data/special_sounds'), 'zefer_gunu.mp3')
-ZEFER_VOL  = 150
+ZEFER_VOL  = 100
 ZEFER_CRON_TOKEN = os.environ.get('ZEFER_CRON_TOKEN', '')
 
 def _play_zefer(host, user):
@@ -2443,6 +2497,7 @@ def api_zefer(campus):
     if not host:
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
     try:
+        _bump_play_gen(campus)
         r = _play_zefer(host, user)
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
@@ -5153,7 +5208,7 @@ def api_announce():
     fpath = os.path.join(ANNOUNCE_DIR, fname)
     audio.save(fpath)
 
-    volume = max(50, min(160, int(request.form.get('volume', 120))))
+    volume = max(50, min(160, int(request.form.get('volume', 150))))
 
     def _play_on(host, user, campus_id):
         # campus-playerctl's `play` silently ignores the volume arg (same
