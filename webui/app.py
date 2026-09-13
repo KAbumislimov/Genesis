@@ -2753,11 +2753,19 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
             )
             out.read()
         else:
-            # File not on campus machine → SFTP-upload to inbox (takes 5-30 s)
-            remote_in = PLAYER_INBOX + '/in.mp3'
+            # File not on campus machine → SFTP-upload to inbox (takes 5-30 s).
+            # PLAYER_INBOX (/var/lib/campus-player/inbox) only exists on client1,
+            # pre-provisioned with a shared "campus" group; every other campus
+            # user has no permission to create anything under /var/lib, so
+            # mkdir+put silently failed there (caught by the outer except,
+            # nothing ever played, no error shown). Every campus user DOES
+            # own their own home dir, so use a self-owned inbox for anyone
+            # but client1 — always creatable, no manual provisioning needed.
+            inbox = PLAYER_INBOX if host == CLIENT1_HOST else f'/home/{user}/player-inbox'
+            remote_in = inbox + '/in.mp3'
             sftp = s.open_sftp()
             try:
-                sftp.mkdir(PLAYER_INBOX)
+                sftp.mkdir(inbox)
             except IOError:
                 pass
             sftp.put(local_path, remote_in)
