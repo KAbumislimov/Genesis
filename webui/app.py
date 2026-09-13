@@ -673,18 +673,23 @@ def admin_only(f):
 
 # Roles: guest=view only, user=music only, staff=music+himn, admin=full
 ROLE_PERMS = {
-    'guest':  frozenset(),
-    'user':   frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev'}),
-    'staff':  frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn'}),
-    'viewer': frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev'}),  # legacy
-    'admin':  frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn', 'admin'}),
+    'guest':    frozenset(),
+    'user':     frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev'}),
+    'staff':    frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn'}),
+    'viewer':   frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev'}),  # legacy
+    # Everything music-related (play/stop/volume/himn/upload/voice/cron
+    # pause), nothing destructive (no delete/rename/folder ops) and no user
+    # management — those stay behind @admin_only, untouched by this role.
+    'helpdesk': frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn', 'cron'}),
+    'admin':    frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn', 'admin', 'cron'}),
 }
 
 ROLE_LABELS = {
-    'guest': ('Гость',   'Только просмотр — кнопки управления недоступны'),
-    'user':  ('Польз.',  'Музыка: включать, останавливать, регулировать громкость'),
-    'staff': ('Персонал','Музыка + гимн: все функции кроме управления пользователями'),
-    'admin': ('Админ',   'Полный доступ: управление пользователями и всеми функциями'),
+    'guest':    ('Гость',    'Только просмотр — кнопки управления недоступны'),
+    'user':     ('Польз.',   'Музыка: включать, останавливать, регулировать громкость'),
+    'staff':    ('Персонал', 'Музыка + гимн: все функции кроме управления пользователями'),
+    'helpdesk': ('HelpDesk', 'Всё, что связано с музыкой: играть/стоп, гимн, воис, загрузка треков, крон — без удаления и без управления пользователями'),
+    'admin':    ('Админ',    'Полный доступ: управление пользователями и всеми функциями'),
 }
 
 def _silence_active():
@@ -702,9 +707,9 @@ def has_perm(perm):
     return perm in ROLE_PERMS.get(role, frozenset())
 
 def has_himn_perm():
-    """Staff/admin always. Others only if can_himn=1 granted by admin."""
+    """Staff/admin/helpdesk always. Others only if can_himn=1 granted by admin."""
     role = getattr(current_user, 'role', '')
-    if role in ('admin', 'staff'):
+    if role in ('admin', 'staff', 'helpdesk'):
         return True
     with get_db() as c:
         row = c.execute('SELECT can_himn FROM users WHERE id=?', (current_user.id,)).fetchone()
@@ -721,6 +726,7 @@ def user_perms():
         'prev':  has_perm('prev'),
         'himn':  has_himn_perm(),
         'admin': has_perm('admin'),
+        'cron':  has_perm('cron'),
         'role':  getattr(current_user, 'role', 'guest'),
     }
 
@@ -732,7 +738,11 @@ def ssh_run_on(host, user, cmd, key=None, timeout=15):
     try:
         s = paramiko.SSHClient()
         s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        s.connect(host, username=user, key_filename=key, timeout=5)
+        # Some campuses (Ağ-Şəhər confirmed) sit behind a genuinely slow/
+        # lossy link — measured 3-7s for even a trivial `echo` round trip.
+        # 5s here was cutting it too close, occasionally timing out a
+        # connection that would have succeeded with a couple more seconds.
+        s.connect(host, username=user, key_filename=key, timeout=10)
         _, out, _ = s.exec_command(cmd, timeout=timeout)
         result = out.read().decode().strip()
         return {'ok': True, 'data': result}
@@ -1673,7 +1683,7 @@ def add_user():
     u    = request.form.get('username','').strip()
     p    = request.form.get('password','')
     role = request.form.get('role','user')
-    if role not in ('guest', 'user', 'staff', 'admin'):
+    if role not in ('guest', 'user', 'staff', 'helpdesk', 'admin'):
         role = 'user'
     if u and p:
         try:
@@ -1729,7 +1739,7 @@ def reset_passwd(uid):
 @admin_only
 def set_role(uid):
     role = request.form.get('role', 'user')
-    if role not in ('guest', 'user', 'staff', 'admin'):
+    if role not in ('guest', 'user', 'staff', 'helpdesk', 'admin'):
         flash('Неверная роль', 'danger')
         return redirect(url_for('admin'))
     if uid == current_user.id:
@@ -1864,7 +1874,7 @@ def _cron_is_paused(host, user):
 @app.route('/api/cron/pause', methods=['GET'])
 @login_required
 def api_cron_pause_get():
-    if not has_perm('admin'):
+    if not has_perm('cron'):
         return jsonify({'ok': False, 'error': 'forbidden'}), 403
     result = {'client1': _cron_is_paused(CLIENT1_HOST, CLIENT1_USER)}
     for m in music_machines():
@@ -1876,7 +1886,7 @@ def api_cron_pause_get():
 @app.route('/api/cron/pause', methods=['POST'])
 @login_required
 def api_cron_pause_set():
-    if not has_perm('admin'):
+    if not has_perm('cron'):
         return jsonify({'ok': False, 'error': 'forbidden'}), 403
     data    = request.json or {}
     machine = data.get('machine', 'both')
@@ -2073,9 +2083,16 @@ def _mpv_stop_on(host, user):
         # in production. The IPC "stop" above already fully releases the
         # stream (verified via `pactl list short sink-inputs` going empty),
         # so the device is freed without touching the audio server at all.
-    r = ssh_run_on(host, user, cmd, timeout=8)
-    if not r.get('ok'):
+    # Up to 4 attempts, not 2 — measured campuses like Ağ-Şəhər can take
+    # 3-7s for even a trivial SSH round trip, so a single retry sometimes
+    # wasn't enough to ride out a slow moment on that link. A panic button
+    # that occasionally needs the user to click it 3-4 times themselves is
+    # not "working" — better the server keeps trying automatically.
+    r = None
+    for _attempt in range(4):
         r = ssh_run_on(host, user, cmd, timeout=8)
+        if r.get('ok'):
+            break
     return r
 
 def _mpv_stop_on_tracked(machine_id, host, user):
@@ -3791,7 +3808,7 @@ def _safe_filename(name):
 @app.route('/upload')
 @login_required
 def upload_page():
-    if current_user.role not in ('admin', 'staff', 'user'):
+    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk'):
         flash('Нет прав для загрузки треков', 'danger')
         return redirect(url_for('tracks'))
     used_mb = 0
@@ -3812,7 +3829,7 @@ def upload_page():
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def api_upload():
-    if current_user.role not in ('admin', 'staff', 'user'):
+    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     f = request.files.get('file')
     if not f or not f.filename:
@@ -5098,14 +5115,14 @@ def cheatsheet_page():
 @app.route('/announce')
 @login_required
 def announce_page():
-    if current_user.role not in ('admin', 'staff'):
+    if current_user.role not in ('admin', 'staff', 'helpdesk'):
         return '', 403
     return render_template('announce.html', music_machines=music_machines_json())
 
 @app.route('/api/announce', methods=['POST'])
 @login_required
 def api_announce():
-    if current_user.role not in ('admin', 'staff'):
+    if current_user.role not in ('admin', 'staff', 'helpdesk'):
         return jsonify({'ok': False, 'error': 'Нет прав'}), 403
     audio = request.files.get('audio')
     if not audio:

@@ -159,10 +159,11 @@
               <div class="role-row">
                 <select name="role" class="form-select"
                         style="padding:4px 8px;font-size:12px;font-family:'JetBrains Mono',monospace;width:90px">
-                  <option value="guest"  {% if u.role=='guest'  %}selected{% endif %}>guest</option>
-                  <option value="user"   {% if u.role in ('user','viewer') %}selected{% endif %}>user</option>
-                  <option value="staff"  {% if u.role=='staff'  %}selected{% endif %}>staff</option>
-                  <option value="admin"  {% if u.role=='admin'  %}selected{% endif %}>admin</option>
+                  <option value="guest"    {% if u.role=='guest'    %}selected{% endif %}>guest</option>
+                  <option value="user"     {% if u.role in ('user','viewer') %}selected{% endif %}>user</option>
+                  <option value="staff"    {% if u.role=='staff'    %}selected{% endif %}>staff</option>
+                  <option value="helpdesk" {% if u.role=='helpdesk' %}selected{% endif %}>helpdesk</option>
+                  <option value="admin"    {% if u.role=='admin'    %}selected{% endif %}>admin</option>
                 </select>
                 <button type="submit" class="btn btn-ghost btn-sm" title="Сохранить роль">
                   <i class="bi bi-check-lg"></i>
@@ -331,6 +332,7 @@
           <option value="guest">guest — только просмотр</option>
           <option value="user" selected>user — управление плеером</option>
           <option value="staff">staff — музыка + гимн</option>
+          <option value="helpdesk">helpdesk — вся музыка, без удаления и юзеров</option>
           <option value="admin">admin — полный доступ</option>
         </select>
       </div>

@@ -2545,6 +2545,7 @@ window.addEventListener('DOMContentLoaded', function() {
         <div style="font-size:10px;color:var(--muted)">
           {% if current_user.role == 'admin' %}администратор
           {% elif current_user.role == 'staff' %}сотрудник
+          {% elif current_user.role == 'helpdesk' %}HelpDesk
           {% elif current_user.role == 'guest' %}гость
           {% else %}пользователь{% endif %}
         </div>
@@ -2631,13 +2632,20 @@ window.addEventListener('DOMContentLoaded', function() {
       {% endif %}
     </a>
 
-    {% if current_user.role in ('admin','staff') %}
+    {% if current_user.role in ('admin','staff','helpdesk') %}
     <div class="sb-sep"></div>
     <a class="sb-link {% if request.endpoint=='upload_page' %}active{% endif %}"
        href="{{ url_for('upload_page') }}" onclick="closeSidebar()">
       <i class="bi bi-cloud-upload-fill"></i>
       <span data-i18n="nav.upload">Загрузка треков</span>
     </a>
+    <a class="sb-link {% if request.endpoint=='announce_page' %}active{% endif %}"
+       href="{{ url_for('announce_page') }}" onclick="closeSidebar()">
+      <i class="bi bi-megaphone-fill" style="color:var(--orange)"></i>
+      <span>Объявление по радио</span>
+    </a>
+    {% endif %}
+    {% if current_user.role in ('admin','staff') %}
     <a class="sb-link {% if request.endpoint=='monitor_page' %}active{% endif %}"
        href="{{ url_for('monitor_page') }}" onclick="closeSidebar()">
       <i class="bi bi-cpu-fill"></i>
@@ -2651,11 +2659,6 @@ window.addEventListener('DOMContentLoaded', function() {
        href="{{ url_for('cheatsheet_page') }}" onclick="closeSidebar()">
       <i class="bi bi-journal-code" style="color:var(--purple)"></i>
       <span>Шпаргалка команд</span>
-    </a>
-    <a class="sb-link {% if request.endpoint=='announce_page' %}active{% endif %}"
-       href="{{ url_for('announce_page') }}" onclick="closeSidebar()">
-      <i class="bi bi-megaphone-fill" style="color:var(--orange)"></i>
-      <span>Объявление по радио</span>
     </a>
     {% endif %}
 

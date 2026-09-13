@@ -656,6 +656,12 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .nc-chip-machines::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
 @media (max-width:1100px){.nc-chip-machines{display:none}}
 .nc-chip-machines .nc-val{font-size:11px}
+.nc-chip-machines.nc-collapsed{width:auto;max-height:none;padding:8px}
+.nc-chip-machines.nc-collapsed #machine-times,
+.nc-chip-machines.nc-collapsed #btn-timesync{display:none!important}
+.nc-mt-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;flex-shrink:0;margin-left:auto}
+.nc-mt-toggle:hover{color:var(--blue)}
+.nc-chip-machines.nc-collapsed .nc-mt-toggle{margin-left:6px}
 .mtime-chip{display:flex;align-items:center;gap:5px;font-size:12px;padding:2px 4px;white-space:nowrap}
 .mtime-lbl{color:var(--muted);margin-right:1px}
 
@@ -1317,13 +1323,16 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   </div>
   <!-- Machine times -->
   {% if perms.role in ('admin','staff') %}
-  <div class="nc-chip nc-chip-machines">
+  <div class="nc-chip nc-chip-machines" id="nc-chip-machines">
     <i class="bi bi-clock-history" style="font-size:13px;color:var(--blue);flex-shrink:0"></i>
     <div id="machine-times" style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px">
       <span style="color:var(--muted);font-size:10px">...</span>
     </div>
     <button onclick="syncTime('all')" id="btn-timesync" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;padding:0" title="Синхр.">
       <i class="bi bi-arrow-repeat" id="timesync-icon"></i>
+    </button>
+    <button class="nc-mt-toggle" id="nc-mt-toggle-btn" onclick="toggleMachineTimesPanel()" title="Свернуть/развернуть">
+      <i class="bi bi-chevron-left" id="nc-mt-toggle-icon"></i>
     </button>
   </div>
   {% endif %}
@@ -1497,7 +1506,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       </div>
       <div class="wa-special-desc" data-i18n="wamp.zefer_desc">8 noyabr — Zəfər Günü trekini işə sal</div>
     </div>
-    {% if perms.admin %}
+    {% if perms.admin or perms.cron %}
     <div class="wa-special-group wa-cron-group">
       <div class="wa-special-top">
         <div class="wa-special-hd">
@@ -4588,6 +4597,24 @@ function fetchMachineTimes() {
   }).catch(function(){});
 }
 
+function toggleMachineTimesPanel() {
+  var panel = document.getElementById('nc-chip-machines');
+  var icon  = document.getElementById('nc-mt-toggle-icon');
+  if (!panel) return;
+  var collapsed = panel.classList.toggle('nc-collapsed');
+  if (icon) icon.className = collapsed ? 'bi bi-chevron-right' : 'bi bi-chevron-left';
+  try { localStorage.setItem('nc-mt-collapsed', collapsed ? '1' : '0'); } catch(e) {}
+}
+(function(){
+  try {
+    if (localStorage.getItem('nc-mt-collapsed') === '1') {
+      var panel = document.getElementById('nc-chip-machines');
+      var icon  = document.getElementById('nc-mt-toggle-icon');
+      if (panel) panel.classList.add('nc-collapsed');
+      if (icon) icon.className = 'bi bi-chevron-right';
+    }
+  } catch(e) {}
+})();
 function _tickMachineTimes() {
   var wrap = document.getElementById('machine-times');
   if (!wrap) return;
