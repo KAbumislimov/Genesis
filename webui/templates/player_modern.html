@@ -17,11 +17,36 @@
 .cpm-top{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .cpm-brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px;color:var(--text)}
 .cpm-brand-mark{width:26px;height:26px;border-radius:8px;background:var(--cpm-accent);color:var(--cpm-accent-ink);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.cpm-campus-switch{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;padding:3px}
-.cpm-campus-pill{padding:8px 16px;border-radius:8px;border:none;background:none;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
-.cpm-campus-pill.active{background:var(--cpm-accent);color:var(--cpm-accent-ink)}
 .cpm-skin-link{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none}
 .cpm-skin-link:hover{color:var(--cpm-accent)}
+
+/* Campus picker — tucked into the empty right margin instead of a full-width
+   top bar. Clicking a name still just calls setActiveCampus(), same as
+   before; only where it lives on the page changed. Collapsible so it never
+   sits in the way of whatever's fully expanded underneath it. */
+.cpm-campus-dock{position:fixed;top:146px;right:14px;z-index:790;
+  width:178px;max-height:calc(100vh - 220px);overflow-y:auto;
+  background:rgba(20,20,40,.88);border:1.5px solid var(--border);
+  border-radius:12px;box-shadow:0 3px 16px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.4)}
+.cpm-campus-dock-hd{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:11px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.cpm-campus-dock-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;margin-left:auto}
+.cpm-campus-dock-toggle:hover{color:var(--cpm-accent)}
+.cpm-campus-switch{display:flex;flex-direction:column;gap:3px;padding:0 8px 8px}
+.cpm-campus-dock.cpm-collapsed .cpm-campus-switch,
+.cpm-campus-dock.cpm-collapsed .cpm-campus-dock-label{display:none}
+.cpm-campus-dock.cpm-collapsed{width:auto;max-height:none}
+.cpm-campus-dock.cpm-collapsed .cpm-campus-dock-toggle{margin-left:4px}
+.cpm-campus-pill{padding:8px 12px;border-radius:8px;border:none;background:none;font-size:12.5px;font-weight:600;
+  color:var(--muted);cursor:pointer;text-align:left;width:100%}
+.cpm-campus-pill:hover{background:var(--bg3)}
+.cpm-campus-pill.active{background:var(--cpm-accent);color:var(--cpm-accent-ink)}
+.cpm-campus-select-mobile{display:none}
+@media (max-width:1100px){
+  .cpm-campus-dock{display:none}
+  .cpm-campus-select-mobile{display:block;margin:0 20px 12px;width:calc(100% - 40px);
+    background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px}
+}
 
 .cpm-campus-strip{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px 12px;padding:10px 20px}
 .cpm-campus-row{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:8px 12px 8px 10px;
@@ -181,12 +206,24 @@
       <span class="cpm-brand-mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
       Campus Player
     </div>
+    <a href="{{ url_for('profile') }}" class="cpm-skin-link" title="Сменить оформление плеера">🎨 Оформление</a>
+  </div>
+
+  <!-- Campus picker — moved out of the top bar into a compact dock in the
+       empty right margin (see .cpm-campus-dock), so it doesn't compete for
+       space with the per-campus card grid below. -->
+  <div class="cpm-campus-dock" id="cpm-campus-dock">
+    <div class="cpm-campus-dock-hd">
+      <i class="bi bi-building"></i> <span class="cpm-campus-dock-label">Кампус</span>
+      <button class="cpm-campus-dock-toggle" id="cpm-campus-dock-toggle" onclick="toggleCampusDock()" title="Свернуть/развернуть">
+        <i class="bi bi-chevron-right" id="cpm-campus-dock-toggle-icon"></i>
+      </button>
+    </div>
     <div class="cpm-campus-switch" id="cpm-campus-switch">
       {% for m in music_machines %}
       <button class="cpm-campus-pill{{ ' active' if loop.first else '' }}" data-campus="{{ m.key }}">{{ m.name }}</button>
       {% endfor %}
     </div>
-    <a href="{{ url_for('profile') }}" class="cpm-skin-link" title="Сменить оформление плеера">🎨 Оформление</a>
   </div>
 
   <!-- campus status strip — same ids the shared polling functions already update -->
@@ -328,7 +365,7 @@
     </div>
   </div>
 
-  <select id="campusSelect" style="display:none" onchange="setActiveCampus(this.value)">
+  <select id="campusSelect" class="cpm-campus-select-mobile" onchange="setActiveCampus(this.value)">
     {% for m in music_machines %}<option value="{{ m.key }}">{{ m.short }}</option>{% endfor %}
   </select>
 </div>
@@ -343,6 +380,25 @@
       setActiveCampus(p.dataset.campus);
     });
   });
+})();
+
+function toggleCampusDock() {
+  var dock = document.getElementById('cpm-campus-dock');
+  var icon = document.getElementById('cpm-campus-dock-toggle-icon');
+  if (!dock) return;
+  var collapsed = dock.classList.toggle('cpm-collapsed');
+  if (icon) icon.className = collapsed ? 'bi bi-chevron-left' : 'bi bi-chevron-right';
+  try { localStorage.setItem('cpm-dock-collapsed', collapsed ? '1' : '0'); } catch(e) {}
+}
+(function(){
+  try {
+    if (localStorage.getItem('cpm-dock-collapsed') === '1') {
+      var dock = document.getElementById('cpm-campus-dock');
+      var icon = document.getElementById('cpm-campus-dock-toggle-icon');
+      if (dock) dock.classList.add('cpm-collapsed');
+      if (icon) icon.className = 'bi bi-chevron-left';
+    }
+  } catch(e) {}
 })();
 
 function _cpmSeek(ck, evt, wrap) {
