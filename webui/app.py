@@ -2046,6 +2046,10 @@ def api_stop():
     # the UI shows "stopped" the instant the request is dispatched, not once
     # the slowest campus's SSH call happens to finish.
     for m in music_machines():
+        # Invalidate any in-flight play (e.g. a slow SFTP upload for a track
+        # not yet synced locally) so it can't "resurrect" playback moments
+        # after this stop, once its upload finally finishes.
+        _bump_play_gen(_campus_key(m))
         threading.Thread(
             target=_mpv_stop_on, args=(m['host'], m.get('user', CLIENT1_USER)), daemon=True
         ).start()
@@ -2065,11 +2069,16 @@ def api_stop_machine(machine):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     if machine == 'client1':
         host, user = CLIENT1_HOST, CLIENT1_USER
+        mid = 'client1'
     else:
         m = _resolve_machine(machine, strict=True)
         if not m:
             return jsonify({'ok': False, 'error': 'машина не настроена'})
         host, user = m['host'], m.get('user', CLIENT1_USER)
+        mid = m.get('user', machine)
+    # Invalidate any in-flight play on this machine so a slow background
+    # SFTP upload can't resurrect playback after the user has stopped it.
+    _bump_play_gen(mid)
     # Fire-and-forget, same as the global panic-stop — the button should feel
     # instant, not wait on an SSH round-trip that may itself be retrying.
     threading.Thread(target=_mpv_stop_on, args=(host, user), daemon=True).start()
@@ -2716,6 +2725,8 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
                 # so a player left paused by an earlier action would silently
                 # load-but-not-play forever. Force it off after loading.
                 unpause = f'echo "{{\\"command\\":[\\"set_property\\",\\"pause\\",false]}}" | socat - {MPV_SOCK} 2>/dev/null'
+                if my_gen is not None and _current_play_gen(machine_id) != my_gen:
+                    return
                 _, out, _ = s.exec_command(
                     f"echo '{b64}' | base64 -d > {playlist_path} && "
                     f'echo "{escaped}" | socat - {MPV_SOCK} 2>/dev/null; '
@@ -2732,6 +2743,8 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
             cmd_j = json.dumps({'command': ['loadfile', remote_path, 'replace']})
             escaped = cmd_j.replace('"', '\\"')
             unpause = f'echo "{{\\"command\\":[\\"set_property\\",\\"pause\\",false]}}" | socat - {MPV_SOCK} 2>/dev/null'
+            if my_gen is not None and _current_play_gen(machine_id) != my_gen:
+                return
             _, out, _ = s.exec_command(
                 f'echo "{escaped}" | socat - {MPV_SOCK} 2>/dev/null; '
                 f'{unpause}; '
@@ -2749,6 +2762,8 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
                 pass
             sftp.put(local_path, remote_in)
             sftp.close()
+            if my_gen is not None and _current_play_gen(machine_id) != my_gen:
+                return
             _, out, _ = s.exec_command(
                 f'/usr/local/bin/campus-playerctl play {remote_in} 2>/dev/null; '
                 f'echo "{{\\"command\\":[\\"set_property\\",\\"pause\\",false]}}" | socat - {MPV_SOCK} 2>/dev/null',
