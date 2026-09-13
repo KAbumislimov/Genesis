@@ -1984,12 +1984,20 @@ def _status_for_machine(machine):
                     'last_error': _get_last_error(machine)}
         return {'playing': False, 'track': None, 'online': False, 'error': 'not found'}
 
-    path     = mpv_get('path')
-    vol      = mpv_get('volume')
-    paused   = mpv_get('pause')
-    muted    = mpv_get('mute')
-    pos      = mpv_get('time-pos')
-    dur      = mpv_get('duration')
+    # Was 6 separate SSH connections (one per property via mpv_get) — every
+    # other campus already reads all properties in ONE connection via
+    # _mpv_status_batch. Six sequential fresh SSH handshakes per poll is
+    # slow enough that some would time out while others succeeded, giving
+    # inconsistent partial reads (volume present, path/duration missing) —
+    # exactly what "actually playing but the player shows nothing" looks
+    # like. client1 gets the same fast, consistent single round trip now.
+    _vals    = _mpv_status_batch(CLIENT1_HOST, CLIENT1_USER)
+    path     = _vals['path']
+    vol      = _vals['volume']
+    paused   = _vals['pause']
+    muted    = _vals['mute']
+    pos      = _vals['time-pos']
+    dur      = _vals['duration']
     with get_db() as c:
         last = c.execute(
             'SELECT username, track_name, played_at FROM play_log ORDER BY id DESC LIMIT 1'

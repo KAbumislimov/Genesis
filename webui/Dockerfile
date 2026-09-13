@@ -9,10 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /data
-
-# Generate self-signed TLS cert (valid 10 years) — enables mic/getUserMedia via HTTPS
-RUN openssl req -x509 -newkey rsa:2048 -keyout /app/ssl.key -out /app/ssl.crt -days 3650 -nodes -subj "/CN=campus-webui/O=MEDIA/C=AZ"
+RUN mkdir -p /data && chmod +x docker-entrypoint.sh
 
 ENV PYTHONUNBUFFERED=1
 ENV HF_HOME=/data/hf_cache
@@ -20,6 +17,6 @@ ENV XDG_CACHE_HOME=/data/cache
 
 EXPOSE 8080 8443
 
-CMD ["gunicorn", "--certfile=/app/ssl.crt", "--keyfile=/app/ssl.key", \
-     "--bind=0.0.0.0:8080", "--workers=1", "--worker-class=gthread", \
-     "--threads=32", "--timeout=300", "--log-level=info", "app:app"]
+# TLS cert is generated once into the persistent /data volume by the
+# entrypoint (not at build time) — see docker-entrypoint.sh for why.
+CMD ["./docker-entrypoint.sh"]
