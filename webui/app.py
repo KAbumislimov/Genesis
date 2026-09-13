@@ -2002,11 +2002,17 @@ def _mpv_stop_on(host, user):
         'pkill -9 vlc     2>/dev/null || true; '
         'pkill -9 cvlc    2>/dev/null || true; '
         'pkill -9 play    2>/dev/null || true; '
-        'pkill -9 festival 2>/dev/null || true; '
-        # Last-resort: force-release the audio device itself, in case
-        # something still holds it open after the process kills above
-        # ("панический стоп" — освободить устройство любой ценой).
-        'fuser -k /dev/snd/* 2>/dev/null || true; true')
+        'pkill -9 festival 2>/dev/null || true; true')
+        # NOTE: deliberately NOT doing `fuser -k /dev/snd/*` here. On every
+        # campus in this fleet mpv plays through --ao=pulse, so /dev/snd is
+        # held by PulseAudio, not by mpv or the helper tools above — fuser -k
+        # was killing the PulseAudio *server* itself on every stop press.
+        # mpv's own connection to it doesn't recover, so the very next play
+        # attempt reports "success" but produces no audio (server gone).
+        # Confirmed this is what silently broke playback on wctk (Ağ-Şəhər)
+        # in production. The IPC "stop" above already fully releases the
+        # stream (verified via `pactl list short sink-inputs` going empty),
+        # so the device is freed without touching the audio server at all.
     r = ssh_run_on(host, user, cmd, timeout=8)
     if not r.get('ok'):
         r = ssh_run_on(host, user, cmd, timeout=8)
