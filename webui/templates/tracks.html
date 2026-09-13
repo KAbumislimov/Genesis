@@ -174,6 +174,12 @@
 }
 .folder-card:hover .fc-upload-btn{opacity:1}
 .fc-upload-btn:hover{background:rgba(88,166,255,.15);border-color:var(--blue)}
+
+.tr-toast{position:fixed;right:18px;bottom:18px;z-index:9999;max-width:360px;
+  background:#241414;border:1px solid #f87060;color:#ffb4a3;font-size:12.5px;
+  line-height:1.4;padding:10px 14px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.4);
+  opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.tr-toast.show{opacity:1;transform:translateY(0)}
 </style>
 {% endblock %}
 
@@ -554,6 +560,38 @@ document.addEventListener('click', function(ev){
   if (pop && pop.classList.contains('open') && !pop.contains(ev.target)) pop.classList.remove('open');
 });
 
+let _trToastEl=null,_trToastTimer=null;
+function trToast(msg){
+  if(!_trToastEl){
+    _trToastEl=document.createElement('div');
+    _trToastEl.className='tr-toast';
+    document.body.appendChild(_trToastEl);
+  }
+  _trToastEl.textContent='⚠ '+msg;
+  _trToastEl.classList.add('show');
+  clearTimeout(_trToastTimer);
+  _trToastTimer=setTimeout(()=>_trToastEl.classList.remove('show'),7000);
+}
+// /api/play answers instantly (fire-and-forget on the server) — it can't
+// yet know whether the campus machine actually loaded the file. Follow up
+// with a real status check so a click that LOOKED like it worked but
+// actually silently failed (dead player socket, rejected upload, campus
+// unreachable) shows the real reason instead of just staying "Играет".
+function _checkTrackPlayResult(machine,btn,ml){
+  if(!machine||machine==='all') return;
+  setTimeout(()=>{
+    fetch('/api/status?machine='+encodeURIComponent(machine)).then(r=>r.json()).then(d=>{
+      if(d.last_error){
+        trToast((ML[machine]&&ML[machine].lbl?ML[machine].lbl:machine)+': '+d.last_error);
+        if(btn&&btn.classList.contains('is-playing')){
+          btn.classList.remove('is-playing');
+          btn.innerHTML=`<i class="bi bi-exclamation-triangle"></i> <span class="btn-lbl">Ошибка</span>`;
+          setTimeout(()=>{ if(!btn.classList.contains('is-playing')) btn.innerHTML=`<i class="bi ${ml.icon}"></i> <span class="btn-lbl">${ml.lbl}</span>`; },3000);
+        }
+      }
+    }).catch(()=>{});
+  },3500);
+}
 function playTrack(name,folder,machine,btn){
   machine=machine||'client1';
   btn.dataset.machine=machine;
@@ -571,8 +609,10 @@ function playTrack(name,folder,machine,btn){
     if(d.ok){btn.classList.add('is-playing');
       btn.innerHTML=`<i class="bi bi-volume-up-fill"></i> <span class="btn-lbl">Играет</span>`;
       currentPlayBtn=btn;
+      _checkTrackPlayResult(machine,btn,ml);
     } else {
       btn.innerHTML=`<i class="bi bi-exclamation-triangle"></i> <span class="btn-lbl">Ошибка</span>`;
+      trToast((ML[machine]&&ML[machine].lbl?ML[machine].lbl:machine)+': '+(d.error||'не удалось воспроизвести'));
       setTimeout(()=>btn.innerHTML=`<i class="bi ${ml.icon}"></i> <span class="btn-lbl">${ml.lbl}</span>`,2000);
     }
   }).catch(()=>btn.innerHTML=`<i class="bi ${ml.icon}"></i> <span class="btn-lbl">${ml.lbl}</span>`);

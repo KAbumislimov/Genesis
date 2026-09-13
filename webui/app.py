@@ -338,6 +338,38 @@ def _current_play_gen(machine_id):
     with _play_gen_lock:
         return _play_gen.get(machine_id, 0)
 
+# Per-campus "what actually went wrong" — a real, human-readable reason,
+# not just a silent failure. Set whenever a play/stop attempt on a machine
+# fails, cleared the moment that machine succeeds again. Surfaced through
+# /api/status so the UI can show the real problem instead of just quietly
+# not working.
+_last_error: dict = {}
+_last_error_lock = threading.Lock()
+
+def _set_last_error(machine_id, msg):
+    with _last_error_lock:
+        _last_error[machine_id] = {'msg': msg, 'ts': time.time()}
+
+def _clear_last_error(machine_id):
+    with _last_error_lock:
+        _last_error.pop(machine_id, None)
+
+def _get_last_error(machine_id, max_age=300):
+    with _last_error_lock:
+        e = _last_error.get(machine_id)
+    if not e or (time.time() - e['ts']) > max_age:
+        return None
+    return e['msg']
+
+def _humanize_ssh_error(e):
+    if isinstance(e, paramiko.ssh_exception.AuthenticationException):
+        return 'Отказ доступа по SSH-ключу — доступ к кампусу настроен неверно'
+    if isinstance(e, (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout, ConnectionRefusedError, OSError)):
+        return 'Кампус не отвечает по сети (недоступен)'
+    if isinstance(e, paramiko.ssh_exception.SSHException):
+        return f'Ошибка SSH-соединения с кампусом: {e}'
+    return f'Техническая ошибка: {e}'
+
 # ── Brute-force login protection ──────────────────────────────────────────────
 _login_attempts: dict = {}   # IP → {'count': int, 'lockout_until': float}
 _MAX_ATTEMPTS  = 5
@@ -1912,8 +1944,9 @@ def api_status():
             # every property came back None, the machine is unreachable or
             # the player service isn't running there, not just "not playing"
             if path is None and paused is None and vol is None:
+                offline_err = _get_last_error(machine) or 'Кампус не отвечает (плеер недоступен по сети)'
                 return jsonify({'playing': False, 'track': None, 'online': False,
-                                'error': 'offline'})
+                                'error': 'offline', 'last_error': offline_err})
             raw_name = os.path.basename(path) if path else None
             if raw_name and raw_name.lower() in ('in.mp3','in.wav','in.ogg'):
                 with get_db() as c:
@@ -1927,7 +1960,8 @@ def api_status():
                             'paused': bool(paused), 'muted': bool(muted), 'online': True,
                             'volume': round(vol) if vol is not None else None,
                             'position': round(pos, 1) if pos is not None else None,
-                            'duration': round(dur, 1) if dur is not None else None})
+                            'duration': round(dur, 1) if dur is not None else None,
+                            'last_error': _get_last_error(machine)})
         return jsonify({'playing': False, 'track': None, 'online': False, 'error': 'not found'})
 
     path     = mpv_get('path')
@@ -1981,6 +2015,7 @@ def api_status():
         'last_track': display_name,
         'position':   round(pos, 1) if pos is not None else None,
         'duration':   round(dur, 1) if dur is not None else None,
+        'last_error': _get_last_error('client1'),
     })
 
 def _mpv_stop_on(host, user):
@@ -2017,6 +2052,16 @@ def _mpv_stop_on(host, user):
     if not r.get('ok'):
         r = ssh_run_on(host, user, cmd, timeout=8)
     return r
+
+def _mpv_stop_on_tracked(machine_id, host, user):
+    """Same as _mpv_stop_on, but records the real reason in _last_error when
+    both attempts fail — a stop button that silently does nothing is exactly
+    the kind of failure that needs to be visible, not swallowed."""
+    r = _mpv_stop_on(host, user)
+    if r.get('ok'):
+        _clear_last_error(machine_id)
+    else:
+        _set_last_error(machine_id, f"Не удалось остановить: {r.get('error') or 'нет связи с кампусом'}")
 
 @app.route('/api/pause', methods=['POST'])
 @login_required
@@ -2057,7 +2102,7 @@ def api_stop():
         # after this stop, once its upload finally finishes.
         _bump_play_gen(_campus_key(m))
         threading.Thread(
-            target=_mpv_stop_on, args=(m['host'], m.get('user', CLIENT1_USER)), daemon=True
+            target=_mpv_stop_on_tracked, args=(_campus_key(m), m['host'], m.get('user', CLIENT1_USER)), daemon=True
         ).start()
     log_action(current_user.username, 'stop', 'all')
     tg_notify(
@@ -2087,7 +2132,7 @@ def api_stop_machine(machine):
     _bump_play_gen(mid)
     # Fire-and-forget, same as the global panic-stop — the button should feel
     # instant, not wait on an SSH round-trip that may itself be retrying.
-    threading.Thread(target=_mpv_stop_on, args=(host, user), daemon=True).start()
+    threading.Thread(target=_mpv_stop_on_tracked, args=(mid, host, user), daemon=True).start()
     log_action(current_user.username, 'stop', machine)
     return jsonify({'ok': True})
 
@@ -2704,6 +2749,14 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
         _, chk, _ = s.exec_command(f'test -f "{remote_path}" && echo y || echo n', timeout=5)
         have_local = chk.read().decode().strip() == 'y'
 
+        # Without this, mpv not running there (crashed, never started, no
+        # systemd unit — happened for real on Ağ-Şəhər) just makes every
+        # socat call below silently no-op: no exception, no sound, no clue.
+        _, sockchk, _ = s.exec_command(f'[ -S "{MPV_SOCK}" ] && echo y || echo n', timeout=5)
+        if sockchk.read().decode().strip() != 'y':
+            _set_last_error(machine_id, 'Плеер не запущен на кампусе (не найден сокет mpv) — нужен перезапуск службы на месте')
+            return
+
         played_sequence = False
         if have_local and folder:
             folder_tracks = scan_tracks(folder_filter=folder)
@@ -2771,11 +2824,16 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
             remote_in = inbox + '/in.mp3'
             sftp = s.open_sftp()
             try:
-                sftp.mkdir(inbox)
-            except IOError:
-                pass
-            sftp.put(local_path, remote_in)
-            sftp.close()
+                try:
+                    sftp.mkdir(inbox)
+                except IOError:
+                    pass
+                sftp.put(local_path, remote_in)
+            except Exception as e:
+                _set_last_error(machine_id, f'Не удалось загрузить файл на кампус: {e}')
+                return
+            finally:
+                sftp.close()
             if my_gen is not None and _current_play_gen(machine_id) != my_gen:
                 return
             _, out, _ = s.exec_command(
@@ -2785,6 +2843,7 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
             )
             out.read()
 
+        _clear_last_error(machine_id)
         with app.app_context():
             with get_db() as db:
                 db.execute(
@@ -2803,6 +2862,7 @@ def _play_track_on(host, user, local_path, name, machine_id, username, folder=''
             )
     except Exception as e:
         app.logger.warning(f'_play_track_on {machine_id}: {e}')
+        _set_last_error(machine_id, _humanize_ssh_error(e))
     finally:
         if s:
             try: s.close()

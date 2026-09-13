@@ -1540,6 +1540,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <span class="wamp2-cs-vol-val" id="vol-val-{{ m.key }}">100</span>
       </div>
       {% endif %}
+      <div class="wamp2-cs-err" id="cs-err-{{ m.key }}" style="display:none;color:#f87060;font-size:10px;padding:1px 4px;line-height:1.3;white-space:normal;word-break:break-word"></div>
     </div>
     {% endfor %}
   </div>
@@ -3911,11 +3912,12 @@ function _wampPlPlay(tr, el, ampIdx) {
   if (_needSingleCampus()) return;
   var shortName = tr.name.replace(/\.(mp3|flac|ogg|m4a|wav)$/i,'').slice(0,38);
   toast('⏳ ' + shortName + '…');
+  var _playCampus = _activeCampus;
   fetch('/api/play',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({name: tr.name, folder: tr.folder||'', machine: _activeCampus})
+    body:JSON.stringify({name: tr.name, folder: tr.folder||'', machine: _playCampus})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) toast('⚠️ '+(d.error||'err'));
-    else toast('▶ ' + shortName);
+    else { toast('▶ ' + shortName); _checkRealPlayResult(_playCampus, shortName); }
   }).catch(function(){ toast('⚠️ Нет связи с сервером'); });
 }
 // Track Ctrl key state
@@ -3928,7 +3930,7 @@ function wampSendToCampus(machine) {
     body:JSON.stringify({name: song.name, folder: song.folder||'', machine: machine})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) toast('⚠️ '+(d.error||'err'));
-    else toast('▶ '+({client1:'NAR',client2:'GNC',cgtk:'CG'}[machine]||machine)+' — '+song.name.slice(0,30));
+    else { toast('▶ '+({client1:'NAR',client2:'GNC',cgtk:'CG'}[machine]||machine)+' — '+song.name.slice(0,30)); _checkRealPlayResult(machine, song.name.slice(0,30)); }
   });
 }
 function wampPlayAll() {
@@ -3980,10 +3982,11 @@ function _escHtml(s) {
 function doStop() {
   if (_needSingleCampus()) return;
   toast('⏳ Останавливаю…');
+  var _stopCampus = _activeCampus;
   fetch('/api/stop',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({machine:_activeCampus})
+    body:JSON.stringify({machine:_stopCampus})
   }).then(function(r){return r.json();})
-    .then(function(d){ if(d.ok) toast('⏹ Остановлено'); else toast('⚠️ ' + (d.error||'ошибка')); })
+    .then(function(d){ if(d.ok) { toast('⏹ Остановлено'); _checkRealPlayResult(_stopCampus, 'Стоп'); } else toast('⚠️ ' + (d.error||'ошибка')); })
     .catch(function(){ toast('⚠️ Нет связи с сервером — попробуй ещё раз'); });
 }
 function _plNavigate(dir) {
@@ -4032,7 +4035,7 @@ function stopCampus(campus) {
   fetch('/api/stop/' + campus, {method:'POST'})
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d.ok) { toast('■ Стоп — ' + (labels[campus]||campus)); setTimeout(pollAllCampuses,600); }
+      if (d.ok) { toast('■ Стоп — ' + (labels[campus]||campus)); setTimeout(pollAllCampuses,600); _checkRealPlayResult(campus, 'Стоп'); }
       else toast('⚠️ ' + (d.error||'Ошибка'));
     })
     .catch(function(){ toast('⚠️ Нет связи с сервером — попробуй ещё раз'); });
@@ -4129,6 +4132,27 @@ function wampSetAllVolume(val) {
     .catch(function(){ toast('⚠️ Нет связи с сервером'); });
 }
 
+function _showCampusErr(key, msg) {
+  var el = document.getElementById('cs-err-'+key);
+  if (!el) return;
+  if (msg) { el.textContent = '⚠ ' + msg; el.style.display = ''; }
+  else { el.style.display = 'none'; el.textContent = ''; }
+}
+// After a play click "succeeds" (i.e. the request was accepted), follow up
+// with a real status check — /api/play answers instantly and can't yet know
+// whether mpv on the campus actually loaded the file. If it turns out it
+// didn't (dead socket, upload rejected, campus unreachable), surface the
+// REAL reason as a toast instead of leaving the user staring at silence.
+function _checkRealPlayResult(campus, label) {
+  if (!campus || campus === 'all') return;
+  setTimeout(function() {
+    fetch('/api/status?machine=' + encodeURIComponent(campus))
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        if (d.last_error) toast('⚠️ ' + campusLabel(campus) + ': ' + d.last_error);
+      }).catch(function(){});
+  }, 3500);
+}
 function pollMachine(key, idx) {
   var conn = document.getElementById('conn-'+key);
   if (!conn) return;
@@ -4145,10 +4169,12 @@ function pollMachine(key, idx) {
         if (live) live.style.display = 'none';
         if (stop) stop.style.display = '';
         if (mn)   mn.textContent = t('np.idle');
+        _showCampusErr(key, d.last_error);
         if (idx===0 && dualWave) dualWave.setActiveL(false);
         if (idx===1 && dualWave) dualWave.setActiveR(false);
         return;
       }
+      _showCampusErr(key, d.last_error);
       conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
       if (d.playing) {
         if (live) live.style.display = '';
@@ -4197,6 +4223,7 @@ function pollMachine(key, idx) {
       if (liveEl) liveEl.style.display = 'none';
       if (stopEl) stopEl.style.display = '';
       if (mn) mn.textContent = t('np.idle');
+      _showCampusErr(key, 'Нет связи с сервером управления');
     });
 }
 // Back-compat shims — several older call sites (doStopAll, perem schedule
@@ -4979,6 +5006,21 @@ setInterval(function(){
     if (lcdI0) lcdI0.textContent = 'ВСЕ КАМПУСЫ';
     return;
   }
+  // The LCD must always reflect what's ACTUALLY playing right now, not a
+  // stale manual selection — a track started from a different page (e.g.
+  // /tracks, a completely separate page load with its own JS state) has no
+  // way to tell this page's _activeCampus about it. So: if the selected
+  // campus isn't really playing but some other one genuinely is, display
+  // that one instead. This only changes what the LCD SHOWS — it does not
+  // touch _activeCampus itself, so the campus picker / command target the
+  // user manually chose for buttons (Стоп, Гимн, etc.) is left alone.
+  var displayCk = ck;
+  if (!(_progState[ck] && _progState[ck].playing)) {
+    for (var _k in _progState) {
+      if (_progState[_k] && _progState[_k].playing) { displayCk = _k; break; }
+    }
+  }
+  ck = displayCk;
   var st = _progState[ck];
   var pos = st.pos, dur = st.dur, pct = 0;
   if(st.playing && dur > 0){
