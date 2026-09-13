@@ -1923,10 +1923,7 @@ def _mpv_status_batch(host, user):
     return out
 
 # ── API ───────────────────────────────────────────
-@app.route('/api/status')
-@login_required
-def api_status():
-    machine = request.args.get('machine', 'client1')
+def _status_for_machine(machine):
     if machine != 'client1':
         m = next((x for x in MACHINES
                   if x.get('host') and x['host'] != CLIENT1_HOST and
@@ -1945,8 +1942,8 @@ def api_status():
             # the player service isn't running there, not just "not playing"
             if path is None and paused is None and vol is None:
                 offline_err = _get_last_error(machine) or 'Кампус не отвечает (плеер недоступен по сети)'
-                return jsonify({'playing': False, 'track': None, 'online': False,
-                                'error': 'offline', 'last_error': offline_err})
+                return {'playing': False, 'track': None, 'online': False,
+                        'error': 'offline', 'last_error': offline_err}
             raw_name = os.path.basename(path) if path else None
             if raw_name and raw_name.lower() in ('in.mp3','in.wav','in.ogg'):
                 with get_db() as c:
@@ -1956,13 +1953,13 @@ def api_status():
                         (datetime.now().strftime('%Y-%m-%d')+'%',)
                     ).fetchone()
                 raw_name = last['track_name'] if last else raw_name
-            return jsonify({'playing': bool(path) and not paused, 'track': raw_name,
-                            'paused': bool(paused), 'muted': bool(muted), 'online': True,
-                            'volume': round(vol) if vol is not None else None,
-                            'position': round(pos, 1) if pos is not None else None,
-                            'duration': round(dur, 1) if dur is not None else None,
-                            'last_error': _get_last_error(machine)})
-        return jsonify({'playing': False, 'track': None, 'online': False, 'error': 'not found'})
+            return {'playing': bool(path) and not paused, 'track': raw_name,
+                    'paused': bool(paused), 'muted': bool(muted), 'online': True,
+                    'volume': round(vol) if vol is not None else None,
+                    'position': round(pos, 1) if pos is not None else None,
+                    'duration': round(dur, 1) if dur is not None else None,
+                    'last_error': _get_last_error(machine)}
+        return {'playing': False, 'track': None, 'online': False, 'error': 'not found'}
 
     path     = mpv_get('path')
     vol      = mpv_get('volume')
@@ -2004,7 +2001,7 @@ def api_status():
             display_name = raw_name
             display_by   = None
             display_at   = None
-    return jsonify({
+    return {
         'playing':    bool(path) and not paused,
         'track':      display_name,
         'volume':     round(vol) if vol is not None else None,
@@ -2016,7 +2013,35 @@ def api_status():
         'position':   round(pos, 1) if pos is not None else None,
         'duration':   round(dur, 1) if dur is not None else None,
         'last_error': _get_last_error('client1'),
-    })
+    }
+
+@app.route('/api/status')
+@login_required
+def api_status():
+    machine = request.args.get('machine', 'client1')
+    return jsonify(_status_for_machine(machine))
+
+@app.route('/api/status-all')
+@login_required
+def api_status_all():
+    # One request instead of one-per-campus — browsers cap concurrent HTTP/1.1
+    # connections to a single origin at ~6, so polling ~10+ campuses every
+    # few seconds as separate fetches queues up client-side and can starve
+    # OTHER clicks (Стоп included) behind that queue. Querying every campus
+    # here, in parallel server-side threads, and returning one combined
+    # payload keeps the browser to a single request per poll tick.
+    from concurrent.futures import ThreadPoolExecutor
+    keys = ['client1'] + [_campus_key(m) for m in music_machines() if m['host'] != CLIENT1_HOST]
+    keys = list(dict.fromkeys(keys))  # de-dupe, preserve order
+    result = {}
+    with ThreadPoolExecutor(max_workers=max(1, len(keys))) as ex:
+        futs = {ex.submit(_status_for_machine, k): k for k in keys}
+        for fut, k in futs.items():
+            try:
+                result[k] = fut.result()
+            except Exception as e:
+                result[k] = {'playing': False, 'track': None, 'online': False, 'error': str(e)}
+    return jsonify(result)
 
 def _mpv_stop_on(host, user):
     # 1. Graceful IPC stop: mpv stays alive (systemd won't restart), clears playlist.

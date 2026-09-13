@@ -1976,7 +1976,10 @@ function playAllCampuses(fn) {
   });
 }
 function pollAllCampuses() {
-  MUSIC_MACHINES.forEach(function(m, i){ pollMachine(m.key, i); });
+  // Single combined request (see pollAllStatus) instead of one fetch per
+  // campus — avoids piling up parallel requests against the browser's
+  // per-origin connection cap right after a burst action like "stop all".
+  pollAllStatus();
 }
 // Declared this early (not down by _startAudioSSE) because makeVisualizer()
 // below calls fd() synchronously on first draw, which indexes _audioSSE[key]
@@ -4153,77 +4156,104 @@ function _checkRealPlayResult(campus, label) {
       }).catch(function(){});
   }, 3500);
 }
+function _applyMachineStatus(key, idx, d) {
+  var conn = document.getElementById('conn-'+key);
+  if (!conn) return;
+  _hubStatus[key] = d;
+  var live = document.getElementById('live-'+key);
+  var stop = document.getElementById('stop-'+key);
+  var mn   = document.getElementById('mini-name-'+key);
+  if (d.error && !d.playing) {
+    conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
+    if (live) live.style.display = 'none';
+    if (stop) stop.style.display = '';
+    if (mn)   mn.textContent = t('np.idle');
+    _showCampusErr(key, d.last_error);
+    if (idx===0 && dualWave) dualWave.setActiveL(false);
+    if (idx===1 && dualWave) dualWave.setActiveR(false);
+    return;
+  }
+  _showCampusErr(key, d.last_error);
+  conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
+  if (d.playing) {
+    if (live) live.style.display = '';
+    if (stop) stop.style.display = 'none';
+    if (mn)   mn.textContent = d.track || '—';
+  } else if (d.paused) {
+    if (live) live.style.display = 'none';
+    if (stop) stop.style.display = '';
+    if (mn)   mn.textContent = d.track || t('np.paused');
+  } else {
+    if (live) live.style.display = 'none';
+    if (stop) stop.style.display = '';
+    if (mn)   mn.textContent = t('np.idle');
+  }
+  if (idx===0 && dualWave) dualWave.setActiveL(d.playing || false);
+  if (idx===1 && dualWave) dualWave.setActiveR(d.playing || false);
+
+  var st = _progState[key];
+  if (st) {
+    st.playing = d.playing || false;
+    st.paused  = d.paused  || false;
+    if (d.position !== undefined && d.position !== null) { st.pos = d.position; st.ts = Date.now(); }
+    if (d.duration !== undefined && d.duration !== null) st.dur = d.duration;
+    if (!d.playing) { st.pos = 0; st.dur = 0; }
+    _updateProgress(key);
+  }
+
+  if (idx === 0) {
+    if (d.volume !== null && d.volume !== undefined) _knob.setVal(d.volume, true);
+    if (d.muted !== undefined) setMuteUI(d.muted);
+  }
+  // Sync this campus's own volume slider to its real current value —
+  // skip while the user is actively dragging it (_csVolDragging) so a
+  // poll landing mid-drag doesn't yank the thumb back.
+  if (d.volume !== null && d.volume !== undefined && _csVolDragging !== key) {
+    var volEl = document.getElementById('vol-'+key);
+    var volValEl = document.getElementById('vol-val-'+key);
+    if (volEl) volEl.value = d.volume;
+    if (volValEl) volValEl.textContent = Math.round(d.volume);
+  }
+}
+function _machineStatusErr(key) {
+  var liveEl = document.getElementById('live-'+key);
+  var stopEl = document.getElementById('stop-'+key);
+  var mn     = document.getElementById('mini-name-'+key);
+  var connEl = document.getElementById('conn-'+key);
+  if (connEl) { connEl.className='badge-conn-err'; connEl.innerHTML='<i class="bi bi-wifi-off"></i>'; }
+  if (liveEl) liveEl.style.display = 'none';
+  if (stopEl) stopEl.style.display = '';
+  if (mn) mn.textContent = t('np.idle');
+  _showCampusErr(key, 'Нет связи с сервером управления');
+}
 function pollMachine(key, idx) {
   var conn = document.getElementById('conn-'+key);
   if (!conn) return;
   fetch('/api/status?machine='+encodeURIComponent(key),
     {signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined})
     .then(function(r){ return r.json(); })
-    .then(function(d) {
-      _hubStatus[key] = d;
-      var live = document.getElementById('live-'+key);
-      var stop = document.getElementById('stop-'+key);
-      var mn   = document.getElementById('mini-name-'+key);
-      if (d.error && !d.playing) {
-        conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (mn)   mn.textContent = t('np.idle');
-        _showCampusErr(key, d.last_error);
-        if (idx===0 && dualWave) dualWave.setActiveL(false);
-        if (idx===1 && dualWave) dualWave.setActiveR(false);
-        return;
-      }
-      _showCampusErr(key, d.last_error);
-      conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
-      if (d.playing) {
-        if (live) live.style.display = '';
-        if (stop) stop.style.display = 'none';
-        if (mn)   mn.textContent = d.track || '—';
-      } else if (d.paused) {
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (mn)   mn.textContent = d.track || t('np.paused');
-      } else {
-        if (live) live.style.display = 'none';
-        if (stop) stop.style.display = '';
-        if (mn)   mn.textContent = t('np.idle');
-      }
-      if (idx===0 && dualWave) dualWave.setActiveL(d.playing || false);
-      if (idx===1 && dualWave) dualWave.setActiveR(d.playing || false);
-
-      var st = _progState[key];
-      if (st) {
-        st.playing = d.playing || false;
-        st.paused  = d.paused  || false;
-        if (d.position !== undefined && d.position !== null) { st.pos = d.position; st.ts = Date.now(); }
-        if (d.duration !== undefined && d.duration !== null) st.dur = d.duration;
-        if (!d.playing) { st.pos = 0; st.dur = 0; }
-        _updateProgress(key);
-      }
-
-      if (idx === 0) {
-        if (d.volume !== null && d.volume !== undefined) _knob.setVal(d.volume, true);
-        if (d.muted !== undefined) setMuteUI(d.muted);
-      }
-      // Sync this campus's own volume slider to its real current value —
-      // skip while the user is actively dragging it (_csVolDragging) so a
-      // poll landing mid-drag doesn't yank the thumb back.
-      if (d.volume !== null && d.volume !== undefined && _csVolDragging !== key) {
-        var volEl = document.getElementById('vol-'+key);
-        var volValEl = document.getElementById('vol-val-'+key);
-        if (volEl) volEl.value = d.volume;
-        if (volValEl) volValEl.textContent = Math.round(d.volume);
-      }
-    }).catch(function() {
-      conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
-      var liveEl = document.getElementById('live-'+key);
-      var stopEl = document.getElementById('stop-'+key);
-      var mn     = document.getElementById('mini-name-'+key);
-      if (liveEl) liveEl.style.display = 'none';
-      if (stopEl) stopEl.style.display = '';
-      if (mn) mn.textContent = t('np.idle');
-      _showCampusErr(key, 'Нет связи с сервером управления');
+    .then(function(d) { _applyMachineStatus(key, idx, d); })
+    .catch(function() { _machineStatusErr(key); });
+}
+// Single combined request for ALL campuses instead of one fetch per campus —
+// browsers cap concurrent HTTP/1.1 connections to one origin at ~6, so with
+// 10+ campuses each polling on their own timer, requests queued up faster
+// than they could drain and even unrelated clicks (Стоп included) ended up
+// stuck behind that queue, surfacing as "Нет связи с сервером". The server
+// still queries every campus in parallel (see /api/status-all) — this just
+// collapses it to one round trip from the browser's point of view.
+function pollAllStatus() {
+  fetch('/api/status-all', {signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined})
+    .then(function(r){ return r.json(); })
+    .then(function(all) {
+      MUSIC_MACHINES.forEach(function(m, idx) {
+        var d = all[m.key];
+        if (d) _applyMachineStatus(m.key, idx, d);
+        else _machineStatusErr(m.key);
+      });
+    })
+    .catch(function() {
+      MUSIC_MACHINES.forEach(function(m){ _machineStatusErr(m.key); });
     });
 }
 // Back-compat shims — several older call sites (doStopAll, perem schedule
@@ -4239,13 +4269,12 @@ function pollCgtk()   { if (MUSIC_MACHINES[2]) pollMachine(MUSIC_MACHINES[2].key
 // gating the old pollStatus/pollVm1/pollCgtk trio had, just generalized to
 // however many campuses MUSIC_MACHINES actually has.
 _knob.init();
+{% if current_user.role == 'admin' %}
+pollAllStatus();
+setInterval(pollAllStatus, 5000);
+{% else %}
 if (MUSIC_MACHINES[0]) pollMachine(MUSIC_MACHINES[0].key, 0);
 setInterval(function(){ if (MUSIC_MACHINES[0]) pollMachine(MUSIC_MACHINES[0].key, 0); }, 5000);
-{% if current_user.role == 'admin' %}
-MUSIC_MACHINES.slice(1).forEach(function(m, i){ pollMachine(m.key, i+1); });
-setInterval(function(){
-  MUSIC_MACHINES.slice(1).forEach(function(m, i){ pollMachine(m.key, i+1); });
-}, 15000);
 {% endif %}
 
 // ──── CAMPUS PICKER — shared dropdown for Гимн/Мик/Минута buttons ────
