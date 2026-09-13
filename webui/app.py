@@ -1226,6 +1226,15 @@ def _before():
                 with get_db() as c:
                     c.execute('UPDATE users SET force_logout=0 WHERE id=?', (uid,))
                 logout_user()
+                # An /api/ call is background JS (heartbeat/chat-poll/status
+                # poll) — a redirect there gets silently followed to the
+                # login page's HTML, fetch().json() throws, and the catch
+                # block swallows it, so the kicked user's already-open tab
+                # just sits there looking normal until they navigate by
+                # hand. A distinct 401 the frontend actually checks for
+                # (see cpLoadMsgs) makes the kick visible right away.
+                if request.path.startswith('/api/'):
+                    return jsonify({'ok': False, 'force_logout': True}), 401
                 flash('Ваша сессия завершена администратором', 'warning')
                 return redirect(url_for('login'))
         except Exception:

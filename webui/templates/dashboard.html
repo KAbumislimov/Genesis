@@ -4253,8 +4253,9 @@ function pollMachine(key, idx) {
 // collapses it to one round trip from the browser's point of view.
 function pollAllStatus() {
   fetch('/api/status-all', {signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined})
-    .then(function(r){ return r.json(); })
+    .then(function(r){ if (r.status===401) { location.href='/login'; return null; } return r.json(); })
     .then(function(all) {
+      if (!all) return;
       MUSIC_MACHINES.forEach(function(m, idx) {
         var d = all[m.key];
         if (d) _applyMachineStatus(m.key, idx, d);

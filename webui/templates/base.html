@@ -2172,6 +2172,7 @@ window.addEventListener('DOMContentLoaded', function() {
   async function cpLoadOnline(){
     try{
       var r=await fetch('/api/online');
+      if(r.status===401){ location.href='/login'; return; }
       var d=await r.json();
       if(!d.ok)return;
       document.getElementById('cp-count').textContent=d.users.length;
@@ -2210,6 +2211,7 @@ window.addEventListener('DOMContentLoaded', function() {
     _cpLoading = true;
     try{
       var r=await fetch('/api/chat/messages?since='+cpLastId);
+      if(r.status===401){ location.href='/login'; return; }
       if(!r.ok) return;
       var d=await r.json();
       if(!d.ok||!d.messages||!d.messages.length) return;
