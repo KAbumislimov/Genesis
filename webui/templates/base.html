@@ -664,13 +664,15 @@ html[data-theme="nordic-slate"]{--bg:#2e3440;--bg2:#3b4252;--bg3:#434c5e;--borde
 .cp-vp-bar{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;cursor:pointer;min-width:60px}
 .cp-vp-fill{height:100%;background:var(--blue);border-radius:3px;width:0%;transition:width .2s linear}
 .cp-vp-time{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-#chat-widget{position:fixed;bottom:24px;right:24px;z-index:900;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+#chat-widget{position:fixed;left:var(--fdock-x,24px);bottom:calc(var(--fdock-y,24px) + 190px);
+  z-index:900;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
 #chat-toggle{
   width:52px;height:52px;border-radius:50%;background:var(--blue);color:#000;
-  border:none;cursor:pointer;font-size:22px;display:flex;align-items:center;
+  border:none;cursor:grab;font-size:22px;display:flex;align-items:center;
   justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.4);
-  position:relative;transition:.2s;
+  position:relative;transition:transform .2s;touch-action:none;
 }
+#chat-toggle:active{cursor:grabbing}
 #chat-toggle:hover{transform:scale(1.08)}
 .w-badge{
   position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;
@@ -2087,7 +2089,7 @@ window.addEventListener('DOMContentLoaded', function() {
       </button>
     </div>
   </div>
-  <button id="chat-toggle" onclick="toggleChat()" title="Чат и онлайн">
+  <button id="chat-toggle" title="Чат и онлайн — перетащи, чтобы переместить">
     <i class="bi bi-chat-dots-fill"></i>
     <span class="w-badge" id="cp-online-badge">0</span>
     <span class="w-badge w-unread" id="cp-unread-badge" style="display:none;top:-4px;left:-4px;right:auto">!</span>
@@ -2440,8 +2442,22 @@ window.addEventListener('DOMContentLoaded', function() {
 {% if current_user.is_authenticated %}
 <!-- ── Contact Admin ─────────────────────────────── -->
 <style>
+:root{--fdock-x:24px;--fdock-y:24px}
+/* All the small floating buttons (contact-admin, perem quick-launch, voice
+   assistant on dashboard.html, chat bubble) anchor off these two shared
+   vars, so dragging any one of them moves the whole cluster together —
+   and collapsing hides them all behind one master icon. */
+.fdock-master{position:fixed;left:var(--fdock-x);bottom:var(--fdock-y);z-index:8900;touch-action:none}
+.fdock-master-btn{width:46px;height:46px;border-radius:50%;background:var(--blue);border:none;color:#fff;
+  font-size:18px;cursor:grab;box-shadow:0 4px 20px rgba(88,166,255,.45);
+  display:flex;align-items:center;justify-content:center;transition:transform .15s,background .15s,color .15s}
+.fdock-master-btn:active{cursor:grabbing}
+.fdock-master-btn:hover{transform:scale(1.08)}
+html.fdock-expanded .fdock-master-btn{background:var(--bg3);color:var(--blue);transform:rotate(45deg)}
+html:not(.fdock-expanded) .contact-float,
+html:not(.fdock-expanded) .float-dock{display:none!important}
 .contact-float{
-  position:fixed;bottom:90px;left:24px;z-index:8800;
+  position:fixed;left:var(--fdock-x);bottom:calc(var(--fdock-y) + 60px);z-index:8800;
   width:44px;height:44px;border-radius:50%;
   background:var(--blue);border:none;color:#fff;
   font-size:18px;cursor:pointer;
@@ -2483,6 +2499,90 @@ window.addEventListener('DOMContentLoaded', function() {
         title="Связаться с администратором">
   <i class="bi bi-headset"></i>
 </button>
+
+<!-- Master toggle — collapses/expands the whole cluster of floating
+     buttons (contact-admin, perem quick-launch, voice assistant) into one
+     icon, and doubles as the drag handle that moves them all together. -->
+<div class="fdock-master" id="fdock-master">
+  <button class="fdock-master-btn" id="fdock-master-btn" title="Быстрые кнопки — перетащи, чтобы переместить">
+    <i class="bi bi-grid-3x3-gap-fill" id="fdock-master-icon"></i>
+  </button>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  function readPos(){
+    var x = parseInt(localStorage.getItem('fdock-x')||'24', 10);
+    var y = parseInt(localStorage.getItem('fdock-y')||'24', 10);
+    if (isNaN(x)) x = 24;
+    if (isNaN(y)) y = 24;
+    return {x:x, y:y};
+  }
+  var pos = readPos();
+  root.style.setProperty('--fdock-x', pos.x+'px');
+  root.style.setProperty('--fdock-y', pos.y+'px');
+  try { if (localStorage.getItem('fdock-expanded') === '1') root.classList.add('fdock-expanded'); } catch(e) {}
+
+  function currentVar(name, fallback){
+    var v = parseInt(getComputedStyle(root).getPropertyValue(name), 10);
+    return isNaN(v) ? fallback : v;
+  }
+  function savePos(x, y){
+    try { localStorage.setItem('fdock-x', x); localStorage.setItem('fdock-y', y); } catch(e) {}
+  }
+  // Shared drag behaviour for any handle that should move the whole
+  // cluster together (the master icon, and — since it reads the same
+  // vars — the chat bubble too). A plain click (no real movement) fires
+  // onClick instead of being swallowed as an accidental micro-drag.
+  window._makeFdockDraggable = function(el, onClick){
+    var dragging = false, moved = false, startX, startY, origX, origY;
+    el.addEventListener('pointerdown', function(e){
+      dragging = true; moved = false;
+      try { el.setPointerCapture(e.pointerId); } catch(err) {}
+      startX = e.clientX; startY = e.clientY;
+      origX = currentVar('--fdock-x', pos.x);
+      origY = currentVar('--fdock-y', pos.y);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!dragging) return;
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      if (!moved) return;
+      var nx = Math.max(8, Math.min(window.innerWidth - 56, origX + dx));
+      var ny = Math.max(8, Math.min(window.innerHeight - 220, origY - dy));
+      root.style.setProperty('--fdock-x', nx+'px');
+      root.style.setProperty('--fdock-y', ny+'px');
+    });
+    function end(){
+      if (!dragging) return;
+      dragging = false;
+      if (moved) {
+        savePos(currentVar('--fdock-x', pos.x), currentVar('--fdock-y', pos.y));
+      } else if (onClick) {
+        onClick();
+      }
+    }
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  };
+
+  var masterBtn = document.getElementById('fdock-master-btn');
+  _makeFdockDraggable(masterBtn, function(){
+    var expanded = root.classList.toggle('fdock-expanded');
+    try { localStorage.setItem('fdock-expanded', expanded ? '1' : '0'); } catch(e) {}
+  });
+
+  // Chat bubble shares the same cluster position (see #chat-widget CSS) and
+  // the same drag mechanics — dragging it moves the whole group, a plain
+  // click opens the chat exactly like before.
+  var chatToggle = document.getElementById('chat-toggle');
+  if (chatToggle && typeof _makeFdockDraggable === 'function') {
+    _makeFdockDraggable(chatToggle, function(){
+      if (typeof toggleChat === 'function') toggleChat();
+    });
+  }
+})();
+</script>
 
 <div class="cm-bg" id="cm" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="cm-box">
@@ -2546,6 +2646,7 @@ window.addEventListener('DOMContentLoaded', function() {
           {% if current_user.role == 'admin' %}администратор
           {% elif current_user.role == 'staff' %}сотрудник
           {% elif current_user.role == 'helpdesk' %}HelpDesk
+          {% elif current_user.role == 'eventmanager' %}Event Manager
           {% elif current_user.role == 'guest' %}гость
           {% else %}пользователь{% endif %}
         </div>
@@ -2632,7 +2733,7 @@ window.addEventListener('DOMContentLoaded', function() {
       {% endif %}
     </a>
 
-    {% if current_user.role in ('admin','staff','helpdesk') %}
+    {% if current_user.role in ('admin','staff','helpdesk','eventmanager') %}
     <div class="sb-sep"></div>
     <a class="sb-link {% if request.endpoint=='upload_page' %}active{% endif %}"
        href="{{ url_for('upload_page') }}" onclick="closeSidebar()">

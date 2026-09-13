@@ -223,6 +223,9 @@
       {% for m in music_machines %}
       <button class="cpm-campus-pill{{ ' active' if loop.first else '' }}" data-campus="{{ m.key }}">{{ m.name }}</button>
       {% endfor %}
+      {% if perms.vol %}
+      <button class="cpm-vol-all-btn" onclick="wampSetAllVolume(150)" title="Выставить громкость 150 на всех кампусах одновременно" style="margin:4px 0 0;width:100%">🔊 Все → 150</button>
+      {% endif %}
     </div>
   </div>
 
@@ -253,9 +256,6 @@
     </div>
     {% endfor %}
   </div>
-  {% if perms.vol %}
-  <button class="cpm-vol-all-btn" onclick="wampSetAllVolume(150)" title="Выставить громкость 150 на всех кампусах одновременно">🔊 Все → 150</button>
-  {% endif %}
 
   {% if perms.himn %}
   <div class="cpm-special-label"><span>⚠</span> Слышно на весь кампус — сначала подумай, потом жми</div>

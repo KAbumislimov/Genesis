@@ -163,6 +163,7 @@
                   <option value="user"     {% if u.role in ('user','viewer') %}selected{% endif %}>user</option>
                   <option value="staff"    {% if u.role=='staff'    %}selected{% endif %}>staff</option>
                   <option value="helpdesk" {% if u.role=='helpdesk' %}selected{% endif %}>helpdesk</option>
+                  <option value="eventmanager" {% if u.role=='eventmanager' %}selected{% endif %}>eventmanager</option>
                   <option value="admin"    {% if u.role=='admin'    %}selected{% endif %}>admin</option>
                 </select>
                 <button type="submit" class="btn btn-ghost btn-sm" title="Сохранить роль">
@@ -263,6 +264,14 @@
         <span class="text-muted">Музыка + гимн: все функции плеера включая национальный гимн</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
+        <span class="role-pill" style="min-width:78px;justify-content:center;background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.35)">helpdesk</span>
+        <span class="text-muted">Всё, что связано с музыкой: играть/стоп, гимн, воис, загрузка/скачивание треков, пауза крона — без удаления и без пользователей</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="role-pill" style="min-width:78px;justify-content:center;background:rgba(224,82,154,.12);color:#e0529a;border:1px solid rgba(224,82,154,.35)">event mgr</span>
+        <span class="text-muted">Играть музыку, спецвозможности (гимн/мик/минута/тревога/Zəfər), загрузка/скачивание треков, голосовые объявления — без крона, без удаления, без пользователей</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
         <span class="role-pill role-admin" style="min-width:58px;justify-content:center">admin</span>
         <span class="text-muted">Полный доступ: всё включая управление пользователями и веб-терминал</span>
       </div>
@@ -333,6 +342,7 @@
           <option value="user" selected>user — управление плеером</option>
           <option value="staff">staff — музыка + гимн</option>
           <option value="helpdesk">helpdesk — вся музыка, без удаления и юзеров</option>
+          <option value="eventmanager">eventmanager — играть/спецвозможности/загрузка/воис</option>
           <option value="admin">admin — полный доступ</option>
         </select>
       </div>

@@ -681,6 +681,9 @@ ROLE_PERMS = {
     # pause), nothing destructive (no delete/rename/folder ops) and no user
     # management — those stay behind @admin_only, untouched by this role.
     'helpdesk': frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn', 'cron'}),
+    # Same day-to-day music controls as helpdesk (play/stop/himn/upload/voice),
+    # but no cron pause — event managers run events, not the bell schedule.
+    'eventmanager': frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn'}),
     'admin':    frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn', 'admin', 'cron'}),
 }
 
@@ -689,6 +692,7 @@ ROLE_LABELS = {
     'user':     ('Польз.',   'Музыка: включать, останавливать, регулировать громкость'),
     'staff':    ('Персонал', 'Музыка + гимн: все функции кроме управления пользователями'),
     'helpdesk': ('HelpDesk', 'Всё, что связано с музыкой: играть/стоп, гимн, воис, загрузка треков, крон — без удаления и без управления пользователями'),
+    'eventmanager': ('Event Manager', 'Играть музыку, спецвозможности (гимн/мик/тревога и т.д.), загрузка треков, голосовые объявления — без крона, без удаления, без пользователей'),
     'admin':    ('Админ',    'Полный доступ: управление пользователями и всеми функциями'),
 }
 
@@ -707,9 +711,9 @@ def has_perm(perm):
     return perm in ROLE_PERMS.get(role, frozenset())
 
 def has_himn_perm():
-    """Staff/admin/helpdesk always. Others only if can_himn=1 granted by admin."""
+    """Staff/admin/helpdesk/eventmanager always. Others only if can_himn=1 granted by admin."""
     role = getattr(current_user, 'role', '')
-    if role in ('admin', 'staff', 'helpdesk'):
+    if role in ('admin', 'staff', 'helpdesk', 'eventmanager'):
         return True
     with get_db() as c:
         row = c.execute('SELECT can_himn FROM users WHERE id=?', (current_user.id,)).fetchone()
@@ -1683,7 +1687,7 @@ def add_user():
     u    = request.form.get('username','').strip()
     p    = request.form.get('password','')
     role = request.form.get('role','user')
-    if role not in ('guest', 'user', 'staff', 'helpdesk', 'admin'):
+    if role not in ('guest', 'user', 'staff', 'helpdesk', 'eventmanager', 'admin'):
         role = 'user'
     if u and p:
         try:
@@ -1739,7 +1743,7 @@ def reset_passwd(uid):
 @admin_only
 def set_role(uid):
     role = request.form.get('role', 'user')
-    if role not in ('guest', 'user', 'staff', 'helpdesk', 'admin'):
+    if role not in ('guest', 'user', 'staff', 'helpdesk', 'eventmanager', 'admin'):
         flash('Неверная роль', 'danger')
         return redirect(url_for('admin'))
     if uid == current_user.id:
@@ -3808,7 +3812,7 @@ def _safe_filename(name):
 @app.route('/upload')
 @login_required
 def upload_page():
-    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk'):
+    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk', 'eventmanager'):
         flash('Нет прав для загрузки треков', 'danger')
         return redirect(url_for('tracks'))
     used_mb = 0
@@ -3829,7 +3833,7 @@ def upload_page():
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def api_upload():
-    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk'):
+    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk', 'eventmanager'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     f = request.files.get('file')
     if not f or not f.filename:
@@ -5115,14 +5119,14 @@ def cheatsheet_page():
 @app.route('/announce')
 @login_required
 def announce_page():
-    if current_user.role not in ('admin', 'staff', 'helpdesk'):
+    if current_user.role not in ('admin', 'staff', 'helpdesk', 'eventmanager'):
         return '', 403
     return render_template('announce.html', music_machines=music_machines_json())
 
 @app.route('/api/announce', methods=['POST'])
 @login_required
 def api_announce():
-    if current_user.role not in ('admin', 'staff', 'helpdesk'):
+    if current_user.role not in ('admin', 'staff', 'helpdesk', 'eventmanager'):
         return jsonify({'ok': False, 'error': 'Нет прав'}), 403
     audio = request.files.get('audio')
     if not audio:
