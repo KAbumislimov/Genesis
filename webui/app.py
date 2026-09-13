@@ -735,7 +735,7 @@ def user_perms():
     }
 
 # ── SSH / MPV ─────────────────────────────────────
-def ssh_run_on(host, user, cmd, key=None, timeout=15):
+def ssh_run_on(host, user, cmd, key=None, timeout=15, connect_timeout=10):
     if key is None:
         key = SSH_KEY
     s = None
@@ -746,7 +746,13 @@ def ssh_run_on(host, user, cmd, key=None, timeout=15):
         # lossy link — measured 3-7s for even a trivial `echo` round trip.
         # 5s here was cutting it too close, occasionally timing out a
         # connection that would have succeeded with a couple more seconds.
-        s.connect(host, username=user, key_filename=key, timeout=10)
+        # connect_timeout is overridable — the status poll (every 5s, one
+        # attempt per campus in parallel) uses a much shorter one: waiting
+        # 10s to learn an offline campus is offline, every 5s, was pushing
+        # the WHOLE batched /api/status-all past the browser's own fetch
+        # timeout, which failed the request for every campus at once —
+        # including the ones that were actually fine.
+        s.connect(host, username=user, key_filename=key, timeout=connect_timeout)
         _, out, _ = s.exec_command(cmd, timeout=timeout)
         result = out.read().decode().strip()
         return {'ok': True, 'data': result}
@@ -1931,7 +1937,13 @@ _STATUS_PROPS = ['path', 'pause', 'volume', 'mute', 'time-pos', 'duration']
 def _mpv_status_batch(host, user):
     reqs = ' '.join("'" + json.dumps({'command': ['get_property', p]}) + "'" for p in _STATUS_PROPS)
     cmd = f"printf '%s\\n' {reqs} | socat - UNIX-CONNECT:/run/campus-player/mpv.sock 2>/dev/null"
-    r = ssh_run_on(host, user, cmd, key=None, timeout=6)
+    # Short connect timeout on purpose: this fires every 5s per campus, in
+    # parallel across up to a dozen campuses inside one browser fetch — an
+    # offline one only needs to fail fast, not get the generous timeout a
+    # real play/stop command gets, or it drags the whole batched response
+    # past the frontend's own abort timeout and blanks every campus card,
+    # not just the offline one.
+    r = ssh_run_on(host, user, cmd, key=None, timeout=6, connect_timeout=4)
     out = {}
     if not r['ok']:
         return dict.fromkeys(_STATUS_PROPS)
