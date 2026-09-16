@@ -19,6 +19,24 @@
 .a-login   {background:rgba(255,166,87,.12);color:var(--orange);border:1px solid rgba(255,166,87,.3)}
 .a-block   {background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.3)}
 .a-other   {background:rgba(139,148,158,.1);color:var(--muted);border:1px solid rgba(139,148,158,.25)}
+.log-row{cursor:pointer}
+.log-row:hover{background:rgba(255,255,255,.03)}
+.log-row.is-open{background:rgba(88,166,255,.06)}
+.log-detail-row{display:none}
+.log-detail-row.is-open{display:table-row}
+.log-detail-row td{padding:0;border-top:none}
+.log-detail{display:none;padding:14px 20px 18px 52px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.log-detail.is-open{display:block}
+.log-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 24px}
+.log-detail-item .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:3px}
+.log-detail-item .val{font-size:13px;font-family:'JetBrains Mono',monospace;word-break:break-word}
+.log-detail-item .val.empty{color:var(--muted)}
+.log-row td:first-child{position:relative;padding-left:24px}
+.log-row td:first-child::before{
+  content:"›";position:absolute;left:8px;top:50%;transform:translateY(-50%) rotate(0deg);
+  transition:transform .15s;color:var(--muted);font-size:14px
+}
+.log-row.is-open td:first-child::before{transform:translateY(-50%) rotate(90deg)}
 </style>
 {% endblock %}
 
@@ -89,7 +107,7 @@
       </thead>
       <tbody>
         {% for r in logs %}
-        <tr>
+        <tr class="log-row" onclick="logRowToggle(this, {{ r.id }})">
           <td class="text-muted mono" style="font-size:11px">{{ r.id }}</td>
           <td class="mono text-muted" style="font-size:12px">{{ r.happened_at }}</td>
           <td>
@@ -114,6 +132,42 @@
           <td class="mono text-muted" style="font-size:12px">{{ r.machine }}</td>
           <td class="text-muted" style="font-size:12px">{{ r.detail or '—' }}</td>
         </tr>
+        <tr class="log-detail-row" id="log-detail-row-{{ r.id }}">
+          <td colspan="6">
+            <div class="log-detail" id="log-detail-{{ r.id }}">
+              <div class="log-detail-grid">
+                <div class="log-detail-item">
+                  <div class="lbl">Пользователь</div>
+                  <div class="val">{{ r.username }}</div>
+                </div>
+                <div class="log-detail-item">
+                  <div class="lbl">Действие</div>
+                  <div class="val">{{ r.action }}</div>
+                </div>
+                <div class="log-detail-item">
+                  <div class="lbl">Машина</div>
+                  <div class="val">{{ r.machine }}</div>
+                </div>
+                <div class="log-detail-item">
+                  <div class="lbl">Точное время</div>
+                  <div class="val">{{ r.happened_at }}</div>
+                </div>
+                <div class="log-detail-item">
+                  <div class="lbl">IP-адрес</div>
+                  <div class="val {% if not r.ip %}empty{% endif %}">{{ r.ip or 'не зафиксирован (действие до обновления)' }}</div>
+                </div>
+                <div class="log-detail-item" style="grid-column:1/-1">
+                  <div class="lbl">Устройство / браузер</div>
+                  <div class="val {% if not r.user_agent %}empty{% endif %}">{{ r.user_agent or 'не зафиксировано (действие до обновления)' }}</div>
+                </div>
+                <div class="log-detail-item" style="grid-column:1/-1">
+                  <div class="lbl">Полные детали</div>
+                  <div class="val {% if not r.detail %}empty{% endif %}">{{ r.detail or '—' }}</div>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
         {% else %}
         <tr>
           <td colspan="6" style="text-align:center;padding:32px;color:var(--muted)">
@@ -126,4 +180,23 @@
     </table>
   </div>
 </div>
+<script>
+function logRowToggle(rowEl, id) {
+  var detailRow = document.getElementById('log-detail-row-' + id);
+  var detail = document.getElementById('log-detail-' + id);
+  var willOpen = !rowEl.classList.contains('is-open');
+  document.querySelectorAll('.log-row.is-open').forEach(function(el) {
+    if (el !== rowEl) el.classList.remove('is-open');
+  });
+  document.querySelectorAll('.log-detail-row.is-open').forEach(function(el) {
+    if (el !== detailRow) el.classList.remove('is-open');
+  });
+  document.querySelectorAll('.log-detail.is-open').forEach(function(el) {
+    if (el !== detail) el.classList.remove('is-open');
+  });
+  rowEl.classList.toggle('is-open', willOpen);
+  detailRow.classList.toggle('is-open', willOpen);
+  detail.classList.toggle('is-open', willOpen);
+}
+</script>
 {% endblock %}

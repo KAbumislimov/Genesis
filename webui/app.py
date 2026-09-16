@@ -553,6 +553,8 @@ def init_db():
             'ALTER TABLE messages ADD COLUMN voice_file TEXT DEFAULT NULL',
             'ALTER TABLE users ADD COLUMN ui_skin   TEXT NOT NULL DEFAULT "classic"',
             'ALTER TABLE users ADD COLUMN ui_accent TEXT NOT NULL DEFAULT "amber"',
+            'ALTER TABLE activity_log ADD COLUMN ip TEXT',
+            'ALTER TABLE activity_log ADD COLUMN user_agent TEXT',
         ]:
             try:
                 c.execute(col_sql)
@@ -625,11 +627,20 @@ def init_db():
     _start_audio_poll_thread()
 
 def log_action(username, action, machine='client1', detail=None):
+    ip = None
+    ua = None
+    try:
+        from flask import has_request_context
+        if has_request_context():
+            ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            ua = request.headers.get('User-Agent', '')[:200]
+    except Exception:
+        pass
     try:
         with get_db() as c:
             c.execute(
-                'INSERT INTO activity_log (username,action,machine,detail,happened_at) VALUES (?,?,?,?,?)',
-                (username, action, machine, detail, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                'INSERT INTO activity_log (username,action,machine,detail,happened_at,ip,user_agent) VALUES (?,?,?,?,?,?,?)',
+                (username, action, machine, detail, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ip, ua)
             )
     except Exception:
         pass  # never crash main flow
@@ -1859,9 +1870,9 @@ def admin_activity():
         import csv, io
         buf = io.StringIO()
         w = csv.writer(buf)
-        w.writerow(['id', 'username', 'action', 'machine', 'detail', 'happened_at'])
+        w.writerow(['id', 'username', 'action', 'machine', 'detail', 'happened_at', 'ip', 'user_agent'])
         for r in rows:
-            w.writerow([r['id'], r['username'], r['action'], r['machine'], r['detail'], r['happened_at']])
+            w.writerow([r['id'], r['username'], r['action'], r['machine'], r['detail'], r['happened_at'], r['ip'], r['user_agent']])
         from flask import Response
         return Response(
             buf.getvalue(),
