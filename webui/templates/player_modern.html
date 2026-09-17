@@ -67,6 +67,12 @@
 .cpm-dot.off{color:var(--muted)}
 .cpm-conn{color:var(--muted);font-size:11px;flex-shrink:0}
 .cpm-campus-name{font-weight:700;width:78px;flex-shrink:0;color:var(--row-accent,var(--text))}
+.cs-status-badge{
+  font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 7px;border-radius:5px;line-height:1.5;white-space:nowrap;flex-shrink:0;
+}
+.cs-status-badge.online{color:var(--green);background:rgba(63,185,80,.14)}
+.cs-status-badge.offline{color:var(--red);background:rgba(248,81,73,.14)}
 .cpm-campus-track{flex:1;min-width:16px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cpm-campus-prog{width:56px;height:4px;border-radius:100px;background:var(--bg2);position:relative;flex-shrink:0;cursor:pointer}
 .cpm-campus-prog-fill{position:absolute;inset:0 auto 0 0;border-radius:100px;background:var(--cpm-accent)}
@@ -318,6 +324,7 @@
         <span class="cpm-dot off" id="stop-{{ m.key }}" style="display:none">●</span>
         <span class="cpm-conn" id="conn-{{ m.key }}"><i class="bi bi-wifi"></i></span>
         <span class="cpm-campus-name">{{ m.name }}</span>
+        <span class="cs-status-badge online" id="status-badge-{{ m.key }}">Онлайн</span>
         <span class="cpm-campus-track" id="mini-name-{{ m.key }}">Не играет</span>
         <div class="cpm-campus-prog" onclick="_cpmSeek('{{ m.key }}',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div></div>
         <span class="cpm-campus-time" id="wamp-pos-{{ m.key }}">0:00</span>

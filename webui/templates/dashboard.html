@@ -115,6 +115,12 @@
 .badge-conn-err{
   display:flex;align-items:center;gap:4px;font-size:11px;color:var(--red);
 }
+.cs-status-badge{
+  font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 8px;border-radius:5px;line-height:1.5;white-space:nowrap;flex-shrink:0;
+}
+.cs-status-badge.online{color:var(--green);background:rgba(63,185,80,.14)}
+.cs-status-badge.offline{color:var(--red);background:rgba(248,81,73,.14)}
 
 @keyframes live-pulse{0%,100%{opacity:1;box-shadow:0 0 5px var(--green)}50%{opacity:.4;box-shadow:0 0 10px var(--green)}}
 
@@ -1532,6 +1538,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <span class="wamp2-cs-dot" id="stop-{{ m.key }}" style="display:none;color:#f87060">■</span>
         <span class="wamp2-cs-campus" style="color:var(--c-{{ m.key }},#8fb8ff)">{{ m.short }}</span>
         <span id="conn-{{ m.key }}" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
+        <span class="cs-status-badge online" id="status-badge-{{ m.key }}">Онлайн</span>
         <span class="wamp2-cs-track" id="mini-name-{{ m.key }}">Не играет</span>
         {% if loop.first %}<span id="mute-badge" style="display:none;color:#f87060">🔇</span>{% endif %}
         <div class="wamp2-cs-prog" onclick="wampSeek('{{ m.key }}',event,this)" title="Перемотка">
@@ -4165,6 +4172,12 @@ function _checkRealPlayResult(campus, label) {
       }).catch(function(){});
   }, 3500);
 }
+function _setStatusBadge(key, online) {
+  var b = document.getElementById('status-badge-'+key);
+  if (!b) return;
+  b.className = 'cs-status-badge ' + (online ? 'online' : 'offline');
+  b.textContent = online ? 'Онлайн' : 'Оффлайн';
+}
 function _applyMachineStatus(key, idx, d) {
   var conn = document.getElementById('conn-'+key);
   if (!conn) return;
@@ -4174,6 +4187,7 @@ function _applyMachineStatus(key, idx, d) {
   var mn   = document.getElementById('mini-name-'+key);
   if (d.error && !d.playing) {
     conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
+    _setStatusBadge(key, false);
     if (live) live.style.display = 'none';
     if (stop) stop.style.display = '';
     if (mn)   mn.textContent = t('np.idle');
@@ -4184,6 +4198,7 @@ function _applyMachineStatus(key, idx, d) {
   }
   _showCampusErr(key, d.last_error);
   conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
+  _setStatusBadge(key, true);
   if (d.playing) {
     if (live) live.style.display = '';
     if (stop) stop.style.display = 'none';
@@ -4231,6 +4246,7 @@ function _machineStatusErr(key) {
   var mn     = document.getElementById('mini-name-'+key);
   var connEl = document.getElementById('conn-'+key);
   if (connEl) { connEl.className='badge-conn-err'; connEl.innerHTML='<i class="bi bi-wifi-off"></i>'; }
+  _setStatusBadge(key, false);
   if (liveEl) liveEl.style.display = 'none';
   if (stopEl) stopEl.style.display = '';
   if (mn) mn.textContent = t('np.idle');
