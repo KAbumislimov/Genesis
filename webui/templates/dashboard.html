@@ -4169,7 +4169,14 @@ function wampCsVolInput(key, val) {
   var lbl = document.getElementById('vol-val-'+key);
   if (lbl) lbl.textContent = val;
   clearTimeout(window['_csVolClear_'+key]);
-  window['_csVolClear_'+key] = setTimeout(function(){ if (_csVolDragging === key) _csVolDragging = null; }, 1500);
+  // Fallback only — normally wampSetCampusVolume's own .finally() clears
+  // this the moment the real SSH round-trip actually completes. Slow links
+  // (wctk measured 3-7s) used to hit this timer FIRST and un-protect the
+  // slider before the real change had even reached mpv, so the next status
+  // poll (reading the still-old volume) snapped the slider straight back —
+  // looked exactly like "the change doesn't stick". Long enough now to
+  // never race ahead of even the slowest campus's real response.
+  window['_csVolClear_'+key] = setTimeout(function(){ if (_csVolDragging === key) _csVolDragging = null; }, 10000);
 }
 function wampSetCampusVolume(key, val) {
   fetch('/api/volume/' + key, {method:'POST', headers:{'Content-Type':'application/json'},

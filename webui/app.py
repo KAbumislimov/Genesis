@@ -2365,7 +2365,21 @@ def _play_via_ipc(host, user, filepath, vol, loop=False):
         f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
         f'echo \'{{"command":["loadfile","{file_esc}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"; '
         f'sleep 0.3; '
-        f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; true'
+        f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+        f'sleep 1.5; '
+        f'echo \'{{"command":["set_property","volume",{vol}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+        f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+        # Root-caused on Ağ-Şəhər: its mpv build (0.14.0, ~2015) silently
+        # fails to push a volume above 100% through --ao=pulse — the
+        # set_property calls above "succeed" but PulseAudio's stream-restore
+        # module re-applies its remembered (100%) level to the new sink-input
+        # anyway, since every campus box only ever runs mpv so there's only
+        # ever one sink-input — setting the Pulse-level volume directly
+        # bypasses mpv's broken path entirely and was confirmed to actually
+        # stick (checked 8s later, still held). Harmless no-op on campuses
+        # where mpv's own volume control already works fine.
+        f'PAID=$(pactl list short sink-inputs 2>/dev/null | head -1 | cut -f1); '
+        f'[ -n "$PAID" ] && pactl set-sink-input-volume "$PAID" {vol}% >/dev/null 2>&1; true'
     )
     return ssh_run_on(host, user, cmd, timeout=10)
 
