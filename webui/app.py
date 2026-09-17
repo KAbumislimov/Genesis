@@ -2593,7 +2593,7 @@ def api_zefer(campus):
 # ── "National Music Day" (18 sentyabr) — тот же централизованный ленивый
 # разнос файла по кампусам, что и Zəfər Günü.
 NMD_FILE = os.path.join(os.environ.get('SPECIAL_SOUNDS_DIR', '/data/special_sounds'), 'national_music_day.mp3')
-NMD_VOL  = 130
+NMD_VOL  = 150
 
 def _play_nmd(host, user):
     remote_path = f'/home/{user}/special/national_music_day.mp3'
