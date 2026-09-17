@@ -17,6 +17,13 @@ __pycache__/
 projects/campus-secrets/
 *.zip
 
+# TLS-ключ веб-панели — генерируется на сервере (docker-entrypoint.sh),
+# root-owned внутри /data, что ломало ежечасный git-бэкап (kamran не может
+# прочитать root-only ssl.key → git add падает → 4 дня без единого коммита).
+# Приватному ключу в репозитории (даже приватном) вообще не место.
+data/webui/ssl.key
+data/webui/ssl.crt
+
 # Данные БД и загрузки (на сервере, бэкапятся отдельно)
 data/webui/webui.db
 data/webui/avatars/
