@@ -236,6 +236,10 @@ services:
       # Zəfər Günü (8 noyabr) — общий секрет для серверного крона, который
       # раз в год дёргает /api/zefer-all без логина (см. scripts/zefer-gunu.sh)
       - ZEFER_CRON_TOKEN=${ZEFER_CRON_TOKEN:-knT5FWZ6-MLfF6BCSyiOY6vh013df5VR_wvdbZ4FWy4}
+      # /api/stop-bot — позволяет Telegram-боту дёргать тот же безопасный
+      # общий стоп (все кампусы, IPC, без pkill -9), что и веб-кнопка "Стоп",
+      # без логина через браузерную сессию.
+      - BOT_STOP_TOKEN=${BOT_STOP_TOKEN:-K4-RZ_dSA6qKBHmlbnYFCLIENT2blEli5xPL24mK62w3WTU}
       # Сервер CentOS (терминал)
       - CENTOS_HOST=${CENTOS_HOST:-10.10.4.120}
       - CENTOS_USER=${CENTOS_USER:-kamran}

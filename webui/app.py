@@ -2211,15 +2211,14 @@ def api_pause():
     log_action(current_user.username, 'pause', machine)
     return jsonify(r if isinstance(r, dict) else {'ok': True})
 
-@app.route('/api/stop', methods=['POST'])
-@login_required
-def api_stop():
-    if not has_perm('stop'):
-        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
-    # Panic button — fire every campus (client1 included) in parallel and
-    # respond immediately instead of waiting on client1's SSH round-trip first;
-    # the UI shows "stopped" the instant the request is dispatched, not once
-    # the slowest campus's SSH call happens to finish.
+def _stop_all_campuses(username):
+    """The one real panic-stop implementation — fires every campus in
+    parallel via the safe mpv-IPC stop (no pkill -9, doesn't kill the mpv
+    process itself, just releases the current stream) and returns instantly
+    instead of waiting on the slowest campus's SSH round-trip. Shared by the
+    web '/api/stop' button and the Telegram bot's '⏹ Стоп' so both actually
+    stop EVERY campus, not just whichever one happens to be SSH-reachable
+    fastest or "active" in a chat."""
     for m in music_machines():
         # Invalidate any in-flight play (e.g. a slow SFTP upload for a track
         # not yet synced locally) so it can't "resurrect" playback moments
@@ -2228,13 +2227,37 @@ def api_stop():
         threading.Thread(
             target=_mpv_stop_on_tracked, args=(_campus_key(m), m['host'], m.get('user', CLIENT1_USER)), daemon=True
         ).start()
-    log_action(current_user.username, 'stop', 'all')
+    log_action(username, 'stop', 'all')
     tg_notify(
         f'⏹ <b>СТОП — остановлено всё, на всех кампусах</b>\n'
-        f'👤 {current_user.username}\n'
+        f'👤 {username}\n'
         f'🕐 {_tg_fmt_time()}',
         event_type='stop'
     )
+
+@app.route('/api/stop', methods=['POST'])
+@login_required
+def api_stop():
+    if not has_perm('stop'):
+        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
+    _stop_all_campuses(current_user.username)
+    return jsonify({'ok': True})
+
+BOT_STOP_TOKEN = os.environ.get('BOT_STOP_TOKEN', '')
+
+@app.route('/api/stop-bot', methods=['POST'])
+def api_stop_bot():
+    """Same global panic-stop as the web '⏹ Стоп' button, callable by the
+    Telegram bot (which has no browser session) via a shared secret token
+    instead of @login_required. The bot's own '/stop' used to only hit
+    whichever single campus was "active" for that chat, via the old
+    campus-playerctl (pkill -9 mpv) path — this makes Telegram parity with
+    the web button: every campus, every time, the safe way."""
+    token = request.headers.get('X-Bot-Token') or (request.get_json(silent=True) or {}).get('token')
+    if not BOT_STOP_TOKEN or token != BOT_STOP_TOKEN:
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
+    who = (request.get_json(silent=True) or {}).get('username') or 'telegram-bot'
+    _stop_all_campuses(who)
     return jsonify({'ok': True})
 
 @app.route('/api/stop/<machine>', methods=['POST'])
