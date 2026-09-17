@@ -555,6 +555,7 @@ def init_db():
             'ALTER TABLE users ADD COLUMN ui_accent TEXT NOT NULL DEFAULT "amber"',
             'ALTER TABLE activity_log ADD COLUMN ip TEXT',
             'ALTER TABLE activity_log ADD COLUMN user_agent TEXT',
+            'ALTER TABLE users ADD COLUMN panel_color TEXT NOT NULL DEFAULT ""',
         ]:
             try:
                 c.execute(col_sql)
@@ -1207,6 +1208,40 @@ def _crontab_replace_time_and_vol(line, hh, mm, vol):
     parts[-1] = str(vol)
     return ' '.join(parts)
 
+def _crontab_toggle_group(host, user, group, enable):
+    """Комментирует (выключить) или раскомментирует (включить) РЕАЛЬНЫЕ
+    строки crontab для группы слотов — 'utro' или 'perem' (1..9peremena).
+    Время/громкость не трогает — просто включает/выключает срабатывание.
+    Использует тот же _crontab_find_slot_lines, что и обычный редактор
+    расписания, поэтому работает независимо от того, был ли слот уже
+    закомментирован раньше."""
+    r = ssh_run_on(host, user, 'crontab -l 2>/dev/null', timeout=10)
+    if not r.get('ok'):
+        return r
+    lines = r['data'].split('\n')
+    slots = ['utro'] if group == 'utro' else [f'{i}peremena' for i in range(1, 10)]
+    changed = False
+    for slot in slots:
+        si, ei = _crontab_find_slot_lines(lines, slot)
+        if si is None:
+            continue
+        for idx in ([si] + ([ei] if ei is not None else [])):
+            bare = lines[idx].lstrip('#')
+            if enable:
+                if lines[idx] != bare:
+                    lines[idx] = bare
+                    changed = True
+            else:
+                if not lines[idx].lstrip().startswith('#'):
+                    lines[idx] = '#' + lines[idx]
+                    changed = True
+    if not changed:
+        return {'ok': True, 'data': 'NOCHANGE'}
+    new_content = '\n'.join(lines)
+    if not new_content.endswith('\n'):
+        new_content += '\n'
+    return _crontab_push(host, user, new_content)
+
 def _crontab_push(host, user, new_content):
     """Атомарно устанавливает новый crontab через heredoc (без stdin-пайпа)."""
     marker = 'CRONEOF9f3a'
@@ -1619,10 +1654,11 @@ def dashboard():
     tomorrow_events = [e for e in SCHEDULE if e['play'] and tdow in e.get('dow', [])]
 
     with get_db() as c:
-        _prefs_row = c.execute('SELECT ui_skin, ui_accent FROM users WHERE username=?',
+        _prefs_row = c.execute('SELECT ui_skin, ui_accent, panel_color FROM users WHERE username=?',
                                 (current_user.username,)).fetchone()
-    ui_skin   = (_prefs_row['ui_skin'] if _prefs_row else 'classic') or 'classic'
-    ui_accent = (_prefs_row['ui_accent'] if _prefs_row else 'amber') or 'amber'
+    ui_skin     = (_prefs_row['ui_skin'] if _prefs_row else 'classic') or 'classic'
+    ui_accent   = (_prefs_row['ui_accent'] if _prefs_row else 'amber') or 'amber'
+    panel_color = (_prefs_row['panel_color'] if _prefs_row else '') or ''
 
     return render_template('dashboard.html',
         schedule=SCHEDULE, next_ev=next_ev, now=now,
@@ -1635,8 +1671,10 @@ def dashboard():
         music_folders=all_music_folders(),
         fixed_folders=MUSIC_FOLDERS,
         perem_slots=[{'id': s, 'label': PEREM_SLOT_LABELS.get(s, s)} for s in PEREM_SLOTS],
-        ui_skin=ui_skin, ui_accent=ui_accent,
+        ui_skin=ui_skin, ui_accent=ui_accent, panel_color=panel_color,
         music_machines=music_machines_json(),
+        utro_enabled=any(e.get('file')=='utro.mp3' and e.get('play') for e in SCHEDULE),
+        perem_enabled=any(e.get('file','').endswith('peremena.mp3') and e.get('play') for e in SCHEDULE),
     )
 
 @app.route('/tracks')
@@ -2708,6 +2746,58 @@ def api_perem_schedule_edit(campus, slot):
     return jsonify({'ok': True,
                      'old': {'start': old_start, 'stop': old_stop, 'vol': old_vol},
                      'new': {'start': new_start, 'stop': new_stop, 'vol': new_vol}})
+
+@app.route('/api/schedule/toggle-group', methods=['POST'])
+@login_required
+def api_schedule_toggle_group():
+    """Включить/выключить целую группу слотов ('utro' или 'perem' = все
+    1..9peremena) СРАЗУ в реальном crontab на всех доступных кампусах —
+    и держит декоративный SCHEDULE (виджет «до звонка») в согласии с этим,
+    иначе он продолжает показывать то, чего на самом деле уже нет."""
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    data = request.get_json() or {}
+    group = data.get('group')
+    enable = bool(data.get('enable'))
+    if group not in ('utro', 'perem'):
+        return jsonify({'ok': False, 'error': 'Неизвестная группа'}), 400
+
+    from concurrent.futures import ThreadPoolExecutor
+    def _do_one(m):
+        probe = ssh_run_on(m['host'], m.get('user', CLIENT1_USER), 'echo OK', timeout=5, connect_timeout=4)
+        if not probe.get('ok'):
+            return {'ok': False, 'error': 'offline'}
+        return _crontab_toggle_group(m['host'], m.get('user', CLIENT1_USER), group, enable)
+
+    machines = music_machines()
+    results = {}
+    with ThreadPoolExecutor(max_workers=max(1, len(machines))) as ex:
+        futs = {ex.submit(_do_one, m): m['id'] for m in machines}
+        for fut, mid in futs.items():
+            try:
+                results[mid] = fut.result()
+            except Exception as e:
+                results[mid] = {'ok': False, 'error': str(e)}
+
+    with _sched_lock:
+        changed = False
+        for e in SCHEDULE:
+            fname = e.get('file', '')
+            is_match = (fname == 'utro.mp3') if group == 'utro' else fname.endswith('peremena.mp3')
+            if is_match and e.get('play') != enable:
+                e['play'] = enable
+                changed = True
+        if changed:
+            save_schedule(SCHEDULE)
+
+    label = 'Утренняя музыка' if group == 'utro' else 'Перемены 1–9'
+    log_action(current_user.username, f'toggle_{group}', 'all', 'включено' if enable else 'выключено')
+    tg_notify(
+        f'{"▶️" if enable else "⏸"} <b>{label}</b> {"включены" if enable else "выключены"} на всех доступных кампусах\n'
+        f'👤 {current_user.username}\n🕐 {_tg_fmt_time()}',
+        event_type='schedule'
+    )
+    return jsonify({'ok': True, 'group': group, 'enabled': enable, 'results': results})
 
 @app.route('/api/volume', methods=['POST'])
 @login_required
@@ -4832,18 +4922,22 @@ def api_kamran_lock():
 
 _UI_SKINS   = ('classic', 'modern')
 _UI_ACCENTS = ('amber', 'blue', 'green', 'magenta', 'red', 'teal')
+_PANEL_COLORS = ('', '#6ea8fe','#c792ea','#f5a3c7','#7bd8b0','#e8b96a',
+                  '#6ec9d8','#e79b8f','#9fa8e8','#ff6b6b','#4ecdc4','#ffd93d','#a78bfa')
 
 @app.route('/api/ui-prefs', methods=['GET', 'POST'])
 @login_required
 def api_ui_prefs():
-    """Personal player skin/accent — each employee picks their own, saved on
-    their account so it follows them to any device they log in on."""
+    """Personal player skin/accent/panel-color — each employee picks their
+    own, saved on their account so it follows them to any device they log
+    in on."""
     if request.method == 'GET':
         with get_db() as c:
-            row = c.execute('SELECT ui_skin, ui_accent FROM users WHERE username=?',
+            row = c.execute('SELECT ui_skin, ui_accent, panel_color FROM users WHERE username=?',
                              (current_user.username,)).fetchone()
         return jsonify({'ok': True, 'skin': (row['ui_skin'] if row else 'classic'),
-                        'accent': (row['ui_accent'] if row else 'amber')})
+                        'accent': (row['ui_accent'] if row else 'amber'),
+                        'panel_color': (row['panel_color'] if row else '') or ''})
     data   = request.get_json() or {}
     skin   = data.get('skin')
     accent = data.get('accent')
@@ -4856,6 +4950,11 @@ def api_ui_prefs():
         if accent not in _UI_ACCENTS:
             return jsonify({'ok': False, 'error': 'Неизвестный акцент'})
         updates.append('ui_accent=?'); params.append(accent)
+    if 'panel_color' in data:
+        panel_color = data.get('panel_color') or ''
+        if panel_color not in _PANEL_COLORS:
+            return jsonify({'ok': False, 'error': 'Неизвестный цвет'})
+        updates.append('panel_color=?'); params.append(panel_color)
     if not updates:
         return jsonify({'ok': False, 'error': 'Нечего сохранять'})
     params.append(current_user.username)

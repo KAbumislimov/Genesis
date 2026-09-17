@@ -121,6 +121,7 @@
 }
 .cs-status-badge.online{color:var(--green);background:rgba(63,185,80,.14)}
 .cs-status-badge.offline{color:var(--red);background:rgba(248,81,73,.14)}
+.wamp2-cs-row .cs-status-badge{font-size:7.5px;padding:1px 5px;border-radius:3px;letter-spacing:.03em}
 
 @keyframes live-pulse{0%,100%{opacity:1;box-shadow:0 0 5px var(--green)}50%{opacity:.4;box-shadow:0 0 10px var(--green)}}
 
@@ -897,6 +898,12 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wa-special-btn:active{transform:translateY(0) scale(.98)}
 .wa-special-btn.busy{opacity:.45;pointer-events:none}
 
+.wa-toggle-group{background:rgba(139,148,158,.06);border:1.5px solid var(--border)}
+.wa-toggle-group .wa-special-icon{color:var(--muted)}
+.wa-toggle-btn{background:var(--bg3);color:var(--text);border-color:var(--border)}
+.wa-toggle-btn[data-state="on"]{background:rgba(63,185,80,.14);color:var(--green);border-color:rgba(63,185,80,.4)}
+.wa-toggle-btn[data-state="off"]{background:rgba(248,81,73,.1);color:var(--red);border-color:rgba(248,81,73,.35)}
+
 .wa-himn-group{background:radial-gradient(120% 160% at 0% 0%,#3d2c06 0%,#241a04 55%,#160f02 100%);
   border:1.5px solid rgba(230,180,50,.35);box-shadow:0 0 0 1px rgba(230,180,50,.08) inset,0 6px 22px -8px rgba(230,180,50,.35)}
 .wa-himn-group::before{content:'';position:absolute;inset:0;pointer-events:none;
@@ -1010,6 +1017,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
   display:flex;flex-direction:row;flex-wrap:wrap;gap:4px 14px}
 .wamp2-cs-row{display:flex;flex-direction:column;align-items:stretch;gap:2px;font-size:9px;flex:0 1 240px;min-width:180px;padding-bottom:2px}
 .wamp2-cs-line1{display:flex;align-items:center;gap:4px;height:16px}
+.wamp2-cs-line2{display:flex;align-items:center;gap:6px;height:16px}
 .wamp2-cs-vol-row{display:flex;align-items:center;gap:5px;padding-left:14px}
 .wamp2-cs-vol{-webkit-appearance:none;appearance:none;flex:1;height:3px;border-radius:2px;
   background:rgba(255,255,255,.12);outline:none;cursor:pointer}
@@ -1225,6 +1233,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wamp2-cs-strip{background:var(--wt-lcd);padding:2px 6px;border-bottom:1px solid rgba(0,0,0,.5);display:flex;flex-direction:row;flex-wrap:wrap;gap:4px 14px}
 .wamp2-cs-row{display:flex;flex-direction:column;align-items:stretch;gap:2px;font-size:9px;flex:0 1 240px;min-width:180px;padding-bottom:2px}
 .wamp2-cs-line1{display:flex;align-items:center;gap:3px;height:16px}
+.wamp2-cs-line2{display:flex;align-items:center;gap:6px;height:16px}
 .wamp2-cs-dot{font-size:8px;width:10px;flex-shrink:0}
 .wamp2-cs-campus{font-size:8px;font-weight:900;letter-spacing:.05em;min-width:26px;flex-shrink:0}
 .wamp2-conn{font-size:9px;color:var(--wt-led2);flex-shrink:0}
@@ -1525,6 +1534,24 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       </div>
       <div class="wa-special-desc" data-i18n="wamp.cron_desc">Остановить/включить автоматические звонки по расписанию</div>
     </div>
+    <div class="wa-special-group wa-toggle-group">
+      <div class="wa-special-top">
+        <div class="wa-special-hd"><span class="wa-special-icon">🔔</span><span class="wa-special-title">Утро / Перемены</span></div>
+        <div class="wa-special-btns">
+          <button class="wa-special-btn wa-toggle-btn" id="btn-toggle-utro"
+                  data-state="{{ 'on' if utro_enabled else 'off' }}"
+                  onclick="wampToggleGroup('utro', this)" title="Включить/выключить утреннюю музыку на всех доступных кампусах">
+            🌅 Утро: <span class="wa-toggle-state">{{ 'Вкл' if utro_enabled else 'Выкл' }}</span>
+          </button>
+          <button class="wa-special-btn wa-toggle-btn" id="btn-toggle-perem"
+                  data-state="{{ 'on' if perem_enabled else 'off' }}"
+                  onclick="wampToggleGroup('perem', this)" title="Включить/выключить перемены 1-9 на всех доступных кампусах">
+            🔔 Перемены: <span class="wa-toggle-state">{{ 'Вкл' if perem_enabled else 'Выкл' }}</span>
+          </button>
+        </div>
+      </div>
+      <div class="wa-special-desc">Временное вкл/выкл — реально меняет crontab на всех доступных кампусах сразу</div>
+    </div>
     {% endif %}
   </div>
   {% endif %}
@@ -1539,8 +1566,10 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <span class="wamp2-cs-campus" style="color:var(--c-{{ m.key }},#8fb8ff)">{{ m.short }}</span>
         <span id="conn-{{ m.key }}" class="wamp2-conn"><i class="bi bi-wifi"></i></span>
         <span class="cs-status-badge online" id="status-badge-{{ m.key }}">Онлайн</span>
-        <span class="wamp2-cs-track" id="mini-name-{{ m.key }}">Не играет</span>
         {% if loop.first %}<span id="mute-badge" style="display:none;color:#f87060">🔇</span>{% endif %}
+      </div>
+      <div class="wamp2-cs-line2">
+        <span class="wamp2-cs-track" id="mini-name-{{ m.key }}">Не играет</span>
         <div class="wamp2-cs-prog" onclick="wampSeek('{{ m.key }}',event,this)" title="Перемотка">
           <div class="wamp2-cs-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div>
         </div>
@@ -4665,22 +4694,30 @@ function _tickMachineTimes() {
 }
 
 function syncTime(machine) {
-  var btn  = document.getElementById('btn-timesync');
-  var icon = document.getElementById('timesync-icon');
+  var btn   = document.getElementById('btn-timesync');
+  var icon  = document.getElementById('timesync-icon');
+  var btn2  = document.getElementById('cpm-timesync-btn');
+  var icon2 = document.getElementById('cpm-timesync-icon');
   if (btn) btn.disabled = true;
-  icon.className = 'bi bi-arrow-repeat spin';
+  if (btn2) btn2.disabled = true;
+  if (icon)  icon.className  = 'bi bi-arrow-repeat spin';
+  if (icon2) icon2.className = 'bi bi-arrow-repeat spin';
   toast(t('toast.syncing'));
   fetch('/api/timesync/sync', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({machine: machine})
   }).then(function(r){return r.json();}).then(function(d) {
-    icon.className = 'bi bi-arrow-repeat';
+    if (icon)  icon.className  = 'bi bi-arrow-repeat';
+    if (icon2) icon2.className = 'bi bi-arrow-repeat';
     if (btn) btn.disabled = false;
+    if (btn2) btn2.disabled = false;
     if (d.ok) { toast(t('toast.synced') + ' (' + (d.ref_time||'').slice(11,19) + ')'); setTimeout(fetchMachineTimes, 800); }
     else toast('⚠️ ' + (d.error || 'Ошибка'));
   }).catch(function() {
-    icon.className = 'bi bi-arrow-repeat';
+    if (icon)  icon.className  = 'bi bi-arrow-repeat';
+    if (icon2) icon2.className = 'bi bi-arrow-repeat';
     if (btn) btn.disabled = false;
+    if (btn2) btn2.disabled = false;
     toast('⚠️ ' + t('conn.no_signal'));
   });
 }
@@ -4723,6 +4760,29 @@ function _cronToggleActive() {
   if (_cronState[_activeCampus]) { cronResume(_activeCampus); return; }
   if (!confirm('⏸ Автоматические звонки по расписанию будут ОСТАНОВЛЕНЫ на ' + label + '.\nНе забудь включить обратно.\n\nПродолжить?')) return;
   cronToggle(_activeCampus);
+}
+function wampToggleGroup(group, btn) {
+  var enabling = btn.dataset.state !== 'on';
+  var label = group === 'utro' ? 'утреннюю музыку' : 'перемены 1-9';
+  if (!confirm((enabling ? '▶️ Включить ' : '⏸ Выключить ') + label + ' на ВСЕХ доступных кампусах?\n\nПродолжить?')) return;
+  btn.classList.add('busy');
+  fetch('/api/schedule/toggle-group', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({group: group, enable: enabling})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    btn.classList.remove('busy');
+    if (d.ok) {
+      btn.dataset.state = enabling ? 'on' : 'off';
+      var stateEl = btn.querySelector('.wa-toggle-state');
+      if (stateEl) stateEl.textContent = enabling ? 'Вкл' : 'Выкл';
+      toast((enabling ? '▶️ Включено: ' : '⏸ Выключено: ') + label);
+    } else {
+      toast('⚠️ ' + (d.error || 'Не удалось'));
+    }
+  }).catch(function() {
+    btn.classList.remove('busy');
+    toast('⚠️ Нет связи с сервером');
+  });
 }
 function pollCron() {
   fetch('/api/cron/pause').then(function(r){return r.json();}).then(function(d){
