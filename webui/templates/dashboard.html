@@ -968,6 +968,14 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wa-zefer-group .wa-special-btn:hover{background:linear-gradient(180deg,#6f4e16 0%,#42300c 100%);
   color:#f5deA0;box-shadow:0 4px 14px -4px rgba(212,175,55,.5)}
 
+.wa-nmd-group{background:radial-gradient(120% 160% at 0% 0%,#0c2a2c 0%,#081c1e 55%,#050f10 100%);
+  border:1.5px solid rgba(78,205,196,.4);box-shadow:0 0 0 1px rgba(78,205,196,.08) inset,0 6px 22px -8px rgba(78,205,196,.3)}
+.wa-nmd-group .wa-special-title,.wa-nmd-group .wa-special-icon{color:#4ecdc4}
+.wa-nmd-group .wa-special-btn{background:linear-gradient(180deg,#104a46 0%,#082826 100%);
+  color:#7fe0d8;border-color:rgba(78,205,196,.45)}
+.wa-nmd-group .wa-special-btn:hover{background:linear-gradient(180deg,#166058 0%,#0c3532 100%);
+  color:#a8f0e8;box-shadow:0 4px 14px -4px rgba(78,205,196,.5)}
+
 .wa-cron-group{background:radial-gradient(120% 160% at 0% 0%,#132a1c 0%,#0d1e14 40%,#14141c 70%,#1a0f10 100%);
   border:1.5px solid rgba(120,160,255,.28);box-shadow:0 0 0 1px rgba(120,160,255,.06) inset,0 6px 22px -8px rgba(80,140,255,.25)}
 .wa-cron-group .wa-special-title{color:#a8c8ff}
@@ -1520,6 +1528,15 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         </div>
       </div>
       <div class="wa-special-desc" data-i18n="wamp.zefer_desc">8 noyabr — Zəfər Günü trekini işə sal</div>
+    </div>
+    <div class="wa-special-group wa-nmd-group">
+      <div class="wa-special-top">
+        <div class="wa-special-hd"><span class="wa-special-icon">🎵</span><span class="wa-special-title">National Music Day</span></div>
+        <div class="wa-special-btns">
+          <button class="wa-special-btn" onclick="wampShowCampusPicker(event,'nmd',this)" title="National Music Day — выбрать кампус">🎵 National Music Day</button>
+        </div>
+      </div>
+      <div class="wa-special-desc">18 sentyabr — Milli Musiqi Günü trekini işə sal</div>
     </div>
     {% if perms.admin or perms.cron %}
     <div class="wa-special-group wa-cron-group">
@@ -4345,7 +4362,8 @@ function wampShowCampusPicker(ev, kind, btn) {
   ev.stopPropagation();
   var groupKeys = {himn: 'wamp.himn_group', minuta: 'wamp.minuta', mic: 'wamp.mik_group',
                     alarm: 'wamp.trevoga_group', zefer: 'wamp.zefer_group', cron: 'wamp.cron_group'};
-  var kindLabel = groupKeys[kind] ? t(groupKeys[kind]) : '';
+  var plainLabels = {nmd: '🎵 National Music Day'};
+  var kindLabel = groupKeys[kind] ? t(groupKeys[kind]) : (plainLabels[kind] || '');
   if (title) title.textContent = kindLabel ? (kindLabel + ' — ' + t('wamp.pick_where')) : t('wamp.pick_campus_title');
   list.innerHTML = '';
   var allBtn = document.createElement('button');
@@ -4376,6 +4394,7 @@ function wampCampusPicked(kind, campus) {
   if (kind === 'mic')    _openMicFor(campus);
   if (kind === 'alarm')  _doPlayAlarmFor(campus);
   if (kind === 'zefer')  _doPlayZeferFor(campus);
+  if (kind === 'nmd')    _doPlayNmdFor(campus);
   if (kind === 'cron')   _doCronToggleFor(campus);
 }
 function _doCronToggleFor(campus) {
@@ -4509,6 +4528,28 @@ function _doPlayZeferFor(campus, btn) {
   var label = campus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_ZEFER_LABELS[campus] || campus) + '»';
   if (!confirm('🎖 Zəfər Günü будет запущен на ' + label + '.\n\nПродолжить?')) return;
   if (campus === 'all') { _doPlayZeferAll(btn); } else { _doPlayZefer(campus, btn); }
+}
+
+// ──── National Music Day (18 sentyabr) ────
+var _NMD_LABELS = CAMPUS_LABELS;
+function _doPlayNmd(campus, btn) {
+  if (btn) btn.classList.add('busy');
+  toast('🎵 National Music Day → ' + (_NMD_LABELS[campus] || campus));
+  fetch('/api/nmd/' + campus, {method:'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) { if (!d.ok) toast('⚠️ ' + (d.error || 'ошибка')); })
+    .catch(function(){ toast('⚠️ нет связи'); })
+    .finally(function(){ if (btn) btn.classList.remove('busy'); });
+}
+function _doPlayNmdAll(btn) {
+  if (btn) btn.classList.add('busy');
+  playAllCampuses(_doPlayNmd);
+  setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
+}
+function _doPlayNmdFor(campus, btn) {
+  var label = campus === 'all' ? 'ВСЕХ кампусах' : 'кампусе «' + (_NMD_LABELS[campus] || campus) + '»';
+  if (!confirm('🎵 National Music Day будет запущен на ' + label + '.\n\nПродолжить?')) return;
+  if (campus === 'all') { _doPlayNmdAll(btn); } else { _doPlayNmd(campus, btn); }
 }
 
 // ──── PEREM QUICK-ACCESS (dashboard "⚡ быстрый запуск") ────

@@ -2575,6 +2575,46 @@ def api_zefer(campus):
     err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
     return jsonify({'ok': False, 'error': err})
 
+
+# ── "National Music Day" (18 sentyabr) — тот же централизованный ленивый
+# разнос файла по кампусам, что и Zəfər Günü.
+NMD_FILE = os.path.join(os.environ.get('SPECIAL_SOUNDS_DIR', '/data/special_sounds'), 'national_music_day.mp3')
+NMD_VOL  = 130
+
+def _play_nmd(host, user):
+    remote_path = f'/home/{user}/special/national_music_day.mp3'
+    return _push_and_play_special(host, user, NMD_FILE, remote_path, NMD_VOL, loop=False)
+
+@app.route('/api/nmd/<campus>', methods=['POST'])
+@login_required
+def api_nmd(campus):
+    if not has_himn_perm():
+        return jsonify({'ok': False, 'error': 'Нет прав'})
+    if not os.path.isfile(NMD_FILE):
+        return jsonify({'ok': False, 'error': 'Файл National Music Day ещё не загружен'})
+    if not _is_known_campus(campus):
+        return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
+    host, user = _machine_ssh(campus)
+    if not host:
+        return jsonify({'ok': False, 'error': f'{campus} не подключен'})
+    try:
+        _bump_play_gen(campus)
+        r = _play_nmd(host, user)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+    if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
+        log_action(current_user.username, 'nmd', campus, 'national_music_day.mp3')
+        tg_notify(
+            f'🎵 <b>National Music Day</b>\n'
+            f'🏫 Кампус: <b>{_MINUTA_LABEL.get(campus, campus)}</b>\n'
+            f'👤 Запустил: <b>{current_user.username}</b>\n'
+            f'🕐 {_tg_fmt_time()}',
+            event_type='nmd'
+        )
+        return jsonify({'ok': True})
+    err = r.get('error') or r.get('data') or 'ошибка воспроизведения'
+    return jsonify({'ok': False, 'error': err})
+
 @app.route('/api/zefer-all', methods=['POST'])
 def api_zefer_all():
     """Broadcast Zəfər Günü to every registered audio campus. No @login_required —
