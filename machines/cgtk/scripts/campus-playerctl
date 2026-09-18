@@ -55,12 +55,13 @@ case "$cmd" in
     send_cmd '{"command": ["cycle", "pause"]}'
     ;;
   stop)
-    # Останавливаем воспроизведение через mpv
+    log_play "stop" ""
+    # Мягкая остановка через IPC: mpv-процесс НЕ убиваем. Жёсткое убийство mpv снимало
+    # сокет на секунды (systemd Restart=always поднимает заново) и гонялось со следующей
+    # командой/звонком. IPC "stop" сам освобождает аудио-поток и устройство.
     send_cmd '{"command": ["stop"]}' >/dev/null 2>&1 || true
-    # Убиваем все процессы mpv для полной остановки и освобождения устройства
-    pkill -9 mpv 2>/dev/null || true
-    # Небольшая задержка для освобождения устройства
-    sleep 0.5
+    # Посторонние аудио-процессы (не mpv) — гасим, чтобы не держали устройство
+    for p in aplay paplay edge-tts mplayer vlc cvlc; do pkill -9 -x "$p" 2>/dev/null || true; done
     ;;
   vol|volume)
     if [ -z "$arg" ]; then

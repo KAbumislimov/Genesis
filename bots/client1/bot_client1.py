@@ -13,7 +13,43 @@ import urllib.parse
 import subprocess
 import threading
 import time
+import ssl
 from datetime import datetime
+
+# ── Глобальный безопасный стоп через веб-панель ──────────────────────────
+# /stop раньше дёргал campus-playerctl stop (pkill -9 mpv) только на ОДНОМ
+# "активном" для этого чата кампусе — не трогая остальные, и убивая сам
+# процесс mpv вместо мягкой остановки через IPC (тот же баг, что чинили в
+# campus-cron-stop-local.sh). Дёргаем вместо этого тот же /api/stop-bot
+# что и веб-кнопка "Стоп" — реально останавливает ВСЕ кампусы разом, тем же
+# безопасным IPC-путём, без разницы откуда нажали.
+_STOP_ALL_URL = os.environ.get('WEBUI_STOP_URL', 'https://127.0.0.1:8090/api/stop-bot')
+_BOT_STOP_TOKEN = os.environ.get('BOT_STOP_TOKEN', '')
+_INSECURE_CTX = ssl.create_default_context()
+_INSECURE_CTX.check_hostname = False
+_INSECURE_CTX.verify_mode = ssl.CERT_NONE
+
+def stop_all_campuses(username='telegram-bot'):
+    """True global panic-stop — every campus, via the web panel's own safe
+    stop path. Returns (ok, error_or_none)."""
+    if not _BOT_STOP_TOKEN:
+        return False, 'BOT_STOP_TOKEN не настроен в окружении бота'
+    try:
+        body = json.dumps({'token': _BOT_STOP_TOKEN, 'username': username}).encode()
+        req = urllib.request.Request(
+            _STOP_ALL_URL, data=body, method='POST',
+            headers={'Content-Type': 'application/json', 'X-Bot-Token': _BOT_STOP_TOKEN},
+        )
+        with urllib.request.urlopen(req, timeout=10, context=_INSECURE_CTX) as resp:
+            data = json.loads(resp.read().decode())
+            return bool(data.get('ok')), data.get('error')
+    except Exception as e:
+        return False, str(e)
+
+# Общая группа для всех кампусов (LEG Media Server) — подписываем каждое
+# сообщение, чтобы было видно, о какой машине речь. Пусто по умолчанию —
+# для инстансов без CAMPUS_LABEL в env поведение не меняется.
+CAMPUS_LABEL = os.environ.get('CAMPUS_LABEL', '').strip()
 
 DIR_BOT = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(DIR_BOT, 'config.env')
@@ -29,10 +65,60 @@ _play_monitor_event = threading.Event()
 _play_monitor_thread = None
 _play_monitor_token = None
 
-def load_config():
+# --- Мульти-кампус: один бот, несколько школ, у каждого чата — свой
+# "активный кампус" (выбирается через /campus). ---
+CAMPUS_REGISTRY = {
+    'client1': {'env': 'client1.env', 'label': 'Nərimanov'},
+    'client2':  {'env': 'client2.env',       'label': 'Client2'},
+    'cgtk': {'env': 'cgtk.env',      'label': 'City Garden'},
+    'wttk': {'env': 'wttk.env',      'label': 'Westtown'},
+    'sbtk': {'env': 'sbtk.env',      'label': 'Sbtk'},
+}
+DEFAULT_CAMPUS = 'client1'
+ACTIVE_CAMPUS_FILE = os.path.join(DIR_BOT, 'active_campus.json')
+_active_campus_cache = None
+
+def _load_active_campus_map():
+    global _active_campus_cache
+    if _active_campus_cache is not None:
+        return _active_campus_cache
+    try:
+        with open(ACTIVE_CAMPUS_FILE) as f:
+            _active_campus_cache = json.load(f)
+    except Exception:
+        _active_campus_cache = {}
+    return _active_campus_cache
+
+def get_active_campus(chat_id):
+    m = _load_active_campus_map()
+    return m.get(str(chat_id), DEFAULT_CAMPUS)
+
+def set_active_campus(chat_id, campus):
+    m = _load_active_campus_map()
+    m[str(chat_id)] = campus
+    try:
+        with open(ACTIVE_CAMPUS_FILE, 'w') as f:
+            json.dump(m, f)
+    except Exception:
+        pass
+
+def campus_label(campus):
+    return CAMPUS_REGISTRY.get(campus, {}).get('label', campus)
+
+def campus_selector_kb():
+    kb = {'inline_keyboard': [
+        [{'text': f"🏫 {info['label']}", 'callback_data': f'setcampus:{code}'}]
+        for code, info in CAMPUS_REGISTRY.items()
+    ]}
+    return kb
+
+def load_config(campus=None):
     env = {}
-    for p in (CONFIG, os.path.join(DIR_BOT, 'client1.env'), os.path.join(DIR_BOT, 'client2.env')):
-        if os.path.isfile(p):
+    campus_env = CAMPUS_REGISTRY.get(campus, {}).get('env') if campus else None
+    files = (CONFIG, os.path.join(DIR_BOT, campus_env)) if campus_env else \
+            (CONFIG, os.path.join(DIR_BOT, 'client1.env'), os.path.join(DIR_BOT, 'client2.env'))
+    for p in files:
+        if p and os.path.isfile(p):
             with open(p) as f:
                 for line in f:
                     line = line.strip()
@@ -149,12 +235,39 @@ def api(token, method, **kwargs):
         return json.loads(r.read().decode())
 
 def send(token, chat_id, text, reply_markup=None, parse_mode=None):
+    # Старый режим (один процесс = один кампус, CAMPUS_LABEL в env) —
+    # приоритет, если задан явно. Новый режим (один бот на все кампусы) —
+    # подпись берётся из активного кампуса ЭТОГО чата.
+    label = CAMPUS_LABEL or campus_label(get_active_campus(chat_id))
+    if label:
+        text = f"🏫 {label}\n{text}"
     kwargs = dict(chat_id=chat_id, text=text, disable_web_page_preview=True)
     if reply_markup is not None:
         kwargs['reply_markup'] = reply_markup
     if parse_mode:
         kwargs['parse_mode'] = parse_mode
     api(token, 'sendMessage', **kwargs)
+
+def send_voice(token, chat_id, audio_path, caption=None):
+    """Send audio file as Telegram voice message (OGG/MP3)."""
+    import email.mime.multipart, email.mime.base, email.generator, io
+    url = f'https://api.telegram.org/bot{token}/sendVoice'
+    boundary = b'--CampusBotBoundary'
+    body = b''
+    for field, val in [('chat_id', str(chat_id)), ('caption', caption or '')]:
+        body += boundary + b'\r\nContent-Disposition: form-data; name="' + field.encode() + b'"\r\n\r\n' + val.encode() + b'\r\n'
+    with open(audio_path, 'rb') as f:
+        audio_data = f.read()
+    fname = os.path.basename(audio_path).encode()
+    body += boundary + b'\r\nContent-Disposition: form-data; name="voice"; filename="' + fname + b'"\r\nContent-Type: audio/mpeg\r\n\r\n' + audio_data + b'\r\n'
+    body += boundary + b'--\r\n'
+    req = urllib.request.Request(url, data=body, method='POST',
+                                  headers={'Content-Type': 'multipart/form-data; boundary=CampusBotBoundary'})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode())
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
 
 def is_chat_admin(token, chat_id, user_id):
     try:
@@ -444,14 +557,14 @@ def _vol_change(cfg, direction):
         f'Проверьте: ssh -i KEY {user}@{host} campus-playerctl status'
     )
 
-def vol_up():
-    cfg = load_config()
+def vol_up(campus=None):
+    cfg = load_config(campus)
     if not cfg.get('CLIENT_HOST'):
         return False, 'Плеер недоступен'
     return _vol_change(cfg, 'volup')
 
-def vol_down():
-    cfg = load_config()
+def vol_down(campus=None):
+    cfg = load_config(campus)
     if not cfg.get('CLIENT_HOST'):
         return False, 'Плеер недоступен'
     return _vol_change(cfg, 'voldown')
@@ -669,12 +782,12 @@ def _media_slot_label(slot):
         return f"Перемена {slot[0]} ({slot}.mp3)"
     return slot or "—"
 
-def get_next_on_schedule_text():
+def get_next_on_schedule_text(campus=None):
     """Текст: что на очереди по Media — день (папка), слот, время, файл."""
     now = datetime.now()
     today_str = now.strftime("%d.%m")
     cur_min = now.hour * 60 + now.minute
-    cfg = load_config()
+    cfg = load_config(campus)
     media_root = (cfg.get("MEDIA_ROOT") or "").strip() or "/home/kamran/Media"
     day = now.isoweekday()  # 1=пн, 7=вс
     folder = day if day <= 5 else 5  # папки только 1–5
@@ -710,58 +823,61 @@ def get_next_on_schedule_text():
         header = f"📅 На очереди (Media)\n\nСегодня {today_str}, {day_name}, папка {folder}\n{media_root}/1..5\n\n"
     return header + "\n".join(lines)
 
-BACKUP_DIR = "/home/kamran/backups"
-BACKUP_LOG = "/home/kamran/backups/backup_client1.log"
+BACKUP_LOG = "/var/log/campus-backup.log"
 
 def get_backup_info():
-    """Информация о бэкапах: когда сделано, что, размер, когда будет удалён/заменён."""
-    lines = []
-    # Файлы бэкапов в папке
-    if os.path.isdir(BACKUP_DIR):
-        try:
-            for f in sorted(os.listdir(BACKUP_DIR)):
-                if not f.endswith('.tgz'):
-                    continue
-                path = os.path.join(BACKUP_DIR, f)
-                if not os.path.isfile(path):
-                    continue
-                try:
-                    size = os.path.getsize(path)
-                    mtime = os.path.getmtime(path)
-                    dt = datetime.fromtimestamp(mtime)
-                    date_str = dt.strftime('%d.%m.%Y %H:%M')
-                    if size >= 1024 * 1024 * 1024:
-                        size_str = f"{size / (1024**3):.1f} ГБ"
-                    elif size >= 1024 * 1024:
-                        size_str = f"{size / (1024**2):.1f} МБ"
-                    else:
-                        size_str = f"{size // 1024} КБ"
-                    # client1-full-* заменяется при следующем бекапе (вс 00:00)
-                    if f.startswith('client1-full-'):
-                        lines.append(f"• {f}\n  Сделан: {date_str} | Размер: {size_str}\n  Будет заменён при след. бекапе (вс 00:00)")
-                    else:
-                        lines.append(f"• {f}\n  Сделан: {date_str} | Размер: {size_str}")
-                except OSError:
-                    pass
-        except OSError:
-            pass
-    # Последние строки лога
-    if os.path.isfile(BACKUP_LOG):
-        try:
-            with open(BACKUP_LOG, 'r', encoding='utf-8') as fp:
-                log_lines = fp.readlines()
-            last = [l.strip() for l in log_lines[-15:] if l.strip()]
-            if last:
-                lines.append("— Лог (последнее): —")
-                for l in last[-5:]:
-                    if len(l) > 70:
-                        l = l[:67] + "..."
-                    lines.append(l)
-        except Exception:
-            pass
+    """Информация о последнем бэкапе из /var/log/campus-backup.log."""
+    if not os.path.isfile(BACKUP_LOG):
+        return "📦 Бэкап ещё не запускался.\nРасписание: каждое воскресенье в 02:00"
+    try:
+        with open(BACKUP_LOG, 'r', encoding='utf-8', errors='replace') as fp:
+            lines = fp.readlines()
+    except Exception as e:
+        return f"Ошибка чтения лога: {e}"
     if not lines:
-        return "Нет данных о бэкапах (папка недоступна или пуста)."
-    return "\n".join(lines)
+        return "Лог пустой."
+    # Найти последний BACKUP START
+    start_idx = None
+    for i in range(len(lines) - 1, -1, -1):
+        if 'BACKUP START' in lines[i]:
+            start_idx = i
+            break
+    if start_idx is None:
+        last = [l.strip() for l in lines[-8:] if l.strip()]
+        return "📦 Лог бэкапов:\n" + "\n".join(last)
+    run = lines[start_idx:]
+    def ts(line):
+        m = re.search(r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]', line)
+        return m.group(1) if m else ''
+    start_time = ts(run[0])
+    end_time, done = '', False
+    successes, errors, sizes = [], [], []
+    for line in run:
+        s = line.strip()
+        if 'BACKUP DONE' in s:
+            done = True
+            end_time = ts(line)
+        if '✅' in s:
+            successes.append(re.sub(r'^\[\S+ \S+\]\s*', '', s))
+        if 'ОШИБКА' in s or ('❌' in s and 'ОШИБКА' in s):
+            errors.append(re.sub(r'^\[\S+ \S+\]\s*', '', s))
+        m = re.search(r'\]\s+(\S+)\s+/mnt/campus-backup/(\S+?)/?$', s)
+        if m:
+            sizes.append(f"  • {m.group(2)}: {m.group(1)}")
+    date_str = start_time[:10] if start_time else '?'
+    icon = '✅' if done and not errors else ('⚠️' if done else '❌')
+    out = [f"{icon} Бэкап от {date_str}",
+           f"🕐 {start_time} → {end_time or '...'}",
+           f"✅ {len(successes)} успешно  ❌ {len(errors)} ошибок"]
+    if sizes:
+        out.append("\n📁 Proxmox (10.20.1.106):")
+        out.extend(sizes)
+    if errors:
+        out.append("\n❌ Ошибки:")
+        for e in errors[:3]:
+            out.append(f"  {e[:90]}")
+    out.append("\n📅 Следующий: воскресенье 02:00")
+    return "\n".join(out)
 
 def run_recover():
     """Перезапускает Docker-стек и системные сервисы. Возвращает текст отчёта."""
@@ -817,11 +933,11 @@ def run_recover():
     return "\n".join(lines)
 
 
-def play_track(token, log_group_id, chat_id, num, username, log=True):
+def play_track(token, log_group_id, chat_id, num, username, log=True, campus=None):
     path = get_track_path(num)
     if not path:
         return False, f'Трек {num} не найден.'
-    cfg = load_config()
+    cfg = load_config(campus)
     if not cfg.get('CLIENT_HOST'):
         return False, 'Плеер недоступен (нет CLIENT_HOST).'
     if not scp_to_inbox(cfg, path):
@@ -854,10 +970,10 @@ _play_all_stop = False
 _play_all_active = False
 
 
-def _play_all_worker(token, log_group_id, chat_id, username, track_nums):
+def _play_all_worker(token, log_group_id, chat_id, username, track_nums, campus=None):
     """Фоновый поток: воспроизводит треки по очереди. Проверяет _play_all_stop между треками."""
     global _play_all_active, _play_all_stop
-    cfg = load_config()
+    cfg = load_config(campus)
     if not cfg.get('CLIENT_HOST'):
         try:
             send(token, chat_id, 'Плеер недоступен (нет CLIENT_HOST).', reply_markup=main_keyboard())
@@ -925,10 +1041,14 @@ def main_keyboard():
             ['▶ След. песня', '◀ Пред. песня'],
             ['📋 История', '📂 Список треков', '📂 Полный список'],
             ['▶ Играть всё', 'ℹ️ Инфо', '📊 Статус', '🕐 Время', '🖥 Сервер', '📋 Меню'],
-            ['🔄 Обновить', '📦 Бэкапы', '📅 На очереди'],
+            ['🔄 Обновить', '📅 На очереди'],
+            ['🖥️ 📦 Бэкапы', '/checkreport 🖥️ REPORT'],
         ],
         'resize_keyboard': True,
     }
+
+# chat_id → True if waiting for voice command
+_voice_assistant_waiting: dict = {}
 
 def inline_list_page(offset=0):
     total = get_tracks_total()
@@ -1006,9 +1126,9 @@ def download_file(token, file_id):
             f.write(r.read())
     return path
 
-def info_text():
+def info_text(campus=None):
     total = get_tracks_total()
-    cfg = load_config()
+    cfg = load_config(campus)
     music_root = cfg.get('MUSIC_ROOT', '') or '(не задан)'
     log_group = 'включено (группа)' if (cfg.get('LOG_GROUP_ID') or '').strip() else 'только файл'
     cron_lines = get_last_cron_entries(8)
@@ -1072,18 +1192,26 @@ def handle_callback(token, log_group_id, chat_id, callback_query, user):
     cid = callback_query.get('id')
     data = (callback_query.get('data') or '').strip()
     username = user.get('username') or user.get('first_name') or '?'
+    active = get_active_campus(chat_id)
     try:
         api(token, 'answerCallbackQuery', callback_query_id=cid)
     except Exception:
         pass
     if data == 'noop':
         return
+    if data.startswith('setcampus:'):
+        code = data.split(':', 1)[1]
+        if code in CAMPUS_REGISTRY:
+            set_active_campus(chat_id, code)
+            send(token, chat_id, f"✅ Активный кампус: {campus_label(code)}", reply_markup=main_keyboard())
+            log_action(token, log_group_id, f"Кампус выбран: {campus_label(code)} | {_at(username)}", also_file=True, chat_id=chat_id)
+        return
     if data.startswith('play_'):
         try:
             num = int(data[5:])
             total = get_tracks_total()
             if 1 <= num <= total:
-                ok, msg = play_track(token, log_group_id, chat_id, num, username, log=True)
+                ok, msg = play_track(token, log_group_id, chat_id, num, username, log=True, campus=active)
                 send(token, chat_id, msg, reply_markup=main_keyboard())
                 if not ok:
                     log_action(token, log_group_id, f"Ошибка: {msg} | {_at(username)}", also_file=True, chat_id=chat_id)
@@ -1150,10 +1278,16 @@ def handle_update(token, chat_id, log_group_id, update):
         if not is_chat_admin(token, chat_id, user_id):
             return
     kb = main_keyboard()
-    cfg = load_config()
+    active = get_active_campus(chat_id)
+    cfg = load_config(active)
+
+    if cmd == '/campus' or text in ('кампус', 'campus', '🏫 Кампус'):
+        send(token, chat_id, f"Сейчас выбран: {campus_label(active)}\nВыбери кампус:", reply_markup=campus_selector_kb())
+        log_action(token, log_group_id, f"Меню выбора кампуса открыто | {_at(username)}", also_file=True, chat_id=chat_id)
+        return
 
     if cmd in ('/start', '/menu') or text in ('меню', 'menu'):
-        send(token, chat_id, menu_text(), reply_markup=kb)
+        send(token, chat_id, f"🏫 Активный кампус: {campus_label(active)} (сменить — /campus)\n\n" + menu_text(), reply_markup=kb)
         log_action(token, log_group_id, f"Меню открыто | {_at(username)}", also_file=True, chat_id=chat_id)
         return
 
@@ -1163,7 +1297,7 @@ def handle_update(token, chat_id, log_group_id, update):
         return
 
     if cmd == '/info' or text in ('инфо', 'info', 'Info', 'ℹ️ Инфо'):
-        send(token, chat_id, info_text(), reply_markup=kb, parse_mode='HTML')
+        send(token, chat_id, info_text(active), reply_markup=kb, parse_mode='HTML')
         log_action(token, log_group_id, f"Инфо открыто | {_at(username)}", also_file=True, chat_id=chat_id)
         return
 
@@ -1195,7 +1329,7 @@ def handle_update(token, chat_id, log_group_id, update):
         return
 
     if cmd == '/schedule' or text in ('📅 На очереди', 'расписание', 'на очереди'):
-        sched_text = get_next_on_schedule_text()
+        sched_text = get_next_on_schedule_text(active)
         send(token, chat_id, sched_text, reply_markup=kb)
         log_action(token, log_group_id, f"На очереди (расписание) | {_at(username)}", also_file=True, chat_id=chat_id)
         return
@@ -1259,7 +1393,7 @@ def handle_update(token, chat_id, log_group_id, update):
         nxt = (cur + 1) if cur is not None else 1
         if nxt > get_tracks_total():
             nxt = 1
-        ok, msg = play_track(token, log_group_id, chat_id, nxt, username, log=True)
+        ok, msg = play_track(token, log_group_id, chat_id, nxt, username, log=True, campus=active)
         send(token, chat_id, msg, reply_markup=kb)
         return
 
@@ -1269,7 +1403,7 @@ def handle_update(token, chat_id, log_group_id, update):
         prev = (cur - 1) if cur is not None else total
         if prev < 1:
             prev = total
-        ok, msg = play_track(token, log_group_id, chat_id, prev, username, log=True)
+        ok, msg = play_track(token, log_group_id, chat_id, prev, username, log=True, campus=active)
         send(token, chat_id, msg, reply_markup=kb)
         return
 
@@ -1286,7 +1420,7 @@ def handle_update(token, chat_id, log_group_id, update):
         track_nums = list(range(1, total + 1))
         t = threading.Thread(
             target=_play_all_worker,
-            args=(token, log_group_id, chat_id, username, track_nums),
+            args=(token, log_group_id, chat_id, username, track_nums, active),
             daemon=True,
         )
         t.start()
@@ -1295,13 +1429,13 @@ def handle_update(token, chat_id, log_group_id, update):
         return
 
     if cmd == '/volup' or text in ('🔊 Громче', 'громче'):
-        ok, out = vol_up()
+        ok, out = vol_up(active)
         send(token, chat_id, out, reply_markup=kb)
         log_action(token, log_group_id, f"🔊 Громче | {_at(username)}", also_file=True, chat_id=chat_id)
         return
 
     if cmd == '/voldown' or text in ('🔉 Тише', 'тише'):
-        ok, out = vol_down()
+        ok, out = vol_down(active)
         send(token, chat_id, out, reply_markup=kb)
         log_action(token, log_group_id, f"🔉 Тише | {_at(username)}", also_file=True, chat_id=chat_id)
         return
@@ -1309,12 +1443,14 @@ def handle_update(token, chat_id, log_group_id, update):
     if cmd == '/stop' or text in ('⏹ Стоп', 'стоп', 'stop'):
         _play_all_stop = True
         stop_play_monitor()
-        # Kill every audio process — mpv, ffmpeg, aplay, edge-tts, announcements
-        ssh_run(cfg, 'pkill -9 mpv 2>/dev/null; pkill -9 ffmpeg 2>/dev/null; '
-                     'pkill -9 aplay 2>/dev/null; pkill -9 paplay 2>/dev/null; '
-                     'pkill -9 edge-tts 2>/dev/null; '
-                     '/usr/local/bin/campus-playerctl stop 2>/dev/null; true')
-        send(token, chat_id, '⏹ Остановлено.', reply_markup=kb)
+        ok, err = stop_all_campuses(username=username or 'telegram-bot')
+        if ok:
+            send(token, chat_id, '⏹ Остановлено — на всех кампусах.', reply_markup=kb)
+        else:
+            # Fallback to the old single-campus path only if the web panel
+            # itself is unreachable — better a partial stop than none.
+            campus(cfg, 'stop')
+            send(token, chat_id, f'⏹ Остановлено ({campus_label(active)}) — веб-панель недоступна: {err}', reply_markup=kb)
         log_action(token, log_group_id, f"⏹ Стоп | {_at(username)}", also_file=True, chat_id=chat_id)
         ts = datetime.now().strftime('%H:%M:%S  %d.%m.%Y')
         notify_all_groups(token, (
@@ -1328,7 +1464,7 @@ def handle_update(token, chat_id, log_group_id, update):
     if cmd == '/status' or text == '📊 Статус':
         cur = get_current_track_num()
         total = get_tracks_total()
-        cfg = load_config()
+        cfg = load_config(active)
         vol = get_volume_remote(cfg)
         lines = []
 
@@ -1382,7 +1518,7 @@ def handle_update(token, chat_id, log_group_id, update):
 
         # ── Расписание (следующие задачи крона) ─────────────────────
         lines.append("\n📅 <b>Расписание (кампус)</b>")
-        sched = get_next_on_schedule_text()
+        sched = get_next_on_schedule_text(active)
         if sched:
             for l in sched.strip().split('\n')[:6]:
                 if l.strip():
@@ -1392,9 +1528,57 @@ def handle_update(token, chat_id, log_group_id, update):
         log_action(token, log_group_id, f"Статус запрошен | {_at(username)}", also_file=True, chat_id=chat_id)
         return
 
+    # ── Голосовой помощник ──────────────────────────────────────────────────
+    if text == '🎤 Голосовой помощник':
+        _voice_assistant_waiting[chat_id] = True
+        send(token, chat_id,
+             '🎤 <b>Голосовой помощник</b>\n\n'
+             'Отправьте голосовое сообщение с командой.\n'
+             'Например: «Стоп», «Следующий», «Громче», «Что играет?»',
+             reply_markup=kb, parse_mode='HTML')
+        return
+
     voice = msg.get('voice') or msg.get('audio')
     doc = msg.get('document')
     if voice or doc:
+        # Если режим ассистента — транскрибируем как команду
+        is_pure_voice = bool(msg.get('voice')) and not bool(msg.get('audio'))
+        waiting = _voice_assistant_waiting.pop(chat_id, False)
+        if waiting and is_pure_voice:
+            file_id = voice.get('file_id', '')
+            try:
+                local = download_file(token, file_id)
+                if local:
+                    send(token, chat_id, '⏳ Слушаю...', reply_markup=kb)
+                    sys.path.insert(0, '/home/kamran/projects/campus-infra/scripts')
+                    from voice_cmd import handle_voice, tts
+                    result = handle_voice(local)
+                    try:
+                        os.unlink(local)
+                    except Exception:
+                        pass
+                    text_out = f'🎤 <i>«{result["text"]}»</i>\n\n{result["reply"]}' if result.get('text') else result.get('reply', '⚠️ Не понял')
+                    # Generate TTS voice reply
+                    tts_path = tempfile.mktemp(suffix='.mp3')
+                    tts_sent = False
+                    if result.get('reply') and tts(result['reply'], tts_path):
+                        try:
+                            send_voice(token, chat_id, tts_path, caption=result.get('text', ''))
+                            tts_sent = True
+                        except Exception:
+                            pass
+                        finally:
+                            try: os.unlink(tts_path)
+                            except Exception: pass
+                    if not tts_sent:
+                        send(token, chat_id, text_out, reply_markup=kb, parse_mode='HTML')
+                    log_action(token, log_group_id, f"🎤 Ассистент [{result.get('action')}]: {result.get('text','?')} | {_at(username)}", also_file=True, chat_id=chat_id)
+                else:
+                    send(token, chat_id, '⚠️ Ошибка загрузки голосового.', reply_markup=kb)
+            except Exception as e:
+                send(token, chat_id, f'⚠️ Ошибка: {e}', reply_markup=kb)
+            return
+
         log_action(token, log_group_id, f"Голос/аудио/MP3 в чат от {_at(username)}", also_file=True, chat_id=chat_id)
         file_id = (voice or {}).get('file_id') or (doc and doc.get('file_name', '').lower().endswith(('.mp3', '.ogg', '.m4a')) and doc.get('file_id'))
         if file_id:
@@ -1431,7 +1615,7 @@ def handle_update(token, chat_id, log_group_id, update):
         num = int(text.lstrip('0') or 0)
     total = get_tracks_total()
     if num and 1 <= num <= total:
-        ok, msg = play_track(token, log_group_id, chat_id, num, username, log=True)
+        ok, msg = play_track(token, log_group_id, chat_id, num, username, log=True, campus=active)
         send(token, chat_id, msg, reply_markup=kb)
         if not ok:
             log_action(token, log_group_id, f"Ошибка: {msg} | {_at(username)}", also_file=True, chat_id=chat_id)
@@ -1439,6 +1623,10 @@ def handle_update(token, chat_id, log_group_id, update):
     if num and (num < 1 or num > total):
         send(token, chat_id, f"Трек {num} не найден (всего: {total}).", reply_markup=kb)
         log_action(token, log_group_id, f"Трек {num} вне диапазона | {_at(username)}", also_file=True, chat_id=chat_id)
+        return
+
+    if text and text.startswith('/checkreport'):
+        # Handled by the separate Helpdesk Ops bot — this one just stays quiet.
         return
 
     if text and text.startswith('/'):
