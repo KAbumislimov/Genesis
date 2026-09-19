@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Campus Player{% endblock %}</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#151f2c">
+<link href="{{ url_for('static', filename='vendor/tabler/css/tabler.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='vendor/bootstrap-icons/css/bootstrap-icons.min.css') }}" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>(function(){
+  window._themeIsAdmin = {{ 'true' if current_user.is_authenticated and current_user.role == 'admin' else 'false' }};
+  window._themeCanPersonalize = {{ 'true' if current_user.is_authenticated and current_user.role != 'guest' else 'false' }};
+  window._themeServerDefault = {{ theme_default|tojson }};
+  var t = localStorage.getItem('v2theme') || (window._themeServerDefault === 'light' ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-bs-theme', t === 'light' ? 'light' : 'dark');
+})()</script>
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
+{% block extra_head %}{% endblock %}
+<link href="{{ url_for('static', filename='v2.css') }}?v=3" rel="stylesheet">
+</head>
+<body class="layout-fluid">
+<div class="page">
+
+  <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#v2-sidebar" aria-controls="v2-sidebar" aria-expanded="false" aria-label="Меню">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <h1 class="navbar-brand navbar-brand-autodark">
+        <a href="{{ url_for('dashboard_v2') }}" class="v2-brand"><i class="bi bi-music-note-beamed"></i> Campus Player</a>
+      </h1>
+      <div class="collapse navbar-collapse" id="v2-sidebar">
+        <ul class="navbar-nav pt-lg-3">
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='dashboard_v2' %}active{% endif %}" href="{{ url_for('dashboard_v2') }}"><span class="nav-link-icon"><i class="bi bi-play-circle"></i></span><span class="nav-link-title">Плеер</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='tracks' %}active{% endif %}" href="{{ url_for('tracks') }}"><span class="nav-link-icon"><i class="bi bi-collection-play"></i></span><span class="nav-link-title">Библиотека</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='announcements_page' %}active{% endif %}" href="{{ url_for('announcements_page') }}"><span class="nav-link-icon"><i class="bi bi-megaphone"></i></span><span class="nav-link-title">Объявления</span></a></li>
+
+          {% if current_user.role in ('admin','staff','helpdesk','eventmanager') %}
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='upload_page' %}active{% endif %}" href="{{ url_for('upload_page') }}"><span class="nav-link-icon"><i class="bi bi-cloud-upload"></i></span><span class="nav-link-title">Загрузка</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='announce_page' %}active{% endif %}" href="{{ url_for('announce_page') }}"><span class="nav-link-icon"><i class="bi bi-mic"></i></span><span class="nav-link-title">Голос в эфир</span></a></li>
+          {% endif %}
+
+          {% if current_user.role in ('admin','staff') %}
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='monitor_page' %}active{% endif %}" href="{{ url_for('monitor_page') }}"><span class="nav-link-icon"><i class="bi bi-activity"></i></span><span class="nav-link-title">Мониторинг</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='cheatsheet_page' %}active{% endif %}" href="{{ url_for('cheatsheet_page') }}"><span class="nav-link-icon"><i class="bi bi-journal-code"></i></span><span class="nav-link-title">Шпаргалка</span></a></li>
+          {% endif %}
+
+          {% if current_user.role == 'admin' %}
+          <li class="nav-item mt-2"><div class="v2-nav-lbl">Администрирование</div></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='admin' %}active{% endif %}" href="{{ url_for('admin') }}"><span class="nav-link-icon"><i class="bi bi-people"></i></span><span class="nav-link-title">Пользователи</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='admin_cron' %}active{% endif %}" href="{{ url_for('admin_cron') }}"><span class="nav-link-icon"><i class="bi bi-alarm"></i></span><span class="nav-link-title">Крон</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='admin_schedule' %}active{% endif %}" href="{{ url_for('admin_schedule') }}"><span class="nav-link-icon"><i class="bi bi-calendar-week"></i></span><span class="nav-link-title">Расписание</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='admin_activity' %}active{% endif %}" href="{{ url_for('admin_activity') }}"><span class="nav-link-icon"><i class="bi bi-journal-text"></i></span><span class="nav-link-title">Лог активности</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='backups_page' %}active{% endif %}" href="{{ url_for('backups_page') }}"><span class="nav-link-icon"><i class="bi bi-hdd-stack"></i></span><span class="nav-link-title">Бэкапы</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='machines_page' %}active{% endif %}" href="{{ url_for('machines_page') }}"><span class="nav-link-icon"><i class="bi bi-pc-display"></i></span><span class="nav-link-title">Машины</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="http://10.10.4.120:3000" target="_blank" rel="noopener"><span class="nav-link-icon"><i class="bi bi-bar-chart-line"></i></span><span class="nav-link-title">Grafana</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('helpdesk_sso') }}" target="_blank" rel="noopener"><span class="nav-link-icon"><i class="bi bi-life-preserver"></i></span><span class="nav-link-title">HelpDesk</span></a></li>
+          {% endif %}
+
+          <li class="nav-item mt-2"><div class="v2-nav-lbl">Сервис</div></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='qr_page' %}active{% endif %}" href="{{ url_for('qr_page') }}"><span class="nav-link-icon"><i class="bi bi-qr-code"></i></span><span class="nav-link-title">QR</span></a></li>
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}"><span class="nav-link-icon"><i class="bi bi-gear"></i></span><span class="nav-link-title">Настройки</span></a></li>
+          {% if current_user.role == 'admin' %}
+          <li class="nav-item"><a class="nav-link {% if request.endpoint=='security_page' %}active{% endif %}" href="{{ url_for('security_page') }}"><span class="nav-link-icon"><i class="bi bi-shield-lock"></i></span><span class="nav-link-title">Безопасность</span></a></li>
+          {% endif %}
+          <li class="nav-item mt-3"><a class="nav-link v2-old-ui" href="{{ url_for('dashboard') }}"><span class="nav-link-icon"><i class="bi bi-arrow-counterclockwise"></i></span><span class="nav-link-title">Старый интерфейс</span></a></li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <div class="page-wrapper">
+    <header class="navbar navbar-expand-md d-print-none v2-topbar">
+      <div class="container-fluid">
+        <div class="navbar-nav flex-row align-items-center gap-2">
+          <span class="badge bg-blue-lt v2-beta">v2 · предпросмотр</span>
+          {% block nav_chips %}{% endblock %}
+        </div>
+        <div class="navbar-nav flex-row order-md-last ms-auto align-items-center gap-2">
+          {% if current_user.role in ('admin','staff') %}<button class="btn btn-icon btn-ghost-secondary" id="v2-times-btn" type="button" title="Время на машинах" aria-label="Время на машинах"><i class="bi bi-clock-history"></i></button>{% endif %}
+          <button class="btn btn-icon btn-ghost-secondary" id="v2-theme-btn" type="button" title="Тема" aria-label="Тема"><i class="bi bi-circle-half"></i></button>
+          <div class="nav-item dropdown">
+            <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Меню пользователя">
+              <span class="avatar avatar-sm v2-avatar">{{ (current_user.display_name or current_user.username)[:1]|upper }}</span>
+              <div class="d-none d-xl-block ps-2">
+                <div>{{ current_user.display_name }}</div>
+                <div class="mt-1 small text-secondary">{{ current_user.role }}</div>
+              </div>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+              <a href="{{ url_for('profile') }}" class="dropdown-item"><i class="bi bi-person me-2"></i>Профиль</a>
+              <div class="dropdown-divider"></div>
+              <a href="{{ url_for('logout') }}" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Выйти</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="container-fluid">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/tabler/js/tabler.min.js') }}"></script>
+<script>
+(function(){
+  var tb = document.getElementById('v2-times-btn');
+  var chip = document.getElementById('nc-chip-machines');
+  if (tb && chip) {
+    tb.addEventListener('click', function(e){ e.stopPropagation(); chip.classList.toggle('v2-open'); });
+    document.addEventListener('click', function(e){ if (!chip.contains(e.target)) chip.classList.remove('v2-open'); });
+  }
+})();
+(function(){
+  var b = document.getElementById('v2-theme-btn');
+  if (!b) return;
+  b.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark';
+    var nx = cur === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-bs-theme', nx);
+    try { localStorage.setItem('v2theme', nx); } catch(e) {}
+  });
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

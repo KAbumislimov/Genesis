@@ -211,6 +211,13 @@ def music_machines_json():
         short = _CAMPUS_SHORT_LABELS.get(key) or key[:4].upper()
         name = _CAMPUS_DISPLAY_OVERRIDE.get(key) or m['name']
         out.append({'key': key, 'name': name, 'short': short})
+    # Два кампуса с общим префиксом ключа (lhmtk / lhmtk2) давали одинаковую
+    # плашку "LHMT" — при коллизии показываем ключ целиком.
+    from collections import Counter
+    _cnt = Counter(o['short'] for o in out)
+    for o in out:
+        if _cnt[o['short']] > 1:
+            o['short'] = o['key'].upper()
     return out
 
 def _music_path_for(machine_key):
@@ -1644,6 +1651,16 @@ def api_weather():
 @app.route('/')
 @login_required
 def dashboard():
+    return _render_dashboard()
+
+@app.route('/v2')
+@login_required
+def dashboard_v2():
+    """Предпросмотр нового интерфейса (Tabler). Тот же контекст и тот же общий JS,
+    что у боевого '/', отличается только каркас (base_v2.html) и разметка плеера."""
+    return _render_dashboard(v2=True, base_layout='base_v2.html')
+
+def _render_dashboard(**extra):
     now = datetime.now()
     ct  = now.strftime('%H:%M')
     next_ev = next((e for e in SCHEDULE if e['time'] > ct and e['play']), None)
@@ -1675,6 +1692,7 @@ def dashboard():
         music_machines=music_machines_json(),
         utro_enabled=any(e.get('file')=='utro.mp3' and e.get('play') for e in SCHEDULE),
         perem_enabled=any(e.get('file','').endswith('peremena.mp3') and e.get('play') for e in SCHEDULE),
+        **extra,
     )
 
 @app.route('/tracks')

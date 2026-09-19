@@ -1,0 +1,166 @@
+/* ═══ Campus Player v2 — поверх Tabler 1.0.0 ═══
+   1) токены старого интерфейса (--bg, --text, …) → переменные Tabler, чтобы
+      общие legacy-стили из dashboard.html (попапы, тосты, EQ) не ломались;
+   2) стили хук-классов, которые ждёт общий JS (cpm-*, cs-status-badge, wamp2-*). */
+:root, [data-bs-theme]{
+  --bg: var(--tblr-body-bg);
+  --bg2: var(--tblr-bg-surface);
+  --bg3: var(--tblr-bg-surface-secondary);
+  --border: var(--tblr-border-color);
+  --text: var(--tblr-body-color);
+  --muted: var(--tblr-secondary-color, #8a97a8);
+  --blue: var(--tblr-blue); --green: var(--tblr-green); --red: var(--tblr-red);
+  --orange: var(--tblr-orange); --purple: var(--tblr-purple); --yellow: var(--tblr-yellow);
+  --panel-opa: 1; --panel-blur: 0px; --panel-bri: 1;
+  --cpm-accent: var(--tblr-primary); --cpm-accent-ink: #fff;
+  --tblr-font-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+body{ font-feature-settings: 'cv11','ss01'; }
+.tabular-nums{ font-variant-numeric: tabular-nums; }
+.min-w-0{ min-width: 0; }
+
+/* sidebar / topbar */
+.v2-brand{ display:flex; align-items:center; gap:.5rem; font-weight:700; letter-spacing:.01em; }
+.v2-brand i{ color: var(--tblr-primary); }
+.v2-nav-lbl{ padding:.4rem 1rem; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color: var(--tblr-secondary-color, #8a97a8); opacity:.75; }
+.v2-old-ui{ opacity:.65; } .v2-old-ui:hover{ opacity:1; }
+.v2-topbar{ border-bottom:1px solid var(--tblr-border-color); background: var(--tblr-bg-surface); min-height:3.25rem; }
+.v2-avatar{ background: var(--tblr-primary-lt); color: var(--tblr-primary); font-weight:700; }
+.v2-beta{ font-weight:600; }
+
+/* now playing */
+.v2-now{ overflow:hidden; }
+.cpm-viz-wrap{ position:relative; width:100%; height:120px; overflow:hidden; background:#000; }
+.cpm-viz{ display:block; width:100%; height:100%; }
+.v2 .v2-play{ width:2.9rem; height:2.9rem; }
+.v2 .cpm-toggle.on, .v2 .cpm-toggle.tog.on{ background: var(--tblr-primary); border-color: var(--tblr-primary); color:#fff; }
+.v2 .cpm-seek-groove, .v2 .cpm-campus-prog{ height:.35rem; }
+.v2 .form-range.v2-vol, .v2 .cpm-campus-vol{ accent-color: var(--tblr-primary); }
+
+/* campus cards */
+.v2 .v2-campus{ border-left:3px solid var(--row-accent, var(--tblr-border-color)); transition:border-color .15s, box-shadow .15s; }
+.v2 .v2-campus:hover{ box-shadow: var(--tblr-box-shadow); }
+.v2 .cpm-campus-name{ color: var(--row-accent, var(--tblr-body-color)); }
+.v2 .cpm-dot{ font-size:.55rem; line-height:1; color: var(--tblr-green); flex-shrink:0; }
+.v2 .cpm-dot.off{ color: var(--tblr-secondary-color, #8a97a8); }
+.v2 .cpm-conn{ color: var(--tblr-secondary-color, #8a97a8); font-size:.85rem; flex-shrink:0; }
+.v2 .badge-conn-ok{ color: var(--tblr-green); } .v2 .badge-conn-err{ color: var(--tblr-red); }
+.v2 .cs-status-badge{ font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.2rem .5rem; border-radius:.35rem; white-space:nowrap; }
+.v2 .cs-status-badge.online{ color: var(--tblr-green); background: rgba(47,179,68,.14); }
+.v2 .cs-status-badge.offline{ color: var(--tblr-red); background: rgba(214,57,57,.14); }
+.v2 .cpm-campus-time{ min-width:2rem; }
+
+/* special actions */
+.v2 .cpm-pill{ font-weight:600; }
+.v2 .cpm-pill.busy, .v2 .busy{ opacity:.45; pointer-events:none; }
+.v2 #btn-cron-active.paused{ border-color: var(--tblr-orange); color: var(--tblr-orange); }
+.v2 .v2-sep{ width:1px; align-self:stretch; background: var(--tblr-border-color); margin:0 .25rem; }
+.v2 .wa-toggle-btn{ background:transparent; border:1px solid var(--tblr-border-color); }
+.v2 .wa-toggle-btn[data-state="on"]{ color: var(--tblr-green); border-color: rgba(47,179,68,.55); background: rgba(47,179,68,.10); }
+.v2 .wa-toggle-btn[data-state="off"]{ color: var(--tblr-red); border-color: rgba(214,57,57,.5); background: rgba(214,57,57,.08); }
+
+/* colour swatches */
+.v2 .cpm-swatch{ width:22px; height:22px; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer; }
+.v2 .cpm-swatch:hover{ transform:scale(1.12); }
+.v2 .cpm-swatch.active{ border-color: var(--tblr-body-color); }
+.v2 .cpm-swatch-reset{ background: var(--tblr-bg-surface-secondary); color: var(--tblr-secondary-color); font-size:.7rem; line-height:1; border:2px solid var(--tblr-border-color); }
+
+/* library layout */
+.v2 .v2-library{ min-height: 520px; }
+.v2 .v2-folders-col{ width:100%; border-bottom:1px solid var(--tblr-border-color); }
+@media (min-width: 992px){
+  .v2 .v2-folders-col{ width:210px; border-bottom:none; border-right:1px solid var(--tblr-border-color); }
+}
+.v2 .cpm-fol-tabs{ display:flex; flex-direction:column; gap:2px; }
+@media (max-width: 991px){ .v2 .cpm-fol-tabs{ flex-direction:row; flex-wrap:wrap; gap:6px; } }
+.v2 .cpm-pl-list{ min-height:320px; max-height:58vh; overflow-y:auto; }
+
+/* ── перенесено из player_modern (списки/папки/bulk/EQ), .cp-modern → .v2 ── */
+.cpm-fol-tabs{display:flex;flex-direction:column;gap:2px}
+.cpm-fol-tab{text-align:left;padding:9px 12px;border-radius:9px;border:none;background:none;
+  color:var(--muted);font-size:13px;font-weight:600}
+.cpm-fol-tab:hover{background:var(--bg3);color:var(--text)}
+.cpm-fol-tab.active{background:var(--bg3);color:var(--cpm-accent)}
+.cpm-fol-tab-new{border:1px dashed var(--border);color:var(--muted)}
+
+.cpm-pl-hdr{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cpm-pl-search{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:9px;
+  padding:9px 12px;color:var(--text);font-size:13px}
+.cpm-pl-sort{background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);
+  padding:9px 10px;font-size:12.5px}
+.cpm-pl-playall{background:var(--cpm-accent);color:var(--cpm-accent-ink);border:none;border-radius:9px;
+  padding:9px 16px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.cpm-pl-list{flex:1;overflow-y:auto;min-height:200px}
+.cpm-pl-status{font-size:11px;color:var(--muted);margin-top:8px}
+/* the shared _wampPlRender() JS builds generic .wamp2-pli rows into #pl-list — restyle them here */
+.v2 .wamp2-pli{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font-size:13px}
+.v2 .wamp2-pli:nth-child(even){background:transparent}
+.v2 .wamp2-pli:hover{background:var(--bg3)!important}
+.v2 .wamp2-pli.pl-active{background:var(--bg3)!important}
+.v2 .wamp2-pli.pl-active .wamp2-pnm{color:var(--cpm-accent);font-weight:700}
+.v2 .wamp2-pin{color:var(--muted);font-size:11px;width:22px;flex-shrink:0}
+.v2 .wamp2-pnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-weight:500}
+.v2 .wamp2-pfol{font-size:9px;padding:2px 7px;border-radius:100px;background:var(--bg3);color:var(--muted);flex-shrink:0}
+.v2 .wamp2-pmeta{font-size:10.5px;color:var(--muted);flex-shrink:0}
+.v2 .wamp2-pdu{font-size:11px;color:var(--muted);flex-shrink:0;min-width:34px;text-align:right}
+.v2 .wamp2-pfav{color:var(--muted);flex-shrink:0;cursor:pointer}
+.v2 .wamp2-pfav.on{color:#ffd24a}
+.v2 .wamp2-pren{color:var(--muted);flex-shrink:0;cursor:pointer;padding:0 4px}
+.v2 .wamp2-pmovebtn{color:var(--muted);flex-shrink:0;background:none;border:none;font-size:12px;padding:0 4px}
+.v2 .wamp2-psel{width:14px;height:14px;flex-shrink:0;border-radius:4px;cursor:pointer;
+  border:1.5px solid var(--border);background:none;position:relative}
+.v2 .wamp2-psel:hover{border-color:var(--cpm-accent)}
+.v2 .wamp2-psel.checked{background:var(--cpm-accent);border-color:var(--cpm-accent)}
+.v2 .wamp2-psel.checked::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-size:10px;color:var(--cpm-accent-ink);line-height:1}
+.v2 .wamp2-bulk-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:10px;
+  background:color-mix(in srgb,var(--cpm-accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--cpm-accent) 40%,transparent);
+  border-radius:9px;font-size:12px}
+.v2 .wamp2-bulk-bar .wamp2-bulk-count{color:var(--text);font-weight:700;margin-right:auto}
+.v2 .wamp2-bulk-bar button{background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:6px 12px;font-size:11.5px;cursor:pointer;font-family:inherit}
+.v2 .wamp2-bulk-bar button:hover{border-color:var(--cpm-accent);color:var(--cpm-accent)}
+.v2 .wamp2-bulk-bar button.danger{color:var(--red)}
+.cpm-fol-tab-wrap{position:relative;display:flex;align-items:center}
+.cpm-fol-tab-wrap .cpm-fol-tab{flex:1}
+.cpm-fol-del{display:flex;align-items:center;justify-content:center;width:22px;flex-shrink:0;
+  font-size:11px;cursor:pointer;color:var(--muted);opacity:.5}
+.cpm-fol-del:hover{color:var(--red);opacity:1}
+.cpm-eq-wrap{padding:16px 20px;border-top:1px solid var(--border)}
+.cpm-eq-hd{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.v2 .wamp2-eq-bands{display:flex;gap:8px;justify-content:center}
+/* ── правки после первого просмотра ── */
+.v2 .cpm-pill, .v2 .wa-toggle-btn{ display:inline-flex; align-items:center; gap:.4rem; }
+.v2 .cpm-pill i, .v2 .wa-toggle-btn i{ margin:0 !important; }
+.v2 .wamp2-pli{ font-family: inherit !important; font-size:.875rem; }
+.v2 .wamp2-pin{ font-family: var(--tblr-font-monospace, monospace); }
+.v2 .wamp2-pfol,.v2 .wamp2-pmeta,.v2 .wamp2-pdu{ font-family: inherit !important; }
+.v2 .cpm-alarm-select{ height:auto; }
+
+/* legacy «Время на машинах» была fixed слева поверх меню → выпадающая панель из шапки */
+.v2-topbar{ position:relative; }
+#nc-chip-machines{ position:absolute !important; top:100% !important; right:.75rem !important; left:auto !important;
+  bottom:auto !important; width:300px; max-height:70vh; overflow:auto; display:none !important; z-index:1050;
+  background: var(--tblr-bg-surface); border:1px solid var(--tblr-border-color); border-radius:.5rem; box-shadow: var(--tblr-box-shadow-dropdown, 0 8px 24px rgba(0,0,0,.35)); }
+#nc-chip-machines.v2-open{ display:block !important; }
+#nc-chip-machines #nc-mt-toggle-btn{ display:none; }
+.v2-topbar .nc-chip{ background:transparent; border:none; box-shadow:none; }
+
+/* плавающие ⚡/🤖 — вправо-вниз, не поверх бокового меню */
+.float-dock{ left:auto !important; right:24px !important; bottom:24px !important; align-items:flex-end !important; }
+
+/* библиотека: grid вместо bootstrap-row (row схлопывал колонку списка на телефоне) */
+.v2 .v2-lib-grid{ display:grid; grid-template-columns:minmax(0,1fr); }
+@media (min-width: 992px){ .v2 .v2-lib-grid{ grid-template-columns: 210px minmax(0,1fr); } }
+.v2 .v2-folders-col{ width:auto; }
+.v2 .v2-list-col{ min-width:0; }
+.v2 .v2-list-col .input-icon{ min-width:0; }
+
+/* телефон: шапки карточек и заголовок страницы переносятся, а не вылезают */
+@media (max-width: 575px){
+  .v2 .card-header{ flex-wrap:wrap; gap:.5rem; }
+  .v2 .card-header .card-actions{ margin-left:0; width:100%; flex-wrap:wrap; }
+  .v2 .page-header .col-auto{ width:100%; margin-left:0 !important; }
+  .v2 .page-header .col-auto .btn{ flex:1 1 0; }
+  .v2 .cpm-viz-wrap{ height:84px; }
+}

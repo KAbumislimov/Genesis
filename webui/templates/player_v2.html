@@ -1,0 +1,433 @@
+<!-- ═══════════════════════════════════════════════════════════
+     PLAYER v2 (Tabler). Только разметка + вид. Вся логика — общий <script>
+     из dashboard.html; здесь сохранены ВСЕ id / onclick / хук-классы
+     (cpm-*, wamp2-*), на которые он опирается. Не переименовывать.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v2" id="wa-skin" data-accent="{{ ui_accent }}">
+
+  <div class="page-header d-print-none mb-3">
+    <div class="row align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Управление звуком кампусов</div>
+        <h2 class="page-title">Плеер</h2>
+      </div>
+      <div class="col-auto ms-auto d-flex gap-2">
+        {% if perms.role in ('admin','staff') %}
+        <button class="btn btn-outline-secondary" id="cpm-timesync-btn" onclick="syncTime('all')" title="Синхронизировать время на всех кампусах с сервером">
+          <i class="bi bi-arrow-repeat me-1" id="cpm-timesync-icon"></i> Синхр. время
+        </button>
+        {% endif %}
+        <button class="btn btn-danger" onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах">
+          <i class="bi bi-stop-fill me-1"></i> Стоп — всё
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Сейчас играет / транспорт ─────────────────────────── -->
+  <div class="card mb-3 v2-now">
+    <div class="cpm-viz-wrap"><canvas class="cpm-viz" id="cpm-viz-canvas" height="120"></canvas></div>
+    <div class="card-body">
+      <div class="row g-3 align-items-center">
+        <div class="col-12 col-lg-3">
+          <div class="d-flex align-items-center gap-3">
+            <span class="avatar avatar-lg bg-primary-lt"><i class="bi bi-music-note-beamed fs-2"></i></span>
+            <div class="min-w-0">
+              <div class="fw-semibold text-truncate" id="wa-lcd-track">CAMPUS PLAYER</div>
+              <div class="text-secondary small text-truncate" id="wa-lcd-info">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-3">
+          <div class="d-flex align-items-center justify-content-center gap-2 v2-transport">
+            <button class="btn btn-icon btn-ghost-secondary" onclick="doPrev()" title="Предыдущий" aria-label="Предыдущий"><i class="bi bi-skip-start-fill fs-3"></i></button>
+            <button class="btn btn-icon btn-primary btn-pill v2-play" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><i class="bi bi-play-fill fs-2"></i></button>
+            <button class="btn btn-icon btn-ghost-secondary" id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><i class="bi bi-pause-fill fs-3"></i></button>
+            <button class="btn btn-icon btn-ghost-secondary" onclick="doNext()" title="Следующий" aria-label="Следующий"><i class="bi bi-skip-end-fill fs-3"></i></button>
+            <button class="btn btn-icon btn-ghost-danger" onclick="doStopAll()" title="СТОП — всё, на всех кампусах" aria-label="Стоп всё"><i class="bi bi-stop-fill fs-3"></i></button>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-3">
+          <div class="d-flex align-items-center gap-2">
+            <div class="cpm-seek-groove progress progress-sm flex-fill" id="wa-seek-groove" onclick="wampSeekActive(event)" style="cursor:pointer">
+              <div class="cpm-seek-fill progress-bar" id="wa-seek-fill" style="width:0%"></div>
+            </div>
+            <div class="cpm-seek-thumb" id="wa-seek-thumb" style="display:none"></div>
+            <span class="text-secondary small tabular-nums" id="wa-lcd-time">0:00</span>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-3">
+          <div class="d-flex flex-column align-items-lg-end gap-2">
+            <div class="d-flex gap-2">
+              <button class="btn btn-icon btn-outline-secondary cpm-toggle" id="wa-shf-btn" onclick="wampToggleShuffle()" title="Перемешать"><i class="bi bi-shuffle"></i></button>
+              <button class="btn btn-icon btn-outline-secondary cpm-toggle" id="wa-rep-btn" onclick="wampToggleRepeat()" title="Зациклить трек"><i class="bi bi-repeat"></i></button>
+              <button class="btn btn-icon btn-outline-secondary cpm-toggle" id="wa-eq-btn" onclick="wampShowTab('eq')" title="Эквалайзер"><i class="bi bi-sliders"></i></button>
+              <button class="btn btn-icon btn-outline-secondary cpm-toggle" id="wa-mute-btn" onclick="toggleMute(); this.classList.toggle('on')" title="Тишина"><i class="bi bi-volume-mute"></i></button>
+            </div>
+            <div class="d-flex align-items-center gap-2 w-100 justify-content-lg-end">
+              <i class="bi bi-volume-up text-secondary"></i>
+              <input type="range" class="form-range v2-vol" min="0" max="160" value="100" oninput="onVolInput(this.value)" style="max-width:190px">
+              <span class="text-secondary small tabular-nums" id="vol-num" style="min-width:28px;text-align:right">100</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="eq-panel" class="mt-3 pt-3 border-top" style="display:none">
+        <div class="text-uppercase text-secondary fw-bold small mb-2">Эквалайзер</div>
+        <div class="wamp2-eq-bands" id="eq-bands-row"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Кампусы ──────────────────────────────────────────── -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-building me-2"></i>Кампусы</h3>
+      <div class="card-actions d-flex align-items-center gap-2">
+        <div class="btn-group d-none d-lg-inline-flex cpm-campus-switch" id="cpm-campus-switch" role="group" aria-label="Активный кампус">
+          {% for m in music_machines %}
+          <button type="button" class="btn btn-sm btn-outline-primary cpm-campus-pill{{ ' active' if loop.first else '' }}" data-campus="{{ m.key }}">{{ m.short }}</button>
+          {% endfor %}
+        </div>
+        <select id="campusSelect" class="form-select form-select-sm d-lg-none" style="width:auto" onchange="setActiveCampus(this.value)">
+          {% for m in music_machines %}<option value="{{ m.key }}">{{ m.short }}</option>{% endfor %}
+        </select>
+        {% if perms.vol %}
+        <button class="btn btn-sm btn-outline-secondary cpm-vol-all-btn" onclick="wampSetAllVolume(150)" title="Выставить громкость 150 на всех кампусах одновременно"><i class="bi bi-volume-up me-1"></i>Все → 150</button>
+        {% endif %}
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" type="button"><i class="bi bi-palette me-1"></i>Мой цвет</button>
+          <div class="dropdown-menu dropdown-menu-end p-3">
+            <div class="cpm-color-picker" id="cpm-color-picker">
+              <div class="d-flex flex-wrap gap-2" style="width:190px">
+                <button class="cpm-swatch cpm-swatch-reset" data-color="" title="По умолчанию">✕</button>
+                <button class="cpm-swatch" style="background:#6ea8fe" data-color="#6ea8fe" title="Синий"></button>
+                <button class="cpm-swatch" style="background:#c792ea" data-color="#c792ea" title="Фиолетовый"></button>
+                <button class="cpm-swatch" style="background:#f5a3c7" data-color="#f5a3c7" title="Розовый"></button>
+                <button class="cpm-swatch" style="background:#7bd8b0" data-color="#7bd8b0" title="Зелёный"></button>
+                <button class="cpm-swatch" style="background:#e8b96a" data-color="#e8b96a" title="Янтарный"></button>
+                <button class="cpm-swatch" style="background:#6ec9d8" data-color="#6ec9d8" title="Бирюзовый"></button>
+                <button class="cpm-swatch" style="background:#ff6b6b" data-color="#ff6b6b" title="Красный"></button>
+                <button class="cpm-swatch" style="background:#ffd93d" data-color="#ffd93d" title="Жёлтый"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 cpm-campus-strip">
+        {% for m in music_machines %}
+        <div class="col-12 col-md-6 col-xl-4 col-xxl-3">
+          <div class="card card-sm v2-campus cpm-campus-row h-100" id="wamp2-row-{{ m.key }}">
+            <div class="card-body">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="cpm-dot" id="live-{{ m.key }}">●</span>
+                <span class="cpm-dot off" id="stop-{{ m.key }}" style="display:none">●</span>
+                <span class="cpm-conn" id="conn-{{ m.key }}"><i class="bi bi-wifi"></i></span>
+                <div class="fw-semibold cpm-campus-name text-truncate">{{ m.name }}</div>
+                <span class="cs-status-badge online ms-auto" id="status-badge-{{ m.key }}">Онлайн</span>
+              </div>
+              <div class="d-flex align-items-center gap-2 small mb-1">
+                <span class="cpm-campus-track text-secondary text-truncate flex-fill" id="mini-name-{{ m.key }}">Не играет</span>
+                <span class="cpm-campus-time tabular-nums" id="wamp-pos-{{ m.key }}">0:00</span>
+                <span class="text-secondary">/</span>
+                <span class="cpm-campus-time tabular-nums text-secondary" id="wamp-dur-{{ m.key }}"></span>
+              </div>
+              <div class="cpm-campus-prog progress progress-sm my-2" onclick="_cpmSeek('{{ m.key }}',event,this)" title="Перемотка" style="cursor:pointer">
+                <div class="cpm-campus-prog-fill progress-bar" id="prog-fill-{{ m.key }}" style="width:0%"></div>
+              </div>
+              {% if perms.vol %}
+              <div class="d-flex align-items-center gap-2 cpm-campus-vol-row">
+                <i class="bi bi-volume-down text-secondary"></i>
+                <input type="range" class="form-range cpm-campus-vol" id="vol-{{ m.key }}" min="0" max="160" value="100"
+                       oninput="wampCsVolInput('{{ m.key }}',this.value)"
+                       onchange="wampSetCampusVolume('{{ m.key }}',this.value)" title="Громкость {{ m.name }}">
+                <span class="cpm-campus-vol-val small text-secondary tabular-nums" id="vol-val-{{ m.key }}" style="min-width:26px;text-align:right">100</span>
+              </div>
+              {% endif %}
+              <div class="cpm-campus-err text-danger small mt-1" id="cs-err-{{ m.key }}" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Спецдействия (слышно на весь кампус) ─────────────── -->
+  {% if perms.himn %}
+  <div class="card mb-3 v2-special">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Слышно на весь кампус</h3>
+      <div class="card-subtitle text-secondary d-none d-md-block ms-3 mb-0">Сначала подумай, потом жми</div>
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <button class="btn btn-outline-warning cpm-pill" onclick="wampShowCampusPicker(event,'himn',this)"><i class="bi bi-star-fill me-1"></i>Гимн</button>
+        <button class="btn btn-outline-primary cpm-pill" onclick="wampShowCampusPicker(event,'mic',this)"><i class="bi bi-mic-fill me-1"></i>Мик — на весь кампус</button>
+        <button class="btn btn-outline-secondary cpm-pill" onclick="wampShowCampusPicker(event,'minuta',this)"><i class="bi bi-bell-slash me-1"></i>Минута тишины</button>
+        <button class="btn btn-danger cpm-pill danger" onclick="wampShowCampusPicker(event,'alarm',this)"><i class="bi bi-exclamation-octagon-fill me-1"></i>Тревога</button>
+        <select id="alarmSoundSelect" class="form-select cpm-alarm-select" style="width:auto;max-width:220px"></select>
+        <button class="btn btn-outline-yellow cpm-pill" onclick="wampShowCampusPicker(event,'zefer',this)"><i class="bi bi-award me-1"></i><span data-i18n="wamp.zefer_group">Zəfər Günü</span></button>
+        <button class="btn btn-outline-teal cpm-pill" onclick="wampShowCampusPicker(event,'nmd',this)" title="National Music Day — 18 sentyabr"><i class="bi bi-music-note-list me-1"></i>National Music Day</button>
+        {% if perms.admin or perms.cron %}
+        <span class="v2-sep"></span>
+        <button class="btn btn-outline-secondary cpm-pill" id="btn-cron-active" onclick="wampShowCampusPicker(event,'cron',this)"><i class="bi bi-alarm me-1"></i>Крон</button>
+        <button class="btn cpm-pill wa-toggle-btn" id="btn-toggle-utro"
+                data-state="{{ 'on' if utro_enabled else 'off' }}"
+                onclick="wampToggleGroup('utro', this)" title="Включить/выключить утреннюю музыку на всех доступных кампусах">
+          <i class="bi bi-sunrise me-1"></i>Утро: <span class="wa-toggle-state">{{ 'Вкл' if utro_enabled else 'Выкл' }}</span>
+        </button>
+        <button class="btn cpm-pill wa-toggle-btn" id="btn-toggle-perem"
+                data-state="{{ 'on' if perem_enabled else 'off' }}"
+                onclick="wampToggleGroup('perem', this)" title="Включить/выключить перемены 1-9 на всех доступных кампусах">
+          <i class="bi bi-bell me-1"></i>Перемены: <span class="wa-toggle-state">{{ 'Вкл' if perem_enabled else 'Выкл' }}</span>
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Библиотека ───────────────────────────────────────── -->
+  <div class="card v2-library">
+    <div class="v2-lib-grid">
+      <div class="v2-folders-col">
+        <div class="p-3">
+          <div class="subheader mb-2">Папки</div>
+          <div class="cpm-fol-tabs" id="pl-folder-tabs">
+            <button class="cpm-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">Все</button>
+            {% for f in music_folders %}
+              {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f == 'KAMRAN')|lower) if current_user.role == 'admin' else '' %}
+              {% if f == 'KAMRAN' %}
+              <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" {{ fctx|safe }} title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
+              {% elif f not in fixed_folders and current_user.role == 'admin' %}
+              <div class="cpm-fol-tab-wrap">
+                <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f }}</button>
+                <span class="cpm-fol-del" title="Удалить папку (должна быть пустой)" onclick="event.stopPropagation();wampDeleteFolder('{{ f }}')">🗑</span>
+              </div>
+              {% else %}
+              <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f }}</button>
+              {% endif %}
+            {% endfor %}
+            <button class="cpm-fol-tab cpm-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ Избранное</button>
+            {% if current_user.role == 'admin' %}
+            <button class="cpm-fol-tab cpm-fol-tab-new" data-folder="__new__" onclick="wampCreateFolder()" title="Создать папку">+ папка</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="v2-list-col">
+        <div class="p-3 d-flex flex-column h-100">
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <div class="input-icon flex-fill" style="min-width:180px">
+              <span class="input-icon-addon"><i class="bi bi-search"></i></span>
+              <input id="pl-search" class="form-control cpm-pl-search" type="search" placeholder="Поиск по трекам…" oninput="wampPlFilter(this.value)">
+            </div>
+            <select id="pl-sort" class="form-select cpm-pl-sort" onchange="wampPlSort(this.value)" title="Сортировка" style="width:auto">
+              <option value="name">A–Z</option>
+              <option value="dur">По длительности</option>
+              <option value="size">По размеру</option>
+            </select>
+            <button class="btn btn-primary cpm-pl-playall" onclick="wampPlayAll()" title="Перемешать и воспроизвести всё"><i class="bi bi-shuffle me-1"></i>Играть всё</button>
+          </div>
+          {% if current_user.role == 'admin' %}
+          <div class="wamp2-bulk-bar" style="display:none">
+            <span class="wamp2-bulk-count">0 треков</span>
+            <button onclick="wampShowBulkMovePop(event, this)">📁 Переместить в…</button>
+            <button class="danger" onclick="wampBulkDelete()">🗑 Удалить</button>
+            <button onclick="wampSelectAllVisible()">Выбрать все</button>
+            <button onclick="wampClearSelection()">✕ Отмена</button>
+          </div>
+          {% endif %}
+          <div class="cpm-pl-list flex-fill" id="pl-list">
+            <div class="wamp2-pl-loading text-secondary">Загрузка треков…</div>
+          </div>
+          <div class="cpm-pl-status text-secondary small mt-2" id="pl-status">…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var pills = document.querySelectorAll('.cpm-campus-pill');
+  pills.forEach(function(p){
+    p.addEventListener('click', function(){
+      pills.forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+      setActiveCampus(p.dataset.campus);
+    });
+  });
+})();
+
+function toggleCampusDock() {
+  var dock = document.getElementById('cpm-campus-dock');
+  var icon = document.getElementById('cpm-campus-dock-toggle-icon');
+  if (!dock) return;
+  var collapsed = dock.classList.toggle('cpm-collapsed');
+  if (icon) icon.className = collapsed ? 'bi bi-chevron-left' : 'bi bi-chevron-right';
+  try { localStorage.setItem('cpm-dock-collapsed', collapsed ? '1' : '0'); } catch(e) {}
+}
+(function(){
+  try {
+    if (localStorage.getItem('cpm-dock-collapsed') === '1') {
+      var dock = document.getElementById('cpm-campus-dock');
+      var icon = document.getElementById('cpm-campus-dock-toggle-icon');
+      if (dock) dock.classList.add('cpm-collapsed');
+      if (icon) icon.className = 'bi bi-chevron-left';
+    }
+  } catch(e) {}
+})();
+
+// ── Personal panel color — each user can pick their own highlight color
+// for the campus rows instead of the default auto-cycled rainbow. Saved
+// server-side (users.panel_color) so it follows the user to any device.
+function applyPanelColor(color) {
+  document.querySelectorAll('.cpm-campus-row, .wamp2-cs-row').forEach(function(el) {
+    if (color) el.style.setProperty('--row-accent', color);
+    else el.style.removeProperty('--row-accent');
+  });
+  document.querySelectorAll('#cpm-color-picker .cpm-swatch').forEach(function(sw) {
+    sw.classList.toggle('active', (sw.dataset.color || '') === (color || ''));
+  });
+}
+(function(){
+  var picker = document.getElementById('cpm-color-picker');
+  if (!picker) return;
+  applyPanelColor({{ (panel_color or '')|tojson }});
+  picker.querySelectorAll('.cpm-swatch').forEach(function(sw) {
+    sw.addEventListener('click', function() {
+      var color = sw.dataset.color || '';
+      applyPanelColor(color);
+      fetch('/api/ui-prefs', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({panel_color: color})
+      }).catch(function(){});
+    });
+  });
+})();
+
+// ── Visualizer — classic Winamp-style LED spectrum bars, full width of
+// the strip. Real bass/mid/treble come from _audioSSE when the per-campus
+// audio-level analyzer is deployed and reporting (same SSE feed the
+// classic skin's visualizer uses — see _startAudioSSE() in the shared
+// script). Whichever campus is actually playing right now (via
+// _progState — same signal the LCD auto-follow uses) drives which feed we
+// read. Without a live feed for that campus it falls back to a smooth
+// simulated motion — alive-looking, but honestly not literal bass-sync
+// until the analyzer script is actually running on that machine.
+(function(){
+  var cv = document.getElementById('cpm-viz-canvas');
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d');
+  var frozenT = 0;
+  var N = 56;
+  var heights = new Array(N).fill(0);
+  var peaks   = new Array(N).fill(0);
+  var peakHold = new Array(N).fill(0);
+
+  function targetCampus(){
+    try {
+      if (typeof _progState === 'undefined') return null;
+      if (typeof _activeCampus !== 'undefined' && _progState[_activeCampus] && _progState[_activeCampus].playing) return _activeCampus;
+      for (var k in _progState) { if (_progState[k] && _progState[k].playing) return k; }
+    } catch(e) {}
+    return null;
+  }
+
+  // Real per-bar energy 0..1 from the SSE feed for this campus, resampled
+  // to N bars, or null if that campus has no live analyzer reporting.
+  function realBars(key){
+    try {
+      var d = (typeof _audioSSE !== 'undefined') ? _audioSSE[key] : null;
+      if (!d || !d.active || !d.bands || !d.bands.length) return null;
+      var src = d.bands, n = src.length, scale = 1800/255;
+      var out = new Array(N);
+      for (var i = 0; i < N; i++) {
+        out[i] = Math.min(1, (src[Math.floor(i/N*n)] || 0) * scale);
+      }
+      return out;
+    } catch(e) { return null; }
+  }
+
+  function draw(){
+    requestAnimationFrame(draw);
+    var W = cv.clientWidth || 400, H = cv.height || 132;
+    if (cv.width !== W) cv.width = W;
+    var key = targetCampus();
+    var playing = !!key;
+    var now = Date.now() / 1000;
+    if (playing) frozenT = now;
+    var t = frozenT;
+
+    var real = playing ? realBars(key) : null;
+
+    ctx.clearRect(0, 0, W, H);
+    var topY = 4, botY = H - 4, maxBH = botY - topY;
+    var gap = 3;
+    var bw = Math.max(3, (W - (N-1)*gap) / N);
+
+    for (var i = 0; i < N; i++) {
+      var tgt;
+      if (real) {
+        tgt = real[i] * maxBH;
+      } else {
+        // Bass-heavy on the left like a real spectrum, fast percussive
+        // sim rather than a lazy sine idle — still honest that it's not
+        // literal audio, but it should feel alive.
+        var bassBoost = i < 10 ? 1.4 - i*0.03 : 1.0;
+        var a = Math.abs(Math.sin(t*(playing?3.0:0.7) + i*0.3));
+        var b = Math.abs(Math.sin(t*(playing?5.3:1.1) + i*0.55));
+        var base = playing ? (0.14+0.86*a*(0.45+0.55*b)) : (0.06+0.10*a);
+        tgt = Math.min(1, bassBoost*base) * maxBH;
+      }
+      heights[i] += (tgt - heights[i]) * (real ? 0.55 : 0.22);
+      var h = Math.max(2, heights[i]);
+      var x = i * (bw + gap);
+
+      // Winamp-style LED segments, green -> yellow -> red by height ratio
+      var SEG = 3, STEP = SEG + 1;
+      for (var sy = botY - SEG; sy >= botY - h; sy -= STEP) {
+        var hr = (botY - sy) / maxBH;
+        var rv, gv, bv;
+        if (hr < 0.55) { rv = Math.round(hr/0.55*255); gv = 255; bv = 0; }
+        else if (hr < 0.8) { rv = 255; gv = Math.round((1-(hr-0.55)/0.25)*220); bv = 0; }
+        else { rv = 255; gv = Math.round((1-(hr-0.8)/0.2)*70); bv = 0; }
+        ctx.fillStyle = 'rgba('+rv+','+gv+','+bv+','+(playing?1:0.5)+')';
+        ctx.fillRect(x, sy, bw, SEG);
+      }
+
+      // Peak-hold cap
+      if (h > peaks[i]) { peaks[i] = h; peakHold[i] = 0; }
+      else if (peakHold[i]++ > 22) peaks[i] = Math.max(h, peaks[i]-1.6);
+      if (peaks[i] > SEG*2) {
+        var pkY = botY - peaks[i];
+        pkY = Math.floor(pkY/STEP)*STEP;
+        ctx.fillStyle = playing ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.4)';
+        ctx.fillRect(x, pkY, bw, SEG);
+      }
+    }
+  }
+  draw();
+})();
+
+function _cpmSeek(ck, evt, wrap) {
+  var st = _progState[ck]; if (!st.playing || st.dur <= 0) return;
+  var r = wrap.getBoundingClientRect();
+  var pct = Math.max(0, Math.min(1, (evt.clientX - r.left) / r.width));
+  var newPos = Math.round(pct * st.dur);
+  fetch('/api/seek', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({machine: ck, pos: newPos})
+  }).catch(function(){});
+  st.pos = newPos; st.ts = Date.now();
+  _updateProgress(ck);
+}
+</script>
