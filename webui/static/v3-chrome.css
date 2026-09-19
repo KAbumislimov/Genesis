@@ -215,3 +215,10 @@ kbd{ font-family:var(--f-body); font-size:10.5px; font-weight:600; letter-spacin
 @media (max-width:1500px){ .topbar .nc-chip:nth-of-type(n+3){ display:none !important; } }
 .usr-skins{ flex-wrap:wrap; } .usr-skins span{ width:100%; margin-bottom:4px; } .usr-menu{ min-width:250px; }
 @media (max-width:560px){ .lang{ display:none !important; } }
+
+/* чипы в шапке: иконка слева, подписи справа */
+.topbar .nc-chip{ flex-direction:row !important; align-items:center; gap:9px !important; height:46px; }
+.topbar .nc-chip > div:last-child{ display:flex; flex-wrap:wrap; column-gap:6px; align-items:baseline; min-width:0; }
+.topbar .nc-chip .nc-label{ flex-basis:100%; font-size:9.5px; line-height:1.2; }
+.topbar .nc-chip .nc-val{ font-size:12px; line-height:1.2; }
+.topbar .nc-chip{ align-self:center; margin:0 !important; }

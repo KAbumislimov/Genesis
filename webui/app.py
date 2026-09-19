@@ -1370,7 +1370,7 @@ def logout():
               event_type='login')
     return redirect(url_for('login'))
 
-_UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5', 'rack': 'dashboard_v6', 'deck': 'dashboard_v7'}
+_UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5', 'neon': 'dashboard_v6', 'lumen': 'dashboard_v7'}
 
 @app.context_processor
 def inject_globals():
@@ -1711,16 +1711,16 @@ def dashboard_v5():
 @app.route('/v6')
 @login_required
 def dashboard_v6():
-    """Вариант дизайна «Рэк» (студийная стойка, стрелочные VU). Тот же контекст и общий JS."""
-    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='rack',
-                             player_tpl='player_v6.html', player_home=url_for('dashboard_v6')), 'rack')
+    """Вариант дизайна «Неон» (тёмный, плоское стекло, свечение). Разметка как у «Пульта», другой вид."""
+    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='neon',
+                             player_tpl='player_v4.html', player_home=url_for('dashboard_v6')), 'neon')
 
 @app.route('/v7')
 @login_required
 def dashboard_v7():
-    """Вариант дизайна «Дека» (светлая деталь с пэдами). Тот же контекст и общий JS."""
-    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='deck',
-                             player_tpl='player_v7.html', player_home=url_for('dashboard_v7')), 'deck')
+    """Вариант дизайна «Свет» (светлый, графичный). Разметка как у «Пульта», другой вид."""
+    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='lumen',
+                             player_tpl='player_v4.html', player_home=url_for('dashboard_v7')), 'lumen')
 
 def _render_dashboard(**extra):
     now = datetime.now()

@@ -72,8 +72,8 @@ function v3Select(key, fromUi) {
 /* ── заливка ползунков громкости (--p) ── */
 (function(){
   function fill(el){ var mx = +el.max || 100; el.style.setProperty('--p', (100 * (+el.value) / mx) + '%'); }
-  function all(){ document.querySelectorAll('.v3 .rng').forEach(fill); }
-  document.addEventListener('input', function(e){ if (e.target.classList && e.target.classList.contains('rng')) fill(e.target); });
+  function all(){ document.querySelectorAll('.v3 .rng, .v3 .cpm-campus-vol').forEach(fill); }
+  document.addEventListener('input', function(e){ if (e.target.classList && (e.target.classList.contains('rng') || e.target.classList.contains('cpm-campus-vol'))) fill(e.target); });
   all(); setInterval(all, 700);
 })();
 
