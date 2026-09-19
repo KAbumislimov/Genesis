@@ -8,7 +8,7 @@
     <span class="rail-label rail-brand-name">Campus<br>Player</span>
   </a>
   <ul class="rail-list">
-    <li><a class="rail-a {% if request.endpoint in ('dashboard_v3','dashboard_v4','dashboard_v5') %}on{% endif %}" href="{{ player_home|default(url_for('dashboard_v3')) }}"><i class="bi bi-play-circle"></i><span class="rail-label">Плеер</span></a></li>
+    <li><a class="rail-a {% if request.endpoint in ('dashboard_v3','dashboard_v4','dashboard_v5','dashboard_v6','dashboard_v7') %}on{% endif %}" href="{{ player_home|default(url_for('dashboard_v3')) }}"><i class="bi bi-play-circle"></i><span class="rail-label">Плеер</span></a></li>
     <li><a class="rail-a {% if request.endpoint=='tracks' %}on{% endif %}" href="{{ url_for('tracks') }}"><i class="bi bi-collection-play"></i><span class="rail-label">Библиотека</span></a></li>
     <li><a class="rail-a {% if request.endpoint=='announcements_page' %}on{% endif %}" href="{{ url_for('announcements_page') }}"><i class="bi bi-megaphone"></i><span class="rail-label">Объявления</span></a></li>
     {% if current_user.role in ('admin','staff','helpdesk','eventmanager') %}
@@ -71,6 +71,8 @@
             <a href="/ui/studio" class="{{ 'on' if variant|default('studio') == 'studio' }}">Студия</a>
             <a href="/ui/console" class="{{ 'on' if variant == 'console' }}">Пульт</a>
             <a href="/ui/bento" class="{{ 'on' if variant == 'bento' }}">Бенто</a>
+            <a href="/ui/rack" class="{{ 'on' if variant == 'rack' }}">Рэк</a>
+            <a href="/ui/deck" class="{{ 'on' if variant == 'deck' }}">Дека</a>
           </div>
           <a href="{{ url_for('profile') }}" role="menuitem"><i class="bi bi-person"></i>Профиль</a>
           <a href="/ui/off" role="menuitem"><i class="bi bi-arrow-counterclockwise"></i>Старый интерфейс</a>

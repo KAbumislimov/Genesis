@@ -73,9 +73,10 @@ html[data-v="bento"] body{ background:#e4e8f1 !important; color:var(--tx); }
 .hero5 .seek{ background:rgba(255,255,255,.25); }
 .hero5 .seek-fill{ background:#fff; box-shadow:0 0 16px rgba(255,255,255,.7); }
 .hero5 .rng{ background:linear-gradient(90deg,#fff var(--p,60%),rgba(255,255,255,.28) var(--p,60%)); }
-.hero5 .btn3{ color:#fff; }
+.b5 .hero5 .btn3.ghost{ color:#fff; background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.3); }
+.b5 .hero5 .btn3.ghost:hover{ background:rgba(255,255,255,.26); }
 .hero5 .eqp{ background:rgba(0,0,30,.28); }
-.rings{ position:absolute; right:-80px; top:-80px; width:420px; height:420px; pointer-events:none; }
+.b5 .hero5.hero > .rings{ position:absolute; z-index:0; right:-80px; top:-80px; width:420px; height:420px; pointer-events:none; }
 .rings i{ position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(255,255,255,.22); transform:scale(.4); }
 .rings i:nth-child(2){ inset:40px; } .rings i:nth-child(3){ inset:90px; }
 .hero5.is-playing .rings i{ animation:ripple-ring 3.6s ease-out infinite; }

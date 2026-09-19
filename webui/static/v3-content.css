@@ -305,3 +305,10 @@
   .sx-grid, .tiles{ grid-template-columns:1fr; }
   .rng{ width:130px; }
 }
+
+/* цвет текста кнопок задаём явно (не зависит от стилей старого каркаса) */
+.btn3{ color:var(--tx); }
+.btn3.solid{ color:var(--a-ink); }
+.btn3.stop{ color:#fff; }
+.auto-b{ color:var(--tx); }
+.sx{ color:var(--tx); }

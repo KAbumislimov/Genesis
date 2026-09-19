@@ -195,7 +195,7 @@ kbd{ font-family:var(--f-body); font-size:10.5px; font-weight:600; letter-spacin
   .topbar{ padding:0 16px; gap:10px; } .stage{ padding:6px 16px 80px; }
   .usr-txt, .usr-btn .bi-chevron-down{ display:none; } .usr-btn{ padding:0 5px; }
   #nc-chip-machines{ right:16px !important; }
-  .topbar > .nc-chip:not(#nc-chip-machines){ display:none !important; }
+  .topbar .nc-chip:not(#nc-chip-machines){ display:none !important; }
 }
 @media (max-width:560px){ .pal{ display:none; } .onair span{ display:none; } .onair{ padding:8px 11px; } .lang{ display:none; } }
 @media (prefers-reduced-motion:reduce){
@@ -208,3 +208,10 @@ kbd{ font-family:var(--f-body); font-size:10.5px; font-weight:600; letter-spacin
 .lang button{ height:32px; padding:0 10px; border-radius:9px; border:1px solid var(--line); background:var(--glass); color:var(--tx2); font-size:11.5px; font-weight:700; letter-spacing:.04em; transition:.2s; }
 .lang button:hover{ color:var(--tx); border-color:var(--line2); }
 .lang button.lang-active{ color:var(--a-ink); background:linear-gradient(140deg,var(--a),var(--a2)); border-color:transparent; }
+
+/* чипы страницы (погода, ближайший звонок) в шапке — компактно, в одну колонку */
+.topbar .nc-chip{ display:flex !important; flex-direction:column; justify-content:center; gap:0; height:46px; padding:0 10px !important; white-space:nowrap; overflow:hidden; line-height:1.15; }
+.topbar .nc-chip .nc-sub{ display:none !important; }
+@media (max-width:1500px){ .topbar .nc-chip:nth-of-type(n+3){ display:none !important; } }
+.usr-skins{ flex-wrap:wrap; } .usr-skins span{ width:100%; margin-bottom:4px; } .usr-menu{ min-width:250px; }
+@media (max-width:560px){ .lang{ display:none !important; } }
