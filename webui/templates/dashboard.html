@@ -1378,7 +1378,9 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 {% endif %}
 
 <!-- ═══ HERO STRIP: big digital clock + info chips ═══ -->
-{% if v2 %}
+{% if v3 %}
+{% include 'player_v3.html' %}
+{% elif v2 %}
 {% include 'player_v2.html' %}
 {% elif ui_skin == 'modern' %}
 {% include 'player_modern.html' %}

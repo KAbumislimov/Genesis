@@ -1660,6 +1660,13 @@ def dashboard_v2():
     что у боевого '/', отличается только каркас (base_v2.html) и разметка плеера."""
     return _render_dashboard(v2=True, base_layout='base_v2.html')
 
+@app.route('/v3')
+@login_required
+def dashboard_v3():
+    """Предпросмотр нового интерфейса «Эфирная студия». Тот же контекст и тот же общий JS,
+    что у боевого '/', отличается только каркас (base_v3.html) и разметка плеера."""
+    return _render_dashboard(v3=True, base_layout='base_v3.html')
+
 def _render_dashboard(**extra):
     now = datetime.now()
     ct  = now.strftime('%H:%M')
