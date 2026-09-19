@@ -1,0 +1,30 @@
+      <div class="sec-tools">
+        <div class="chips cpm-campus-switch" id="cpm-campus-switch" role="group" aria-label="Активный кампус">
+          {% for m in music_machines %}
+          <button type="button" class="chip cpm-campus-pill{{ ' active' if loop.first else '' }}" data-campus="{{ m.key }}">{{ m.short }}</button>
+          {% endfor %}
+        </div>
+        <select id="campusSelect" class="sel" onchange="setActiveCampus(this.value)" aria-label="Активный кампус">
+          {% for m in music_machines %}<option value="{{ m.key }}">{{ m.short }}</option>{% endfor %}
+        </select>
+        {% if perms.vol %}
+        <button class="btn3 ghost sm cpm-vol-all-btn rip" onclick="wampSetAllVolume(150)" title="Выставить громкость 150 на всех кампусах одновременно"><i class="bi bi-volume-up"></i><span>Все → 150</span></button>
+        {% endif %}
+        <div class="pop" id="v3-colorpop">
+          <button class="btn3 ghost sm rip" type="button" id="v3-color-btn" aria-haspopup="true"><i class="bi bi-palette"></i><span>Мой цвет</span></button>
+          <div class="pop-body">
+            <div class="pop-t">Цвет ваших карточек</div>
+            <div class="cpm-color-picker" id="cpm-color-picker">
+              <button class="cpm-swatch cpm-swatch-reset" data-color="" title="По умолчанию">✕</button>
+              <button class="cpm-swatch" style="background:#6ea8fe" data-color="#6ea8fe" title="Синий"></button>
+              <button class="cpm-swatch" style="background:#c792ea" data-color="#c792ea" title="Фиолетовый"></button>
+              <button class="cpm-swatch" style="background:#f5a3c7" data-color="#f5a3c7" title="Розовый"></button>
+              <button class="cpm-swatch" style="background:#7bd8b0" data-color="#7bd8b0" title="Зелёный"></button>
+              <button class="cpm-swatch" style="background:#e8b96a" data-color="#e8b96a" title="Янтарный"></button>
+              <button class="cpm-swatch" style="background:#6ec9d8" data-color="#6ec9d8" title="Бирюзовый"></button>
+              <button class="cpm-swatch" style="background:#ff6b6b" data-color="#ff6b6b" title="Красный"></button>
+              <button class="cpm-swatch" style="background:#ffd93d" data-color="#ffd93d" title="Жёлтый"></button>
+            </div>
+          </div>
+        </div>
+      </div>

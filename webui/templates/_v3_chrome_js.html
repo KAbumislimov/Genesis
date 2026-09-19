@@ -1,0 +1,120 @@
+<!-- ───────── Палитра команд ───────── -->
+<div class="cmd" id="v3-cmd" hidden>
+  <div class="cmd-box" role="dialog" aria-label="Команды">
+    <div class="cmd-in"><i class="bi bi-search"></i><input id="v3-cmd-input" type="text" placeholder="Куда перейти или что сделать…" autocomplete="off"><kbd>Esc</kbd></div>
+    <ul class="cmd-list" id="v3-cmd-list"></ul>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ = function(s, r){ return (r||document).querySelector(s); };
+  var $$ = function(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+  /* слот «чипов» страницы (погода/время машин) переезжает в шапку */
+  (function(){
+    var src = document.getElementById('v3-chips-src'), tb = document.querySelector('.topbar'), right = document.querySelector('.tb-right');
+    if (!tb) return;
+    if (src) { while (src.firstChild) tb.insertBefore(src.firstChild, right); src.remove(); }
+    /* «Кто онлайн» из старой шапки — в новую */
+    var ob = document.getElementById('online-trigger-btn');
+    if (ob && ob.parentElement) tb.insertBefore(ob.parentElement, right);
+  })();
+
+  /* палитра */
+  var pals = $$('#v3-pal button');
+  function setPal(p){
+    document.documentElement.setAttribute('data-pal', p);
+    pals.forEach(function(b){ b.classList.toggle('on', b.dataset.pal === p); });
+    try { localStorage.setItem('v3pal-{{ variant|default('studio') }}', p); } catch(e) {}
+  }
+  pals.forEach(function(b){ b.addEventListener('click', function(){ setPal(b.dataset.pal); }); });
+  setPal(document.documentElement.getAttribute('data-pal') || 'amber');
+
+  /* мобильное меню */
+  var rail = $('#v3-rail'), scrim = $('#v3-scrim');
+  function railOpen(o){ rail.classList.toggle('open', o); scrim.classList.toggle('open', o); }
+  $('#v3-burger').addEventListener('click', function(){ railOpen(!rail.classList.contains('open')); });
+  scrim.addEventListener('click', function(){ railOpen(false); });
+
+  /* меню пользователя */
+  var usr = $('#v3-usr'), ub = $('.usr-btn', usr);
+  ub.addEventListener('click', function(e){ e.stopPropagation(); var o = usr.classList.toggle('open'); ub.setAttribute('aria-expanded', o); });
+  document.addEventListener('click', function(e){ if (!usr.contains(e.target)) { usr.classList.remove('open'); ub.setAttribute('aria-expanded', 'false'); } });
+
+  /* время на машинах (легаси-панель nc-chip-machines) */
+  var tb = $('#v3-times-btn'), chip = document.getElementById('nc-chip-machines');
+  if (tb && chip) {
+    tb.addEventListener('click', function(e){ e.stopPropagation(); chip.classList.toggle('v3-open'); });
+    document.addEventListener('click', function(e){ if (!chip.contains(e.target)) chip.classList.remove('v3-open'); });
+  }
+
+  /* ripple */
+  document.addEventListener('pointerdown', function(e){
+    var el = e.target.closest && e.target.closest('.rip');
+    if (!el || el.disabled) return;
+    var r = el.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2;
+    var d = document.createElement('span');
+    d.className = 'ripple';
+    d.style.cssText = 'width:'+s+'px;height:'+s+'px;left:'+(e.clientX-r.left-s/2)+'px;top:'+(e.clientY-r.top-s/2)+'px';
+    el.appendChild(d);
+    setTimeout(function(){ d.remove(); }, 650);
+  }, {passive:true});
+
+  /* Ctrl+K */
+  var cmd = $('#v3-cmd'), inp = $('#v3-cmd-input'), list = $('#v3-cmd-list');
+  var items = [], sel = 0;
+  function build(){
+    items = [];
+    $$('#v3-rail .rail-a').forEach(function(a){
+      var l = $('.rail-label', a); if (!l) return;
+      items.push({ t: l.textContent.trim(), g: 'Перейти', i: $('i', a).className, run: function(){ if (a.target === '_blank') window.open(a.href, '_blank'); else location.href = a.href; } });
+    });
+    var acts = [
+      ['Стоп — остановить всё', 'bi bi-stop-fill', 'doStopAll'],
+      ['Синхронизировать время', 'bi bi-arrow-repeat', function(){ syncTime('all'); }],
+      ['Играть всё (перемешать)', 'bi bi-shuffle', 'wampPlayAll']
+    ];
+    acts.forEach(function(a){
+      var fn = typeof a[2] === 'string' ? window[a[2]] : a[2];
+      if (typeof fn === 'function' && (typeof a[2] !== 'string' || $('[onclick*="'+a[2]+'"]'))) items.push({ t: a[0], g: 'Действие', i: a[1], run: fn });
+    });
+    $$('.cpm-campus-pill').forEach(function(p){
+      items.push({ t: 'Кампус: ' + p.textContent.trim(), g: 'Выбрать кампус', i: 'bi bi-building', run: function(){ p.click(); } });
+    });
+    [['Янтарь','amber'],['Аврора','aurora'],['Роза','rose']].forEach(function(p){
+      items.push({ t: 'Палитра: ' + p[0], g: 'Оформление', i: 'bi bi-palette', run: function(){ setPal(p[1]); } });
+    });
+  }
+  function render(){
+    var q = inp.value.trim().toLowerCase();
+    var f = items.filter(function(x){ return !q || (x.t + ' ' + x.g).toLowerCase().indexOf(q) > -1; });
+    if (sel >= f.length) sel = 0;
+    list.innerHTML = '';
+    f.forEach(function(x, n){
+      var li = document.createElement('li');
+      li.className = n === sel ? 'sel' : '';
+      li.innerHTML = '<i class="'+x.i+'"></i><span></span><em></em>';
+      li.children[1].textContent = x.t; li.children[2].textContent = x.g;
+      li.addEventListener('mousemove', function(){ sel = n; $$('li', list).forEach(function(y, k){ y.classList.toggle('sel', k === n); }); });
+      li.addEventListener('click', function(){ closeCmd(); x.run(); });
+      list.appendChild(li);
+    });
+    list._f = f;
+  }
+  function openCmd(){ build(); sel = 0; inp.value = ''; cmd.hidden = false; requestAnimationFrame(function(){ cmd.classList.add('open'); }); render(); inp.focus(); }
+  function closeCmd(){ cmd.classList.remove('open'); setTimeout(function(){ cmd.hidden = true; }, 160); }
+  $('#v3-cmdk').addEventListener('click', openCmd);
+  cmd.addEventListener('mousedown', function(e){ if (e.target === cmd) closeCmd(); });
+  inp.addEventListener('input', function(){ sel = 0; render(); });
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); cmd.hidden ? openCmd() : closeCmd(); return; }
+    if (cmd.hidden) return;
+    var f = list._f || [];
+    if (e.key === 'Escape') closeCmd();
+    else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(f.length - 1, sel + 1); render(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(0, sel - 1); render(); }
+    else if (e.key === 'Enter' && f[sel]) { e.preventDefault(); closeCmd(); f[sel].run(); }
+  });
+})();
+</script>

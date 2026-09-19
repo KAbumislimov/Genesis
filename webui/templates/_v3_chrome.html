@@ -1,0 +1,82 @@
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ───────── Боковая рейка ───────── -->
+<nav class="rail" id="v3-rail" aria-label="Навигация">
+  <a class="rail-brand" href="{{ player_home|default(url_for('dashboard_v3')) }}" title="Campus Player">
+    <span class="rail-logo"><i class="bi bi-soundwave"></i></span>
+    <span class="rail-label rail-brand-name">Campus<br>Player</span>
+  </a>
+  <ul class="rail-list">
+    <li><a class="rail-a {% if request.endpoint in ('dashboard_v3','dashboard_v4','dashboard_v5') %}on{% endif %}" href="{{ player_home|default(url_for('dashboard_v3')) }}"><i class="bi bi-play-circle"></i><span class="rail-label">Плеер</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='tracks' %}on{% endif %}" href="{{ url_for('tracks') }}"><i class="bi bi-collection-play"></i><span class="rail-label">Библиотека</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='announcements_page' %}on{% endif %}" href="{{ url_for('announcements_page') }}"><i class="bi bi-megaphone"></i><span class="rail-label">Объявления</span></a></li>
+    {% if current_user.role in ('admin','staff','helpdesk','eventmanager') %}
+    <li><a class="rail-a {% if request.endpoint=='upload_page' %}on{% endif %}" href="{{ url_for('upload_page') }}"><i class="bi bi-cloud-upload"></i><span class="rail-label">Загрузка</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='announce_page' %}on{% endif %}" href="{{ url_for('announce_page') }}"><i class="bi bi-mic"></i><span class="rail-label">Голос в эфир</span></a></li>
+    {% endif %}
+    {% if current_user.role in ('admin','staff') %}
+    <li><a class="rail-a {% if request.endpoint=='monitor_page' %}on{% endif %}" href="{{ url_for('monitor_page') }}"><i class="bi bi-activity"></i><span class="rail-label">Мониторинг</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='cheatsheet_page' %}on{% endif %}" href="{{ url_for('cheatsheet_page') }}"><i class="bi bi-journal-code"></i><span class="rail-label">Шпаргалка</span></a></li>
+    {% endif %}
+    {% if current_user.role == 'admin' %}
+    <li class="rail-sep"><span class="rail-label">Администрирование</span></li>
+    <li><a class="rail-a {% if request.endpoint=='admin' %}on{% endif %}" href="{{ url_for('admin') }}"><i class="bi bi-people"></i><span class="rail-label">Пользователи</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='admin_cron' %}on{% endif %}" href="{{ url_for('admin_cron') }}"><i class="bi bi-alarm"></i><span class="rail-label">Крон</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='admin_schedule' %}on{% endif %}" href="{{ url_for('admin_schedule') }}"><i class="bi bi-calendar-week"></i><span class="rail-label">Расписание</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='admin_activity' %}on{% endif %}" href="{{ url_for('admin_activity') }}"><i class="bi bi-journal-text"></i><span class="rail-label">Лог активности</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='backups_page' %}on{% endif %}" href="{{ url_for('backups_page') }}"><i class="bi bi-hdd-stack"></i><span class="rail-label">Бэкапы</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='machines_page' %}on{% endif %}" href="{{ url_for('machines_page') }}"><i class="bi bi-pc-display"></i><span class="rail-label">Машины</span></a></li>
+    <li><a class="rail-a" href="http://10.10.4.120:3000" target="_blank" rel="noopener"><i class="bi bi-bar-chart-line"></i><span class="rail-label">Grafana</span></a></li>
+    <li><a class="rail-a" href="{{ url_for('helpdesk_sso') }}" target="_blank" rel="noopener"><i class="bi bi-life-preserver"></i><span class="rail-label">HelpDesk</span></a></li>
+    {% endif %}
+    <li class="rail-sep"><span class="rail-label">Сервис</span></li>
+    <li><a class="rail-a {% if request.endpoint=='qr_page' %}on{% endif %}" href="{{ url_for('qr_page') }}"><i class="bi bi-qr-code"></i><span class="rail-label">QR</span></a></li>
+    <li><a class="rail-a {% if request.endpoint=='settings_page' %}on{% endif %}" href="{{ url_for('settings_page') }}"><i class="bi bi-gear"></i><span class="rail-label">Настройки</span></a></li>
+    {% if current_user.role == 'admin' %}
+    <li><a class="rail-a {% if request.endpoint=='security_page' %}on{% endif %}" href="{{ url_for('security_page') }}"><i class="bi bi-shield-lock"></i><span class="rail-label">Безопасность</span></a></li>
+    {% endif %}
+  </ul>
+  <a class="rail-a rail-old" href="/ui/off"><i class="bi bi-arrow-counterclockwise"></i><span class="rail-label">Старый интерфейс</span></a>
+</nav>
+<div class="rail-scrim" id="v3-scrim"></div>
+
+<div class="shell">
+  <!-- ───────── Верхняя панель ───────── -->
+  <header class="topbar">
+    <button class="tb-btn tb-burger" id="v3-burger" type="button" aria-label="Меню"><i class="bi bi-list"></i></button>
+    <div class="onair" id="v3-onair" title="Есть воспроизведение хотя бы на одном кампусе"><i class="onair-lamp"></i><span>В ЭФИРЕ</span></div>
+    <button class="cmdk" id="v3-cmdk" type="button"><i class="bi bi-search"></i><span>Команды и страницы</span><kbd>Ctrl K</kbd></button>
+    <div class="tb-right">
+      <div class="lang" role="group" aria-label="Язык">
+        <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+        <button type="button" class="lang-btn" data-lang="az" onclick="setLang('az')">AZ</button>
+        <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      </div>
+      {% if current_user.role in ('admin','staff') %}<button class="tb-btn" id="v3-times-btn" type="button" title="Время на машинах" aria-label="Время на машинах"><i class="bi bi-clock-history"></i></button>{% endif %}
+      <div class="pal" id="v3-pal" role="group" aria-label="Палитра">
+        <button type="button" data-pal="amber" title="Янтарь" aria-label="Янтарь"></button>
+        <button type="button" data-pal="aurora" title="Аврора" aria-label="Аврора"></button>
+        <button type="button" data-pal="rose" title="Роза" aria-label="Роза"></button>
+      </div>
+      <div class="usr" id="v3-usr">
+        <button class="usr-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="usr-av">{{ (current_user.display_name or current_user.username)[:1]|upper }}</span>
+          <span class="usr-txt"><b>{{ current_user.display_name }}</b><small>{{ current_user.role }}</small></span>
+          <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="usr-menu" role="menu">
+          <div class="usr-skins" role="group" aria-label="Дизайн">
+            <span>Дизайн</span>
+            <a href="/ui/studio" class="{{ 'on' if variant|default('studio') == 'studio' }}">Студия</a>
+            <a href="/ui/console" class="{{ 'on' if variant == 'console' }}">Пульт</a>
+            <a href="/ui/bento" class="{{ 'on' if variant == 'bento' }}">Бенто</a>
+          </div>
+          <a href="{{ url_for('profile') }}" role="menuitem"><i class="bi bi-person"></i>Профиль</a>
+          <a href="/ui/off" role="menuitem"><i class="bi bi-arrow-counterclockwise"></i>Старый интерфейс</a>
+          <a href="{{ url_for('logout') }}" role="menuitem" class="danger"><i class="bi bi-box-arrow-right"></i>Выйти</a>
+        </div>
+      </div>
+    </div>
+  </header>
+

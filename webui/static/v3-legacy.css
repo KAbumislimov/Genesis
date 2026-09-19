@@ -1,0 +1,78 @@
+/* ═══ Старые страницы в новом каркасе ═══
+   Подключается из base.html при включённом новом дизайне (cookie ui). Скрывает старую шапку/меню,
+   перекладывает токены старых тем на палитру v3 и слегка «пересобирает» общие элементы. */
+html.v3ui[data-legacy], html.v3ui[data-legacy][data-theme], html.v3ui[data-legacy].light-theme{
+  --bg:var(--ink); --bg2:color-mix(in srgb,var(--ink3) 88%,transparent); --bg3:color-mix(in srgb,#fff 6%,var(--ink3)); --border:var(--line2);
+  --text:var(--tx); --muted:var(--tx2);
+  --blue:#7aa2ff; --green:var(--ok); --red:var(--bad); --orange:#ff9d4d; --purple:#b48cff; --yellow:#ffd24a;
+  --panel-opa:1; --panel-blur:0px; --panel-bri:1; --fon-opa:0;
+  --font:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif !important;
+  color-scheme:dark;
+  background:var(--ink) !important;
+}
+html.v3ui[data-legacy] body{ background:transparent; color:var(--tx); font-family:var(--f-body); font-size:14.5px; line-height:1.5; min-height:100vh; margin:0; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+html.v3ui[data-legacy] body::before{ display:none !important; }
+html.v3ui[data-legacy] .top-nav,
+html.v3ui[data-legacy] #sidebar,
+html.v3ui[data-legacy] #sidebar-overlay{ display:none !important; }
+
+/* контейнер страницы */
+.v3-legacy{ padding-top:6px; }
+.v3-legacy .main{ max-width:1400px; margin:0 auto; padding:8px 0 40px; }
+.v3-legacy .main > *{ animation:rise .7s var(--ease) both; }
+.v3-legacy .main > *:nth-child(2){ animation-delay:.06s } .v3-legacy .main > *:nth-child(3){ animation-delay:.12s }
+.v3-legacy .main > *:nth-child(4){ animation-delay:.18s } .v3-legacy .main > *:nth-child(n+5){ animation-delay:.24s }
+
+/* заголовки */
+.v3-legacy h1, .v3-legacy h2, .v3-legacy h3{ font-family:var(--f-display); letter-spacing:-.005em; }
+.v3-legacy h1{ font-weight:600; }
+
+/* формы */
+.v3-legacy .form-control, .v3-legacy .form-select,
+.v3-legacy input[type=text], .v3-legacy input[type=password], .v3-legacy input[type=email], .v3-legacy input[type=number], .v3-legacy input[type=search], .v3-legacy input[type=time], .v3-legacy input[type=date], .v3-legacy textarea, .v3-legacy select{
+  background-color:var(--bg3); color:var(--tx); border:1px solid var(--line2); border-radius:12px; transition:border-color .2s, box-shadow .25s var(--ease);
+}
+.v3-legacy .form-control:focus, .v3-legacy .form-select:focus, .v3-legacy input:focus, .v3-legacy textarea:focus, .v3-legacy select:focus{
+  border-color:var(--a); box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 18%,transparent); outline:none; background-color:var(--bg3); color:var(--tx);
+}
+.v3-legacy select option{ background:#1a1722; color:var(--tx); }
+.v3-legacy ::placeholder{ color:var(--tx3); }
+
+/* кнопки */
+.v3-legacy .btn{ border-radius:100px; font-weight:600; transition:transform .25s var(--ease), background .2s, border-color .2s, box-shadow .3s; }
+.v3-legacy .btn:hover{ transform:translateY(-1px); }
+.v3-legacy .btn:active{ transform:scale(.97); }
+.v3-legacy .btn-primary, .v3-legacy .btn-success{ background:linear-gradient(140deg,var(--a),var(--a2)); border:none; color:var(--a-ink); box-shadow:0 6px 20px color-mix(in srgb,var(--a) 30%,transparent); }
+.v3-legacy .btn-primary:hover, .v3-legacy .btn-success:hover{ background:linear-gradient(140deg,var(--a),var(--a2)); color:var(--a-ink); filter:brightness(1.06); box-shadow:0 10px 28px color-mix(in srgb,var(--a) 45%,transparent); }
+.v3-legacy .btn-danger{ background:linear-gradient(140deg,#ff3b47,#c81e33); border:none; color:#fff; }
+.v3-legacy .btn-outline-secondary, .v3-legacy .btn-secondary, .v3-legacy .btn-light{ background:var(--glass); border:1px solid var(--line2); color:var(--tx); }
+.v3-legacy .btn-outline-secondary:hover, .v3-legacy .btn-secondary:hover, .v3-legacy .btn-light:hover{ background:var(--glass2); border-color:var(--line2); color:var(--tx); }
+
+/* таблицы */
+.v3-legacy .table{ --bs-table-bg:transparent; --bs-table-color:var(--tx); --bs-table-border-color:var(--line); --bs-table-hover-bg:var(--glass2); --bs-table-hover-color:var(--tx); --bs-table-striped-bg:rgba(255,255,255,.02); --bs-table-striped-color:var(--tx); color:var(--tx); }
+.v3-legacy table{ border-color:var(--line); }
+.v3-legacy th{ font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--tx3); }
+.v3-legacy tbody tr{ transition:background .18s; }
+.v3-legacy tbody tr:hover{ background:var(--glass2); }
+
+/* модалки, тосты, алерты */
+.v3-legacy .modal-content, html.v3ui[data-legacy] .modal-content{ background:color-mix(in srgb,var(--ink3) 96%,transparent); color:var(--tx); border:1px solid var(--line2); border-radius:22px; box-shadow:0 40px 100px rgba(0,0,0,.7); }
+.modal-backdrop.show{ opacity:.6; backdrop-filter:blur(6px); }
+.v3-legacy .alert{ border-radius:14px; border:1px solid var(--line2); background:var(--glass); color:var(--tx); }
+.v3-legacy .dropdown-menu{ background:color-mix(in srgb,var(--ink3) 96%,transparent); border:1px solid var(--line2); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.55); }
+.v3-legacy .dropdown-item{ color:var(--tx2); border-radius:9px; } .v3-legacy .dropdown-item:hover{ background:var(--glass2); color:var(--tx); }
+.v3-legacy .badge{ font-weight:700; letter-spacing:.04em; }
+.v3-legacy hr{ border-color:var(--line2); opacity:1; }
+
+/* плавающие кнопки/панели старого каркаса */
+html.v3ui[data-legacy] .float-dock{ right:24px !important; left:auto !important; }
+
+/* плавающие виджеты старого каркаса (⚡ 🤖 чат, «Сообщить о проблеме») — правее рейки */
+html.v3ui[data-legacy] .v3-legacy .main{ max-width:1560px; }
+html.v3ui[data-legacy] .fdock-master,
+html.v3ui[data-legacy] #chat-widget,
+html.v3ui[data-legacy] .float-dock{ left:calc(var(--fdock-x,24px) + var(--rail-w)) !important; }
+html.v3ui[data-legacy] .bug-fab{ top:auto !important; bottom:24px !important; left:calc(var(--rail-w) + 92px) !important; background:color-mix(in srgb,var(--ink3) 92%,transparent); backdrop-filter:blur(12px); }
+/* «Кто онлайн» в шапке */
+.topbar #online-trigger-btn{ height:40px !important; border-radius:12px !important; background:var(--glass) !important; border:1px solid var(--line) !important; }
+.topbar #online-panel{ z-index:70; }

@@ -1,0 +1,210 @@
+<!-- ═══════════════════════════════════════════════════════════
+     PLAYER v4 «Пульт» — микшерная консоль. Только разметка + вид; логика — общий
+     JS из dashboard.html и _studio_js.html. Сохранены ВСЕ id / onclick / хук-классы.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v3 c4" id="wa-skin" data-accent="{{ ui_accent }}">
+
+  <!-- ── Мастер-секция ───────────────────────────────────── -->
+  <section class="c4-master rv" id="v3-hero" style="--d:0">
+    <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+
+    <div class="c4-screen">
+      <div class="c4-screen-top">
+        <span class="c4-led-tag"><i class="onair-lamp"></i><span id="v3-hero-tag">Ожидание</span></span>
+        <span class="c4-clock" id="v3-clock">--:--<small>:--</small></span>
+      </div>
+      <canvas class="hero-viz c4-viz" id="cpm-viz-canvas" height="200"></canvas>
+      <div class="c4-lcd">
+        <div class="c4-lcd-l">
+          <div class="c4-lcd-cap">СЕЙЧАС</div>
+          <div class="c4-marq"><h2 class="c4-track" id="wa-lcd-track">CAMPUS PLAYER</h2></div>
+          <div class="c4-info" id="wa-lcd-info">—</div>
+        </div>
+        <div class="c4-time"><span id="wa-lcd-time">0:00</span></div>
+      </div>
+      <div class="cpm-seek-groove seek c4-tape" id="wa-seek-groove" onclick="wampSeekActive(event)"><div class="cpm-seek-fill seek-fill" id="wa-seek-fill" style="width:0%"></div></div>
+      <div class="cpm-seek-thumb" id="wa-seek-thumb" style="display:none"></div>
+    </div>
+
+    <div class="c4-keys">
+      <div class="c4-cap">ТРАНСПОРТ</div>
+      <div class="c4-keyrow">
+        <button class="key rip" onclick="doPrev()" title="Предыдущий" aria-label="Предыдущий"><i class="bi bi-skip-start-fill"></i><em></em></button>
+        <button class="key big go rip" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><i class="bi bi-play-fill"></i><em></em></button>
+        <button class="key rip" id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><i class="bi bi-pause-fill"></i><em></em></button>
+        <button class="key rip" onclick="doNext()" title="Следующий" aria-label="Следующий"><i class="bi bi-skip-end-fill"></i><em></em></button>
+      </div>
+      <div class="c4-keyrow sm">
+        <button class="key sw cpm-toggle rip" id="wa-shf-btn" onclick="wampToggleShuffle()" title="Перемешать"><i class="bi bi-shuffle"></i><em></em></button>
+        <button class="key sw cpm-toggle rip" id="wa-rep-btn" onclick="wampToggleRepeat()" title="Зациклить трек"><i class="bi bi-repeat"></i><em></em></button>
+        <button class="key sw cpm-toggle rip" id="wa-eq-btn" onclick="wampShowTab('eq')" title="Эквалайзер"><i class="bi bi-sliders"></i><em></em></button>
+        <button class="key sw cpm-toggle rip" id="wa-mute-btn" onclick="toggleMute(); this.classList.toggle('on')" title="Тишина"><i class="bi bi-volume-mute"></i><em></em></button>
+      </div>
+    </div>
+
+    <div class="c4-mst">
+      <div class="c4-cap">МАСТЕР</div>
+      <div class="knobwrap">
+        <div class="knob4" id="c4-knob" role="slider" aria-label="Мастер-громкость" aria-valuemin="0" aria-valuemax="160" tabindex="0"><i></i></div>
+        <div class="knob-ticks"><span>0</span><span>80</span><span>160</span></div>
+      </div>
+      <div class="c4-vol"><input type="range" class="rng" id="c4-master-rng" min="0" max="160" value="100" oninput="onVolInput(this.value)" aria-label="Громкость"><span id="vol-num">100</span></div>
+      <div class="c4-btnrow">
+        {% if perms.role in ('admin','staff') %}
+        <button class="btn3 ghost sm rip" id="cpm-timesync-btn" onclick="syncTime('all')" title="Синхронизировать время на всех кампусах с сервером"><i class="bi bi-arrow-repeat" id="cpm-timesync-icon"></i><span>Время</span></button>
+        {% endif %}
+      </div>
+    </div>
+
+    <button class="estop rip" onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах" aria-label="Стоп — всё">
+      <span class="estop-cap"><i class="bi bi-stop-fill"></i></span>
+      <span class="estop-lbl">СТОП<br>ВСЁ</span>
+    </button>
+
+    <div id="eq-panel" class="eqp c4-eq" style="display:none">
+      <div class="lbl">Эквалайзер</div>
+      <div class="wamp2-eq-bands" id="eq-bands-row"></div>
+    </div>
+  </section>
+
+  <!-- ── Каналы ──────────────────────────────────────────── -->
+  <section class="sec rv" style="--d:1">
+    <div class="sec-h">
+      <h3><i class="bi bi-sliders2-vertical"></i>Каналы</h3>
+      <div class="c4-counters">
+        <span class="cnt"><b data-stat="online">0</b><small>онлайн</small></span>
+        <span class="cnt"><b data-stat="playing">0</b><small>играют</small></span>
+        <span class="cnt"><b data-stat="total">0</b><small>всего</small></span>
+      </div>
+      {% include '_studio_campus_tools.html' %}
+    </div>
+
+    <div class="c4-strips cpm-campus-strip">
+      {% for m in music_machines %}
+      <article class="strip cpm-campus-row" data-tile id="wamp2-row-{{ m.key }}" data-key="{{ m.key }}" data-state="idle" style="--i:{{ loop.index0 }}">
+        <div class="strip-top">
+          <span class="lamp"><i class="cpm-dot" id="live-{{ m.key }}" style="display:none">●</i><i class="cpm-dot off" id="stop-{{ m.key }}">●</i></span>
+          <span class="cpm-conn" id="conn-{{ m.key }}"><i class="bi bi-wifi"></i></span>
+          <span class="strip-ch">{{ '%02d'|format(loop.index) }}</span>
+        </div>
+        <span class="cs-status-badge online" id="status-badge-{{ m.key }}">Онлайн</span>
+        <div class="strip-lcd">
+          <div class="strip-marq"><span class="cpm-campus-track" id="mini-name-{{ m.key }}">Не играет</span></div>
+          <div class="strip-t"><span class="cpm-campus-time" id="wamp-pos-{{ m.key }}">0:00</span><i>/</i><span class="cpm-campus-time dim" id="wamp-dur-{{ m.key }}"></span></div>
+        </div>
+        <div class="strip-mid">
+          <div class="vu" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          {% if perms.vol %}
+          <div class="fader">
+            <input type="range" class="cpm-campus-vol" id="vol-{{ m.key }}" min="0" max="160" value="100" orient="vertical"
+                   oninput="wampCsVolInput('{{ m.key }}',this.value)"
+                   onchange="wampSetCampusVolume('{{ m.key }}',this.value)" title="Громкость {{ m.name }}">
+            <div class="scale"><span>160</span><span>120</span><span>80</span><span>40</span><span>0</span></div>
+          </div>
+          {% endif %}
+        </div>
+        <div class="strip-val"><span class="cpm-campus-vol-val" id="vol-val-{{ m.key }}">100</span></div>
+        <div class="cpm-campus-prog tprog" onclick="_cpmSeek('{{ m.key }}',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill tprog-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div></div>
+        <button type="button" class="strip-sel rip" onclick="v3Select('{{ m.key }}')" title="Выбрать этот кампус активным">ВЫБОР</button>
+        <div class="strip-plate"><h4 class="cpm-campus-name">{{ m.name }}</h4></div>
+        <div class="cpm-campus-err terr" id="cs-err-{{ m.key }}" style="display:none"></div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ── Спецдействия ────────────────────────────────────── -->
+  {% if perms.himn %}
+  <section class="sec rv" style="--d:2">
+    <div class="sec-h">
+      <h3><i class="bi bi-broadcast-pin"></i>Слышно на весь кампус</h3>
+      <div class="sec-note">Кампус выбирается после нажатия</div>
+    </div>
+    <div class="c4-pads">
+      <button class="pad amber cpm-pill rip" onclick="wampShowCampusPicker(event,'himn',this)"><i class="led"></i><i class="bi bi-star-fill"></i><b>Гимн</b></button>
+      <button class="pad blue cpm-pill rip" onclick="wampShowCampusPicker(event,'mic',this)"><i class="led"></i><i class="bi bi-mic-fill"></i><b>Микрофон</b></button>
+      <button class="pad slate cpm-pill rip" onclick="wampShowCampusPicker(event,'minuta',this)"><i class="led"></i><i class="bi bi-bell-slash"></i><b>Минута тишины</b></button>
+      <button class="pad yellow cpm-pill rip" onclick="wampShowCampusPicker(event,'zefer',this)"><i class="led"></i><i class="bi bi-award"></i><b data-i18n="wamp.zefer_group">Zəfər Günü</b></button>
+      <button class="pad teal cpm-pill rip" onclick="wampShowCampusPicker(event,'nmd',this)" title="National Music Day — 18 sentyabr"><i class="led"></i><i class="bi bi-music-note-list"></i><b>National Music Day</b></button>
+      <div class="pad-alarm">
+        <button class="pad danger cpm-pill danger rip" onclick="wampShowCampusPicker(event,'alarm',this)"><i class="led"></i><i class="bi bi-exclamation-octagon-fill"></i><b>Тревога</b></button>
+        <select id="alarmSoundSelect" class="sel cpm-alarm-select" aria-label="Звук тревоги"></select>
+      </div>
+    </div>
+
+    {% if perms.admin or perms.cron %}
+    <div class="c4-rockers">
+      <span class="c4-cap">АВТОМАТИКА</span>
+      <button class="rocker cpm-pill rip" id="btn-cron-active" onclick="wampShowCampusPicker(event,'cron',this)"><i class="bi bi-alarm"></i><span>Крон</span></button>
+      <button class="rocker cpm-pill wa-toggle-btn rip" id="btn-toggle-utro" data-state="{{ 'on' if utro_enabled else 'off' }}"
+              onclick="wampToggleGroup('utro', this)" title="Включить/выключить утреннюю музыку на всех доступных кампусах">
+        <i class="bi bi-sunrise"></i><span>Утро</span><span class="wa-toggle-state">{{ 'Вкл' if utro_enabled else 'Выкл' }}</span><em class="lever"></em>
+      </button>
+      <button class="rocker cpm-pill wa-toggle-btn rip" id="btn-toggle-perem" data-state="{{ 'on' if perem_enabled else 'off' }}"
+              onclick="wampToggleGroup('perem', this)" title="Включить/выключить перемены 1-9 на всех доступных кампусах">
+        <i class="bi bi-bell"></i><span>Перемены</span><span class="wa-toggle-state">{{ 'Вкл' if perem_enabled else 'Выкл' }}</span><em class="lever"></em>
+      </button>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% include '_studio_library.html' %}
+</div>
+
+{% include '_studio_js.html' %}
+<script>
+/* ── Ручка мастер-громкости: тянуть вверх/вниз или колёсиком; крутит скрытый ползунок ── */
+(function(){
+  var k = document.getElementById('c4-knob'), rng = document.getElementById('c4-master-rng');
+  if (!k || !rng) return;
+  var MIN = 0, MAX = 160;
+  function paint(){
+    var v = +rng.value, a = -135 + 270 * (v - MIN) / (MAX - MIN);
+    k.style.setProperty('--ang', a + 'deg'); k.setAttribute('aria-valuenow', v);
+  }
+  function set(v){
+    v = Math.max(MIN, Math.min(MAX, Math.round(v)));
+    if (+rng.value === v) return;
+    rng.value = v; rng.dispatchEvent(new Event('input', {bubbles:true})); paint();
+  }
+  var y0 = 0, v0 = 0, drag = false;
+  k.addEventListener('pointerdown', function(e){ drag = true; y0 = e.clientY; v0 = +rng.value; k.setPointerCapture(e.pointerId); k.classList.add('grab'); });
+  k.addEventListener('pointermove', function(e){ if (drag) set(v0 + (y0 - e.clientY) * 0.9); });
+  k.addEventListener('pointerup', function(){ drag = false; k.classList.remove('grab'); });
+  k.addEventListener('wheel', function(e){ e.preventDefault(); set(+rng.value + (e.deltaY < 0 ? 4 : -4)); }, {passive:false});
+  k.addEventListener('keydown', function(e){ if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); set(+rng.value + 4); } if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); set(+rng.value - 4); } });
+  rng.addEventListener('input', paint);
+  paint(); setInterval(paint, 700);
+})();
+
+/* ── Бегущая строка для длинных названий + светодиодные индикаторы уровня ── */
+(function(){
+  function mq(el){
+    var w = el.parentElement, key = el.textContent;
+    if (el._k === key && el._w === w.clientWidth) return;
+    el._k = key; el._w = w.clientWidth;
+    el.classList.remove('mq'); el.style.removeProperty('--dx');
+    var over = el.offsetWidth - w.clientWidth;
+    if (over > 4) { el.style.setProperty('--dx', -(over + 18) + 'px'); el.style.setProperty('--dur', (over / 26 + 4) + 's'); el.classList.add('mq'); }
+  }
+  function marquees(){ document.querySelectorAll('#wa-lcd-track, .strip .cpm-campus-track').forEach(mq); }
+  marquees(); setInterval(marquees, 1200);
+
+  var lvl = {};
+  function tick(){
+    document.querySelectorAll('.strip').forEach(function(st){
+      var k = st.dataset.key, leds = st.querySelectorAll('.vu i'), tgt = 0;
+      if (st.dataset.state === 'playing') {
+        var real = null;
+        try { var d = _audioSSE && _audioSSE[k]; if (d && d.active && d.bands && d.bands.length) { var sum = 0; d.bands.forEach(function(b){ sum += b; }); real = Math.min(1, (sum / d.bands.length) * (5.5 / 255)); } } catch(e) {}
+        tgt = real !== null ? real * 10 : 2.5 + Math.abs(Math.sin(Date.now() / 260 + k.length * 1.7)) * 3.2 + Math.random() * 3.2;
+      }
+      lvl[k] = (lvl[k] || 0) + (tgt - (lvl[k] || 0)) * (tgt > (lvl[k] || 0) ? .6 : .25);
+      var n = Math.round(lvl[k]);
+      for (var i = 0; i < leds.length; i++) leds[i].classList.toggle('lit', i < n);
+    });
+  }
+  setInterval(tick, 90);
+})();
+</script>

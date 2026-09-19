@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, jsonify, flash, session, send_from_directory
+from flask import Flask, render_template, redirect, url_for, request, jsonify, flash, session, send_from_directory, make_response
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -1370,9 +1370,14 @@ def logout():
               event_type='login')
     return redirect(url_for('login'))
 
+_UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5'}
+
 @app.context_processor
 def inject_globals():
     result = {'ann_count': 0, 'wallpaper_default': 'off', 'theme_default': ''}
+    _ui = request.cookies.get('ui')
+    if _ui in _UI_VARIANTS:
+        result.update(v3ui=True, variant=_ui, player_home=url_for(_UI_VARIANTS[_ui]))
     if current_user.is_authenticated:
         try:
             with get_db() as c:
@@ -1651,7 +1656,22 @@ def api_weather():
 @app.route('/')
 @login_required
 def dashboard():
+    _ui = request.cookies.get('ui')
+    if _ui in _UI_VARIANTS and not request.args.get('classic'):
+        return redirect(url_for(_UI_VARIANTS[_ui]))
     return _render_dashboard()
+
+@app.route('/ui/<name>')
+@login_required
+def set_ui(name):
+    """Выбор дизайна (cookie 'ui'): studio / console / bento — новый каркас на всех страницах; off — старый."""
+    if name in _UI_VARIANTS:
+        resp = redirect(url_for(_UI_VARIANTS[name]))
+        resp.set_cookie('ui', name, max_age=365*86400, samesite='Lax')
+        return resp
+    resp = redirect(url_for('dashboard', classic=1))
+    resp.delete_cookie('ui')
+    return resp
 
 @app.route('/v2')
 @login_required
@@ -1660,12 +1680,33 @@ def dashboard_v2():
     что у боевого '/', отличается только каркас (base_v2.html) и разметка плеера."""
     return _render_dashboard(v2=True, base_layout='base_v2.html')
 
+def _ui_page(html, name):
+    """Ответ с запоминанием выбранного дизайна (cookie), чтобы остальные страницы открывались в нём же."""
+    resp = make_response(html)
+    resp.set_cookie('ui', name, max_age=365*86400, samesite='Lax')
+    return resp
+
 @app.route('/v3')
 @login_required
 def dashboard_v3():
     """Предпросмотр нового интерфейса «Эфирная студия». Тот же контекст и тот же общий JS,
     что у боевого '/', отличается только каркас (base_v3.html) и разметка плеера."""
-    return _render_dashboard(v3=True, base_layout='base_v3.html')
+    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='studio',
+                             player_tpl='player_v3.html', player_home=url_for('dashboard_v3')), 'studio')
+
+@app.route('/v4')
+@login_required
+def dashboard_v4():
+    """Вариант дизайна «Пульт» (микшерная консоль). Тот же контекст и общий JS."""
+    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='console',
+                             player_tpl='player_v4.html', player_home=url_for('dashboard_v4')), 'console')
+
+@app.route('/v5')
+@login_required
+def dashboard_v5():
+    """Вариант дизайна «Бенто» (светлый, сеточные карточки). Тот же контекст и общий JS."""
+    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='bento',
+                             player_tpl='player_v5.html', player_home=url_for('dashboard_v5')), 'bento')
 
 def _render_dashboard(**extra):
     now = datetime.now()

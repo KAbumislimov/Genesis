@@ -1,0 +1,131 @@
+<!-- ═══════════════════════════════════════════════════════════
+     PLAYER v5 «Бенто» — светлая сетка карточек. Только разметка + вид; логика — общий
+     JS из dashboard.html и _studio_js.html. Сохранены ВСЕ id / onclick / хук-классы.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v3 b5" id="wa-skin" data-accent="{{ ui_accent }}">
+
+  <section class="bento">
+    <!-- главная карточка -->
+    <article class="bx hero hero5 rv" id="v3-hero" style="--d:0">
+      <canvas class="hero-viz b5-viz" id="cpm-viz-canvas" height="260"></canvas>
+      <div class="hero-veil"></div>
+      <div class="rings" aria-hidden="true"><i></i><i></i><i></i></div>
+
+      <div class="hero-top">
+        <div class="hero-tag"><i class="onair-lamp"></i><span id="v3-hero-tag">Ожидание</span></div>
+        <div class="hero-acts">
+          {% if perms.role in ('admin','staff') %}
+          <button class="btn3 ghost rip" id="cpm-timesync-btn" onclick="syncTime('all')" title="Синхронизировать время на всех кампусах с сервером"><i class="bi bi-arrow-repeat" id="cpm-timesync-icon"></i><span>Синхр. время</span></button>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="hero-main">
+        <div class="hero-eyebrow">Сейчас играет</div>
+        <h2 class="hero-title" id="wa-lcd-track">CAMPUS PLAYER</h2>
+        <div class="hero-info" id="wa-lcd-info">—</div>
+      </div>
+
+      <div class="hero-ctrl">
+        <div class="transport">
+          <button class="ib rip" onclick="doPrev()" title="Предыдущий" aria-label="Предыдущий"><i class="bi bi-skip-start-fill"></i></button>
+          <button class="play rip" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><i class="bi bi-play-fill"></i></button>
+          <button class="ib rip" id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><i class="bi bi-pause-fill"></i></button>
+          <button class="ib rip" onclick="doNext()" title="Следующий" aria-label="Следующий"><i class="bi bi-skip-end-fill"></i></button>
+        </div>
+        <div class="seekbox">
+          <div class="cpm-seek-groove seek" id="wa-seek-groove" onclick="wampSeekActive(event)"><div class="cpm-seek-fill seek-fill" id="wa-seek-fill" style="width:0%"></div></div>
+          <div class="cpm-seek-thumb" id="wa-seek-thumb" style="display:none"></div>
+          <span class="seek-time" id="wa-lcd-time">0:00</span>
+        </div>
+        <div class="hero-side">
+          <div class="tgl">
+            <button class="ib sm cpm-toggle rip" id="wa-shf-btn" onclick="wampToggleShuffle()" title="Перемешать"><i class="bi bi-shuffle"></i></button>
+            <button class="ib sm cpm-toggle rip" id="wa-rep-btn" onclick="wampToggleRepeat()" title="Зациклить трек"><i class="bi bi-repeat"></i></button>
+            <button class="ib sm cpm-toggle rip" id="wa-eq-btn" onclick="wampShowTab('eq')" title="Эквалайзер"><i class="bi bi-sliders"></i></button>
+            <button class="ib sm cpm-toggle rip" id="wa-mute-btn" onclick="toggleMute(); this.classList.toggle('on')" title="Тишина"><i class="bi bi-volume-mute"></i></button>
+          </div>
+          <div class="vol"><i class="bi bi-volume-up"></i><input type="range" class="rng" min="0" max="160" value="100" oninput="onVolInput(this.value)" aria-label="Громкость"><span id="vol-num">100</span></div>
+        </div>
+      </div>
+
+      <div id="eq-panel" class="eqp" style="display:none">
+        <div class="lbl">Эквалайзер</div>
+        <div class="wamp2-eq-bands" id="eq-bands-row"></div>
+      </div>
+    </article>
+
+    <!-- часы -->
+    <article class="bx clock5 rv" style="--d:1">
+      <div class="eyebrow" id="v3-date">Управление звуком кампусов</div>
+      <div class="clock" id="v3-clock">--:--<small>:--</small></div>
+      <h1 class="greet-h" id="v3-greet">Здравствуйте</h1>
+    </article>
+
+    <!-- цифры -->
+    <article class="bx stat5 st-on rv" style="--d:2"><i class="bi bi-wifi"></i><b data-stat="online">0</b><span>кампусов онлайн</span></article>
+    <article class="bx stat5 st-play rv" style="--d:3"><i class="bi bi-soundwave"></i><b data-stat="playing">0</b><span>играют сейчас</span></article>
+
+    <!-- стоп -->
+    <button class="bx stop5 rip rv" style="--d:4" onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах">
+      <span class="stop5-ic"><i class="bi bi-stop-fill"></i></span>
+      <span class="stop5-t"><b>Стоп — всё</b><small>остановить звук на всех кампусах</small></span>
+    </button>
+  </section>
+
+  <!-- ── Кампусы ─────────────────────────────────────────── -->
+  <section class="sec rv" style="--d:3">
+    <div class="sec-h">
+      <h3><i class="bi bi-buildings"></i>Кампусы</h3>
+      {% include '_studio_campus_tools.html' %}
+    </div>
+
+    <div class="tiles cpm-campus-strip">
+      {% for m in music_machines %}
+      <article class="tile cpm-campus-row" data-tile id="wamp2-row-{{ m.key }}" data-key="{{ m.key }}" data-state="idle" style="--i:{{ loop.index0 }}">
+        <div class="tile-glow"></div>
+        <header class="tile-head">
+          <span class="lamp"><i class="cpm-dot" id="live-{{ m.key }}" style="display:none">●</i><i class="cpm-dot off" id="stop-{{ m.key }}">●</i></span>
+          <h4 class="cpm-campus-name">{{ m.name }}</h4>
+          <span class="cpm-conn" id="conn-{{ m.key }}"><i class="bi bi-wifi"></i></span>
+          <span class="cs-status-badge online" id="status-badge-{{ m.key }}">Онлайн</span>
+        </header>
+        <div class="tile-track">
+          <span class="eqg" aria-hidden="true"><b></b><b></b><b></b><b></b></span>
+          <span class="cpm-campus-track" id="mini-name-{{ m.key }}">Не играет</span>
+          <span class="tile-t"><span class="cpm-campus-time" id="wamp-pos-{{ m.key }}">0:00</span><i>/</i><span class="cpm-campus-time dim" id="wamp-dur-{{ m.key }}"></span></span>
+        </div>
+        <div class="cpm-campus-prog tprog" onclick="_cpmSeek('{{ m.key }}',event,this)" title="Перемотка"><div class="cpm-campus-prog-fill tprog-fill" id="prog-fill-{{ m.key }}" style="width:0%"></div></div>
+        {% if perms.vol %}
+        <div class="cpm-campus-vol-row tvol">
+          <i class="bi bi-volume-down"></i>
+          <input type="range" class="rng cpm-campus-vol" id="vol-{{ m.key }}" min="0" max="160" value="100"
+                 oninput="wampCsVolInput('{{ m.key }}',this.value)" onchange="wampSetCampusVolume('{{ m.key }}',this.value)" title="Громкость {{ m.name }}">
+          <span class="cpm-campus-vol-val" id="vol-val-{{ m.key }}">100</span>
+        </div>
+        {% endif %}
+        <div class="cpm-campus-err terr" id="cs-err-{{ m.key }}" style="display:none"></div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% include '_studio_specials.html' %}
+
+  {% include '_studio_library.html' %}
+</div>
+
+{% include '_studio_js.html' %}
+<script>
+/* лёгкий 3D-наклон карточек кампусов под курсором */
+(function(){
+  if (window.matchMedia && matchMedia('(hover:none), (prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.b5 .tile, .b5 .sx').forEach(function(el){
+    el.addEventListener('pointermove', function(e){
+      var r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+      el.style.setProperty('--rx', (-y * 5).toFixed(2) + 'deg'); el.style.setProperty('--ry', (x * 6).toFixed(2) + 'deg');
+    });
+    el.addEventListener('pointerleave', function(){ el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); });
+  });
+})();
+</script>

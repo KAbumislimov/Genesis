@@ -1,0 +1,224 @@
+<script>
+/* ── выбор кампуса: чипы ⇄ карточки ⇄ select ── */
+function v3Select(key, fromUi) {
+  document.querySelectorAll('.cpm-campus-pill').forEach(function(p){ p.classList.toggle('active', p.dataset.campus === key); });
+  document.querySelectorAll('[data-tile]').forEach(function(t){ t.classList.toggle('is-active', t.dataset.key === key); });
+  if (fromUi !== false) setActiveCampus(key);
+}
+(function(){
+  document.querySelectorAll('.cpm-campus-pill').forEach(function(p){
+    p.addEventListener('click', function(){ v3Select(p.dataset.campus); });
+  });
+  document.querySelectorAll('[data-tile]').forEach(function(t){
+    t.addEventListener('click', function(e){
+      if (e.target.closest('input,.cpm-campus-prog,button,select')) return;
+      v3Select(t.dataset.key);
+    });
+    t.addEventListener('pointermove', function(e){
+      var r = t.getBoundingClientRect();
+      t.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      t.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  });
+  var first = document.querySelector('.cpm-campus-pill');
+  if (first) { var t0 = document.querySelector('[data-tile][data-key="'+first.dataset.campus+'"]'); if (t0) t0.classList.add('is-active'); }
+  var cs = document.getElementById('campusSelect');
+  if (cs) cs.addEventListener('change', function(){ v3Select(cs.value, false); });
+})();
+
+/* ── кто-то играет? состояние плиток и «В ЭФИРЕ» ── */
+(function(){
+  var hero = document.getElementById('v3-hero');
+  var onair = document.getElementById('v3-onair');
+  var tag = document.getElementById('v3-hero-tag');
+  var baseTitle = document.title;
+  function tileState(t){
+    var k = t.dataset.key;
+    var badge = document.getElementById('status-badge-' + k);
+    var live = document.getElementById('live-' + k);
+    if (badge && badge.classList.contains('offline')) return 'offline';
+    if (live && live.style.display !== 'none') return 'playing';
+    return 'idle';
+  }
+  function scan(){
+    var n = 0, on_ = 0, tot = 0, name = '', track = '';
+    document.querySelectorAll('[data-tile]').forEach(function(t){
+      var s = tileState(t);
+      tot++; if (s !== 'offline') on_++;
+      if (t.dataset.state !== s) t.dataset.state = s;
+      if (s === 'playing') {
+        n++;
+        if (!name || t.classList.contains('is-active')) {
+          name = t.querySelector('.cpm-campus-name').textContent.trim();
+          track = (t.querySelector('.cpm-campus-track') || {}).textContent || '';
+        }
+      }
+    });
+    var on = n > 0;
+    document.querySelectorAll('[data-stat]').forEach(function(el){
+      var k = el.dataset.stat, v = k === 'online' ? on_ : k === 'playing' ? n : k === 'total' ? tot : k === 'offline' ? tot - on_ : null;
+      if (v !== null && el.textContent !== String(v)) el.textContent = v;
+    });
+    if (hero) hero.classList.toggle('is-playing', on);
+    if (onair) onair.classList.toggle('on', on);
+    if (tag) tag.textContent = on ? (n > 1 ? 'В эфире · ' + n + ' кампуса' : 'В эфире · ' + name) : 'Ожидание';
+    document.title = on ? ('▶ ' + (track || 'Играет') + ' · Campus Player') : baseTitle;
+  }
+  var mo = new MutationObserver(function(){ clearTimeout(scan._t); scan._t = setTimeout(scan, 60); });
+  document.querySelectorAll('[data-tile]').forEach(function(t){ mo.observe(t, {subtree:true, attributes:true, childList:true, characterData:true, attributeFilter:['style','class']}); });
+  scan(); setInterval(scan, 1500);
+})();
+
+/* ── заливка ползунков громкости (--p) ── */
+(function(){
+  function fill(el){ var mx = +el.max || 100; el.style.setProperty('--p', (100 * (+el.value) / mx) + '%'); }
+  function all(){ document.querySelectorAll('.v3 .rng').forEach(fill); }
+  document.addEventListener('input', function(e){ if (e.target.classList && e.target.classList.contains('rng')) fill(e.target); });
+  all(); setInterval(all, 700);
+})();
+
+/* ── приветствие и часы (Баку) ── */
+(function(){
+  var g = document.getElementById('v3-greet'), c = document.getElementById('v3-clock'), d = document.getElementById('v3-date');
+  if (!g && !c && !d) return;
+  var nm = {{ (current_user.display_name or current_user.username)|tojson }};
+  function tick(){
+    var now = new Date();
+    var p = new Intl.DateTimeFormat('ru-RU', {timeZone:'Asia/Baku', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}).formatToParts(now);
+    var v = {}; p.forEach(function(x){ v[x.type] = x.value; });
+    var h = +v.hour % 24;
+    if (c) c.innerHTML = v.hour + ':' + v.minute + '<small>:' + v.second + '</small>';
+    var w = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+    if (g) g.textContent = w + ', ' + nm;
+    if (d) d.textContent = new Intl.DateTimeFormat('ru-RU', {timeZone:'Asia/Baku', weekday:'long', day:'numeric', month:'long'}).format(now) + ' · Баку';
+  }
+  tick(); setInterval(tick, 1000);
+})();
+
+/* ── «Мой цвет» ── */
+(function(){
+  var pop = document.getElementById('v3-colorpop'), btn = document.getElementById('v3-color-btn');
+  if (!pop || !btn) return;
+  btn.addEventListener('click', function(e){ e.stopPropagation(); pop.classList.toggle('open'); });
+  document.addEventListener('click', function(e){ if (!pop.contains(e.target)) pop.classList.remove('open'); });
+})();
+function applyPanelColor(color) {
+  document.querySelectorAll('.cpm-campus-row, .wamp2-cs-row').forEach(function(el) {
+    if (color) el.style.setProperty('--row-accent', color);
+    else el.style.removeProperty('--row-accent');
+  });
+  document.querySelectorAll('#cpm-color-picker .cpm-swatch').forEach(function(sw) {
+    sw.classList.toggle('active', (sw.dataset.color || '') === (color || ''));
+  });
+}
+(function(){
+  var picker = document.getElementById('cpm-color-picker');
+  if (!picker) return;
+  applyPanelColor({{ (panel_color or '')|tojson }});
+  picker.querySelectorAll('.cpm-swatch').forEach(function(sw) {
+    sw.addEventListener('click', function() {
+      var color = sw.dataset.color || '';
+      applyPanelColor(color);
+      fetch('/api/ui-prefs', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({panel_color: color})
+      }).catch(function(){});
+    });
+  });
+})();
+
+/* ── Визуализатор: зеркальные столбцы со свечением. Реальные полосы — из
+   _audioSSE (анализатор кампуса), если он присылает данные; иначе плавная
+   имитация. Цвета берутся из палитры (--a / --a2). ── */
+(function(){
+  var cv = document.getElementById('cpm-viz-canvas');
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d');
+  var N = 72, hs = new Array(N).fill(0), pk = new Array(N).fill(0), hold = new Array(N).fill(0);
+  var frozenT = 0, reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cA = '#ffb347', cB = '#ff6a3d', tick = 0;
+
+  function readColors(){
+    var s = getComputedStyle(cv), r = getComputedStyle(document.documentElement);
+    cA = s.getPropertyValue('--viz-a').trim() || r.getPropertyValue('--a').trim() || cA;
+    cB = s.getPropertyValue('--viz-b').trim() || r.getPropertyValue('--a2').trim() || cB;
+  }
+  readColors();
+  new MutationObserver(readColors).observe(document.documentElement, {attributes:true, attributeFilter:['data-pal']});
+
+  function target(){
+    try {
+      if (typeof _progState === 'undefined') return null;
+      if (typeof _activeCampus !== 'undefined' && _progState[_activeCampus] && _progState[_activeCampus].playing) return _activeCampus;
+      for (var k in _progState) { if (_progState[k] && _progState[k].playing) return k; }
+    } catch(e) {}
+    return null;
+  }
+  function real(key){
+    try {
+      var d = (typeof _audioSSE !== 'undefined') ? _audioSSE[key] : null;
+      if (!d || !d.active || !d.bands || !d.bands.length) return null;
+      var src = d.bands, n = src.length, out = new Array(N);
+      for (var i = 0; i < N; i++) out[i] = Math.min(1, (src[Math.floor(i / N * n)] || 0) * (1800 / 255));
+      return out;
+    } catch(e) { return null; }
+  }
+  function draw(){
+    requestAnimationFrame(draw);
+    if (document.hidden) return;
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var W = cv.clientWidth || 600, H = cv.clientHeight || 260;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var key = target(), playing = !!key, now = Date.now() / 1000;
+    if (playing) frozenT = now;
+    var t = reduce ? 0 : frozenT;
+    var rl = playing ? real(key) : null;
+    ctx.clearRect(0, 0, W, H);
+
+    var gap = 4, bw = Math.max(3, (W - (N - 1) * gap) / N);
+    var base = H * 0.86, maxH = H * 0.74;
+    var g = ctx.createLinearGradient(0, base - maxH, 0, base);
+    g.addColorStop(0, cB); g.addColorStop(1, cA);
+    for (var i = 0; i < N; i++) {
+      var tg;
+      if (rl) tg = rl[i] * maxH;
+      else {
+        var bass = i < 14 ? 1.35 - i * 0.025 : 1;
+        var a = Math.abs(Math.sin(t * (playing ? 2.6 : 0.55) + i * 0.27));
+        var b = Math.abs(Math.sin(t * (playing ? 4.7 : 0.9) + i * 0.51 + 1.3));
+        var v = playing ? (0.12 + 0.88 * a * (0.4 + 0.6 * b)) : (0.07 + 0.11 * a * (0.5 + 0.5 * b));
+        tg = Math.min(1, bass * v) * maxH;
+      }
+      hs[i] += (tg - hs[i]) * (rl ? 0.5 : 0.2);
+      var h = Math.max(3, hs[i]), x = i * (bw + gap);
+      ctx.globalAlpha = playing ? 1 : 0.45;
+      ctx.fillStyle = g;
+      rr(x, base - h, bw, h, Math.min(bw / 2, 4));
+      ctx.globalAlpha = playing ? 0.16 : 0.08;            /* отражение */
+      rr(x, base + 3, bw, Math.min(h * 0.45, H - base - 3), Math.min(bw / 2, 4));
+      ctx.globalAlpha = 1;
+      if (h > pk[i]) { pk[i] = h; hold[i] = 0; } else if (hold[i]++ > 26) pk[i] = Math.max(h, pk[i] - 1.4);
+      if (playing && pk[i] > 8) { ctx.fillStyle = 'rgba(255,255,255,.9)'; rr(x, base - pk[i] - 6, bw, 2.5, 1.2); }
+    }
+  }
+  function rr(x, y, w, h, r){
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+    ctx.fill();
+  }
+  draw();
+})();
+
+function _cpmSeek(ck, evt, wrap) {
+  var st = _progState[ck]; if (!st.playing || st.dur <= 0) return;
+  var r = wrap.getBoundingClientRect();
+  var pct = Math.max(0, Math.min(1, (evt.clientX - r.left) / r.width));
+  var newPos = Math.round(pct * st.dur);
+  fetch('/api/seek', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({machine: ck, pos: newPos})
+  }).catch(function(){});
+  st.pos = newPos; st.ts = Date.now();
+  _updateProgress(ck);
+}
+</script>

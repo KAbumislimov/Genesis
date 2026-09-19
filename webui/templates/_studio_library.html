@@ -1,0 +1,56 @@
+  <!-- ── Библиотека ──────────────────────────────────────── -->
+  <section class="sec rv" style="--d:4">
+    <div class="sec-h"><h3><i class="bi bi-collection-play"></i>Библиотека</h3></div>
+    <div class="lib">
+      <aside class="lib-folders">
+        <div class="lbl">Папки</div>
+        <div class="cpm-fol-tabs" id="pl-folder-tabs">
+          <button class="cpm-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">Все</button>
+          {% for f in music_folders %}
+            {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f == 'KAMRAN')|lower) if current_user.role == 'admin' else '' %}
+            {% if f == 'KAMRAN' %}
+            <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" {{ fctx|safe }} title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
+            {% elif f not in fixed_folders and current_user.role == 'admin' %}
+            <div class="cpm-fol-tab-wrap">
+              <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f }}</button>
+              <span class="cpm-fol-del" title="Удалить папку (должна быть пустой)" onclick="event.stopPropagation();wampDeleteFolder('{{ f }}')">🗑</span>
+            </div>
+            {% else %}
+            <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f }}</button>
+            {% endif %}
+          {% endfor %}
+          <button class="cpm-fol-tab cpm-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ Избранное</button>
+          {% if current_user.role == 'admin' %}
+          <button class="cpm-fol-tab cpm-fol-tab-new" data-folder="__new__" onclick="wampCreateFolder()" title="Создать папку">+ папка</button>
+          {% endif %}
+        </div>
+      </aside>
+
+      <div class="lib-list">
+        <div class="lib-bar">
+          <label class="search"><i class="bi bi-search"></i>
+            <input id="pl-search" class="cpm-pl-search" type="search" placeholder="Поиск по трекам…" oninput="wampPlFilter(this.value)">
+          </label>
+          <select id="pl-sort" class="sel cpm-pl-sort" onchange="wampPlSort(this.value)" title="Сортировка">
+            <option value="name">A–Z</option>
+            <option value="dur">По длительности</option>
+            <option value="size">По размеру</option>
+          </select>
+          <button class="btn3 solid cpm-pl-playall rip" onclick="wampPlayAll()" title="Перемешать и воспроизвести всё"><i class="bi bi-shuffle"></i><span>Играть всё</span></button>
+        </div>
+        {% if current_user.role == 'admin' %}
+        <div class="wamp2-bulk-bar" style="display:none">
+          <span class="wamp2-bulk-count">0 треков</span>
+          <button onclick="wampShowBulkMovePop(event, this)">📁 Переместить в…</button>
+          <button class="danger" onclick="wampBulkDelete()">🗑 Удалить</button>
+          <button onclick="wampSelectAllVisible()">Выбрать все</button>
+          <button onclick="wampClearSelection()">✕ Отмена</button>
+        </div>
+        {% endif %}
+        <div class="cpm-pl-list" id="pl-list">
+          <div class="wamp2-pl-loading">Загрузка треков…</div>
+        </div>
+        <div class="cpm-pl-status" id="pl-status">…</div>
+      </div>
+    </div>
+  </section>

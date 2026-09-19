@@ -1,0 +1,38 @@
+  <!-- ── Спецдействия ────────────────────────────────────── -->
+  {% if perms.himn %}
+  <section class="sec rv" style="--d:3">
+    <div class="sec-h">
+      <h3><i class="bi bi-broadcast-pin"></i>Слышно на весь кампус</h3>
+      <div class="sec-note">Сначала подумай, потом жми — выбор кампуса появится после клика</div>
+    </div>
+    <div class="sx-grid">
+      <button class="sx amber cpm-pill rip" onclick="wampShowCampusPicker(event,'himn',this)"><span class="sx-i"><i class="bi bi-star-fill"></i></span><span class="sx-t"><b>Гимн</b><small>Государственный гимн</small></span></button>
+      <button class="sx blue cpm-pill rip" onclick="wampShowCampusPicker(event,'mic',this)"><span class="sx-i"><i class="bi bi-mic-fill"></i></span><span class="sx-t"><b>Микрофон</b><small>Голос на весь кампус</small></span></button>
+      <button class="sx slate cpm-pill rip" onclick="wampShowCampusPicker(event,'minuta',this)"><span class="sx-i"><i class="bi bi-bell-slash"></i></span><span class="sx-t"><b>Минута тишины</b><small>Памятная минута</small></span></button>
+      <button class="sx yellow cpm-pill rip" onclick="wampShowCampusPicker(event,'zefer',this)"><span class="sx-i"><i class="bi bi-award"></i></span><span class="sx-t"><b data-i18n="wamp.zefer_group">Zəfər Günü</b><small>8 ноября</small></span></button>
+      <button class="sx teal cpm-pill rip" onclick="wampShowCampusPicker(event,'nmd',this)" title="National Music Day — 18 sentyabr"><span class="sx-i"><i class="bi bi-music-note-list"></i></span><span class="sx-t"><b>National Music Day</b><small>18 сентября</small></span></button>
+      <div class="sx-alarm">
+        <button class="sx danger cpm-pill danger rip" onclick="wampShowCampusPicker(event,'alarm',this)"><span class="sx-i"><i class="bi bi-exclamation-octagon-fill"></i></span><span class="sx-t"><b>Тревога</b><small>Сирена + выбор звука</small></span></button>
+        <select id="alarmSoundSelect" class="sel cpm-alarm-select" aria-label="Звук тревоги"></select>
+      </div>
+    </div>
+
+    {% if perms.admin or perms.cron %}
+    <div class="auto">
+      <div class="auto-l"><i class="bi bi-cpu"></i><span>Автоматика</span></div>
+      <button class="auto-b cpm-pill rip" id="btn-cron-active" onclick="wampShowCampusPicker(event,'cron',this)"><i class="bi bi-alarm"></i><span>Крон</span></button>
+      <button class="auto-b sw cpm-pill wa-toggle-btn rip" id="btn-toggle-utro"
+              data-state="{{ 'on' if utro_enabled else 'off' }}"
+              onclick="wampToggleGroup('utro', this)" title="Включить/выключить утреннюю музыку на всех доступных кампусах">
+        <i class="bi bi-sunrise"></i><span>Утро</span><span class="wa-toggle-state">{{ 'Вкл' if utro_enabled else 'Выкл' }}</span><em class="knob"></em>
+      </button>
+      <button class="auto-b sw cpm-pill wa-toggle-btn rip" id="btn-toggle-perem"
+              data-state="{{ 'on' if perem_enabled else 'off' }}"
+              onclick="wampToggleGroup('perem', this)" title="Включить/выключить перемены 1-9 на всех доступных кампусах">
+        <i class="bi bi-bell"></i><span>Перемены</span><span class="wa-toggle-state">{{ 'Вкл' if perem_enabled else 'Выкл' }}</span><em class="knob"></em>
+      </button>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+

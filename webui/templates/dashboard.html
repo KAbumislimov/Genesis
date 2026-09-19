@@ -2,6 +2,7 @@
 {% block title %}Панель — MEDIA{% endblock %}
 
 {% block extra_head %}
+{% if v3 %}<link href="{{ url_for('static', filename='v3-content.css') }}?v=1" rel="stylesheet">{% endif %}
 <style>
 /* ═══════════════════════════════════════════════════════
    DASHBOARD v3 — campus control center
@@ -1379,7 +1380,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 
 <!-- ═══ HERO STRIP: big digital clock + info chips ═══ -->
 {% if v3 %}
-{% include 'player_v3.html' %}
+{% include player_tpl|default('player_v3.html') %}
 {% elif v2 %}
 {% include 'player_v2.html' %}
 {% elif ui_skin == 'modern' %}
