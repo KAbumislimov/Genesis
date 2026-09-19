@@ -95,7 +95,7 @@ a{ color:inherit; text-decoration:none; }
 .rail-scrim.open{ opacity:1; pointer-events:auto; }
 
 /* ── каркас ── */
-.shell{ position:relative; z-index:2; margin-left:var(--rail-w); min-height:100vh; }
+.shell{ position:relative; margin-left:var(--rail-w); min-height:100vh; }
 .topbar{
   position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:14px;
   height:64px; padding:0 28px; background:linear-gradient(var(--ink) 0%,color-mix(in srgb,var(--ink) 70%,transparent) 70%,transparent);
@@ -148,6 +148,7 @@ kbd{ font-family:var(--f-body); font-size:10.5px; font-weight:600; letter-spacin
 #nc-chip-machines.v3-open{ display:block !important; animation:pop-in .25s var(--ease); }
 #nc-chip-machines #nc-mt-toggle-btn{ display:none; }
 .topbar .nc-chip{ background:transparent; border:none; box-shadow:none; }
+.float-panel{ left:calc(var(--rail-w) + 24px); }
 .float-dock{ left:auto !important; right:24px !important; bottom:24px !important; align-items:flex-end !important; }
 
 .stage{ padding:6px 28px 90px; max-width:1560px; margin:0 auto; }
