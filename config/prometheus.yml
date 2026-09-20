@@ -69,10 +69,6 @@ scrape_configs:
         labels:
           nodename: xptk
           host_ip: 10.102.0.41
-      - targets: ['10.40.0.42:9100']
-        labels:
-          nodename: shtk
-          host_ip: 10.40.0.42
       - targets: ['10.40.0.43:9100']
         labels:
           nodename: sptk
@@ -85,14 +81,6 @@ scrape_configs:
         labels:
           nodename: bptk
           host_ip: 10.10.0.42
-      - targets: ['10.30.0.41:9100']
-        labels:
-          nodename: lhmtk
-          host_ip: 10.30.0.41
-      - targets: ['10.30.0.42:9100']
-        labels:
-          nodename: lhmtk2
-          host_ip: 10.30.0.42
     relabel_configs:
       - source_labels: [nodename]
         regex: (.+)

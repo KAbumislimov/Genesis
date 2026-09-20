@@ -61,8 +61,9 @@ function v3Select(key, fromUi) {
     });
     if (hero) hero.classList.toggle('is-playing', on);
     if (onair) onair.classList.toggle('on', on);
-    if (tag) tag.textContent = on ? (n > 1 ? 'В эфире · ' + n + ' кампуса' : 'В эфире · ' + name) : 'Ожидание';
-    document.title = on ? ('▶ ' + (track || 'Играет') + ' · Campus Player') : baseTitle;
+    var tr = window.autoTranslate || function(x){ return x; };
+    if (tag) tag.textContent = on ? (n > 1 ? tr('В эфире') + ' · ' + n + ' ' + tr('кампуса') : tr('В эфире') + ' · ' + name) : tr('Ожидание');
+    document.title = on ? ('▶ ' + (track || tr('Играет')) + ' · Campus Player') : tr(baseTitle);
   }
   var mo = new MutationObserver(function(){ clearTimeout(scan._t); scan._t = setTimeout(scan, 60); });
   document.querySelectorAll('[data-tile]').forEach(function(t){ mo.observe(t, {subtree:true, attributes:true, childList:true, characterData:true, attributeFilter:['style','class']}); });
@@ -84,13 +85,14 @@ function v3Select(key, fromUi) {
   var nm = {{ (current_user.display_name or current_user.username)|tojson }};
   function tick(){
     var now = new Date();
+    var L = window.currentLang || 'ru', loc = {ru:'ru-RU', en:'en-GB', az:'az-Latn-AZ'}[L] || 'ru-RU', tr = window.autoTranslate || function(x){ return x; };
     var p = new Intl.DateTimeFormat('ru-RU', {timeZone:'Asia/Baku', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}).formatToParts(now);
     var v = {}; p.forEach(function(x){ v[x.type] = x.value; });
     var h = +v.hour % 24;
     if (c) c.innerHTML = v.hour + ':' + v.minute + '<small>:' + v.second + '</small>';
     var w = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
-    if (g) g.textContent = w + ', ' + nm;
-    if (d) d.textContent = new Intl.DateTimeFormat('ru-RU', {timeZone:'Asia/Baku', weekday:'long', day:'numeric', month:'long'}).format(now) + ' · Баку';
+    if (g) g.textContent = tr(w) + ', ' + nm;
+    if (d) d.textContent = new Intl.DateTimeFormat(loc, {timeZone:'Asia/Baku', weekday:'long', day:'numeric', month:'long'}).format(now) + ' · ' + tr('Баку');
   }
   tick(); setInterval(tick, 1000);
 })();
