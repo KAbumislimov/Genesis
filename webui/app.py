@@ -563,6 +563,8 @@ def init_db():
             'ALTER TABLE activity_log ADD COLUMN ip TEXT',
             'ALTER TABLE activity_log ADD COLUMN user_agent TEXT',
             'ALTER TABLE users ADD COLUMN panel_color TEXT NOT NULL DEFAULT ""',
+            'ALTER TABLE users ADD COLUMN ui_variant TEXT NOT NULL DEFAULT ""',
+            'ALTER TABLE users ADD COLUMN ui_palette TEXT NOT NULL DEFAULT ""',
         ]:
             try:
                 c.execute(col_sql)
@@ -1610,19 +1612,60 @@ def logout():
 
 _UI_DEFAULT = 'console'   # основной дизайн для всех, кто явно не выбрал другой ('off' в cookie — старый)
 
+# Все варианты дизайна. key — значение cookie/поля users.ui_variant, route — страница плеера,
+# css — номер файла static/v<N>.css (None — у «Студии» стили общие), demo — цвета для карточки-превью.
+UI_VARIANT_INFO = [
+    {'key': 'console', 'name': 'Пульт',  'route': 'dashboard_v4', 'desc': 'Микшерная консоль: каналы с фейдерами, светодиодные уровни, аварийный стоп. Основной дизайн.', 'demo': ['#1c1e24', '#ffb000', '#ff7a00']},
+    {'key': 'studio',  'name': 'Студия', 'route': 'dashboard_v3', 'desc': 'Тёмный, стеклянные карточки кампусов, янтарная лампа «В ЭФИРЕ», визуализатор звука.', 'demo': ['#0d0c11', '#ffb347', '#ff6a3d']},
+    {'key': 'neon',    'name': 'Неон',   'route': 'dashboard_v6', 'desc': 'Тёмное плоское стекло, свечение, тонкие фейдеры. Разметка «Пульта», современный вид.', 'demo': ['#07080c', '#ff7a45', '#ff3d7f']},
+    {'key': 'bento',   'name': 'Бенто',  'route': 'dashboard_v5', 'desc': 'Светлый, крупные цветные карточки, плитки со статистикой.', 'demo': ['#e4e8f1', '#3d5afe', '#7c4dff']},
+    {'key': 'lumen',   'name': 'Свет',   'route': 'dashboard_v7', 'desc': 'Светлый и графичный: белые каналы, чёрные акценты, уровни-точки.', 'demo': ['#eceef2', '#ff5b2e', '#111318']},
+    {'key': 'rack',    'name': 'Рэк',    'route': 'dashboard_v8', 'desc': 'Студийная стойка: юниты на рейках, стрелочные VU-метры, светодиодные шкалы.', 'demo': ['#141518', '#ffb400', '#e6e2d3']},
+    {'key': 'deck',    'name': 'Дека',   'route': 'dashboard_v9', 'desc': 'Светлый корпус в духе Teenage Engineering: точечный экран, энкодер, пэды.', 'demo': ['#c8ccd1', '#ff5a1f', '#111214']},
+]
+UI_PALETTES = [('amber', 'Янтарь'), ('aurora', 'Аврора'), ('rose', 'Роза')]
+_UI_PALETTE_KEYS = tuple(k for k, _ in UI_PALETTES)
+
+def _ui_pref_row():
+    """Сохранённые в аккаунте ui_variant / ui_palette текущего пользователя (кэш на запрос)."""
+    from flask import g
+    if getattr(g, '_ui_pref', None) is None:
+        row = None
+        if getattr(current_user, 'is_authenticated', False):
+            try:
+                with get_db() as c:
+                    row = c.execute('SELECT ui_variant, ui_palette FROM users WHERE id=?', (current_user.id,)).fetchone()
+            except Exception:
+                row = None
+        g._ui_pref = {'variant': (row['ui_variant'] if row else '') or '', 'palette': (row['ui_palette'] if row else '') or ''}
+    return g._ui_pref
+
 def _effective_ui():
-    """Вариант дизайна для текущего запроса: cookie 'ui' → она; 'off' → старый (None); иначе основной."""
+    """Вариант дизайна для запроса: cookie → выбор, сохранённый в аккаунте → основной.
+    'off' — старый интерфейс (возвращает None)."""
     c = request.cookies.get('ui')
+    if c not in _UI_VARIANTS and c != 'off':
+        c = _ui_pref_row()['variant']
     if c == 'off':
         return None
     return c if c in _UI_VARIANTS else _UI_DEFAULT
 
-_UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5', 'neon': 'dashboard_v6', 'lumen': 'dashboard_v7'}
+def _save_ui_variant(name):
+    if getattr(current_user, 'is_authenticated', False):
+        try:
+            with get_db() as c:
+                c.execute('UPDATE users SET ui_variant=? WHERE id=?', (name, current_user.id))
+        except Exception:
+            pass
+
+_UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5', 'neon': 'dashboard_v6', 'lumen': 'dashboard_v7', 'rack': 'dashboard_v8', 'deck': 'dashboard_v9'}
 
 @app.context_processor
 def inject_globals():
     result = {'ann_count': 0, 'wallpaper_default': 'off', 'theme_default': ''}
     _ui = _effective_ui()
+    result['ui_variant_list'] = [(v['key'], v['name']) for v in UI_VARIANT_INFO]
+    result['ui_palette_pref'] = _ui_pref_row()['palette'] if _ui_pref_row()['palette'] in _UI_PALETTE_KEYS else ''
     if _ui:
         result.update(v3ui=True, variant=_ui, player_home=url_for(_UI_VARIANTS[_ui]))
     if current_user.is_authenticated:
@@ -1913,9 +1956,11 @@ def dashboard():
 def set_ui(name):
     """Выбор дизайна (cookie 'ui'): studio / console / bento — новый каркас на всех страницах; off — старый."""
     if name in _UI_VARIANTS:
+        _save_ui_variant(name)
         resp = redirect(url_for(_UI_VARIANTS[name]))
         resp.set_cookie('ui', name, max_age=365*86400, samesite='Lax')
         return resp
+    _save_ui_variant('off')
     resp = redirect(url_for('dashboard', classic=1))
     resp.set_cookie('ui', 'off', max_age=365*86400, samesite='Lax')
     return resp
@@ -1931,6 +1976,8 @@ def _ui_page(html, name):
     """Ответ с запоминанием выбранного дизайна (cookie), чтобы остальные страницы открывались в нём же."""
     resp = make_response(html)
     resp.set_cookie('ui', name, max_age=365*86400, samesite='Lax')
+    if request.cookies.get('ui') != name:
+        _save_ui_variant(name)
     return resp
 
 @app.route('/v3')
@@ -1968,6 +2015,20 @@ def dashboard_v7():
     """Вариант дизайна «Свет» (светлый, графичный). Разметка как у «Пульта», другой вид."""
     return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='lumen',
                              player_tpl='player_v4.html', player_home=url_for('dashboard_v7')), 'lumen')
+
+@app.route('/v8')
+@login_required
+def dashboard_v8():
+    """Вариант дизайна «Рэк» (студийная стойка, стрелочные VU). Тот же контекст и общий JS."""
+    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='rack',
+                             player_tpl='player_v8.html', player_home=url_for('dashboard_v8')), 'rack')
+
+@app.route('/v9')
+@login_required
+def dashboard_v9():
+    """Вариант дизайна «Дека» (светлый корпус, пэды). Тот же контекст и общий JS."""
+    return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='deck',
+                             player_tpl='player_v9.html', player_home=url_for('dashboard_v9')), 'deck')
 
 def _render_dashboard(**extra):
     now = datetime.now()
@@ -3851,7 +3912,8 @@ def settings_page():
         s = c.execute("SELECT value FROM settings WHERE key='silence_mode'").fetchone()
         if s:
             silence = s['value'] == '1'
-    return render_template('settings.html', tg_settings=tg_settings, silence=silence)
+    return render_template('settings.html', tg_settings=tg_settings, silence=silence,
+                           ui_variants=UI_VARIANT_INFO, ui_current=(_effective_ui() or 'off'), ui_palettes=UI_PALETTES)
 
 @app.route('/security')
 @perm_required('security_view')
@@ -5337,11 +5399,13 @@ def api_ui_prefs():
     in on."""
     if request.method == 'GET':
         with get_db() as c:
-            row = c.execute('SELECT ui_skin, ui_accent, panel_color FROM users WHERE username=?',
+            row = c.execute('SELECT ui_skin, ui_accent, panel_color, ui_variant, ui_palette FROM users WHERE username=?',
                              (current_user.username,)).fetchone()
         return jsonify({'ok': True, 'skin': (row['ui_skin'] if row else 'classic'),
                         'accent': (row['ui_accent'] if row else 'amber'),
-                        'panel_color': (row['panel_color'] if row else '') or ''})
+                        'panel_color': (row['panel_color'] if row else '') or '',
+                        'ui_variant': (row['ui_variant'] if row else '') or '',
+                        'ui_palette': (row['ui_palette'] if row else '') or ''})
     data   = request.get_json() or {}
     skin   = data.get('skin')
     accent = data.get('accent')
@@ -5354,6 +5418,16 @@ def api_ui_prefs():
         if accent not in _UI_ACCENTS:
             return jsonify({'ok': False, 'error': 'Неизвестный акцент'})
         updates.append('ui_accent=?'); params.append(accent)
+    if 'ui_variant' in data:
+        v = data.get('ui_variant') or ''
+        if v not in _UI_VARIANTS and v not in ('off', ''):
+            return jsonify({'ok': False, 'error': 'Неизвестный дизайн'})
+        updates.append('ui_variant=?'); params.append(v)
+    if 'ui_palette' in data:
+        pal = data.get('ui_palette') or ''
+        if pal not in _UI_PALETTE_KEYS and pal != '':
+            return jsonify({'ok': False, 'error': 'Неизвестная палитра'})
+        updates.append('ui_palette=?'); params.append(pal)
     if 'panel_color' in data:
         panel_color = data.get('panel_color') or ''
         if panel_color not in _PANEL_COLORS:

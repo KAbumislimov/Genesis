@@ -1,0 +1,62 @@
+[
+  {
+    "blocked": false,
+    "role": "admin",
+    "username": "Abdulqadir"
+  },
+  {
+    "blocked": false,
+    "role": "eventmanager",
+    "username": "Guler Mikayilova"
+  },
+  {
+    "blocked": false,
+    "role": "admin",
+    "username": "Nicat.Gadirov"
+  },
+  {
+    "blocked": false,
+    "role": "helpdesk",
+    "username": "Orxan Cavadov"
+  },
+  {
+    "blocked": false,
+    "role": "helpdesk",
+    "username": "Rufet.Rehimov"
+  },
+  {
+    "blocked": false,
+    "role": "admin",
+    "username": "Ruslan.K"
+  },
+  {
+    "blocked": false,
+    "role": "admin",
+    "username": "Samir.S"
+  },
+  {
+    "blocked": false,
+    "role": "helpdesk",
+    "username": "Seyid Hafizli"
+  },
+  {
+    "blocked": false,
+    "role": "admin",
+    "username": "Veli"
+  },
+  {
+    "blocked": false,
+    "role": "eventmanager",
+    "username": "Vuqar Ehmedov"
+  },
+  {
+    "blocked": false,
+    "role": "admin",
+    "username": "admin"
+  },
+  {
+    "blocked": false,
+    "role": "eventmanager",
+    "username": "lala.osmanova"
+  }
+]

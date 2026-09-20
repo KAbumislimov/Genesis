@@ -23,6 +23,13 @@ for tool in campus-mon gitkamran; do
     fi
 done
 
+# Перед каждым коммитом: (1) выгрузить «живое состояние» системы — права ролей, настройки, машины,
+# расписание, crontab и ЗАШИФРОВАННЫЙ снимок БД — в campus-infra/state/, (2) дописать в docs/journal/
+# что именно менялось. Так на новом железе всё (а не только код) восстанавливается командой из GitHub.
+# Обе программы только читают БД и никогда не роняют бэкап (|| true).
+python3 "$REPO_DIR/campus-infra/scripts/export_state.py" >>"$LOG" 2>&1 || true
+python3 "$REPO_DIR/campus-infra/scripts/update_journal.py" >>"$LOG" 2>&1 || true
+
 # Только campus-infra + helpdesk-ops + ops-journal — НЕ "-A" по всему
 # $HOME/projects, чтобы никогда случайно не утащить в бэкап личные файлы
 # (Desktop, Downloads, xlsx-отчёты, посторонние git-репозитории вроде

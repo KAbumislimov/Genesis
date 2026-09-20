@@ -26,7 +26,8 @@
   function setPal(p){
     document.documentElement.setAttribute('data-pal', p);
     pals.forEach(function(b){ b.classList.toggle('on', b.dataset.pal === p); });
-    try { localStorage.setItem('v3pal-{{ variant|default('studio') }}', p); } catch(e) {}
+    try { localStorage.setItem('v3pal', p); } catch(e) {}
+    try { fetch('/api/ui-prefs', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ui_palette:p})}).catch(function(){}); } catch(e) {}
   }
   pals.forEach(function(b){ b.addEventListener('click', function(){ setPal(b.dataset.pal); }); });
   setPal(document.documentElement.getAttribute('data-pal') || 'amber');

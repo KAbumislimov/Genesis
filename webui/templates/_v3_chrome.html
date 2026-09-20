@@ -75,11 +75,8 @@
         <div class="usr-menu" role="menu">
           <div class="usr-skins" role="group" aria-label="Дизайн">
             <span>Дизайн</span>
-            <a href="/ui/studio" class="{{ 'on' if variant|default('studio') == 'studio' }}">Студия</a>
-            <a href="/ui/console" class="{{ 'on' if variant == 'console' }}">Пульт</a>
-            <a href="/ui/bento" class="{{ 'on' if variant == 'bento' }}">Бенто</a>
-            <a href="/ui/neon" class="{{ 'on' if variant == 'neon' }}">Неон</a>
-            <a href="/ui/lumen" class="{{ 'on' if variant == 'lumen' }}">Свет</a>
+            {% for k, n in ui_variant_list %}<a href="/ui/{{ k }}" class="{{ 'on' if variant == k }}">{{ n }}</a>{% endfor %}
+            <a href="{{ url_for('settings_page') }}#ui-design" class="usr-all">Все варианты и цвета →</a>
           </div>
           <a href="{{ url_for('profile') }}" role="menuitem"><i class="bi bi-person"></i>Профиль</a>
           <a href="/ui/off" role="menuitem"><i class="bi bi-arrow-counterclockwise"></i>Старый интерфейс</a>

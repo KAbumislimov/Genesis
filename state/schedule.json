@@ -1,0 +1,326 @@
+[
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ Утро",
+    "file": "utro.mp3",
+    "play": false,
+    "time": "07:45",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "07:59",
+    "vol": null
+  },
+  {
+    "days": "Только ПН",
+    "dow": [
+      0
+    ],
+    "event": "▶ Гос. гимн",
+    "file": "himn.mp3",
+    "play": true,
+    "special": true,
+    "time": "08:00",
+    "vol": 160
+  },
+  {
+    "days": "Только ПН",
+    "dow": [
+      0
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "special": true,
+    "time": "08:03",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 1 перемена",
+    "file": "1peremena.mp3",
+    "play": false,
+    "time": "08:40",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "08:45",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 2 перемена",
+    "file": "2peremena.mp3",
+    "play": false,
+    "time": "09:25",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "09:35",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 3 перемена",
+    "file": "3peremena.mp3",
+    "play": false,
+    "time": "10:15",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "10:20",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 4 перемена",
+    "file": "4peremena.mp3",
+    "play": false,
+    "time": "11:00",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "11:05",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 5 перемена",
+    "file": "5peremena.mp3",
+    "play": false,
+    "time": "11:45",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "11:55",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 6 перемена",
+    "file": "6peremena.mp3",
+    "play": false,
+    "time": "12:35",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "12:40",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 7 перемена",
+    "file": "7peremena.mp3",
+    "play": false,
+    "time": "13:20",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "13:30",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 8 перемена",
+    "file": "8peremena.mp3",
+    "play": false,
+    "time": "14:10",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Стоп",
+    "file": "—",
+    "play": false,
+    "time": "14:15",
+    "vol": null
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "▶ 9 перемена",
+    "file": "9peremena.mp3",
+    "play": false,
+    "time": "14:55",
+    "vol": 110
+  },
+  {
+    "days": "Пн–Пт",
+    "dow": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event": "⏹ Финал",
+    "file": "—",
+    "play": false,
+    "time": "15:10",
+    "vol": null
+  }
+]

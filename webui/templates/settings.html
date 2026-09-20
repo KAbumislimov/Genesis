@@ -70,6 +70,82 @@
   </a>
 </div>
 
+<!-- ═══ ДИЗАЙН ИНТЕРФЕЙСА: все варианты плеера и палитры ═══ -->
+<div class="st-card" id="ui-design" style="margin-bottom:20px">
+  <div class="st-head"><i class="bi bi-window-stack" style="color:var(--blue)"></i> Дизайн интерфейса</div>
+  <div class="st-body">
+    <div class="st-sub" style="margin-bottom:14px">Выберите вид плеера и всего сайта. Выбор сохраняется в вашем аккаунте и работает на любом устройстве.</div>
+    <div class="ud-grid">
+      {% for v in ui_variants %}
+      <a class="ud-card{{ ' on' if ui_current == v.key }}" href="/ui/{{ v.key }}" data-variant="{{ v.key }}">
+        <span class="ud-prev" style="--c1:{{ v.demo[0] }};--c2:{{ v.demo[1] }};--c3:{{ v.demo[2] }}"><i></i><i></i><i></i></span>
+        <b>{{ v.name }}{% if ui_current == v.key %}<em>сейчас</em>{% endif %}</b>
+        <small>{{ v.desc }}</small>
+      </a>
+      {% endfor %}
+      <a class="ud-card{{ ' on' if ui_current == 'off' }}" href="/ui/off">
+        <span class="ud-prev old"><i></i><i></i><i></i></span>
+        <b>Старый интерфейс{% if ui_current == 'off' %}<em>сейчас</em>{% endif %}</b>
+        <small>Прежний вид до обновления: классический и современный плеер.</small>
+      </a>
+      <a class="ud-card" href="/v2" title="Предпросмотр на основе Tabler">
+        <span class="ud-prev tabler"><i></i><i></i><i></i></span>
+        <b>Tabler</b>
+        <small>Ранний предпросмотр на готовой библиотеке Tabler (только плеер).</small>
+      </a>
+    </div>
+    <div class="st-row" style="margin-top:14px">
+      <div>
+        <div class="st-lbl">Цветовая палитра</div>
+        <div class="st-sub">Три цветовые схемы для любого дизайна</div>
+      </div>
+      <div class="st-ctrl ud-pals" id="ud-pals">
+        {% for k, n in ui_palettes %}<button type="button" class="ud-pal" data-pal="{{ k }}" title="{{ n }}"><i></i>{{ n }}</button>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+.ud-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.ud-card{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);text-decoration:none;color:var(--text);transition:transform .25s,border-color .2s,box-shadow .3s}
+.ud-card:hover{transform:translateY(-3px);border-color:var(--blue);box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.ud-card.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 40%,transparent)}
+.ud-card b{font-size:14px;display:flex;align-items:center;gap:8px}
+.ud-card b em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:100px;background:var(--blue);color:#fff}
+.ud-card small{font-size:11.5px;color:var(--muted);line-height:1.4}
+.ud-prev{position:relative;display:block;height:74px;border-radius:9px;background:var(--c1);overflow:hidden;border:1px solid rgba(128,128,128,.25)}
+.ud-prev i{position:absolute;border-radius:5px;background:var(--c2)}
+.ud-prev i:nth-child(1){left:8px;top:8px;width:46%;height:26px;background:var(--c2)}
+.ud-prev i:nth-child(2){left:8px;bottom:8px;width:28%;height:20px;background:var(--c3);opacity:.85}
+.ud-prev i:nth-child(3){right:8px;bottom:8px;width:40%;height:20px;background:var(--c2);opacity:.45}
+.ud-prev.old{background:linear-gradient(135deg,#0d1117,#161b22);--c2:#58a6ff;--c3:#3fb950}
+.ud-prev.tabler{background:linear-gradient(135deg,#151f2c,#1d2a3a);--c2:#4299e1;--c3:#2fb344}
+.ud-pals{display:flex;gap:8px;flex-wrap:wrap}
+.ud-pal{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:100px;border:2px solid var(--border);background:var(--bg3);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer;transition:.2s}
+.ud-pal i{width:14px;height:14px;border-radius:50%}
+.ud-pal[data-pal="amber"] i{background:linear-gradient(135deg,#ffb347,#ff6a3d)}
+.ud-pal[data-pal="aurora"] i{background:linear-gradient(135deg,#4ff0d0,#7a6cff)}
+.ud-pal[data-pal="rose"] i{background:linear-gradient(135deg,#ff7eb6,#ffb86b)}
+.ud-pal:hover{border-color:var(--blue)}
+.ud-pal.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 14%,var(--bg3))}
+</style>
+<script>
+(function(){
+  var cur = document.documentElement.getAttribute('data-pal') || 'amber';
+  function mark(){ document.querySelectorAll('#ud-pals .ud-pal').forEach(function(b){ b.classList.toggle('on', b.dataset.pal === (document.documentElement.getAttribute('data-pal') || 'amber')); }); }
+  document.querySelectorAll('#ud-pals .ud-pal').forEach(function(b){
+    b.addEventListener('click', function(){
+      var p = b.dataset.pal;
+      document.documentElement.setAttribute('data-pal', p);
+      try { localStorage.setItem('v3pal', p); } catch(e) {}
+      fetch('/api/ui-prefs', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ui_palette:p})}).catch(function(){});
+      mark();
+    });
+  });
+  mark();
+})();
+</script>
+
 <div class="st-grid">
 
 <!-- ═══ LEFT COLUMN ═══════════════════════════════════════════════ -->

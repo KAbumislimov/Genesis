@@ -1,0 +1,82 @@
+[
+  {
+    "cockpit_url": "http://10.20.1.106:1991",
+    "host": "10.20.1.106",
+    "id": 1,
+    "is_audio_client": 0,
+    "mac": "70:10:6f:3e:be:79",
+    "music_path": "",
+    "name": "Microserver Hp Proxmox",
+    "user": "root"
+  },
+  {
+    "cockpit_url": "http://10.20.1.102:1991",
+    "host": "10.50.0.41",
+    "id": 8,
+    "is_audio_client": 1,
+    "mac": "98:ee:cb:28:c5:2f",
+    "music_path": "",
+    "name": "Client1 CityGarden",
+    "user": "cgtk"
+  },
+  {
+    "cockpit_url": "http://10.20.1.105:1991",
+    "host": "10.40.0.41",
+    "id": 9,
+    "is_audio_client": 1,
+    "mac": "00:80:64:ab:50:03",
+    "music_path": "",
+    "name": "Seabreeze Məktəb",
+    "user": "sbtk"
+  },
+  {
+    "cockpit_url": "http://10.103.0.41:1991",
+    "host": "10.103.0.41",
+    "id": 10,
+    "is_audio_client": 1,
+    "mac": "00:80:64:bc:12:4b",
+    "music_path": "",
+    "name": "Ağ-Şəhər Məktəb",
+    "user": "wctk"
+  },
+  {
+    "cockpit_url": "http://10.102.0.41:1991",
+    "host": "10.102.0.41",
+    "id": 15,
+    "is_audio_client": 1,
+    "mac": "",
+    "music_path": "/home/xptk/Media",
+    "name": "BCR Xatai Preschool",
+    "user": "xptk"
+  },
+  {
+    "cockpit_url": "http://10.40.0.43:1991",
+    "host": "10.40.0.43",
+    "id": 17,
+    "is_audio_client": 1,
+    "mac": "",
+    "music_path": "/home/sptk/Media",
+    "name": "Seabreeze Preschool",
+    "user": "sptk"
+  },
+  {
+    "cockpit_url": "http://10.10.0.41:1991",
+    "host": "10.10.0.41",
+    "id": 18,
+    "is_audio_client": 1,
+    "mac": "",
+    "music_path": "/home/bstk/Media",
+    "name": "Bayıl Məktəb",
+    "user": "bstk"
+  },
+  {
+    "cockpit_url": "http://10.10.0.42:1991",
+    "host": "10.10.0.42",
+    "id": 19,
+    "is_audio_client": 1,
+    "mac": "",
+    "music_path": "/home/bptk/Media",
+    "name": "Bayıl Preschool",
+    "user": "bptk"
+  }
+]

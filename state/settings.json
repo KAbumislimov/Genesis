@@ -1,0 +1,12 @@
+{
+  "silence_mode": "0",
+  "tg_chat_ids": "",
+  "tg_notify_backup": "1",
+  "tg_notify_himn": "1",
+  "tg_notify_login": "1",
+  "tg_notify_play": "1",
+  "tg_notify_upload": "1",
+  "tg_notify_users": "1",
+  "theme_default": "modern-dark",
+  "wallpaper_default": "light-fon1.png"
+}

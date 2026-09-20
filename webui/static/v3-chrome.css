@@ -222,3 +222,5 @@ kbd{ font-family:var(--f-body); font-size:10.5px; font-weight:600; letter-spacin
 .topbar .nc-chip .nc-label{ flex-basis:100%; font-size:9.5px; line-height:1.2; }
 .topbar .nc-chip .nc-val{ font-size:12px; line-height:1.2; }
 .topbar .nc-chip{ align-self:center; margin:0 !important; }
+.usr-menu .usr-skins a.usr-all{ width:100%; margin-top:4px; padding:8px 10px; border-radius:10px; font-size:12px; color:var(--a); }
+.usr-menu .usr-skins a.usr-all:hover{ background:var(--glass2); }

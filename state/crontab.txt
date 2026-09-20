@@ -1,0 +1,29 @@
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=""
+
+# Мониторинг диска — каждый час
+0 * * * * /home/kamran/scripts/monitoring/disk-monitor.sh >> /home/kamran/log/disk-monitor.log 2>&1
+0 * * * * /home/kamran/scripts/sync-client1-time.sh >> /home/kamran/log/client1-timesync.log 2>&1
+0 * * * * /usr/bin/docker restart campus-webui >/dev/null 2>&1
+
+*/30 * * * * /home/kamran/projects/campus-infra/scripts/sync-to-genesis.sh >> /home/kamran/log/genesis-sync.log 2>&1
+# Еженедельный бэкап всех машин (каждое воскресенье в 02:00)
+0 2 * * 0 /home/kamran/projects/homelab/backup/campus-backup.sh >> /home/kamran/log/campus-backup-$(date +\%Y-\%m-\%d).log 2>&1
+
+# gitkamran: ежедневный бэкап БД (webui + helpdesk-ops) в campus-backups (03:00)
+0 3 * * * /home/kamran/projects/campus-infra/scripts/backup-data.sh >> /home/kamran/log/backup-data.log 2>&1
+# gitkamran: ежечасный бэкап кода (campus-infra + helpdesk-ops) в GitHub
+0 * * * * /home/kamran/projects/campus-infra/scripts/backup-to-github.sh >> /home/kamran/log/backup-to-github.log 2>&1
+0 20 * * * /home/kamran/projects/campus-infra/scripts/daily-digest.sh >> /home/kamran/log/daily-digest.log 2>&1
+# Ночное авто-заполнение Журнала (00:00): вчерашние git-коммиты + сводка активности
+0 0 * * * /home/kamran/projects/helpdesk-ops/journal_autofill.py >> /home/kamran/log/journal-autofill.log 2>&1
+# ops-journal: gündəlik auditd log ixracı + təmizlik (23:50, github push saat başı gedir)
+50 23 * * * /home/kamran/projects/ops-journal/scripts/sync.sh >> /home/kamran/log/ops-journal-sync.log 2>&1
+# github-live-sync: постоянный watcher — коммитит/пушит в GitHub в течение ~45с
+# после изменения (вместо ожидания часового крона) + шлёт Telegram-уведомление
+@reboot /home/kamran/projects/campus-infra/scripts/github-live-sync-watchdog.sh >> /home/kamran/log/github-live-sync-watchdog.log 2>&1
+*/5 * * * * /home/kamran/projects/campus-infra/scripts/github-live-sync-watchdog.sh >> /home/kamran/log/github-live-sync-watchdog.log 2>&1
+
+# Zəfər Günü — раз в год, 8 ноября, 09:00: трек на всех кампусах (текущих и будущих)
+0 9 8 11 * /home/kamran/projects/campus-infra/scripts/zefer-gunu.sh >> /home/kamran/log/zefer-gunu-cron.log 2>&1
