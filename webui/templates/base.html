@@ -780,11 +780,12 @@ html[data-theme="nordic-slate"]{--bg:#2e3440;--bg2:#3b4252;--bg3:#434c5e;--borde
 {% block extra_head %}{% endblock %}
 {% if v3ui %}
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+{% if variant in ('glass','rows','dial','soft','onair','compact') %}<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">{% elif variant == 'oled' %}<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">{% endif %}
 {% if variant == 'console' %}<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">{% elif variant == 'bento' %}<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">{% elif variant in ('neon','lumen') %}<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">{% elif variant == 'rack' %}<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">{% elif variant == 'deck' %}<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">{% endif %}
 <script>try { if (!localStorage.getItem('fdock-x')) localStorage.setItem('fdock-x', String(Math.max(24, window.innerWidth - 168))); } catch(e) {}</script>
 <script>try { var _p = localStorage.getItem('v3pal') || localStorage.getItem('v3pal-{{ variant|default('studio') }}') || {{ (ui_palette_pref or '')|tojson }}; if (_p) document.documentElement.setAttribute('data-pal', _p); } catch(e) {}</script>
 <link href="{{ url_for('static', filename='v3-chrome.css') }}?v=11" rel="stylesheet">
-{% set _vn = {'console':'4','bento':'5','neon':'6','lumen':'7','rack':'8','deck':'9'} %}{% if variant in _vn %}<link href="{{ url_for('static', filename='v' ~ _vn[variant] ~ '.css') }}?v=7" rel="stylesheet">{% endif %}
+{% set _vn = {'console':'4','bento':'5','neon':'6','lumen':'7','rack':'8','deck':'9','glass':'10','rows':'11','dial':'12','oled':'13','soft':'14','onair':'15','compact':'16'} %}{% if variant in _vn %}<link href="{{ url_for('static', filename='v' ~ _vn[variant] ~ '.css') }}?v=8" rel="stylesheet">{% endif %}
 <link href="{{ url_for('static', filename='v3-legacy.css') }}?v=1" rel="stylesheet">
 {% endif %}
 </head>

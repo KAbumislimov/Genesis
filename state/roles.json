@@ -37,6 +37,7 @@
     "timesync",
     "tracks_delete",
     "tracks_edit",
+    "ui_default",
     "upload",
     "users_manage",
     "volume"

@@ -748,6 +748,7 @@ PERM_CATALOG = [
         ('announcements_manage', 'Доска объявлений',           'Создание, закрепление и удаление объявлений'),
         ('appearance_manage',    'Обои, эмодзи и тема',        'Обои, эмодзи и тема по умолчанию для всех'),
         ('login_style',          'Стартовая страница входа',   'Выбор внешнего вида страницы входа для всех (Настройки → «Стартовая страница входа»)'),
+        ('ui_default',           'Дизайн плеера по умолчанию', 'Выбор основного дизайна плеера для всех, кто не выбрал свой (Настройки → «Дизайн интерфейса»)'),
         ('telegram_settings',    'Уведомления в Telegram',     'Настройка оповещений в Telegram'),
     ]),
     ('admin', 'Администрирование', 'bi-shield-lock', [
@@ -1692,6 +1693,14 @@ UI_VARIANT_INFO = [
     {'key': 'lumen',   'name': 'Свет',   'route': 'dashboard_v7', 'desc': 'Светлый и графичный: белые каналы, чёрные акценты, уровни-точки.', 'demo': ['#eceef2', '#ff5b2e', '#111318']},
     {'key': 'rack',    'name': 'Рэк',    'route': 'dashboard_v8', 'desc': 'Студийная стойка: юниты на рейках, стрелочные VU-метры, светодиодные шкалы.', 'demo': ['#141518', '#ffb400', '#e6e2d3']},
     {'key': 'deck',    'name': 'Дека',   'route': 'dashboard_v9', 'desc': 'Светлый корпус в духе Teenage Engineering: точечный экран, энкодер, пэды.', 'demo': ['#c8ccd1', '#ff5a1f', '#111214']},
+    # ── семейство «Пульт»: разметка player_v4.html, разные интерфейсы и свои «плюшки» (static/v10..v16.css, static/console-extras.js) ──
+    {'key': 'glass',   'name': 'Стекло',    'route': 'dashboard_v10', 'desc': 'Матовое стекло на живом фоне: аврора пульсирует в такт музыке, крупные скруглённые каналы.', 'demo': ['#0a0c14', '#7cf0ff', '#b38cff']},
+    {'key': 'rows',    'name': 'Ряды',      'route': 'dashboard_v11', 'desc': 'Каналы строками: горизонтальные фейдеры и уровни, закреплённый мастер — удобно при многих кампусах.', 'demo': ['#0b0d12', '#5dd6a2', '#2f8cff']},
+    {'key': 'dial',    'name': 'Циферблат', 'route': 'dashboard_v12', 'desc': 'Круглые регуляторы у каждого кампуса и большой мастер-циферблат: тянуть, крутить колёсиком, стрелками.', 'demo': ['#0c0d14', '#ff9d3d', '#ff4d6d']},
+    {'key': 'oled',    'name': 'OLED',      'route': 'dashboard_v13', 'desc': 'Чёрный экран, тонкие линии и огромные цифры: строгий минимализм.', 'demo': ['#000000', '#c6ff3d', '#ffffff']},
+    {'key': 'soft',    'name': 'Мята',      'route': 'dashboard_v14', 'desc': 'Светлый мягкий интерфейс: пастель, объёмные кнопки, дружелюбный вид.', 'demo': ['#e9eff5', '#18c48a', '#4a7dff']},
+    {'key': 'onair',   'name': 'Эфир-студия', 'route': 'dashboard_v15', 'desc': 'Вещательная студия: огромная вывеска ON AIR, красные светодиоды, статус каждого кампуса.', 'demo': ['#0b0708', '#ff3b47', '#ff8a3d']},
+    {'key': 'compact', 'name': 'Компакт',   'route': 'dashboard_v16', 'desc': 'Для планшета и телефона: крупные кнопки, пресеты громкости и «+/−», мастер внизу экрана.', 'demo': ['#0d1017', '#4ff0d0', '#7a6cff']},
 ]
 UI_PALETTES = [('amber', 'Янтарь'), ('aurora', 'Аврора'), ('rose', 'Роза')]
 _UI_PALETTE_KEYS = tuple(k for k, _ in UI_PALETTES)
@@ -1718,7 +1727,18 @@ def _effective_ui():
         c = _ui_pref_row()['variant']
     if c == 'off':
         return None
-    return c if c in _UI_VARIANTS else _UI_DEFAULT
+    return c if c in _UI_VARIANTS else _ui_default_current()
+
+def _ui_default_current():
+    """Основной дизайн плеера для всех, кто не выбрал свой: settings.ui_default (задаёт админ), иначе «Пульт»."""
+    try:
+        with get_db() as c:
+            row = c.execute("SELECT value FROM settings WHERE key='ui_default'").fetchone()
+        if row and row['value'] in _UI_VARIANTS:
+            return row['value']
+    except Exception:
+        pass
+    return _UI_DEFAULT
 
 def _save_ui_variant(name):
     if getattr(current_user, 'is_authenticated', False):
@@ -1728,7 +1748,8 @@ def _save_ui_variant(name):
         except Exception:
             pass
 
-_UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5', 'neon': 'dashboard_v6', 'lumen': 'dashboard_v7', 'rack': 'dashboard_v8', 'deck': 'dashboard_v9'}
+_UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5', 'neon': 'dashboard_v6', 'lumen': 'dashboard_v7', 'rack': 'dashboard_v8', 'deck': 'dashboard_v9',
+                'glass': 'dashboard_v10', 'rows': 'dashboard_v11', 'dial': 'dashboard_v12', 'oled': 'dashboard_v13', 'soft': 'dashboard_v14', 'onair': 'dashboard_v15', 'compact': 'dashboard_v16'}
 
 @app.context_processor
 def inject_globals():
@@ -2043,8 +2064,11 @@ def dashboard_v2():
     return _render_dashboard(v2=True, base_layout='base_v2.html')
 
 def _ui_page(html, name):
-    """Ответ с запоминанием выбранного дизайна (cookie), чтобы остальные страницы открывались в нём же."""
+    """Ответ с запоминанием выбранного дизайна (cookie), чтобы остальные страницы открывались в нём же.
+    ?preview=1 — только посмотреть: ни cookie, ни выбор в аккаунте не меняются."""
     resp = make_response(html)
+    if request.args.get('preview'):
+        return resp
     resp.set_cookie('ui', name, max_age=365*86400, samesite='Lax')
     if request.cookies.get('ui') != name:
         _save_ui_variant(name)
@@ -2099,6 +2123,42 @@ def dashboard_v9():
     """Вариант дизайна «Дека» (светлый корпус, пэды). Тот же контекст и общий JS."""
     return _ui_page(_render_dashboard(v3=True, v3ui=True, variant='deck',
                              player_tpl='player_v9.html', player_home=url_for('dashboard_v9')), 'deck')
+
+def _register_console_variants():
+    """Варианты семейства «Пульт»: та же разметка player_v4.html, свой вид (static/vN.css) и «плюшки» (console-extras.js)."""
+    for key, num in (('glass', 10), ('rows', 11), ('dial', 12), ('oled', 13), ('soft', 14), ('onair', 15), ('compact', 16)):
+        def make(key=key, num=num):
+            def view():
+                return _ui_page(_render_dashboard(v3=True, v3ui=True, variant=key, player_tpl='player_v4.html',
+                                                  player_home=url_for(f'dashboard_v{num}')), key)
+            return view
+        app.add_url_rule(f'/v{num}', endpoint=f'dashboard_v{num}', view_func=login_required(make()))
+
+_register_console_variants()
+
+@app.route('/api/ui-default', methods=['GET', 'POST'])
+@login_required
+def api_ui_default():
+    """Основной дизайн плеера для всех — только с привилегией ui_default (у админа есть всегда)."""
+    if not has_perm('ui_default'):
+        return jsonify({'ok': False, 'error': 'Нет прав'}), 403
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'current': _ui_default_current(), 'variants': list(_UI_VARIANTS)})
+    st = str((request.get_json(silent=True) or {}).get('style', ''))
+    if st not in _UI_VARIANTS:
+        return jsonify({'ok': False, 'error': 'Неизвестный вариант'}), 400
+    with get_db() as c:
+        c.execute("INSERT OR REPLACE INTO settings (key,value) VALUES ('ui_default',?)", (st,))
+    log_action(current_user.username, 'ui_default', 'webui', st)
+    return jsonify({'ok': True, 'current': st})
+
+@app.route('/ui-preview/<key>.jpg')
+@login_required
+def ui_preview_image(key):
+    """Картинки-превью дизайнов плеера (на них видны названия кампусов и треков — поэтому только для вошедших)."""
+    if not re.match(r'^[a-z0-9_-]{1,24}$', key):
+        return '', 404
+    return send_from_directory(os.path.join(app.root_path, 'ui_previews'), key + '.jpg', max_age=3600)
 
 def _render_dashboard(**extra):
     now = datetime.now()
@@ -4181,7 +4241,8 @@ def settings_page():
             silence = s['value'] == '1'
     return render_template('settings.html', tg_settings=tg_settings, silence=silence,
                            ui_variants=UI_VARIANT_INFO, ui_current=(_effective_ui() or 'off'), ui_palettes=UI_PALETTES,
-                           login_styles=LOGIN_STYLE_INFO, login_style_current=_login_style_current())
+                           login_styles=LOGIN_STYLE_INFO, login_style_current=_login_style_current(),
+                           ui_default=_ui_default_current())
 
 @app.route('/security')
 @perm_required('security_view')
