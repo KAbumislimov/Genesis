@@ -648,11 +648,12 @@ function applyLang(l){
   tickClock(); renderTip(); renderNews(); step4Refresh(); renderSlog(); runIntro(); renderMq(); if ($('#v12') && $('#v12').classList.contains('ready')) runType12();
   document.title = 'Media Audio — ' + T('title');
 }
+var LOGO_B = (function(){ try { return new URLSearchParams(location.search).get('logo') === 'b'; } catch(e) { return false; } })();   // ?logo=b — светлая сирень в телах букв Media (для сравнения)
 function swapLogos(t){
   document.querySelectorAll('img.logo-o').forEach(function(im){
     if (!im.dataset.o) im.dataset.o = im.getAttribute('src');
-    var o = im.dataset.o;
-    im.setAttribute('src', t === 'light' ? o : o.replace(/\.logo\.(crop|t)\.png/, function(m, k){ return k === 'crop' ? '.logo.cropline.png?v=5' : '.logo.tline.png?v=5'; }));
+    var o = im.dataset.o, b = LOGO_B ? '_b' : '';
+    im.setAttribute('src', t === 'light' ? o : o.replace(/\.logo\.(crop|t)\.png/, function(m, k){ return (k === 'crop' ? '.logo.cropline' : '.logo.tline') + b + '.png?v=8'; }));
   });
 }
 function setShineMask(){ document.querySelectorAll('.v11 .lw').forEach(function(l){ var im = l.querySelector('img'); if (im) l.style.setProperty('--m', 'url("' + im.getAttribute('src') + '")'); }); }
