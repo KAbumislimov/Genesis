@@ -1553,7 +1553,7 @@ def _before():
         except Exception:
             pass
 
-_LOGIN_STYLES = tuple(str(i) for i in range(1, 12))
+_LOGIN_STYLES = tuple(str(i) for i in range(1, 20))
 
 def _render_login():
     """Страница входа: стандартная или один из вариантов предпросмотра (?style=1..5 — см. templates/login_alt.html)."""
