@@ -216,11 +216,21 @@ def cron_schedule():
     return jobs
 
 
+def disabled_machines():
+    """Физически отключённые машины (config/backup-disabled.txt): их не бэкапим и не считаем проблемой."""
+    try:
+        lines = open(os.path.join(INFRA, 'config', 'backup-disabled.txt'), encoding='utf-8').read().splitlines()
+    except OSError:
+        return []
+    return [re.sub(r'#.*', '', ln).strip() for ln in lines if re.sub(r'#.*', '', ln).strip()]
+
+
 def main():
     cache = load_cache()
     st = {
         'generated_at': time.time(),
         'schedule': cron_schedule(),
+        'disabled': disabled_machines(),
         'proxmox': proxmox_info(),
         'github': github_info(),
         'snapshots': snapshots_info(),

@@ -60,7 +60,6 @@ function v3Select(key, fromUi) {
       if (v !== null && el.textContent !== String(v)) el.textContent = v;
     });
     if (hero) hero.classList.toggle('is-playing', on);
-    if (onair) onair.classList.toggle('on', on);
     var tr = window.autoTranslate || function(x){ return x; };
     if (tag) tag.textContent = on ? (n > 1 ? tr('В эфире') + ' · ' + n + ' ' + tr('кампуса') : tr('В эфире') + ' · ' + name) : tr('Ожидание');
     document.title = on ? ('▶ ' + (track || tr('Играет')) + ' · Campus Player') : tr(baseTitle);

@@ -1185,6 +1185,11 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 .wamp2-movepop-item{display:block;width:100%;text-align:left;background:none;border:none;
   color:#dbe6fa;font-family:inherit;font-size:13px;padding:8px 10px;border-radius:5px;cursor:pointer}
 .wamp2-movepop-item:hover{background:rgba(60,110,220,.25);color:#fff}
+.ccpop-row{display:flex !important;align-items:center;gap:9px}
+.ccpop-row small{margin-left:auto;font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:.06em}
+.ccpop-row.is-off{opacity:.45;cursor:not-allowed}.ccpop-row.is-off:hover{background:none;color:inherit}
+.ccpop-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:#5b6070}
+.ccpop-dot.green{background:#2ecc71;box-shadow:0 0 7px #2ecc71}.ccpop-dot.yellow{background:#f5b301;box-shadow:0 0 7px #f5b301}.ccpop-dot.red{background:#ff3b47;box-shadow:0 0 7px #ff3b47}
 
 /* Right-click context menu */
 .wamp2-ctx{display:none;position:fixed;z-index:9000;min-width:210px;
@@ -1461,7 +1466,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <button class="w2b w2b-next" onclick="doNext()" data-i18n-title="wamp.next_t" title="Следующий трек"><span data-i18n="wamp.next">СЛЕД</span> ⏭</button>
     {% endif %}
     {% if perms.play %}
-    <button class="w2b w2b-playall" onclick="wampPlayAllOshhaya()" data-i18n-title="wamp.playall_t" title="▶ Играть всё из папки Общая (перемешать) на активном кампусе">▶ <span data-i18n="wamp.playall">ИГРАТЬ ВСЁ</span></button>
+    <button class="w2b w2b-playall" onclick="wampPlayAllOshhaya(event)" data-i18n-title="wamp.playall_t" title="▶ Играть всё из папки Общая (перемешать) на активном кампусе">▶ <span data-i18n="wamp.playall">ИГРАТЬ ВСЁ</span></button>
     {% endif %}
     <div class="w2b-gap"></div>
     <button class="w2b w2b-shf tog" id="wa-shf-btn" onclick="wampToggleShuffle()" data-i18n-title="wamp.shuffle_t" title="Перемешать треки">🔀 <span data-i18n="wamp.shuffle">ШАФ</span></button>
@@ -1986,7 +1991,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
         <div class="perem-qa-main">
           <span class="perem-qa-label">{{ s.label }}</span>
           <div class="perem-qa-btns">
-            <button class="perem-qa-btn c-all" onclick="_doPlayPeremActive('{{ s.id }}',this)" title="{{ s.label }} — выбранный в шапке кампус">▶</button>
+            <button class="perem-qa-btn c-all" onclick="_doPlayPeremActive('{{ s.id }}',this,event)" title="{{ s.label }} — выбранный в шапке кампус">▶</button>
             <button class="perem-qa-editbtn" onclick="_togglePeremEdit('{{ s.id }}',this)" title="Редактировать время/громкость по кампусам">✏️</button>
           </div>
         </div>
@@ -3613,7 +3618,7 @@ function _wampPlRender() {
       '<span class="wamp2-pdu">'+dur+'</span>' +
       (IS_ADMIN ? '<button class="wamp2-pmovebtn" title="Переместить в другой альбом">📁→</button>' : '') +
       (IS_ADMIN ? '<span class="wamp2-pren" title="Переименовать">✎</span>' : '');
-    div.onclick = (function(t, ri){ return function(){ _wampPlPlay(t, div, ri); }; })(tr, realIdx);
+    div.onclick = (function(t, ri){ return function(ev){ _wampPlPlay(t, div, ri, ev); }; })(tr, realIdx);
     var favEl = div.querySelector('.wamp2-pfav');
     favEl.onclick = (function(t, fe){ return function(ev){ ev.stopPropagation(); wampToggleFavorite(t, fe); }; })(tr, favEl);
     if (IS_ADMIN) {
@@ -3968,7 +3973,57 @@ document.addEventListener('DOMContentLoaded', function(){
   document.addEventListener('keydown', function(ev){ if(ev.key === 'Escape') wampCtxClose(); });
 });
 
-function _wampPlPlay(tr, el, ampIdx) {
+// ──── ВЫБОР КАМПУСА ПРИ ЗАПУСКЕ ЛЮБОГО ЗВУКА ─────────────────────────────
+// Любой клик по музыке (строка библиотеки, «Играть всё», перемена…) сначала спрашивает, на каком кампусе играть,
+// и только после выбора запускает звук именно там. Выбранный кампус становится активным (для Пауза/След./Стоп).
+// Ctrl+клик по треку — прослушка в браузере (на колонки не идёт) — работает как раньше.
+function _lampOfKey(k) {
+  var s = _hubStatus[k];
+  if (!s || !('playing' in s || 'online' in s || 'error' in s || 'reachable' in s)) return (window._v3Lamps && window._v3Lamps[k]) || '';
+  if (s.online === false || s.error === 'offline' || s.reachable === false) return 'red';
+  return (s.paused || s.muted) ? 'yellow' : 'green';
+}
+function wampAskCampus(ev, title, onPick, opts) {
+  opts = opts || {};
+  var pop = document.getElementById('wamp2-campuspop');
+  var list = document.getElementById('ccpop-list');
+  var ttl = document.getElementById('ccpop-title');
+  if (!pop || !list) return;
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  if (ttl) ttl.textContent = title;
+  list.innerHTML = '';
+  function item(label, key, lamp, bold) {
+    var b = document.createElement('button');
+    b.className = 'wamp2-movepop-item ccpop-row';
+    var dot = document.createElement('i');
+    dot.className = 'ccpop-dot' + (lamp ? ' ' + lamp : '');
+    b.appendChild(dot);
+    b.appendChild(document.createTextNode(label));
+    if (bold) b.style.fontWeight = '900';
+    if (lamp === 'red') {
+      b.disabled = true; b.classList.add('is-off'); b.title = _tr('Кампус оффлайн');
+      var tag = document.createElement('small'); tag.textContent = _tr('оффлайн'); b.appendChild(tag);
+    } else {
+      b.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); onPick(key); };
+    }
+    list.appendChild(b);
+  }
+  if (opts.all) item('📡 ' + _tr('Все кампусы'), 'all', '', true);
+  MUSIC_MACHINES.forEach(function(m){ item(m.name, m.key, _lampOfKey(m.key)); });
+  pop.style.maxHeight = 'min(82vh, 600px)';        // все кампусы должны помещаться без прокрутки
+  pop.classList.add('open');
+  var x = (ev && ev.clientX) || (window.innerWidth / 2 - 90), y = (ev && ev.clientY) || (window.innerHeight / 3);
+  var pw = pop.offsetWidth || 200, ph = pop.offsetHeight || 260;
+  if (x + pw > window.innerWidth - 8) x = window.innerWidth - pw - 8;
+  if (y + ph > window.innerHeight - 8) y = Math.max(8, window.innerHeight - ph - 8);
+  pop.style.left = Math.max(8, x) + 'px';
+  pop.style.top = Math.max(8, y) + 'px';
+}
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') { var pp = document.getElementById('wamp2-campuspop'); if (pp) pp.classList.remove('open'); }
+});
+
+function _wampPlPlay(tr, el, ampIdx, ev, noAsk) {
   document.querySelectorAll('.wamp2-pli').forEach(function(x){x.classList.remove('pl-active');});
   if(el) el.classList.add('pl-active');
   // Track current index for next/prev navigation
@@ -3979,16 +4034,26 @@ function _wampPlPlay(tr, el, ampIdx) {
     toast('▶ LOCAL: '+tr.name.slice(0,35));
     return;
   }
-  // Normal click → play on campus speakers (SFTP upload ~5-30s, show spinner first)
-  if (_needSingleCampus()) return;
   var shortName = tr.name.replace(/\.(mp3|flac|ogg|m4a|wav)$/i,'').slice(0,38);
+  if (noAsk) {                      // «След./Пред.» — продолжаем на том кампусе, где уже играем
+    if (_needSingleCampus()) return;
+    _wampPlPlayOn(tr, ampIdx, _activeCampus, shortName);
+    return;
+  }
+  wampAskCampus(ev || window.event, _tr('Где играть') + ' — ' + shortName, function(key){
+    setActiveCampus(key);
+    _wampPlPlayOn(tr, ampIdx, key, shortName);
+  });
+}
+function _wampPlPlayOn(tr, ampIdx, campus, shortName) {
+  // Play on campus speakers (SFTP upload ~5-30s, show spinner first)
   toast('⏳ ' + shortName + '…');
-  var _playCampus = _activeCampus;
+  var _playCampus = campus;
   fetch('/api/play',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({name: tr.name, folder: tr.folder||'', machine: _playCampus})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) toast('⚠️ '+(d.error||'err'));
-    else { toast('▶ ' + shortName); _checkRealPlayResult(_playCampus, shortName); }
+    else { toast('▶ ' + shortName + ' · ' + campusLabel(_playCampus)); _checkRealPlayResult(_playCampus, shortName); }
   }).catch(function(){ toast('⚠️ Нет связи с сервером'); });
 }
 // Track Ctrl key state
@@ -4004,7 +4069,7 @@ function wampSendToCampus(machine) {
     else { toast('▶ '+({client1:'NAR',client2:'GNC',cgtk:'CG'}[machine]||machine)+' — '+song.name.slice(0,30)); _checkRealPlayResult(machine, song.name.slice(0,30)); }
   });
 }
-function wampPlayAll() {
+function wampPlayAllLocal() {
   if(_plTracks.length === 0) { toast('Сначала загрузи плейлист (кнопка PL)'); return; }
   var shuffled = _plTracks.slice();
   if(_wampShuffle) { for(var i=shuffled.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var tmp=shuffled[i];shuffled[i]=shuffled[j];shuffled[j]=tmp;} }
@@ -4021,18 +4086,26 @@ function wampPlayAll() {
   Amplitude.play();
   toast('▶ ALL — ' + songs.length + ' треков');
 }
-function wampPlayAllOshhaya() {
-  if (_needSingleCampus()) return;
+// «Играть всё» (библиотека): выбор кампуса → вся его музыка вперемешку. Ctrl+клик — прослушка в браузере, как раньше.
+function wampPlayAll(ev) {
+  ev = ev || window.event;
+  if (ev && ev.ctrlKey) { wampPlayAllLocal(); return; }
+  wampAskCampus(ev, _tr('Где играть') + ' — ' + _tr('Играть всё'), function(key){ setActiveCampus(key); _wampPlayAllOn(key); });
+}
+function wampPlayAllOshhaya(ev) {
+  wampAskCampus(ev || window.event, _tr('Где играть') + ' — ' + _tr('Играть всё'), function(key){ setActiveCampus(key); _wampPlayAllOn(key); });
+}
+function _wampPlayAllOn(campus) {
   var btn = document.querySelector('.w2b-playall');
   if(btn) btn.textContent = '⏳ Запуск...';
   fetch('/api/play-all', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({folder: 'Общая', machine: _activeCampus, shuffle: true})
+    body: JSON.stringify({folder: 'Общая', machine: campus, shuffle: true})
   }).then(function(r){ return r.json(); }).then(function(d){
     if(btn) btn.textContent = '▶ ИГРАТЬ ВСЁ';
     if(d.ok) {
-      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + campusLabel(_activeCampus));
+      toast('▶ Общая — ' + (d.tracks||'') + ' треков · ' + campusLabel(campus));
       // Switch playlist view to Общая folder
       var tab = document.querySelector('.wamp2-fol-tab[data-folder="Общая"]');
       if(tab) wampFolderTab(tab, 'Общая');
@@ -4075,7 +4148,7 @@ function _plNavigate(dir) {
     var found = list.querySelector('.wamp2-pli[data-track-idx="'+next+'"]');
     if(found) { el = found; found.scrollIntoView({block:'nearest'}); }
   }
-  _wampPlPlay(tr, el, next);
+  _wampPlPlay(tr, el, next, null, true);
 }
 function doNext() { _plNavigate(+1); }
 function doPrev() { _plNavigate(-1); }
@@ -4247,6 +4320,7 @@ function _applyMachineStatus(key, idx, d) {
   if (d.error && !d.playing) {
     conn.className='badge-conn-err'; conn.innerHTML='<i class="bi bi-wifi-off"></i>';
     _setStatusBadge(key, false);
+    if (window.v3SetLamp) window.v3SetLamp(key, 'red');
     if (live) live.style.display = 'none';
     if (stop) stop.style.display = '';
     if (mn)   mn.textContent = t('np.idle');
@@ -4258,6 +4332,7 @@ function _applyMachineStatus(key, idx, d) {
   _showCampusErr(key, d.last_error);
   conn.className='badge-conn-ok'; conn.innerHTML='<i class="bi bi-wifi"></i>';
   _setStatusBadge(key, true);
+  if (window.v3SetLamp) window.v3SetLamp(key, (d.paused || d.muted) ? 'yellow' : 'green');
   if (d.playing) {
     if (live) live.style.display = '';
     if (stop) stop.style.display = 'none';
@@ -4306,6 +4381,7 @@ function _machineStatusErr(key) {
   var connEl = document.getElementById('conn-'+key);
   if (connEl) { connEl.className='badge-conn-err'; connEl.innerHTML='<i class="bi bi-wifi-off"></i>'; }
   _setStatusBadge(key, false);
+  if (window.v3SetLamp) window.v3SetLamp(key, 'red');
   if (liveEl) liveEl.style.display = 'none';
   if (stopEl) stopEl.style.display = '';
   if (mn) mn.textContent = t('np.idle');
@@ -4589,8 +4665,10 @@ function _doPlayPeremAll(slot, btn) {
   playAllCampuses(_doPlayPerem, slot);
   setTimeout(function(){ if (btn) btn.classList.remove('busy'); }, MUSIC_MACHINES.length * 600 + 200);
 }
-function _doPlayPeremActive(slot, btn) {
-  if (_activeCampus === 'all') { _doPlayPeremAll(slot, btn); } else { _doPlayPerem(_activeCampus, slot, btn); }
+function _doPlayPeremActive(slot, btn, ev) {
+  wampAskCampus(ev || window.event, _tr('Где играть') + ' — ' + _tr('Перемена'), function(key){
+    if (key === 'all') { _doPlayPeremAll(slot, btn); } else { setActiveCampus(key); _doPlayPerem(key, slot, btn); }
+  }, {all: true});
 }
 
 // ──── PEREM SCHEDULE EDIT (per-campus время/громкость, реально в crontab) ────

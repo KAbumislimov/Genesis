@@ -48,7 +48,7 @@ bash ~/projects/campus-infra/restore.sh --verify
 | **Секреты**: `.env`, токены ботов, SSH-ключ `campus_bot`, **ключ шифрования снимков** | GitHub `campus-secrets` (приватный) | вручную; в `campus-infra` секретов нет (защита `.gitignore` + проверка перед коммитом) |
 | Что и когда менялось | `docs/journal/ГГГГ-ММ-ДД.md` | автоматически: `scripts/update_journal.py` |
 | Media (звонки/гимн, ~800 МБ) | диск сервера + еженедельный бэкап на Proxmox | **не в GitHub**; восстановление: `scripts/restore-music.sh` |
-| Музыкальная библиотека «Kamran Music» (~33 ГБ) | только диск сервера | **нигде не бэкапится** — нужна отдельная копия |
+| Музыкальная библиотека «Kamran Music» (~33 ГБ) | диск сервера + еженедельная копия на Proxmox (с 2026-09-20) | **не в GitHub**; возврат: `rsync` с Proxmox, см. README.md в корне репозитория, шаг 6 |
 
 Снимки шифруются (`AES-256`, ключ `BACKUP_VAULT_PASS` из `.env`, который живёт только в `campus-secrets`).
 Без токена `campus-secrets` данные из GitHub прочитать нельзя — это сделано намеренно.

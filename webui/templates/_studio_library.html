@@ -36,7 +36,7 @@
             <option value="dur">По длительности</option>
             <option value="size">По размеру</option>
           </select>
-          <button class="btn3 solid cpm-pl-playall rip" onclick="wampPlayAll()" title="Перемешать и воспроизвести всё"><i class="bi bi-shuffle"></i><span>Играть всё</span></button>
+          <button class="btn3 solid cpm-pl-playall rip" onclick="wampPlayAll(event)" title="Перемешать и воспроизвести всё"><i class="bi bi-shuffle"></i><span>Играть всё</span></button>
         </div>
         {% if can('tracks_edit') or can('tracks_delete') %}
         <div class="wamp2-bulk-bar" style="display:none">

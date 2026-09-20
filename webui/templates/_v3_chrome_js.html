@@ -118,4 +118,34 @@
     else if (e.key === 'Enter' && f[sel]) { e.preventDefault(); closeCmd(); f[sel].run(); }
   });
 })();
+
+/* ── лампочки: «В ЭФИРЕ» в шапке и лампочки кампусов на любой странице ──
+   Цвет: зелёный — на связи, жёлтый — часть кампусов оффлайн (у кампуса — пауза/без звука), красный — оффлайн.
+   Кольцо-пульсация у лампочки — сейчас идёт эфир. */
+(function(){
+  var root = document.documentElement, pill = document.getElementById('v3-onair');
+  var tr = function(x){ return window.autoTranslate ? window.autoTranslate(x) : x; };
+  window._v3Lamps = window._v3Lamps || {};
+  window.v3SetLamp = function(key, state){
+    window._v3Lamps[key] = state;
+    document.querySelectorAll('[data-tile][data-key="' + key + '"]').forEach(function(t){ if (t.dataset.lamp !== state) t.dataset.lamp = state; });
+  };
+  function apply(d){
+    root.dataset.fleet = d.fleet; root.dataset.air = d.air ? '1' : '0';
+    if (pill) {
+      var label = pill.querySelector('span');
+      var txt = d.fleet === 'red' ? 'ОФФЛАЙН' : (d.air ? 'В ЭФИРЕ' : 'ОЖИДАНИЕ');
+      if (label) label.textContent = tr(txt);
+      pill.title = tr('На связи') + ': ' + d.online + ' / ' + d.total + (d.playing ? ' · ' + tr('Играет') + ': ' + d.playing : '');
+    }
+    Object.keys(d.lamps || {}).forEach(function(k){ window.v3SetLamp(k, d.lamps[k]); });
+  }
+  function poll(){
+    fetch('/api/fleet-status', {signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined})
+      .then(function(r){ if (r.status === 401) { location.href = '/login'; return null; } return r.json(); })
+      .then(function(d){ if (d && d.fleet) apply(d); })
+      .catch(function(){ apply({fleet:'red', air:false, online:0, total:0, playing:0, lamps:{}}); });
+  }
+  poll(); setInterval(poll, 10000);
+})();
 </script>

@@ -224,3 +224,22 @@ kbd{ font-family:var(--f-body); font-size:10.5px; font-weight:600; letter-spacin
 .topbar .nc-chip{ align-self:center; margin:0 !important; }
 .usr-menu .usr-skins a.usr-all{ width:100%; margin-top:4px; padding:8px 10px; border-radius:10px; font-size:12px; color:var(--a); }
 .usr-menu .usr-skins a.usr-all:hover{ background:var(--glass2); }
+
+/* ── лампочки по состоянию связи (зелёный / жёлтый / красный) ── */
+html{ --fleet:#4a4552; }
+html[data-fleet="green"]{ --fleet:#2ecc71; } html[data-fleet="yellow"]{ --fleet:#f5b301; } html[data-fleet="red"]{ --fleet:#ff3b47; }
+html[data-fleet] .onair{ color:var(--tx2); border-color:color-mix(in srgb,var(--fleet) 50%,transparent); background:color-mix(in srgb,var(--fleet) 11%,transparent); box-shadow:0 0 26px color-mix(in srgb,var(--fleet) 16%,transparent); }
+html[data-fleet] .onair-lamp{ background:var(--fleet) !important; box-shadow:0 0 11px var(--fleet), 0 0 22px color-mix(in srgb,var(--fleet) 55%,transparent) !important; }
+html[data-fleet][data-air="1"] .onair-lamp::after{ content:''; position:absolute; inset:-5px; border-radius:50%; border:2px solid var(--fleet) !important; animation:ring 1.6s ease-out infinite; }
+html[data-fleet][data-air="0"] .onair-lamp::after{ display:none; }
+html[data-fleet="red"] .onair-lamp{ animation:lampblink 1.4s steps(1) infinite; }
+@keyframes lampblink{ 50%{ opacity:.45; } }
+/* лампочка кампуса: у каждой плитки/канала/пэда — цвет по связи; кольцо остаётся, пока там играет */
+[data-tile][data-lamp]{ --lc:#2ecc71; }
+[data-tile][data-lamp="yellow"]{ --lc:#f5b301; } [data-tile][data-lamp="red"]{ --lc:#ff3b47; }
+[data-tile][data-lamp] .lamp .cpm-dot{ background:var(--lc) !important; box-shadow:0 0 9px var(--lc) !important; }
+[data-tile][data-lamp] .lamp .cpm-dot::after{ border-color:var(--lc) !important; }
+[data-tile][data-lamp="red"] .lamp .cpm-dot.off{ animation:lampblink 1.4s steps(1) infinite; }
+/* дежурный светодиод у фейдера (Пульт / Неон / Свет) */
+.c4 .strip[data-lamp] .vu i.stby{ background:var(--lc); box-shadow:0 0 8px var(--lc); }
+@media (prefers-reduced-motion:reduce){ html[data-fleet] .onair-lamp, [data-tile] .lamp .cpm-dot{ animation:none !important; } }

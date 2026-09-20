@@ -192,7 +192,7 @@ if [[ $PROBLEMS -eq 0 ]]; then echo -e "${G}${B}ГОТОВО${N}${G}: крити
 cat <<'MANUAL'
 
 Что НЕ хранится в GitHub и восстанавливается отдельно (см. docs/BACKUP-AND-RESTORE.md):
-  • «Kamran Music» (~33 ГБ) — НИГДЕ не бэкапится: вернуть можно только со старого диска / отдельной копии
+  • «Kamran Music» (~33 ГБ) — копия на Proxmox (с 2026-09-20, недельный бэкап), возврат: rsync с Proxmox, см. README.md шаг 6
   • мастер-копия Media (~800 МБ) — бэкап еженедельно на Proxmox (см. README.md в корне репозитория, шаг 6):
         bash ~/projects/campus-infra/scripts/restore-music.sh client1
   • на новой сетевой карте изменится MAC (Wake-on-LAN): обновить CLIENT1_MAC в .env

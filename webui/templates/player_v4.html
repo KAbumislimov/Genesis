@@ -221,6 +221,7 @@
       lvl[k] = (lvl[k] || 0) + (tgt - (lvl[k] || 0)) * (tgt > (lvl[k] || 0) ? .6 : .25);
       var n = Math.round(lvl[k]);
       for (var i = 0; i < leds.length; i++) leds[i].classList.toggle('lit', i < n);
+      if (leds[0]) leds[0].classList.toggle('stby', n < 1);   // дежурная лампочка: цвет = состояние связи (data-lamp)
     });
   }
   setInterval(tick, 90);

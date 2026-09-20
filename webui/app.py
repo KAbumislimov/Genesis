@@ -2482,6 +2482,7 @@ def _status_for_machine(machine):
             display_by   = None
             display_at   = None
     return {
+        'reachable':  not (path is None and paused is None and vol is None),   # для индикатора «В ЭФИРЕ»
         'playing':    bool(path) and not paused,
         'track':      display_name,
         'volume':     round(vol) if vol is not None else None,
@@ -2501,6 +2502,33 @@ def api_status():
     machine = request.args.get('machine', 'client1')
     return jsonify(_status_for_machine(machine))
 
+_FLEET_CACHE = {'ts': 0.0, 'data': None}
+_FLEET_LOCK = threading.Lock()
+
+def _fleet_status_all(max_age=0):
+    """Статус всех кампусов (параллельно). max_age — сколько секунд можно отдавать прошлый результат:
+    /api/status-all всегда считает заново (max_age=0) и обновляет кэш, а индикатор «В ЭФИРЕ» на любой странице
+    (/api/fleet-status) довольствуется свежим кэшем — так лишние SSH-опросы кампусов не плодятся."""
+    from concurrent.futures import ThreadPoolExecutor
+    c = _FLEET_CACHE
+    if max_age and c['data'] is not None and time.time() - c['ts'] < max_age:
+        return c['data']
+    with _FLEET_LOCK:
+        if max_age and c['data'] is not None and time.time() - c['ts'] < max_age:
+            return c['data']
+        keys = ['client1'] + [_campus_key(m) for m in music_machines() if m['host'] != CLIENT1_HOST]
+        keys = list(dict.fromkeys(keys))  # de-dupe, preserve order
+        result = {}
+        with ThreadPoolExecutor(max_workers=max(1, len(keys))) as ex:
+            futs = {ex.submit(_status_for_machine, k): k for k in keys}
+            for fut, k in futs.items():
+                try:
+                    result[k] = fut.result()
+                except Exception as e:
+                    result[k] = {'playing': False, 'track': None, 'online': False, 'error': str(e)}
+        c['data'], c['ts'] = result, time.time()
+        return result
+
 @app.route('/api/status-all')
 @login_required
 def api_status_all():
@@ -2510,18 +2538,26 @@ def api_status_all():
     # OTHER clicks (Стоп included) behind that queue. Querying every campus
     # here, in parallel server-side threads, and returning one combined
     # payload keeps the browser to a single request per poll tick.
-    from concurrent.futures import ThreadPoolExecutor
-    keys = ['client1'] + [_campus_key(m) for m in music_machines() if m['host'] != CLIENT1_HOST]
-    keys = list(dict.fromkeys(keys))  # de-dupe, preserve order
-    result = {}
-    with ThreadPoolExecutor(max_workers=max(1, len(keys))) as ex:
-        futs = {ex.submit(_status_for_machine, k): k for k in keys}
-        for fut, k in futs.items():
-            try:
-                result[k] = fut.result()
-            except Exception as e:
-                result[k] = {'playing': False, 'track': None, 'online': False, 'error': str(e)}
-    return jsonify(result)
+    return jsonify(_fleet_status_all())
+
+@app.route('/api/fleet-status')
+@login_required
+def api_fleet_status():
+    """Сводка для лампочки «В ЭФИРЕ» в шапке (есть на каждой странице).
+    fleet: green — все кампусы на связи, yellow — часть оффлайн, red — ни один не отвечает; air — кто-то играет.
+    lamps: лампочка каждого кампуса — green (на связи), yellow (на связи, но пауза/без звука), red (оффлайн)."""
+    data = _fleet_status_all(max_age=9)
+    total = len(data)
+    online = sum(1 for d in data.values() if d.get('online', d.get('reachable', True)))
+    playing = sum(1 for d in data.values() if d.get('playing'))
+    fleet = 'red' if total and online == 0 else ('yellow' if online < total else 'green')
+    lamps = {}
+    for k, d in data.items():
+        if not d.get('online', d.get('reachable', True)):
+            lamps[k] = 'red'
+        else:
+            lamps[k] = 'yellow' if (d.get('paused') or d.get('muted')) else 'green'
+    return jsonify({'fleet': fleet, 'online': online, 'total': total, 'playing': playing, 'air': playing > 0, 'lamps': lamps})
 
 def _mpv_stop_on(host, user):
     # 1. Graceful IPC stop: mpv stays alive (systemd won't restart), clears playlist.
@@ -5724,7 +5760,9 @@ def _bk_overview(st):
         ('client1',     none,                          _bk_step_cell(px, ['client1 → client1-full.tar.gz']), none),
         ('client2',      none,                          _bk_step_cell(px, ['client2 → client2-full.tar.gz']), none),
     ]
-    rows = [{'key': k, 'github': g, 'proxmox': p, 'local': l} for k, g, p, l in rows]
+    disabled = set(st.get('disabled') or [])
+    rows = [{'key': k, 'github': g, 'proxmox': ({'state': 'off', 'when': ''} if k in disabled else p), 'local': l}
+            for k, g, p, l in rows]
     problems = []
     def add(level, code, **kw):
         problems.append(dict(level=level, code=code, **kw))
@@ -5739,8 +5777,9 @@ def _bk_overview(st):
         add('warn', 'music_pending')
     if any(r['key'] == 'music' and r['proxmox']['state'] == 'bad' for r in rows):
         add('bad', 'music_missing')
-    if any(r['key'] == 'client2' and r['proxmox']['state'] == 'bad' for r in rows):
-        add('bad', 'client2_missing')
+    for r in rows:                      # отключённые машины (config/backup-disabled.txt) — не проблема
+        if px.get('reachable') and r['key'] in ('client1', 'client2') and r['proxmox']['state'] == 'bad':   # если Proxmox лежит — причина уже названа выше
+            add('bad', 'machine_missing', name=r['key'])
     if not gh.get('live_sync'):
         add('bad', 'github_sync_off')
     elif (gh.get('unpushed') or 0) > 3:

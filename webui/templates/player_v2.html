@@ -235,7 +235,7 @@
               <option value="dur">По длительности</option>
               <option value="size">По размеру</option>
             </select>
-            <button class="btn btn-primary cpm-pl-playall" onclick="wampPlayAll()" title="Перемешать и воспроизвести всё"><i class="bi bi-shuffle me-1"></i>Играть всё</button>
+            <button class="btn btn-primary cpm-pl-playall" onclick="wampPlayAll(event)" title="Перемешать и воспроизвести всё"><i class="bi bi-shuffle me-1"></i>Играть всё</button>
           </div>
           {% if current_user.role == 'admin' %}
           <div class="wamp2-bulk-bar" style="display:none">
