@@ -1370,13 +1370,22 @@ def logout():
               event_type='login')
     return redirect(url_for('login'))
 
+_UI_DEFAULT = 'console'   # основной дизайн для всех, кто явно не выбрал другой ('off' в cookie — старый)
+
+def _effective_ui():
+    """Вариант дизайна для текущего запроса: cookie 'ui' → она; 'off' → старый (None); иначе основной."""
+    c = request.cookies.get('ui')
+    if c == 'off':
+        return None
+    return c if c in _UI_VARIANTS else _UI_DEFAULT
+
 _UI_VARIANTS = {'studio': 'dashboard_v3', 'console': 'dashboard_v4', 'bento': 'dashboard_v5', 'neon': 'dashboard_v6', 'lumen': 'dashboard_v7'}
 
 @app.context_processor
 def inject_globals():
     result = {'ann_count': 0, 'wallpaper_default': 'off', 'theme_default': ''}
-    _ui = request.cookies.get('ui')
-    if _ui in _UI_VARIANTS:
+    _ui = _effective_ui()
+    if _ui:
         result.update(v3ui=True, variant=_ui, player_home=url_for(_UI_VARIANTS[_ui]))
     if current_user.is_authenticated:
         try:
@@ -1656,8 +1665,8 @@ def api_weather():
 @app.route('/')
 @login_required
 def dashboard():
-    _ui = request.cookies.get('ui')
-    if _ui in _UI_VARIANTS and not request.args.get('classic'):
+    _ui = _effective_ui()
+    if _ui and not request.args.get('classic'):
         return redirect(url_for(_UI_VARIANTS[_ui]))
     return _render_dashboard()
 
@@ -1670,7 +1679,7 @@ def set_ui(name):
         resp.set_cookie('ui', name, max_age=365*86400, samesite='Lax')
         return resp
     resp = redirect(url_for('dashboard', classic=1))
-    resp.delete_cookie('ui')
+    resp.set_cookie('ui', 'off', max_age=365*86400, samesite='Lax')
     return resp
 
 @app.route('/v2')
