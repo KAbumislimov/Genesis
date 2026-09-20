@@ -136,9 +136,12 @@ def main():
         if not a.only or 'emerald' in keys:
             print('emerald: пиковые огоньки')
             ctx = new_ctx(1500, 1000); pg, _, _ = open_page(ctx, 'emerald', 3000)
-            pg.evaluate("document.querySelectorAll('.strip')[0].querySelectorAll('.vu i').forEach((e,i)=>{ if(i<4) e.classList.add('lit'); })"); pg.wait_for_timeout(350)
-            pg.evaluate("document.querySelectorAll('.strip')[0].querySelectorAll('.vu i.lit').forEach(e=>e.classList.remove('lit'))"); pg.wait_for_timeout(350)
-            if not pg.query_selector('.strip .vu i.pk'): bad('emerald: пиковый огонёк не появился')
+            pg.evaluate("document.querySelectorAll('.strip')[0].dataset.state='playing'")   # уровни в плеере «играют» по имитации, огонёк пика должен появиться
+            found = False
+            for _ in range(40):
+                pg.wait_for_timeout(100)
+                if pg.query_selector('.strip .vu i.pk'): found = True; break
+            if not found: bad('emerald: пиковый огонёк не появился за 4 с')
             ctx.close()
         b.close()
     print(f'\nПОЛОМОК: {len(fails)}' if fails else '\nВСЁ В ПОРЯДКЕ')
