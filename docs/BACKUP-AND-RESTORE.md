@@ -88,3 +88,10 @@ tail -f ~/log/campus-backup-to-github.log ~/log/github-live-sync.log      # чт
 Снимки — бинарные файлы: webui ≈ 60 КБ, Helpdesk ≈ 0,5 МБ (раз в сутки), вложения ≈ 10 МБ (только при изменении). Ожидаемый
 прирост — порядка сотен МБ в год. Если репозиторий раздуется, историю `state/` можно сжать (`git filter-repo --path campus-infra/state --invert-paths`
 для старых коммитов) — актуальные снимки создаются заново автоматически.
+
+## Пароль входа на страницу «Бэкапы»
+
+Два разных секрета: `BACKUP_VAULT_PASS` — **ключ шифрования снимков** в GitHub (менять только вместе с перешифровкой снимков и обновлением `campus-secrets`),
+и `BACKUP_UI_PASS` — **пароль разблокировки скачивания архивов** на странице «Бэкапы» (можно менять свободно). Если `BACKUP_UI_PASS` не задан,
+используется `BACKUP_VAULT_PASS`. Сброс: записать новое значение `BACKUP_UI_PASS=...` в `~/projects/campus-infra/.env` (и в `campus-secrets/server/.env`),
+затем `docker compose up -d campus-webui`.

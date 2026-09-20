@@ -250,6 +250,7 @@ services:
       # Бэкапы
       - BACKUP_DIR=/campus-backups
       - BACKUP_VAULT_PASS=${BACKUP_VAULT_PASS:-}
+      - BACKUP_UI_PASS=${BACKUP_UI_PASS:-}
       - BACKUP_ADMIN_EMAILS=${BACKUP_ADMIN_EMAILS:-}
       # Email уведомления
       - NOTIFY_SMTP_HOST=${NOTIFY_SMTP_HOST:-smtp.gmail.com}

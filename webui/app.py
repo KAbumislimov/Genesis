@@ -101,6 +101,9 @@ ALLOWED_IMG_EXT = {'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'}
 MPV_SOCK  = '/run/campus-player/mpv.sock'
 BACKUP_DIR        = os.environ.get('BACKUP_DIR', '/campus-backups')
 BACKUP_VAULT_PASS = os.environ.get('BACKUP_VAULT_PASS', '')
+# Пароль входа на страницу «Бэкапы» (скачивание архивов). Отдельный от ключа шифрования снимков (BACKUP_VAULT_PASS):
+# его можно менять свободно, не трогая снимки в GitHub. Если не задан — как раньше, используется BACKUP_VAULT_PASS.
+BACKUP_UI_PASS = os.environ.get('BACKUP_UI_PASS', '')
 BACKUP_ADMIN_EMAILS = os.environ.get('BACKUP_ADMIN_EMAILS', '')
 VOICE_DIR = os.path.join(os.path.dirname(DB_PATH), 'voices')
 os.makedirs(VOICE_DIR, exist_ok=True)
@@ -2505,29 +2508,51 @@ def api_status():
 _FLEET_CACHE = {'ts': 0.0, 'data': None}
 _FLEET_LOCK = threading.Lock()
 
-def _fleet_status_all(max_age=0):
-    """Статус всех кампусов (параллельно). max_age — сколько секунд можно отдавать прошлый результат:
-    /api/status-all всегда считает заново (max_age=0) и обновляет кэш, а индикатор «В ЭФИРЕ» на любой странице
-    (/api/fleet-status) довольствуется свежим кэшем — так лишние SSH-опросы кампусов не плодятся."""
+def _fleet_compute():
+    """Опрос всех кампусов параллельно (5–8 с, пока оффлайн-кампусы не отвалятся по таймауту SSH)."""
     from concurrent.futures import ThreadPoolExecutor
+    keys = ['client1'] + [_campus_key(m) for m in music_machines() if m['host'] != CLIENT1_HOST]
+    keys = list(dict.fromkeys(keys))  # de-dupe, preserve order
+    result = {}
+    with ThreadPoolExecutor(max_workers=max(1, len(keys))) as ex:
+        futs = {ex.submit(_status_for_machine, k): k for k in keys}
+        for fut, k in futs.items():
+            try:
+                result[k] = fut.result()
+            except Exception as e:
+                result[k] = {'playing': False, 'track': None, 'online': False, 'error': str(e)}
+    return result
+
+def _fleet_store(started, data):
+    if started >= _FLEET_CACHE['ts']:
+        _FLEET_CACHE['data'], _FLEET_CACHE['ts'] = data, started
+
+def _fleet_status_all(max_age=0):
+    """max_age=0 (опрос плиток /api/status-all) — всегда считает заново и НИКОГДА не ждёт других запросов: раньше общая
+    блокировка выстраивала опросы в очередь (расчёт ~8 с, опрос раз в 5 с), запросы упирались в 15-секундный таймаут браузера
+    и онлайн-кампусы ошибочно краснели. max_age>0 (/api/fleet-status для лампочки в шапке) берёт свежий кэш; если кэш
+    устарел и его уже обновляет другой запрос — отдаёт последнее известное, а не встаёт в очередь."""
     c = _FLEET_CACHE
-    if max_age and c['data'] is not None and time.time() - c['ts'] < max_age:
+    if not max_age:
+        started = time.time()
+        data = _fleet_compute()
+        _fleet_store(started, data)
+        return data
+    if c['data'] is not None and time.time() - c['ts'] < max_age:
         return c['data']
-    with _FLEET_LOCK:
-        if max_age and c['data'] is not None and time.time() - c['ts'] < max_age:
+    if not _FLEET_LOCK.acquire(blocking=False):
+        if c['data'] is not None:
             return c['data']
-        keys = ['client1'] + [_campus_key(m) for m in music_machines() if m['host'] != CLIENT1_HOST]
-        keys = list(dict.fromkeys(keys))  # de-dupe, preserve order
-        result = {}
-        with ThreadPoolExecutor(max_workers=max(1, len(keys))) as ex:
-            futs = {ex.submit(_status_for_machine, k): k for k in keys}
-            for fut, k in futs.items():
-                try:
-                    result[k] = fut.result()
-                except Exception as e:
-                    result[k] = {'playing': False, 'track': None, 'online': False, 'error': str(e)}
-        c['data'], c['ts'] = result, time.time()
-        return result
+        _FLEET_LOCK.acquire()            # самый первый запрос после старта — кэша ещё нет, ждём
+    try:
+        if c['data'] is not None and time.time() - c['ts'] < max_age:
+            return c['data']
+        started = time.time()
+        data = _fleet_compute()
+        _fleet_store(started, data)
+        return data
+    finally:
+        _FLEET_LOCK.release()
 
 @app.route('/api/status-all')
 @login_required
@@ -5825,7 +5850,7 @@ def backups_page():
     return render_template('backups.html',
                            backup_dir=base, entries=entries, music=music,
                            machines=machines, unlocked=unlocked,
-                           has_vault=bool(BACKUP_VAULT_PASS),
+                           has_vault=bool(BACKUP_UI_PASS or BACKUP_VAULT_PASS),
                            admin_emails=BACKUP_ADMIN_EMAILS,
                            st=st, health=health, rows=rows, px=px, gh=gh, last_run=last_run, vchecks=vchecks,
                            schedule=_bk_schedule_view(st), fmt_ts=_bk_fmt_ts, fmt_sz=_fmt_sz,
@@ -5838,9 +5863,11 @@ def api_backup_unlock():
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data = request.get_json() or {}
     pwd  = data.get('password', '')
-    if not BACKUP_VAULT_PASS:
-        return jsonify({'ok': False, 'error': 'BACKUP_VAULT_PASS не задан'})
-    if pwd == BACKUP_VAULT_PASS:
+    expected = BACKUP_UI_PASS or BACKUP_VAULT_PASS
+    if not expected:
+        return jsonify({'ok': False, 'error': 'BACKUP_UI_PASS не задан'})
+    import hmac
+    if hmac.compare_digest(str(pwd).strip().encode(), expected.encode()):
         session['backup_unlocked'] = True
         return jsonify({'ok': True})
     return jsonify({'ok': False, 'error': 'Неверный пароль'})

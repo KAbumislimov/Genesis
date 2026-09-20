@@ -3125,6 +3125,21 @@ function toggleSched() {
 // ──── VOLUME KNOB ─────────────────────────────────────
 var currentVol = 100, isMuted = false, volTimer = null;
 
+// ──── ЗАЩИТА ГРОМКОСТИ ОТ «ОТСКОКА» ────────────────────────────────────────────
+// Опрос статуса занимает 5–8 с (оффлайн-кампусы отваливаются по таймауту), поэтому ответ, начатый ДО того как вы
+// выставили громкость, приходит уже ПОСЛЕ и возвращает ползунок на старое значение — со стороны выглядит как «звук
+// не фиксируется». Пока идёт удержание (15 с после последнего движения), ответы со старым значением игнорируются;
+// как только кампус сообщил ровно выставленное значение — удержание снимается.
+var _volHold = {};
+function _volHoldSet(key, val) { _volHold[key] = {val: Math.round(+val), until: Date.now() + 15000}; }
+function _volHoldAll(val) { MUSIC_MACHINES.forEach(function(m){ _volHoldSet(m.key, val); }); }
+function _volHoldClear(key) { if (key) delete _volHold[key]; else _volHold = {}; }
+function _volHeld(key, real) {
+  var h = _volHold[key];
+  if (!h) return false;
+  if (Math.round(+real) === h.val || Date.now() > h.until) { delete _volHold[key]; return false; }
+  return true;
+}
 var _knob = (function(){
   var MIN=0, MAX=160, val=100;
   var START_ANG = 2.356, SWEEP = 4.712; // 135° to 405° (270° sweep)
@@ -3185,6 +3200,7 @@ var _knob = (function(){
     var vn=document.getElementById('vol-num'); if(vn) vn.textContent=v;
     draw();
     if(!skipSend){
+      _volHoldAll(v);
       clearTimeout(volTimer);
       volTimer=setTimeout(function(){ sendVol(v); },280);
     }
@@ -3235,8 +3251,9 @@ function sendVol(v) {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({value: v})
   }).then(function(r){ return r.json(); }).then(function(d) {
-    if (d.ok) { currentVol = v; toast(t('toast.vol') + ' ' + v); }
-  });
+    if (d.ok) { currentVol = v; _volHoldAll(v); toast(t('toast.vol') + ' ' + v); }
+    else { _volHoldClear(); toast('⚠️ ' + (d.error || 'ошибка громкости')); }
+  }).catch(function(){ _volHoldClear(); toast('⚠️ Нет связи с сервером'); });
 }
 
 // ──── EQUALIZER (10-band) ─────────────────────────────
@@ -4245,6 +4262,7 @@ function setIdleNctk() {
 var _csVolDragging = null;
 function wampCsVolInput(key, val) {
   _csVolDragging = key;
+  _volHoldSet(key, val);
   var lbl = document.getElementById('vol-val-'+key);
   if (lbl) lbl.textContent = val;
   clearTimeout(window['_csVolClear_'+key]);
@@ -4261,17 +4279,18 @@ function wampSetCampusVolume(key, val) {
   fetch('/api/volume/' + key, {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({value: val})
   }).then(function(r){ return r.json(); })
-    .then(function(d){ if (!d.ok) toast('⚠️ ' + (d.error || 'ошибка громкости')); })
-    .catch(function(){ toast('⚠️ Нет связи с сервером'); })
+    .then(function(d){ if (!d.ok) { _volHoldClear(key); toast('⚠️ ' + (d.error || 'ошибка громкости')); } else { _volHoldSet(key, val); } })
+    .catch(function(){ _volHoldClear(key); toast('⚠️ Нет связи с сервером'); })
     .finally(function(){ _csVolDragging = null; });
 }
 function wampSetAllVolume(val) {
+  _volHoldAll(val);
   toast('⏳ Выставляю громкость ' + val + ' на всех кампусах…');
   fetch('/api/volume', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({value: val})
   }).then(function(r){ return r.json(); })
     .then(function(d){
-      if (!d.ok) { toast('⚠️ ' + (d.error || 'ошибка')); return; }
+      if (!d.ok) { _volHoldClear(); toast('⚠️ ' + (d.error || 'ошибка')); return; }
       toast('🔊 Громкость ' + val + ' — на всех кампусах');
       MUSIC_MACHINES.forEach(function(m){
         var volEl = document.getElementById('vol-'+m.key);
@@ -4361,13 +4380,13 @@ function _applyMachineStatus(key, idx, d) {
   }
 
   if (idx === 0) {
-    if (d.volume !== null && d.volume !== undefined) _knob.setVal(d.volume, true);
+    if (d.volume !== null && d.volume !== undefined && !_volHeld(key, d.volume)) _knob.setVal(d.volume, true);
     if (d.muted !== undefined) setMuteUI(d.muted);
   }
   // Sync this campus's own volume slider to its real current value —
   // skip while the user is actively dragging it (_csVolDragging) so a
   // poll landing mid-drag doesn't yank the thumb back.
-  if (d.volume !== null && d.volume !== undefined && _csVolDragging !== key) {
+  if (d.volume !== null && d.volume !== undefined && _csVolDragging !== key && !_volHeld(key, d.volume)) {
     var volEl = document.getElementById('vol-'+key);
     var volValEl = document.getElementById('vol-val-'+key);
     if (volEl) volEl.value = d.volume;
