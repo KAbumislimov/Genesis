@@ -170,3 +170,35 @@ html[data-v="glass"] body{ background:#07080c !important; }
 
 .c4 .c4-screen{ grid-area:screen; } .c4 .c4-keys{ grid-area:keys; } .c4 .c4-mst{ grid-area:mst; } .c4 .estop{ grid-area:estop; justify-self:stretch; justify-content:flex-start; } .c4 .c4-eq{ grid-area:eq; }
 .c4 .c4-vol span#vol-num{ font:500 26px var(--f-mono); color:var(--tx); min-width:56px; }
+
+/* ══ ДИЗАЙН ВАРИАНТА (поверх базовой копии) ══ */
+[data-v="glass"]{ --ink:#070912; --ink2:#0d1020; --ink3:#141830; --a:#7cf0ff; --a2:#b38cff; --a-ink:#021a1f; --line:rgba(255,255,255,.12); --line2:rgba(255,255,255,.22); --r-lg:38px; --r-md:28px; }
+[data-v="glass"][data-pal="aurora"]{ --a:#5cffb1; --a2:#5c9dff; --a-ink:#02201a; }
+[data-v="glass"][data-pal="rose"]{ --a:#ff8ad0; --a2:#ffb86b; --a-ink:#2a0620; }
+html[data-v="glass"] body{ background:#070912 !important; }
+[data-v="glass"] .aurora, [data-v="glass"] .grain{ display:none; }
+/* живой фон: три светящихся пятна, яркость которых меняется с уровнем звука (--lvl задаёт console-extras.js) */
+html[data-v="glass"] body::before{ content:''; position:fixed; inset:-25%; z-index:-1; pointer-events:none; filter:blur(38px); animation:glassdrift 32s ease-in-out infinite alternate;
+  background:
+    radial-gradient(38% 34% at 18% 24%, color-mix(in srgb,var(--a) calc(30% + var(--lvl,0) * 34%), transparent), transparent 72%),
+    radial-gradient(36% 32% at 82% 18%, color-mix(in srgb,var(--a2) calc(28% + var(--lvl,0) * 36%), transparent), transparent 72%),
+    radial-gradient(42% 38% at 62% 88%, color-mix(in srgb,#ff7ad9 calc(20% + var(--lvl,0) * 28%), transparent), transparent 72%); }
+@keyframes glassdrift{ from{ transform:translate3d(-3%,-2%,0) rotate(0deg) scale(1); } to{ transform:translate3d(4%,3%,0) rotate(8deg) scale(1.08); } }
+[data-v="glass"] .c4-master, [data-v="glass"] .c4 .strip, [data-v="glass"] .c4 .pad, [data-v="glass"] .c4 .lib{
+  background:linear-gradient(155deg,rgba(255,255,255,.13),rgba(255,255,255,.035)); border-color:rgba(255,255,255,.18); backdrop-filter:blur(28px) saturate(1.5); -webkit-backdrop-filter:blur(28px) saturate(1.5); }
+[data-v="glass"] .c4-master{ box-shadow:0 30px 90px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(255,255,255,.05); }
+[data-v="glass"] .c4 .strip{ border-radius:34px; padding:18px 15px 16px; }
+[data-v="glass"] .c4 .strip:hover{ transform:translateY(-6px) scale(1.01); }
+[data-v="glass"] .c4-strips{ grid-auto-columns:minmax(142px,1fr); gap:14px; }
+[data-v="glass"] .c4 .key{ background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.22); backdrop-filter:blur(10px); }
+[data-v="glass"] .c4 .key.go{ background:linear-gradient(140deg,var(--a),var(--a2)); box-shadow:0 14px 44px color-mix(in srgb,var(--a) 50%,transparent), inset 0 1px 0 rgba(255,255,255,.5); }
+[data-v="glass"] .c4 .cpm-campus-vol::-webkit-slider-runnable-track{ width:12px; border-radius:12px; background:linear-gradient(to top,var(--row-accent) var(--p,60%),rgba(255,255,255,.14) var(--p,60%)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1); }
+[data-v="glass"] .c4 .cpm-campus-vol::-webkit-slider-thumb{ width:30px; height:30px; margin-left:-9px; background:linear-gradient(160deg,#fff,#dfe7ff); box-shadow:0 0 0 5px color-mix(in srgb,var(--row-accent) 28%,transparent), 0 8px 20px rgba(0,0,0,.5); }
+[data-v="glass"] .c4 .cpm-campus-vol{ width:34px; }
+[data-v="glass"] .c4 .vu{ width:9px; } [data-v="glass"] .c4 .vu i{ border-radius:5px; background:rgba(255,255,255,.1); }
+[data-v="glass"] .c4 .strip-mid{ height:214px; }
+[data-v="glass"] .c4 .cpm-campus-vol-val{ font:400 26px var(--f-mono); }
+[data-v="glass"] .c4 .strip-sel{ height:40px; background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.2); }
+[data-v="glass"] .c4 .pad{ border-radius:26px; }
+[data-v="glass"] .c4 .c4-viz{ height:120px; filter:drop-shadow(0 0 22px color-mix(in srgb,var(--a) 60%,transparent)); }
+[data-v="glass"] .c4 .estop{ background:linear-gradient(140deg,rgba(255,80,110,.95),rgba(190,40,120,.95)); box-shadow:0 16px 46px rgba(255,59,90,.45), inset 0 1px 0 rgba(255,255,255,.45); }

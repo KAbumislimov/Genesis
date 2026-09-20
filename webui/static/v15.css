@@ -170,3 +170,29 @@ html[data-v="onair"] body{ background:#07080c !important; }
 
 .c4 .c4-screen{ grid-area:screen; } .c4 .c4-keys{ grid-area:keys; } .c4 .c4-mst{ grid-area:mst; } .c4 .estop{ grid-area:estop; justify-self:stretch; justify-content:flex-start; } .c4 .c4-eq{ grid-area:eq; }
 .c4 .c4-vol span#vol-num{ font:500 26px var(--f-mono); color:var(--tx); min-width:56px; }
+
+/* ══ ДИЗАЙН ВАРИАНТА (поверх базовой копии) ══ */
+[data-v="onair"]{ --ink:#0a0607; --ink2:#120b0d; --ink3:#1b1114; --a:#ff3b47; --a2:#ff8a3d; --a-ink:#ffffff; --air:#ff3b47; --r-lg:22px; --r-md:16px; }
+[data-v="onair"][data-pal="aurora"]{ --a:#ff5a36; --a2:#ffc247; }
+[data-v="onair"][data-pal="rose"]{ --a:#ff2d7a; --a2:#ff8a3d; }
+html[data-v="onair"] body{ background:#0a0607 !important; }
+[data-v="onair"] .aurora i{ opacity:.18; }
+/* огромная вывеска: тусклая в ожидании, горит красным, когда где-то идёт эфир */
+[data-v="onair"] .c4 .c4-led-tag{ padding:12px 28px; border-radius:14px; background:#120a0c; border:3px solid rgba(255,255,255,.14); font:800 clamp(18px,2.2vw,30px)/1 var(--f-display); letter-spacing:.34em; color:rgba(255,255,255,.26); text-transform:uppercase; transition:all .5s; }
+[data-v="onair"] .c4-master.is-playing .c4-led-tag{ color:#fff; border-color:#ff6a73; background:linear-gradient(180deg,#ff3b47,#c81e3b); box-shadow:0 0 40px rgba(255,59,71,calc(.45 + var(--lvl,0) * .5)), 0 0 110px rgba(255,59,71,calc(.25 + var(--lvl,0) * .4)); animation:onairpulse 2.2s ease-in-out infinite; }
+@keyframes onairpulse{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.18); } }
+[data-v="onair"] .c4-master{ border-color:rgba(255,59,71,.28); background:linear-gradient(155deg,rgba(255,59,71,.09),rgba(255,255,255,.015) 60%); }
+[data-v="onair"] .c4-master.is-playing{ box-shadow:0 40px 100px rgba(0,0,0,.6), 0 0 0 1px rgba(255,59,71,.5), 0 0 130px rgba(255,59,71,calc(.1 + var(--lvl,0) * .22)); }
+[data-v="onair"] .c4 .c4-viz{ filter:drop-shadow(0 0 16px rgba(255,59,71,.6)); }
+[data-v="onair"] .c4 .key.go{ background:linear-gradient(140deg,#ff3b47,#ff8a3d); color:#fff; }
+[data-v="onair"] .c4 .estop{ background:linear-gradient(140deg,#ff2d3a,#a80f27); }
+[data-v="onair"] .c4 .strip{ border-radius:20px; background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)); }
+[data-v="onair"] .c4 .strip[data-state="playing"]{ border-color:rgba(255,59,71,.6); box-shadow:inset 0 0 0 1px rgba(255,59,71,.3), 0 0 44px rgba(255,59,71,.2); }
+[data-v="onair"] .c4 .strip[data-state="playing"] .strip-plate .cpm-campus-name{ color:#ff8f96; }
+/* крупные светодиоды вместо маленьких лампочек */
+[data-v="onair"] .c4 .strip .lamp{ width:26px !important; height:26px !important; }
+[data-v="onair"] .c4 .vu i.lit{ background:#ff3b47; box-shadow:0 0 10px #ff3b47; } [data-v="onair"] .c4 .vu i.lit:nth-child(n+8){ background:#ff8a3d; box-shadow:0 0 10px #ff8a3d; } [data-v="onair"] .c4 .vu i.lit:nth-child(n+10){ background:#fff; }
+[data-v="onair"] .c4 .cpm-campus-vol::-webkit-slider-thumb{ border-radius:6px; width:34px; height:20px; margin-left:-14.5px; background:linear-gradient(#f2f2f2,#bdbdbd); box-shadow:0 0 0 3px rgba(255,59,71,.28), 0 6px 14px rgba(0,0,0,.6); }
+[data-v="onair"] .c4 .cpm-campus-vol::-webkit-slider-runnable-track{ background:linear-gradient(to top,#ff3b47 var(--p,60%),rgba(255,255,255,.11) var(--p,60%)); }
+[data-v="onair"] .c4 .pad{ border-radius:16px; }
+[data-v="onair"] .c4 .cnt b{ color:#ff8f96; }

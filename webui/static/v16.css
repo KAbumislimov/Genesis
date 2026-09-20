@@ -170,3 +170,39 @@ html[data-v="compact"] body{ background:#07080c !important; }
 
 .c4 .c4-screen{ grid-area:screen; } .c4 .c4-keys{ grid-area:keys; } .c4 .c4-mst{ grid-area:mst; } .c4 .estop{ grid-area:estop; justify-self:stretch; justify-content:flex-start; } .c4 .c4-eq{ grid-area:eq; }
 .c4 .c4-vol span#vol-num{ font:500 26px var(--f-mono); color:var(--tx); min-width:56px; }
+
+/* ══ ДИЗАЙН ВАРИАНТА (поверх базовой копии) ══ */
+[data-v="compact"]{ --ink:#0c0f16; --ink2:#131722; --ink3:#1a1f2d; --a:#4ff0d0; --a2:#7a6cff; --a-ink:#02201c; --r-lg:26px; --r-md:20px; }
+[data-v="compact"][data-pal="aurora"]{ --a:#6b9bff; --a2:#b38cff; --a-ink:#05122e; }
+[data-v="compact"][data-pal="rose"]{ --a:#ff7eb6; --a2:#ffb86b; --a-ink:#2a0620; }
+html[data-v="compact"] body{ background:#0c0f16 !important; }
+/* мастер: одна компактная панель с крупными кнопками под палец */
+[data-v="compact"] .c4-master{ grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"screen screen" "keys mst" "estop estop" "eq eq"; gap:18px 26px; padding:20px 22px; border-radius:26px; }
+[data-v="compact"] .c4 .c4-viz{ height:54px; } [data-v="compact"] .c4 .c4-track{ font-size:clamp(20px,3vw,32px); } [data-v="compact"] .c4 .c4-time span{ font-size:clamp(30px,5vw,52px); }
+[data-v="compact"] .c4 .key{ width:60px; height:60px; font-size:24px; } [data-v="compact"] .c4 .key.big{ width:84px; height:84px; font-size:36px; } [data-v="compact"] .c4 .key.sw{ width:54px; height:54px; border-radius:16px; font-size:21px; }
+[data-v="compact"] .c4 .c4-vol .rng{ height:12px; } [data-v="compact"] .c4 .c4-vol span#vol-num{ font-size:34px; }
+[data-v="compact"] .c4 .estop{ height:74px; justify-content:center; } [data-v="compact"] .c4 .estop-cap{ width:54px; height:54px; font-size:26px; }
+/* каналы — сетка карточек, горизонтальный фейдер на всю ширину */
+[data-v="compact"] .c4-strips{ grid-auto-flow:row; grid-auto-columns:auto; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); overflow:visible; gap:12px; padding:2px; scroll-snap-type:none; }
+[data-v="compact"] .c4 .strip{ padding:14px 14px 14px; border-radius:24px; gap:9px; }
+[data-v="compact"] .c4 .strip:hover{ transform:none; }
+[data-v="compact"] .c4 .strip-mid{ height:auto; flex-direction:column; gap:9px; }
+[data-v="compact"] .c4 .vu{ order:2; flex-direction:row; width:100%; height:8px; gap:3px; padding:0; } [data-v="compact"] .c4 .vu i{ height:100%; flex:1; }
+[data-v="compact"] .c4 .fader{ order:1; width:100%; }
+[data-v="compact"] .c4 .cpm-campus-vol{ writing-mode:horizontal-tb; direction:ltr; -moz-orient:horizontal; width:100%; height:38px; }
+[data-v="compact"] .c4 .cpm-campus-vol::-webkit-slider-runnable-track{ width:auto; height:10px; border-radius:10px; background:linear-gradient(to right,var(--row-accent) var(--p,60%),rgba(255,255,255,.12) var(--p,60%)); }
+[data-v="compact"] .c4 .cpm-campus-vol::-webkit-slider-thumb{ margin-left:0; margin-top:-14px; width:38px; height:38px; }
+[data-v="compact"] .c4 .cpm-campus-vol::-moz-range-thumb{ width:38px; height:38px; }
+[data-v="compact"] .c4 .scale{ display:none; }
+[data-v="compact"] .c4 .cpm-campus-vol-val{ font-size:30px; }
+[data-v="compact"] .c4 .strip-sel{ height:46px; font-size:12px; }
+[data-v="compact"] .c4 .strip-plate .cpm-campus-name{ font-size:16px; }
+/* пресеты и «+/−» (console-extras.js) */
+[data-v="compact"] .c4 .qk{ order:7; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; align-items:stretch; min-width:0; }
+[data-v="compact"] .c4 .qk button{ min-height:40px; border-radius:12px; border:1px solid var(--line2); background:var(--glass2); color:var(--tx); font:600 13px var(--f-mono); cursor:pointer; padding:0; min-width:0; }
+[data-v="compact"] .c4 .qk button:active{ transform:scale(.94); } [data-v="compact"] .c4 .qk button.on{ background:color-mix(in srgb,var(--a) 22%,transparent); border-color:var(--a); color:var(--a); }
+[data-v="compact"] .c4 .qk .pre{ order:1; padding:0; }
+[data-v="compact"] .c4 .qk .st{ order:2; grid-column:span 2; font-size:20px; padding:0; }
+[data-v="compact"] .c4 .qk .st:last-child{ order:3; }
+[data-v="compact"] .c4 .pad{ height:66px; border-radius:20px; }
+@media (max-width:700px){ [data-v="compact"] .c4-strips{ grid-template-columns:1fr; } [data-v="compact"] .c4-master{ grid-template-columns:1fr; grid-template-areas:"screen" "keys" "mst" "estop" "eq"; } }

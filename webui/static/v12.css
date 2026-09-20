@@ -170,3 +170,42 @@ html[data-v="dial"] body{ background:#07080c !important; }
 
 .c4 .c4-screen{ grid-area:screen; } .c4 .c4-keys{ grid-area:keys; } .c4 .c4-mst{ grid-area:mst; } .c4 .estop{ grid-area:estop; justify-self:stretch; justify-content:flex-start; } .c4 .c4-eq{ grid-area:eq; }
 .c4 .c4-vol span#vol-num{ font:500 26px var(--f-mono); color:var(--tx); min-width:56px; }
+
+/* ══ ДИЗАЙН ВАРИАНТА (поверх базовой копии) ══ */
+[data-v="dial"]{ --ink:#0a0b12; --ink2:#11131d; --ink3:#191c2a; --a:#ff9d3d; --a2:#ff4d6d; --a-ink:#1a0c02; --r-lg:34px; --r-md:26px; }
+[data-v="dial"][data-pal="aurora"]{ --a:#4ff0d0; --a2:#6b7bff; --a-ink:#03201c; }
+[data-v="dial"][data-pal="rose"]{ --a:#ff7eb6; --a2:#a06bff; --a-ink:#2a0620; }
+html[data-v="dial"] body{ background:#0a0b12 !important; }
+/* мастер: большой циферблат вместо ползунка */
+[data-v="dial"] .c4-master{ grid-template-columns:minmax(0,1fr) auto auto; grid-template-areas:"screen mst keys" "screen mst estop" "eq eq eq"; align-items:center; }
+[data-v="dial"] .c4 .c4-mst{ min-width:230px; align-items:center; }
+[data-v="dial"] .c4 .knobwrap{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+[data-v="dial"] .c4 .knob4{ --ang:-45deg; position:relative; width:168px; height:168px; border-radius:50%; cursor:ns-resize; touch-action:none; outline:none;
+  background:radial-gradient(circle at 50% 30%, #2b2f44, #12141f 68%); box-shadow:inset 0 2px 0 rgba(255,255,255,.14), 0 20px 46px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08); }
+[data-v="dial"] .c4 .knob4::before{ content:''; position:absolute; inset:-9px; border-radius:50%; background:conic-gradient(from -135deg, var(--a) 0 calc(var(--ang) + 135deg), rgba(255,255,255,.1) 0 270deg, transparent 0);
+  -webkit-mask:radial-gradient(circle,transparent 66%,#000 67%,#000 72%,transparent 73%); mask:radial-gradient(circle,transparent 66%,#000 67%,#000 72%,transparent 73%); filter:drop-shadow(0 0 10px color-mix(in srgb,var(--a) 60%,transparent)); }
+[data-v="dial"] .c4 .knob4 i{ position:absolute; inset:0; transform:rotate(var(--ang)); transition:transform .08s linear; }
+[data-v="dial"] .c4 .knob4 i::after{ content:''; position:absolute; left:50%; top:12px; width:6px; height:30px; margin-left:-3px; border-radius:4px; background:var(--a); box-shadow:0 0 14px var(--a); }
+[data-v="dial"] .c4 .knob4:focus-visible{ box-shadow:0 0 0 3px var(--a); }
+[data-v="dial"] .c4 .knob-ticks{ display:flex; justify-content:space-between; width:150px; font:400 10.5px var(--f-mono); color:var(--tx3); }
+[data-v="dial"] .c4 .c4-vol .rng{ display:none; }
+[data-v="dial"] .c4 .c4-vol{ justify-content:center; margin:0 0 12px; } [data-v="dial"] .c4 .c4-vol span#vol-num{ font:300 44px var(--f-mono); text-align:center; }
+[data-v="dial"] .c4 .c4-keys{ align-items:flex-start; }
+/* канал: круглый регулятор (создаёт console-extras.js), обычный фейдер скрыт, но остаётся рабочим */
+[data-v="dial"] .c4-strips{ grid-auto-columns:minmax(176px,1fr); gap:14px; }
+[data-v="dial"] .c4 .strip{ border-radius:34px; padding:16px 14px; }
+[data-v="dial"] .c4 .strip-mid{ height:auto; justify-content:center; position:relative; min-height:148px; align-items:center; }
+[data-v="dial"] .c4 .fader{ position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none; }
+[data-v="dial"] .c4 .vu{ display:none; }
+[data-v="dial"] .c4 .strip-val{ display:none; }
+[data-v="dial"] .c4 .dial{ --pv:.6; position:relative; width:142px; height:142px; border-radius:50%; cursor:ns-resize; touch-action:none; outline:none; -webkit-user-select:none; user-select:none;
+  background:radial-gradient(circle at 50% 28%, rgba(255,255,255,.13), rgba(255,255,255,.03) 62%); border:1px solid var(--line2); transition:box-shadow .25s; }
+[data-v="dial"] .c4 .dial .ring{ position:absolute; inset:-5px; border-radius:50%; background:conic-gradient(from -135deg, var(--row-accent) 0 calc(var(--pv) * 270deg), rgba(255,255,255,.1) 0 270deg, transparent 0);
+  -webkit-mask:radial-gradient(circle,transparent 66%,#000 67%,#000 74%,transparent 75%); mask:radial-gradient(circle,transparent 66%,#000 67%,#000 74%,transparent 75%); filter:drop-shadow(0 0 8px color-mix(in srgb,var(--row-accent) 55%,transparent)); }
+[data-v="dial"] .c4 .dial .dv{ position:absolute; inset:0; display:grid; place-content:center; text-align:center; font:400 34px/1 var(--f-mono); color:var(--tx); }
+[data-v="dial"] .c4 .dial .dv small{ display:block; margin-top:5px; font:600 9.5px var(--f-display); letter-spacing:.2em; color:var(--tx3); }
+[data-v="dial"] .c4 .dial:hover, [data-v="dial"] .c4 .dial:focus-visible{ box-shadow:0 0 0 6px color-mix(in srgb,var(--row-accent) 16%,transparent); }
+[data-v="dial"] .c4 .strip[data-state="playing"] .dial{ box-shadow:0 0 44px color-mix(in srgb,var(--row-accent) calc(14% + var(--slvl,0) * 40%), transparent); }
+[data-v="dial"] .c4 .strip[data-state="offline"] .dial{ opacity:.55; }
+@media (max-width:1250px){ [data-v="dial"] .c4-master{ grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"screen screen" "mst keys" "estop estop" "eq eq"; } }
+@media (max-width:760px){ [data-v="dial"] .c4-master{ grid-template-columns:1fr; grid-template-areas:"screen" "mst" "keys" "estop" "eq"; } }

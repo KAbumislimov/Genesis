@@ -257,12 +257,12 @@ html[data-fleet="red"] .onair-lamp{ animation:lampblink 1.4s steps(1) infinite; 
 [data-v="lumen"] .c4 .strip[data-lamp] .strip-ch{ text-shadow:0 0 10px color-mix(in srgb, var(--lc) 55%, transparent); }
 
 /* ── панель управления «Пульта/Неона/Света»: всё в цвет состояния связи (как лампочки) ── */
-html[data-fleet] .c4-master{ --a: var(--fleet); }
-html[data-fleet] .c4-master .c4-led-tag{ color:var(--fleet); }
-html[data-fleet] .c4-master .key:not(.cpm-toggle) em{ background:var(--fleet); box-shadow:0 0 10px var(--fleet), 0 0 2px var(--fleet); height:4px; }
-html[data-fleet] .c4-master .key:not(.cpm-toggle){ color:color-mix(in srgb, var(--fleet) 78%, #ffffff); }
-html[data-fleet] .c4-master .key.go{ color:var(--fleet); text-shadow:0 0 14px var(--fleet); }
-html[data-fleet] .c4-master .estop-cap{ border-color:var(--fleet); box-shadow:0 0 22px color-mix(in srgb, var(--fleet) 55%, transparent), 0 7px 0 #4a0508, 0 12px 20px rgba(0,0,0,.6), inset 0 -7px 14px rgba(0,0,0,.35), 0 0 0 4px #1b1c20; }
-html[data-fleet] .c4-vol span, html[data-fleet] .c4-master .knob4 + .knob-ticks{ text-shadow:0 0 10px color-mix(in srgb, var(--fleet) 70%, transparent); }
-html[data-fleet] .c4-master .knob4 i::after{ box-shadow:0 0 12px var(--fleet), 0 0 22px color-mix(in srgb, var(--fleet) 60%, transparent); }
-html[data-fleet] .c4-master #vol-num{ color:var(--fleet); font-size:18px; width:auto; min-width:40px; text-shadow:0 0 10px color-mix(in srgb, var(--fleet) 70%, transparent); }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master{ --a: var(--fleet); }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .c4-led-tag{ color:var(--fleet); }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .key:not(.cpm-toggle) em{ background:var(--fleet); box-shadow:0 0 10px var(--fleet), 0 0 2px var(--fleet); height:4px; }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .key:not(.cpm-toggle){ color:color-mix(in srgb, var(--fleet) 78%, #ffffff); }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .key.go{ color:var(--fleet); text-shadow:0 0 14px var(--fleet); }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .estop-cap{ border-color:var(--fleet); box-shadow:0 0 22px color-mix(in srgb, var(--fleet) 55%, transparent), 0 7px 0 #4a0508, 0 12px 20px rgba(0,0,0,.6), inset 0 -7px 14px rgba(0,0,0,.35), 0 0 0 4px #1b1c20; }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-vol span, html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .knob4 + .knob-ticks{ text-shadow:0 0 10px color-mix(in srgb, var(--fleet) 70%, transparent); }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .knob4 i::after{ box-shadow:0 0 12px var(--fleet), 0 0 22px color-mix(in srgb, var(--fleet) 60%, transparent); }
+html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master #vol-num{ color:var(--fleet); font-size:18px; width:auto; min-width:40px; text-shadow:0 0 10px color-mix(in srgb, var(--fleet) 70%, transparent); }

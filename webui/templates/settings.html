@@ -74,26 +74,36 @@
 <div class="st-card" id="ui-design" style="margin-bottom:20px">
   <div class="st-head"><i class="bi bi-window-stack" style="color:var(--blue)"></i> Дизайн интерфейса</div>
   <div class="st-body">
-    <div class="st-sub" style="margin-bottom:14px">Выберите вид плеера и всего сайта. Выбор сохраняется в вашем аккаунте и работает на любом устройстве.</div>
-    <div class="ud-grid">
+    <div class="st-sub" style="margin-bottom:14px">Выберите вид плеера и всего сайта. Нажмите на картинку — предпросмотр откроется в новой вкладке, ваш выбор при этом не изменится. Выбор сохраняется в вашем аккаунте и работает на любом устройстве.</div>
+    <div class="ud-grid" id="ud-grid">
       {% for v in ui_variants %}
-      <a class="ud-card{{ ' on' if ui_current == v.key }}" href="/ui/{{ v.key }}" data-variant="{{ v.key }}">
-        <span class="ud-prev" style="--c1:{{ v.demo[0] }};--c2:{{ v.demo[1] }};--c3:{{ v.demo[2] }}"><i></i><i></i><i></i></span>
-        <b>{{ v.name }}{% if ui_current == v.key %}<em>сейчас</em>{% endif %}</b>
+      <div class="ud-card{{ ' on' if ui_current == v.key }}" data-variant="{{ v.key }}">
+        <a class="ud-img" href="{{ url_for(v.route) }}?preview=1" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key=v.key) }}?v=1" alt="{{ v.name }}"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
+        <b>{{ v.name }}<em class="ud-b-me"{% if ui_current != v.key %} hidden{% endif %}>Ваш</em><em class="ud-b-def"{% if ui_default != v.key %} hidden{% endif %}>Основной</em></b>
         <small>{{ v.desc }}</small>
-      </a>
+        <div class="ud-tags">{% for f in v.feat %}<span>{{ f }}</span>{% endfor %}</div>
+        <div class="ud-act">
+          <a class="ud-btn" href="/ui/{{ v.key }}"><i class="bi bi-check2-circle"></i> Применить</a>
+          {% if can('ui_default') %}<button type="button" class="ud-btn ghost ud-def"{% if ui_default == v.key %} hidden{% endif %} title="Все, кто не выбрал свой дизайн, увидят этот">Сделать основным для всех</button>{% endif %}
+        </div>
+      </div>
       {% endfor %}
-      <a class="ud-card{{ ' on' if ui_current == 'off' }}" href="/ui/off">
-        <span class="ud-prev old"><i></i><i></i><i></i></span>
-        <b>Старый интерфейс{% if ui_current == 'off' %}<em>сейчас</em>{% endif %}</b>
+      <div class="ud-card{{ ' on' if ui_current == 'off' }}" data-variant="off">
+        <a class="ud-img" href="{{ url_for('dashboard') }}?classic=1" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key='off') }}?v=1" alt="Старый интерфейс"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
+        <b>Старый интерфейс<em class="ud-b-me"{% if ui_current != 'off' %} hidden{% endif %}>Ваш</em></b>
         <small>Прежний вид до обновления: классический и современный плеер.</small>
-      </a>
-      <a class="ud-card" href="/v2" title="Предпросмотр на основе Tabler">
-        <span class="ud-prev tabler"><i></i><i></i><i></i></span>
+        <div class="ud-tags"><span>Классика</span></div>
+        <div class="ud-act"><a class="ud-btn" href="/ui/off"><i class="bi bi-check2-circle"></i> Применить</a></div>
+      </div>
+      <div class="ud-card" data-variant="tabler">
+        <a class="ud-img" href="{{ url_for('dashboard_v2') }}" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key='tabler') }}?v=1" alt="Tabler"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
         <b>Tabler</b>
         <small>Ранний предпросмотр на готовой библиотеке Tabler (только плеер).</small>
-      </a>
+        <div class="ud-tags"><span>Только плеер</span></div>
+        <div class="ud-act"><a class="ud-btn" href="{{ url_for('dashboard_v2') }}"><i class="bi bi-box-arrow-up-right"></i> Открыть</a></div>
+      </div>
     </div>
+    <div class="st-sub" id="ud-msg" style="margin-top:12px;min-height:20px"></div>
     <div class="st-row" style="margin-top:14px">
       <div>
         <div class="st-lbl">Цветовая палитра</div>
@@ -106,20 +116,28 @@
   </div>
 </div>
 <style>
-.ud-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
-.ud-card{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);text-decoration:none;color:var(--text);transition:transform .25s,border-color .2s,box-shadow .3s}
-.ud-card:hover{transform:translateY(-3px);border-color:var(--blue);box-shadow:0 12px 30px rgba(0,0,0,.25)}
-.ud-card.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 40%,transparent)}
-.ud-card b{font-size:14px;display:flex;align-items:center;gap:8px}
+.ud-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.ud-card{display:flex;flex-direction:column;gap:7px;padding:10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg3);transition:transform .25s,border-color .2s,box-shadow .3s}
+.ud-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--blue) 60%,var(--border));box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.ud-card.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 30%,transparent)}
+.ud-img{position:relative;display:block;border-radius:9px;overflow:hidden;aspect-ratio:16/10;background:#0a0f1e}
+.ud-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.ud-img:hover img{transform:scale(1.05)}
+.ud-zoom{position:absolute;inset:auto 8px 8px auto;display:inline-flex;gap:6px;align-items:center;padding:5px 10px;border-radius:100px;background:rgba(0,0,0,.7);color:#fff;font-size:11.5px;font-weight:700;opacity:0;transform:translateY(4px);transition:.2s}
+.ud-img:hover .ud-zoom,.ud-img:focus-visible .ud-zoom{opacity:1;transform:none}
+.ud-card b{font-size:14.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .ud-card b em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:100px;background:var(--blue);color:#fff}
-.ud-card small{font-size:11.5px;color:var(--muted);line-height:1.4}
-.ud-prev{position:relative;display:block;height:74px;border-radius:9px;background:var(--c1);overflow:hidden;border:1px solid rgba(128,128,128,.25)}
-.ud-prev i{position:absolute;border-radius:5px;background:var(--c2)}
-.ud-prev i:nth-child(1){left:8px;top:8px;width:46%;height:26px;background:var(--c2)}
-.ud-prev i:nth-child(2){left:8px;bottom:8px;width:28%;height:20px;background:var(--c3);opacity:.85}
-.ud-prev i:nth-child(3){right:8px;bottom:8px;width:40%;height:20px;background:var(--c2);opacity:.45}
-.ud-prev.old{background:linear-gradient(135deg,#0d1117,#161b22);--c2:#58a6ff;--c3:#3fb950}
-.ud-prev.tabler{background:linear-gradient(135deg,#151f2c,#1d2a3a);--c2:#4299e1;--c3:#2fb344}
+.ud-card b em.ud-b-def{background:var(--green);color:#04210f}
+.ud-card b em[hidden]{display:none}
+.ud-card small{font-size:12px;color:var(--text2);line-height:1.4;min-height:34px}
+.ud-tags{display:flex;flex-wrap:wrap;gap:5px}
+.ud-tags span{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;border:1px solid var(--border);color:var(--muted)}
+.ud-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.ud-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;text-decoration:none}
+.ud-btn:hover{filter:brightness(1.1)}
+.ud-btn.ghost{background:transparent;color:var(--blue)}
+.ud-btn.ghost:hover{background:var(--blue);color:#fff}
+.ud-btn[hidden]{display:none}
 .ud-pals{display:flex;gap:8px;flex-wrap:wrap}
 .ud-pal{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:100px;border:2px solid var(--border);background:var(--bg3);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer;transition:.2s}
 .ud-pal i{width:14px;height:14px;border-radius:50%}
@@ -129,6 +147,29 @@
 .ud-pal:hover{border-color:var(--blue)}
 .ud-pal.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 14%,var(--bg3))}
 </style>
+<script>
+(function(){
+  var msg = document.getElementById('ud-msg');
+  document.querySelectorAll('#ud-grid .ud-def').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var k = btn.closest('.ud-card').dataset.variant;
+      btn.disabled = true;
+      fetch('/api/ui-default', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({style: k})})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          btn.disabled = false;
+          if (!d.ok) { msg.textContent = '⚠ ' + (d.error || 'Ошибка'); return; }
+          document.querySelectorAll('#ud-grid .ud-card').forEach(function(c){
+            var on = c.dataset.variant === d.current, bd = c.querySelector('.ud-b-def'), bt = c.querySelector('.ud-def');
+            if (bd) bd.hidden = !on; if (bt) bt.hidden = on;
+          });
+          msg.textContent = '✓ Основной дизайн обновлён: его увидят все, кто не выбрал свой';
+        })
+        .catch(function(){ btn.disabled = false; msg.textContent = '⚠ Нет связи с сервером'; });
+    });
+  });
+})();
+</script>
 <script>
 (function(){
   var cur = document.documentElement.getAttribute('data-pal') || 'amber';

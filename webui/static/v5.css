@@ -13,8 +13,8 @@
   --r-lg:30px; --r-md:24px;
   color-scheme:light;
 }
-[data-v="bento"][data-pal="aurora"]{ --a:#0fb982; --a2:#0891b2; }
-[data-v="bento"][data-pal="rose"]{ --a:#f0357f; --a2:#ff8a3d; }
+[data-v="bento"][data-pal="aurora"]{ --a:#0fb982; --a2:#0891b2; --ink:#e4e8f1; --ink2:#ffffff; --ink3:#f4f6fb; --tx:#141726; --tx2:#565c75; --tx3:#8b91a9; --glass:rgba(22,26,52,.045); --glass2:rgba(22,26,52,.08); --line:rgba(22,26,52,.09); --line2:rgba(22,26,52,.16); }
+[data-v="bento"][data-pal="rose"]{ --a:#f0357f; --a2:#ff8a3d; --ink:#e4e8f1; --ink2:#ffffff; --ink3:#f4f6fb; --tx:#141726; --tx2:#565c75; --tx3:#8b91a9; --glass:rgba(22,26,52,.045); --glass2:rgba(22,26,52,.08); --line:rgba(22,26,52,.09); --line2:rgba(22,26,52,.16); }
 html[data-v="bento"]{ background:#e4e8f1 !important; }
 html[data-v="bento"] body{ background:#e4e8f1 !important; color:var(--tx); }
 [data-v="bento"] .aurora i{ opacity:.22; filter:blur(110px); }
