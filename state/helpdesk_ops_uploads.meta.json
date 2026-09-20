@@ -1,0 +1,6 @@
+{
+  "core": "02947e18b86f510f779d6c4fbd64181608f6b0cf0c86c799375ceee75935b463",
+  "how": "tar.gz + openssl enc -aes-256-cbc -pbkdf2",
+  "ts": 1789894849.9405324,
+  "when": "2026-09-20 13:00"
+}

@@ -17,7 +17,7 @@
           <i class="bi bi-arrow-repeat me-1" id="cpm-timesync-icon"></i> Синхр. время
         </button>
         {% endif %}
-        <button class="btn btn-danger" onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах">
+        <button class="btn btn-danger" onclick="wampShowCampusPicker(event,'stop',this)" title="СТОП — выбрать кампус для остановки (или все сразу)">
           <i class="bi bi-stop-fill me-1"></i> Стоп — всё
         </button>
       </div>
@@ -45,7 +45,7 @@
             <button class="btn btn-icon btn-primary btn-pill v2-play" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><i class="bi bi-play-fill fs-2"></i></button>
             <button class="btn btn-icon btn-ghost-secondary" id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><i class="bi bi-pause-fill fs-3"></i></button>
             <button class="btn btn-icon btn-ghost-secondary" onclick="doNext()" title="Следующий" aria-label="Следующий"><i class="bi bi-skip-end-fill fs-3"></i></button>
-            <button class="btn btn-icon btn-ghost-danger" onclick="doStopAll()" title="СТОП — всё, на всех кампусах" aria-label="Стоп всё"><i class="bi bi-stop-fill fs-3"></i></button>
+            <button class="btn btn-icon btn-ghost-danger" onclick="wampShowCampusPicker(event,'stop',this)" title="СТОП — выбрать кампус для остановки (или все сразу)" aria-label="Стоп всё"><i class="bi bi-stop-fill fs-3"></i></button>
           </div>
         </div>
 

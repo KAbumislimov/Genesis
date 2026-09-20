@@ -1,159 +1,72 @@
-# ВОССТАНОВЛЕНИЕ ИНФРАСТРУКТУРЫ CAMPUS
+# Восстановление всей системы из GitHub
 
-> **Если всё сломалось — одна команда поднимает всё:**
+> **Одна команда на новой или пустой машине** (CentOS 9 / Ubuntu, обычный пользователь с `sudo`):
+>
 > ```bash
-> bash ~/projects/campus-infra/restore.sh
+> export GH_TOKEN=ghp_xxxxxxxx     # токен GitHub с доступом к репозиториям campus-infra и campus-secrets
+> git clone --depth 1 https://${GH_TOKEN}@github.com/KAbumislimov/campus-infra.git /tmp/ci \
+>   && bash /tmp/ci/projects/campus-infra/restore.sh
 > ```
+>
+> Если репозиторий уже на машине: `bash ~/projects/campus-infra/restore.sh`
+>
+> **Пошаговая инструкция «что куда вставлять» — в [README.md в корне репозитория](../../README.md).**
 
----
+Скрипт сам: ставит Docker/Git/cron → получает код (частичный клон ≈ 100 МБ) → берёт секреты из `campus-secrets` →
+возвращает **пользователей, роли и права, настройки, список машин, расписание** и **Helpdesk Ops** (тикеты, отчёты, вложения)
+из зашифрованных снимков → ставит crontab и systemd-службы (Telegram-бот и др.) → открывает порты →
+поднимает все контейнеры → по вопросу переустанавливает кампусные клиенты → проверяет, что панель отвечает.
 
-## Что работает и где
-
-| Сервис | URL | Логин |
-|--------|-----|-------|
-| **Web UI** | http://10.10.4.120:8090 | см. campus-secrets |
-| **HelpDesk** | http://10.10.4.120:8091 | см. campus-secrets |
-| **Cockpit — CentOS** | http://10.10.4.120:1991 | kamran / (системный) |
-| **Cockpit — Клиент 1** | http://10.20.0.41:1991 | client1 / см. campus-secrets |
-| **Cockpit — Клиент 2** | http://10.10.4.120:19912 | client2 / см. campus-secrets |
-| **Grafana** | http://10.10.4.120:3000 | admin / см. .env |
-
----
-
-## Машины
-
-| Машина | IP | ОС | Роль |
-|--------|----|----|------|
-| **CentOS** | 10.10.4.120 | CentOS 9 | Главный сервер, Docker, Web UI |
-| **client1** | 10.20.0.41 | Ubuntu 22.04 | Клиент 1 Campus |
-| **client2** | 10.70.0.41 | Ubuntu 22.04 | Клиент 2 Campus |
-
-SSH ключ для всех: `~/.ssh/campus_bot`
-
----
-
-## ВОССТАНОВЛЕНИЕ С НУЛЯ (новый сервер или сбой)
-
-### Один скрипт — всё готово:
+## Проверка «а восстановится ли?» — без изменений на машине
 
 ```bash
-# Клонировать репо
-git clone https://github.com/KAbumislimov/campus-infra.git ~/projects/campus-infra
-
-# Запустить полное восстановление
-bash ~/projects/campus-infra/restore.sh
+bash ~/projects/campus-infra/restore.sh --verify
 ```
 
-Скрипт сам:
-1. Обновит код из GitHub
-2. Попросит GitHub-токен для campus-secrets и скачает `.env`
-3. Восстановит данные БД из последнего бэкапа (если есть)
-4. Откроет порты в firewall
-5. Пересоберёт и запустит все Docker-контейнеры
-6. Покажет статус и URL
+Проверяет: репозиторий и GitHub доступны, `.env` и ключ расшифровки на месте, **снимки БД расшифровываются и целы**
+(показывает число пользователей, прав, тикетов), unit-файлы и crontab в снимке есть, `docker-compose.yaml` разбирается.
+Делайте это раз в месяц и после крупных изменений. Итог: `ГОТОВО` или список проблем `✗`.
 
-### Если только нужно поднять контейнеры (код уже есть):
+## Опции
 
-```bash
-cd ~/projects/campus-infra
-docker compose --profile webui --profile logs --profile bot --profile cockpit --profile helpdesk up -d --build
-```
+| Опция | Что делает |
+|---|---|
+| `--verify` | только проверка, ничего не меняет |
+| `--state-only` | только данные (БД, права, настройки), без контейнеров/cron/служб |
+| `--no-clients` | не трогать кампусные машины (client1, client2 …) |
+| `--force-data` | заменить существующие БД снимками из GitHub (старые сохраняются рядом как `*.before_restore_*`) |
+| `--yes` | не задавать вопросов |
 
----
+## Что где хранится
 
-## Где хранятся данные
+| Что | Где | Как попадает |
+|---|---|---|
+| Код, шаблоны, конфиги, скрипты кампусов, документация | GitHub `campus-infra` | автоматически: `github-live-sync.sh` проверяет изменения каждые 45 с и пушит; плюс часовой cron |
+| **Пользователи, РОЛИ И ПРАВА, настройки, машины, журнал** | `state/webui.db.enc` (зашифровано) + читаемые `state/roles.json`, `settings.json`, `machines.json` | `scripts/export_state.py` перед каждым коммитом |
+| Helpdesk Ops: тикеты, отчёты, вложения | `state/helpdesk_ops.db.enc`, `state/helpdesk_ops_uploads.tar.gz.enc` | тем же скриптом, раз в сутки |
+| crontab, systemd-службы, NTP-конфиг сервера | `state/crontab.txt`, `state/systemd/`, `state/etc/` | тем же скриптом |
+| **Секреты**: `.env`, токены ботов, SSH-ключ `campus_bot`, **ключ шифрования снимков** | GitHub `campus-secrets` (приватный) | вручную; в `campus-infra` секретов нет (защита `.gitignore` + проверка перед коммитом) |
+| Что и когда менялось | `docs/journal/ГГГГ-ММ-ДД.md` | автоматически: `scripts/update_journal.py` |
+| Media (звонки/гимн, ~800 МБ) | диск сервера + еженедельный бэкап на Proxmox | **не в GitHub**; восстановление: `scripts/restore-music.sh` |
+| Музыкальная библиотека «Kamran Music» (~33 ГБ) | только диск сервера | **нигде не бэкапится** — нужна отдельная копия |
 
-```
-~/projects/campus-infra/
-├── data/
-│   ├── webui/
-│   │   └── webui.db        ← пользователи, тонкие клиенты, настройки
-│   └── helpdesk/
-│       ├── helpdesk.db     ← обращения в helpdesk
-│       └── uploads/        ← прикреплённые фото
-├── .env                    ← токены и пароли (из campus-secrets)
-└── docker-compose.yaml
-```
+Снимки шифруются (`AES-256`, ключ `BACKUP_VAULT_PASS` из `.env`, который живёт только в `campus-secrets`).
+Без токена `campus-secrets` данные из GitHub прочитать нельзя — это сделано намеренно.
 
-| Данные | Где |
-|--------|-----|
-| Код, конфиги | **GitHub: campus-infra** (этот репо) |
-| Токены, пароли, .env | **GitHub: campus-secrets** (приватный) |
-| БД (пользователи, клиенты) | `data/webui/webui.db` + бэкапы |
-| Музыка | `/home/kamran/Kamran Music/` на CentOS |
-| Бэкапы БД | `/home/kamran/campus-backups/db/YYYY-MM-DD/` |
-| Бэкапы музыки | `/home/kamran/campus-backups/` |
-| SSH ключи | `~/.ssh/campus_bot` (копия в campus-secrets) |
+## Если что-то пошло не так
 
----
+* Логи: `~/log/restore-git.log`, `docker logs campus-webui --tail 100`.
+* Только поднять контейнеры (код уже есть): `cd ~/projects/campus-infra && docker compose --profile webui --profile logs --profile bot --profile cockpit --profile helpdesk up -d --build`.
+* БД не восстановилась из снимка → `python3 scripts/import_state.py verify` покажет причину (обычно неверный ключ). Запасной путь: `restore.sh` сам применит роли/настройки/машины из JSON (пользователей придётся создать заново).
+* Кампусные машины по одной: `bash machines/<кампус>/install.sh` (см. `docs/DISASTER-RECOVERY.md`).
+* Старая версия скрипта: `scripts/legacy/restore-v1.sh`.
 
-## Добавить новый тонкий клиент
+## После восстановления вручную
 
-1. Войди в Web UI → боковое меню → **Тонкие клиенты**
-2. Нажми **+ Добавить клиента**
-3. Введи IP, имя, MAC (для WoL), SSH-пользователь
-4. Сохранить — клиент сразу появится в мониторинге и везде
+1. **Доступ к GitHub для автосинхронизации.** Если на новой машине нет SSH-ключа GitHub, скрипт оставит HTTPS-remote с токеном. Лучше:
+   `ssh-keygen -t ed25519` → добавить ключ в GitHub (Settings → SSH keys) → `git -C ~ remote set-url origin git@github.com:KAbumislimov/campus-infra.git`.
+2. Новая сетевая карта = новый MAC: обновить `CLIENT1_MAC` в `.env` (Wake-on-LAN).
+3. Проверить `https://<адрес сервера>:8090` — вход под своим логином (пользователи вернулись из снимка).
+4. `bash restore.sh --verify` ещё раз — убедиться, что цепочка резервного копирования снова замкнулась.
 
-При восстановлении сервера тонкие клиенты восстанавливаются из `data/webui/webui.db`.
-
----
-
-## Восстановление client1 / client2
-
-```bash
-# client1 (Клиент 1) — если машина переустановлена:
-bash ~/projects/campus-infra/scripts/restore-client1.sh
-
-# client2 (Клиент 2) — если машина переустановлена:
-bash ~/projects/campus-infra/scripts/restore-client2.sh
-```
-
----
-
-## Бэкап данных (автоматически каждую ночь)
-
-```bash
-# Добавить в crontab:
-0 3 * * * bash ~/projects/campus-infra/scripts/backup-data.sh
-
-# Бэкапы хранятся в:
-~/campus-backups/db/YYYY-MM-DD/webui.db
-~/campus-backups/db/YYYY-MM-DD/helpdesk.db
-```
-
----
-
-## Быстрые команды
-
-```bash
-# Статус всех контейнеров
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-# Логи webui
-docker logs campus-webui -f --tail 50
-
-# Перезапустить webui
-docker compose up -d --build campus-webui
-
-# Перезапустить всё
-docker compose --profile webui --profile logs --profile bot --profile cockpit --profile helpdesk restart
-
-# Посмотреть данные webui.db
-python3 -c "import sqlite3; c=sqlite3.connect('data/webui/webui.db'); print(c.execute('SELECT count(*) FROM users').fetchone()); print(c.execute('SELECT name,host FROM thin_clients').fetchall())"
-```
-
----
-
-## Если что-то не запускается
-
-```bash
-# Смотреть ошибки контейнера
-docker logs campus-webui --tail 100
-docker logs media-helpdesk --tail 100
-
-# Проверить .env
-cat ~/projects/campus-infra/.env | grep -v "TOKEN\|PASS\|SECRET"
-
-# Принудительно пересоздать
-docker compose up -d --force-recreate --build campus-webui
-```
+Подробности и устройство бэкапов: [docs/BACKUP-AND-RESTORE.md](docs/BACKUP-AND-RESTORE.md).

@@ -282,7 +282,7 @@
       <button class="cpm-play" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg></button>
       <button id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg></button>
       <button onclick="doNext()" title="Следующий" aria-label="Следующий"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg></button>
-      <button onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах" aria-label="Стоп всё" style="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14"/></svg></button>
+      <button onclick="wampShowCampusPicker(event,'stop',this)" title="СТОП — выбрать кампус для остановки (или все сразу)" aria-label="Стоп всё" style="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14"/></svg></button>
     </div>
 
     <div class="cpm-bottom-seek">

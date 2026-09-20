@@ -72,13 +72,13 @@
       items.push({ t: l.textContent.trim(), g: 'Перейти', i: $('i', a).className, run: function(){ if (a.target === '_blank') window.open(a.href, '_blank'); else location.href = a.href; } });
     });
     var acts = [
-      ['Стоп — остановить всё', 'bi bi-stop-fill', 'doStopAll'],
+      ['Стоп — выбрать кампус', 'bi bi-stop-fill', function(){ var b = $('[onclick*="\'stop\'"]'); if (b && window.wampShowCampusPicker) wampShowCampusPicker(new MouseEvent('click'), 'stop', b); }, true],
       ['Синхронизировать время', 'bi bi-arrow-repeat', function(){ syncTime('all'); }],
       ['Играть всё (перемешать)', 'bi bi-shuffle', 'wampPlayAll']
     ];
     acts.forEach(function(a){
       var fn = typeof a[2] === 'string' ? window[a[2]] : a[2];
-      if (typeof fn === 'function' && (typeof a[2] !== 'string' || $('[onclick*="'+a[2]+'"]'))) items.push({ t: a[0], g: 'Действие', i: a[1], run: fn });
+      if (typeof fn === 'function' && (typeof a[2] !== 'string' ? (!a[3] || $('[onclick*="\'stop\'"]')) : $('[onclick*="'+a[2]+'"]'))) items.push({ t: a[0], g: 'Действие', i: a[1], run: fn });
     });
     $$('.cpm-campus-pill').forEach(function(p){
       items.push({ t: 'Кампус: ' + p.textContent.trim(), g: 'Выбрать кампус', i: 'bi bi-building', run: function(){ p.click(); } });

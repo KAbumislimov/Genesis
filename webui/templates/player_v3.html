@@ -27,8 +27,8 @@
           <i class="bi bi-arrow-repeat" id="cpm-timesync-icon"></i><span>Синхр. время</span>
         </button>
         {% endif %}
-        <button class="btn3 stop rip" onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах">
-          <i class="bi bi-stop-fill"></i><span>Стоп — всё</span>
+        <button class="btn3 stop rip" onclick="wampShowCampusPicker(event,'stop',this)" title="СТОП — выбрать кампус для остановки (или все сразу)">
+          <i class="bi bi-stop-fill"></i><span>Стоп</span>
         </button>
       </div>
     </div>
@@ -45,7 +45,7 @@
         <button class="play rip" id="wa-play-btn" onclick="doPlay()" title="Play" aria-label="Play"><i class="bi bi-play-fill"></i></button>
         <button class="ib rip" id="wa-pause-btn" onclick="doPause()" title="Пауза" aria-label="Пауза"><i class="bi bi-pause-fill"></i></button>
         <button class="ib rip" onclick="doNext()" title="Следующий" aria-label="Следующий"><i class="bi bi-skip-end-fill"></i></button>
-        <button class="ib danger rip" onclick="doStopAll()" title="СТОП — всё, на всех кампусах" aria-label="Стоп всё"><i class="bi bi-stop-fill"></i></button>
+        <button class="ib danger rip" onclick="wampShowCampusPicker(event,'stop',this)" title="СТОП — выбрать кампус для остановки (или все сразу)" aria-label="Стоп всё"><i class="bi bi-stop-fill"></i></button>
       </div>
 
       <div class="seekbox">

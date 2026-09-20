@@ -1455,7 +1455,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     <button class="w2b w2b-play" id="wa-play-btn" onclick="doPlay()" data-i18n-title="wamp.play_t" title="Воспроизвести на активном кампусе">▶ <span data-i18n="wamp.play">PLAY</span></button>
     <button class="w2b w2b-pause" id="wa-pause-btn" onclick="doPause()" data-i18n-title="wamp.pause_t" title="Пауза / продолжить">⏸ <span data-i18n="wamp.pause">ПАУЗА</span></button>
     {% if perms.stop %}
-    <button class="w2b w2b-stop" onclick="doStopAll()" data-i18n-title="wamp.stop_t" title="⏹ СТОП — выключить ВСЁ на всех кампусах">⏹ <span data-i18n="wamp.stop">СТОП</span></button>
+    <button class="w2b w2b-stop" onclick="wampShowCampusPicker(event,'stop',this)" data-i18n-title="wamp.stop_t" title="⏹ СТОП — выключить ВСЁ на всех кампусах">⏹ <span data-i18n="wamp.stop">СТОП</span></button>
     {% endif %}
     {% if perms.next %}
     <button class="w2b w2b-next" onclick="doNext()" data-i18n-title="wamp.next_t" title="Следующий трек"><span data-i18n="wamp.next">СЛЕД</span> ⏭</button>
@@ -4374,7 +4374,7 @@ function wampShowCampusPicker(ev, kind, btn) {
   if (!pop || !list) return;
   ev.stopPropagation();
   var groupKeys = {himn: 'wamp.himn_group', minuta: 'wamp.minuta', mic: 'wamp.mik_group',
-                    alarm: 'wamp.trevoga_group', zefer: 'wamp.zefer_group', cron: 'wamp.cron_group'};
+                    alarm: 'wamp.trevoga_group', zefer: 'wamp.zefer_group', cron: 'wamp.cron_group', stop: 'wamp.stop_group'};
   var plainLabels = {nmd: '🎵 National Music Day'};
   var kindLabel = groupKeys[kind] ? t(groupKeys[kind]) : (plainLabels[kind] || '');
   if (title) title.textContent = kindLabel ? (kindLabel + ' — ' + t('wamp.pick_where')) : t('wamp.pick_campus_title');
@@ -4383,12 +4383,15 @@ function wampShowCampusPicker(ev, kind, btn) {
   allBtn.className = 'wamp2-movepop-item';
   allBtn.style.fontWeight = '900';
   allBtn.textContent = '📡 ' + t('wamp.all_campuses');
+  if (kind === 'stop') allBtn.style.color = '#ff6b73';
   allBtn.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); wampCampusPicked(kind, 'all'); };
   list.appendChild(allBtn);
   MUSIC_MACHINES.forEach(function(m){
     var b = document.createElement('button');
     b.className = 'wamp2-movepop-item';
-    b.textContent = m.name;
+    // для «Стоп» отмечаем кампусы, где сейчас что-то играет
+    var playingNow = kind === 'stop' && typeof _progState !== 'undefined' && _progState[m.key] && _progState[m.key].playing;
+    b.textContent = (playingNow ? '🔊 ' : '') + m.name;
     b.onclick = function(e){ e.stopPropagation(); pop.classList.remove('open'); wampCampusPicked(kind, m.key); };
     list.appendChild(b);
   });
@@ -4409,6 +4412,7 @@ function wampCampusPicked(kind, campus) {
   if (kind === 'zefer')  _doPlayZeferFor(campus);
   if (kind === 'nmd')    _doPlayNmdFor(campus);
   if (kind === 'cron')   _doCronToggleFor(campus);
+  if (kind === 'stop')   { if (campus === 'all') doStopAll(); else stopCampus(campus); }
 }
 function _doCronToggleFor(campus) {
   if (campus === 'all') {

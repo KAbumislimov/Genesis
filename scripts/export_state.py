@@ -198,6 +198,7 @@ def main():
     # ── зашифрованный полный снимок БД ──────────────────────────────────────
     snap_msg = snapshot(con)
     con.close()
+    snap_msg += ' | ' + helpdesk_snapshots()
 
     for e in events:
         journal_add('state', e)
@@ -227,25 +228,47 @@ def vault_pass():
     return m.group(1).strip().strip('"\'') if m else ''
 
 
+def encrypt_file(src, dst, pw):
+    r = subprocess.run(['openssl', 'enc', '-aes-256-cbc', '-pbkdf2', '-iter', '200000', '-salt',
+                        '-in', src, '-out', dst, '-pass', 'env:CAMPUS_VAULT'],
+                       env=dict(os.environ, CAMPUS_VAULT=pw), capture_output=True, text=True)
+    return r.returncode == 0, r.stderr.strip()[:100]
+
+
+def should_refresh(meta, h, min_interval, max_age, have_file):
+    """Обновлять снимок: если нет файла; если данные изменились и прошёл min_interval; либо прошло max_age."""
+    if not have_file:
+        return True
+    age = time.time() - meta.get('ts', 0)
+    if meta.get('core') != h:
+        return age >= min_interval
+    return age >= max_age
+
+
+def load_meta(rel):
+    try:
+        return json.loads((read(os.path.join(STATE, rel)) or b'{}').decode())
+    except ValueError:
+        return {}
+
+
+def save_meta(rel, h, note):
+    now = time.time()
+    write_if_changed(rel, dumps({'core': h, 'ts': now, 'when': datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M'), 'how': note}))
+
+
+HOW = 'gzip + openssl enc -aes-256-cbc -pbkdf2 -iter 200000; ключ — BACKUP_VAULT_PASS из campus-secrets/server/.env'
+
+
 def snapshot(con):
+    """Полный снимок БД веб-панели (пользователи, права, настройки, машины, журналы)."""
     enc = os.path.join(STATE, 'webui.db.enc')
-    meta_p = os.path.join(STATE, 'webui.db.meta.json')
     pw = vault_pass()
     if not pw:
         return 'снимок БД пропущен: нет BACKUP_VAULT_PASS в .env'
-    try:
-        meta = json.loads((read(meta_p) or b'{}').decode())
-    except ValueError:
-        meta = {}
-    now = time.time()
-    h = core_hash(con)
-    age = now - meta.get('ts', 0)
-    if os.path.isfile(enc) and meta.get('core') == h and age < SNAP_MAX_AGE:
+    meta, h = load_meta('webui.db.meta.json'), core_hash(con)
+    if not should_refresh(meta, h, SNAP_MIN_INTERVAL, SNAP_MAX_AGE, os.path.isfile(enc)):
         return 'снимок БД актуален'
-    if os.path.isfile(enc) and meta.get('core') != h and age < SNAP_MIN_INTERVAL:
-        return 'снимок БД: изменения есть, подождём (не чаще раза в 2 часа)'
-    if os.path.isfile(enc) and meta.get('core') == h and age >= SNAP_MAX_AGE:
-        pass  # суточное обновление (журналы/чат за день)
     with tempfile.TemporaryDirectory() as td:
         raw_p = os.path.join(td, 'webui.db')
         dst = sqlite3.connect(raw_p)
@@ -254,20 +277,79 @@ def snapshot(con):
         gz_p = raw_p + '.gz'
         with open(raw_p, 'rb') as fi, gzip.open(gz_p, 'wb', compresslevel=9) as fo:
             shutil.copyfileobj(fi, fo)
-        env = dict(os.environ, CAMPUS_VAULT=pw)
-        r = subprocess.run(['openssl', 'enc', '-aes-256-cbc', '-pbkdf2', '-iter', '200000', '-salt',
-                            '-in', gz_p, '-out', os.path.join(td, 'x.enc'), '-pass', 'env:CAMPUS_VAULT'],
-                           env=env, capture_output=True, text=True)
-        if r.returncode != 0:
-            return 'снимок БД: ошибка шифрования ' + r.stderr.strip()[:100]
+        ok, err = encrypt_file(gz_p, os.path.join(td, 'x.enc'), pw)
+        if not ok:
+            return 'снимок БД: ошибка шифрования ' + err
         with open(os.path.join(td, 'x.enc'), 'rb') as f:
             data = f.read()
     write_if_changed('webui.db.enc', data)
-    write_if_changed('webui.db.meta.json', dumps({
-        'core': h, 'ts': now, 'when': datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M'),
-        'how': 'gzip + openssl enc -aes-256-cbc -pbkdf2 -iter 200000; ключ — BACKUP_VAULT_PASS из campus-secrets/server/.env'}))
-    journal_add('state', 'Обновлён зашифрованный снимок БД в GitHub (state/webui.db.enc)')
+    save_meta('webui.db.meta.json', h, HOW)
+    journal_add('state', 'Обновлён зашифрованный снимок БД веб-панели в GitHub (state/webui.db.enc)')
     return 'снимок БД обновлён'
+
+
+def helpdesk_snapshots():
+    """Helpdesk Ops (тикеты, отчёты) и его вложения — раз в сутки, тоже зашифрованно."""
+    base = os.path.abspath(os.path.join(ROOT, '..', 'helpdesk-ops', 'data'))
+    db_p, up_p = os.path.join(base, 'helpdesk_ops.db'), os.path.join(base, 'uploads')
+    pw = vault_pass()
+    msgs = []
+    if not pw:
+        return 'Helpdesk Ops: пропущено (нет BACKUP_VAULT_PASS)'
+    DAY = 24 * 3600
+    if os.path.isfile(db_p):
+        enc = os.path.join(STATE, 'helpdesk_ops.db.enc')
+        try:
+            con = sqlite3.connect(f'file:{db_p}?mode=ro', uri=True, timeout=10)
+            h = hashlib.sha256('\n'.join(con.iterdump()).encode('utf-8', 'ignore')).hexdigest()
+            meta = load_meta('helpdesk_ops.db.meta.json')
+            if should_refresh(meta, h, DAY, DAY, os.path.isfile(enc)):
+                with tempfile.TemporaryDirectory() as td:
+                    raw_p = os.path.join(td, 'h.db')
+                    dst = sqlite3.connect(raw_p)
+                    con.backup(dst)
+                    dst.close()
+                    with open(raw_p, 'rb') as fi, gzip.open(raw_p + '.gz', 'wb', compresslevel=9) as fo:
+                        shutil.copyfileobj(fi, fo)
+                    ok, err = encrypt_file(raw_p + '.gz', os.path.join(td, 'x.enc'), pw)
+                    if ok:
+                        with open(os.path.join(td, 'x.enc'), 'rb') as f:
+                            write_if_changed('helpdesk_ops.db.enc', f.read())
+                        save_meta('helpdesk_ops.db.meta.json', h, HOW)
+                        journal_add('state', 'Обновлён зашифрованный снимок БД Helpdesk Ops (state/helpdesk_ops.db.enc)')
+                        msgs.append('helpdesk БД обновлена')
+                    else:
+                        msgs.append('helpdesk БД: ошибка шифрования ' + err)
+            con.close()
+        except sqlite3.Error as e:
+            msgs.append('helpdesk БД: ' + str(e)[:60])
+    if os.path.isdir(up_p):
+        files = []
+        for dp, _, fns in os.walk(up_p):
+            for fn in fns:
+                fp = os.path.join(dp, fn)
+                try:
+                    files.append((os.path.relpath(fp, up_p), os.path.getsize(fp)))
+                except OSError:
+                    pass
+        h = hashlib.sha256(repr(sorted(files)).encode()).hexdigest()
+        total = sum(x[1] for x in files)
+        enc = os.path.join(STATE, 'helpdesk_ops_uploads.tar.gz.enc')
+        meta = load_meta('helpdesk_ops_uploads.meta.json')
+        if files and total <= 40 * 1024 * 1024 and should_refresh(meta, h, DAY, 7 * DAY, os.path.isfile(enc)):
+            with tempfile.TemporaryDirectory() as td:
+                tar_p = os.path.join(td, 'u.tar.gz')
+                subprocess.run(['tar', 'czf', tar_p, '-C', base, 'uploads'], capture_output=True)
+                ok, err = encrypt_file(tar_p, os.path.join(td, 'x.enc'), pw)
+                if ok:
+                    with open(os.path.join(td, 'x.enc'), 'rb') as f:
+                        write_if_changed('helpdesk_ops_uploads.tar.gz.enc', f.read())
+                    save_meta('helpdesk_ops_uploads.meta.json', h, 'tar.gz + openssl enc -aes-256-cbc -pbkdf2')
+                    journal_add('state', 'Обновлён зашифрованный архив вложений Helpdesk Ops')
+                    msgs.append('вложения обновлены')
+        elif files and total > 40 * 1024 * 1024:
+            msgs.append(f'вложения {total // 1048576} МБ — слишком велики для GitHub, только локальный бэкап')
+    return '; '.join(msgs) or 'Helpdesk Ops: актуально'
 
 
 if __name__ == '__main__':

@@ -60,9 +60,9 @@
         <div class="kval"><input type="range" class="rng" id="r6-master-rng" min="0" max="160" value="100" oninput="onVolInput(this.value)" aria-label="Громкость"><span id="vol-num">100</span></div>
       </div>
 
-      <button class="panic rip" onclick="doStopAll()" title="СТОП — остановить абсолютно всё, на всех кампусах" aria-label="Стоп — всё">
+      <button class="panic rip" onclick="wampShowCampusPicker(event,'stop',this)" title="СТОП — выбрать кампус для остановки (или все сразу)" aria-label="Стоп — всё">
         <span class="panic-frame"><span class="panic-cap"><i class="bi bi-stop-fill"></i></span></span>
-        <span class="panic-lbl">СТОП · ВСЁ</span>
+        <span class="panic-lbl">СТОП · КАМПУС</span>
       </button>
     </div>
 
