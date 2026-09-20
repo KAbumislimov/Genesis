@@ -117,10 +117,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 }
 /* Тёмная тема: вместо белой плитки под логотипом — тонкий белый контур по буквам и знакам
    (фильтр на контейнере частей пазла и на цельных картинках, поэтому швов между частями нет). */
-[data-theme="dark"] .lion-pieces, [data-theme="dark"] .leg-pieces, [data-theme="dark"] .full-logo{
-  filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)
-         drop-shadow(0 0 5px rgba(255,255,255,.22));
-}
+/* (контур теперь запечён в картинки *.logo.tline.png: буквы полые, только белая линия; в светлой теме — исходные логотипы) */
 /* картинка логотипа лежит в квадрате 360×360 с пустыми полями — подпись подтягиваем к самому знаку */
 .leg-wrap + .logo-name2, .col-leg .logo-name2{margin-top:-96px}
 .col-leg .logo-sub2{margin-top:2px}
@@ -486,14 +483,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 // ── FORM: nothing extra needed — inputs use form="loginform" attr ──
 
 // ── THEME ──
-var LND_URL = "{{ url_for('static', filename='media.logo.t.png') }}";
-var LEG_URL = "{{ url_for('static', filename='leg.logo.t.png') }}";
+var LOGO_URLS = {
+  light: {media: "{{ url_for('static', filename='media.logo.t.png') }}",     leg: "{{ url_for('static', filename='leg.logo.t.png') }}"},
+  dark:  {media: "{{ url_for('static', filename='media.logo.tline.png') }}", leg: "{{ url_for('static', filename='leg.logo.tline.png') }}"}
+};
+var LND_URL = LOGO_URLS.dark.media, LEG_URL = LOGO_URLS.dark.leg;
 
 function setTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
   try { localStorage.setItem('login_theme', t); } catch(e) {}
   document.getElementById('tl').classList.toggle('on', t === 'light');
   document.getElementById('td').classList.toggle('on', t === 'dark');
+  // логотипы: в тёмной теме — контурные (буквы полые), в светлой — исходные
+  var u = LOGO_URLS[t === 'light' ? 'light' : 'dark']; LND_URL = u.media; LEG_URL = u.leg;
+  document.querySelectorAll('.col-lion .logo-piece').forEach(function(el){ el.style.backgroundImage = 'url(' + LND_URL + ')'; });
+  document.querySelectorAll('.col-leg .logo-piece').forEach(function(el){ el.style.backgroundImage = 'url(' + LEG_URL + ')'; });
+  var lf = document.getElementById('lion-full'), gf = document.getElementById('leg-full');
+  if (lf) lf.src = LND_URL; if (gf) gf.src = LEG_URL;
 }
 
 setTheme(document.documentElement.getAttribute('data-theme') || 'dark');

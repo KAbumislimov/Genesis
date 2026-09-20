@@ -1553,8 +1553,19 @@ def _before():
         except Exception:
             pass
 
+_LOGIN_STYLES = tuple(str(i) for i in range(1, 12))
+
+def _render_login():
+    """Страница входа: стандартная или один из вариантов предпросмотра (?style=1..5 — см. templates/login_alt.html)."""
+    st = request.args.get('style', '')
+    if st in _LOGIN_STYLES:
+        return render_template('login_alt.html', style=st)
+    return render_template('login.html')
+
 @app.route('/login', methods=['GET','POST'])
 def login():
+    if request.method == 'GET' and request.args.get('style', '') in _LOGIN_STYLES:
+        return _render_login()            # предпросмотр вариантов доступен и при открытой сессии
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     ip  = request.remote_addr or '0.0.0.0'
@@ -1563,7 +1574,7 @@ def login():
     if rec['lockout_until'] > now:
         mins = int((rec['lockout_until'] - now) // 60) + 1
         flash(f'Слишком много неудачных попыток. Попробуйте через {mins} мин.', 'danger')
-        return render_template('login.html')
+        return _render_login()
     if request.method == 'POST':
         username = request.form.get('username','').strip()
         password = request.form.get('password','')
@@ -1571,7 +1582,7 @@ def login():
             row = c.execute('SELECT * FROM users WHERE username=?',(username,)).fetchone()
         if row and dict(row).get('is_blocked'):
             flash('Ваш аккаунт заблокирован. Обратитесь к администратору.', 'danger')
-            return render_template('login.html')
+            return _render_login()
         if row and check_password_hash(row['password_hash'], password):
             _login_attempts.pop(ip, None)   # сбросить счётчик при успехе
             login_user(User(row), remember=True, duration=timedelta(days=30))
@@ -1601,7 +1612,7 @@ def login():
             flash(f'Неверный логин или пароль. Осталось попыток: {left}', 'danger')
             tg_notify(f'⚠️ <b>Неверный пароль</b>\nЛогин: <code>{username}</code>\nIP: <code>{ip}</code> (попытка {rec["count"]}/{_MAX_ATTEMPTS})\n🕐 {_tg_fmt_time()}',
                       event_type='login')
-    return render_template('login.html')
+    return _render_login()
 
 @app.route('/logout')
 @login_required

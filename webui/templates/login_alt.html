@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Media Audio</title>
+<script>try{document.documentElement.setAttribute('data-theme', localStorage.getItem('login_theme') || 'dark');}catch(e){}</script>
+<style>
+:root{
+  --bg:#f2f5fc;--bg2:#e7ecf8;--card:rgba(255,255,255,.94);--bd:rgba(40,70,160,.2);--tx:#0f1830;--sub:#44506e;
+  --acc:#2563eb;--acc2:#7c3aed;--in:#ffffff;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--shadow:rgba(30,50,120,.16);
+}
+[data-theme=dark]{
+  --bg:#080d18;--bg2:#0d1526;--card:rgba(14,22,44,.82);--bd:rgba(120,165,255,.24);--tx:#eef3fb;--sub:#b9c5dc;
+  --acc:#6ea8ff;--acc2:#a78bfa;--in:rgba(255,255,255,.07);--ok:#2ecc71;--warn:#f5b301;--bad:#ff5a64;--shadow:rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;}
+body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;transition:background .3s,color .3s}
+button,input{font:inherit;color:inherit}
+a{color:var(--acc)}
+/* верхняя панель: язык и тема */
+.top{position:fixed;top:14px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:0 18px;z-index:30;pointer-events:none}
+.top > *{pointer-events:auto}
+.seg{display:flex;gap:2px;background:var(--card);border:1.5px solid var(--bd);border-radius:30px;padding:4px;backdrop-filter:blur(10px)}
+.seg button{border:0;background:transparent;padding:7px 14px;border-radius:24px;font-weight:700;font-size:14px;color:var(--sub);cursor:pointer}
+.seg button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff}
+.lamp{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);flex:none}
+.chip{display:inline-flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--bd);border-radius:30px;padding:8px 15px;font-size:14px;font-weight:600;color:var(--sub);backdrop-filter:blur(10px)}
+/* форма (общая) */
+.lf label.l{display:block;font-weight:700;font-size:15px;margin:14px 0 7px}
+.in{display:flex;align-items:center;gap:8px;background:var(--in);border:1.5px solid var(--bd);border-radius:12px;padding:0 12px;transition:border-color .2s,box-shadow .2s}
+.in:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 25%,transparent)}
+.in input{flex:1;min-width:0;background:transparent;border:0;outline:0;padding:14px 2px;font-size:17px}
+.in input::placeholder{color:var(--sub);opacity:.75}
+.in button{background:none;border:0;cursor:pointer;color:var(--sub);font-size:14px;font-weight:700;padding:6px}
+.caps{display:none;color:var(--warn);font-weight:700;font-size:14px;margin-top:8px}
+.caps.on{display:block}
+.rem{display:flex;align-items:center;gap:9px;margin-top:16px;font-size:15px;font-weight:600;color:var(--sub);cursor:pointer}
+.rem input{width:19px;height:19px;accent-color:var(--acc)}
+.go{width:100%;margin-top:18px;border:0;border-radius:12px;padding:15px;font-size:18px;font-weight:800;color:#fff;cursor:pointer;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 8px 26px color-mix(in srgb,var(--acc) 40%,transparent);transition:transform .15s}
+.go:hover{transform:translateY(-1px)}
+.note{margin-top:14px;text-align:center;color:var(--sub);font-size:15px}
+.flash{list-style:none;margin:10px 0 0}
+.flash li{padding:10px 13px;border-radius:10px;font-size:15px;font-weight:600;margin-bottom:6px;background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.flash li.flash-success{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+/* логотипы: в тёмной теме подменяются на контурные (буквы полые, белая линия) — см. applyTheme() */
+/* переключатель вариантов (только в режиме предпросмотра) */
+.pv{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-wrap:wrap;justify-content:center;max-width:96vw;gap:4px;align-items:center;background:var(--card);border:1.5px solid var(--bd);border-radius:30px;padding:6px 10px;font-size:14px;backdrop-filter:blur(10px)}
+.pv a{padding:5px 10px;border-radius:20px;text-decoration:none;font-weight:800;color:var(--sub)}
+.pv a.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── 1 · Эфир ── */
+.v1{display:grid;place-items:center;min-height:100vh;padding:70px 16px 70px;position:relative;overflow:hidden}
+.v1 canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.v1::before{content:'';position:fixed;inset:0;background:radial-gradient(60% 50% at 50% 35%,color-mix(in srgb,var(--acc) 22%,transparent),transparent 70%);z-index:0}
+.v1 .wrap{position:relative;z-index:2;width:min(440px,100%);text-align:center}
+.v1 .clock{font:800 clamp(48px,9vw,78px)/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.02em}
+.v1 .clock small{font-size:.42em;opacity:.7}
+.v1 .date{color:var(--sub);font-size:17px;margin-top:6px}
+.v1 .greet{font-size:22px;font-weight:800;margin:14px 0 20px}
+.v1 .card{background:var(--card);border:1.5px solid var(--bd);border-radius:22px;padding:22px 26px 24px;text-align:left;backdrop-filter:blur(16px);box-shadow:0 20px 60px var(--shadow)}
+.v1 .card h1{font-size:26px;text-align:center}
+.v1 .card .sub{text-align:center;color:var(--sub);margin-top:2px}
+.v1 .foot{margin-top:18px;display:flex;justify-content:center}
+
+/* ── 2 · Пульт ── */
+.v2{display:grid;place-items:center;min-height:100vh;padding:80px 16px 70px;background:
+  repeating-linear-gradient(0deg,transparent 0 39px,color-mix(in srgb,var(--tx) 5%,transparent) 39px 40px),
+  repeating-linear-gradient(90deg,transparent 0 39px,color-mix(in srgb,var(--tx) 5%,transparent) 39px 40px),var(--bg)}
+.v2{--acc:#ffb020;--acc2:#ff7a1a}
+[data-theme=light] .v2{--acc:#d97706;--acc2:#ea580c}
+.v2 .panel{width:min(520px,100%);background:var(--card);border:1.5px solid var(--bd);border-radius:18px;overflow:hidden;box-shadow:0 24px 70px var(--shadow)}
+.v2 .leds{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px;border-bottom:1.5px solid var(--bd)}
+.v2 .leds .chip{padding:6px 12px;font-size:13.5px}
+.v2 .lcd{margin:16px;padding:14px 18px;background:#05070c;border:1.5px solid var(--bd);border-radius:12px;display:flex;justify-content:space-between;align-items:baseline;font-family:ui-monospace,Menlo,monospace}
+[data-theme=light] .v2 .lcd{background:#151a26}
+.v2 .lcd .t{font-size:40px;font-weight:700;color:var(--acc);text-shadow:0 0 16px color-mix(in srgb,var(--acc) 60%,transparent)}
+.v2 .lcd .s{font-size:14px;color:#9aa6bf;text-align:right;letter-spacing:.08em}
+.v2 .body{padding:0 22px 24px}
+.v2 h1{font-size:15px;letter-spacing:.24em;text-transform:uppercase;color:var(--sub);margin:4px 0 0}
+.v2 .lamp.off{background:#59627a;box-shadow:none}
+.v2 .lamp.warn{background:var(--warn);box-shadow:0 0 10px var(--warn)}
+
+/* ── 3 · Сцена ── */
+.v3{display:grid;grid-template-columns:1.15fr 1fr;min-height:100vh}
+.v3 .brand{position:relative;overflow:hidden;padding:90px 48px 60px;display:flex;flex-direction:column;justify-content:center;gap:26px;
+  background:linear-gradient(135deg,#0b1a44,#3b1d7a,#0b3a5a,#0b1a44);background-size:300% 300%;animation:aur 16s ease infinite;color:#fff}
+@keyframes aur{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.v3 .brand h2{font-size:clamp(28px,3.2vw,44px);line-height:1.15;font-weight:800;max-width:560px}
+.v3 .logos{display:flex;gap:34px;align-items:center;flex-wrap:wrap}
+.v3 .lg{position:relative;width:200px;height:84px;overflow:hidden;flex:none}
+.v3 .lg img{position:absolute;left:50%;top:50%;height:250px;width:auto;max-width:none;transform:translate(-50%,-50%)}
+.v3 .tip{min-height:86px;max-width:520px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.22);border-radius:16px;padding:16px 18px;font-size:18px;backdrop-filter:blur(8px);transition:opacity .4s}
+.v3 .tip b{display:block;font-size:13px;letter-spacing:.16em;text-transform:uppercase;opacity:.75;margin-bottom:4px}
+.v3 .dots{display:flex;gap:8px}
+.v3 .dots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.3)}
+.v3 .dots i.on{background:#fff}
+.v3 .side{display:grid;place-items:center;padding:80px 28px 70px}
+.v3 .card{width:min(400px,100%)}
+.v3 .card h1{font-size:30px}
+.v3 .card .sub{color:var(--sub);margin-top:2px}
+
+/* ── 4 · Шаги ── */
+.v4{display:grid;place-items:center;min-height:100vh;padding:80px 20px 70px;background:radial-gradient(70% 60% at 50% 30%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 70%),var(--bg)}
+.v4 .wrap{width:min(560px,100%);text-align:center;overflow:hidden}
+.v4 h1{font-size:clamp(34px,6vw,54px);line-height:1.1;font-weight:900;letter-spacing:-.02em}
+.v4 .sub{color:var(--sub);font-size:19px;margin:10px 0 28px}
+.v4 .in input{font-size:26px;padding:18px 4px;text-align:center}
+.v4 .steps{display:flex;gap:10px;justify-content:center;margin-bottom:22px}
+.v4 .steps i{width:34px;height:6px;border-radius:6px;background:var(--bd)}
+.v4 .steps i.on{background:linear-gradient(90deg,var(--acc),var(--acc2))}
+.v4 .st{display:none;animation:sl .35s ease}
+.v4 .st.on{display:block}
+@keyframes sl{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+.v4 .avatar{width:84px;height:84px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;font-size:38px;font-weight:900;color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 10px 30px color-mix(in srgb,var(--acc) 40%,transparent)}
+.v4 .who{font-size:22px;font-weight:800;margin-bottom:6px}
+.v4 .lnk{background:none;border:0;color:var(--acc);font-weight:700;cursor:pointer;font-size:16px;margin-top:14px;padding:6px}
+.v4 .hint{color:var(--sub);font-size:14px;margin-top:12px}
+.v4 .lastu{display:none;margin:0 auto 18px;cursor:pointer}
+.v4 .lastu.on{display:inline-flex}
+
+/* ── 5 · Центр ── */
+.v5{display:grid;grid-template-columns:1fr minmax(340px,420px) 1fr;gap:22px;align-items:center;min-height:100vh;padding:80px 26px 76px;max-width:1400px;margin:0 auto}
+.v5 .card{background:var(--card);border:1.5px solid var(--bd);border-radius:20px;padding:20px 22px;box-shadow:0 14px 44px var(--shadow)}
+.v5 .card h3{font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--sub);margin-bottom:12px}
+.v5 .form h1{font-size:28px;text-align:center}
+.v5 .form .sub{text-align:center;color:var(--sub)}
+.v5 ul.nw{list-style:none;display:grid;gap:11px}
+.v5 ul.nw li{display:flex;gap:11px;align-items:flex-start;font-size:16px}
+.v5 ul.nw li::before{content:'';flex:none;width:9px;height:9px;margin-top:8px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2))}
+.v5 .col{display:grid;gap:18px}
+.v5 .links a{display:block;padding:11px 0;border-bottom:1px solid var(--bd);text-decoration:none;font-weight:700;font-size:16px}
+.v5 .links a:last-child{border:0}
+.v5 kbd{background:var(--in);border:1.5px solid var(--bd);border-radius:7px;padding:2px 8px;font:700 13.5px ui-monospace,Menlo,monospace}
+.v5 .keys div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;font-size:15.5px}
+@media (max-width:980px){
+  .v3{grid-template-columns:1fr}.v3 .brand{padding:80px 24px 30px}
+  .v5{grid-template-columns:1fr}.v5 .form{order:-1}
+}
+
+/* ══ новые варианты 6–11: логотипы и крупные надписи ══ */
+.wm{font-weight:900;letter-spacing:.06em;line-height:1;text-transform:uppercase}
+.outline{color:transparent;-webkit-text-stroke:2px var(--tx)}
+[data-theme=light] .outline{-webkit-text-stroke-color:#0f1830}
+.gcard{background:var(--card);border:1.5px solid var(--bd);border-radius:22px;padding:6px 24px 24px;text-align:left;backdrop-filter:blur(14px);box-shadow:0 22px 64px var(--shadow)}
+.gcard h1{font-size:24px;text-align:center;margin-top:18px}
+.slog{color:var(--sub);font-size:20px;min-height:32px;transition:opacity .4s;font-weight:600}
+@keyframes spin{to{rotate:360deg}}
+@keyframes rise{from{opacity:0;transform:translateY(26px) scale(.94)}to{opacity:1;transform:none}}
+
+/* 6 · Герб */
+.v6{min-height:100vh;display:grid;justify-items:center;align-content:center;gap:14px;padding:76px 16px 120px;text-align:center;position:relative;overflow:hidden}
+.v6 > *{position:relative;z-index:1}
+.v6 .ring{position:absolute;z-index:0;top:50%;left:50%;width:min(760px,120vw);aspect-ratio:1;translate:-50% -64%;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent,var(--acc),transparent 30%,var(--acc2),transparent 62%);filter:blur(46px);opacity:.3;animation:spin 20s linear infinite}
+.v6 .big{width:min(330px,68vw);height:auto;animation:rise .9s ease both}
+.v6 .wm{font-size:clamp(34px,7.4vw,84px);animation:rise 1s .15s ease both}
+.v6 .gcard{width:min(410px,100%)}
+.v6 .foot{display:flex;align-items:center;gap:16px;margin-top:8px;color:var(--sub);font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:14px;flex-wrap:wrap;justify-content:center}
+.v6 .foot img{height:40px;width:auto}
+
+/* 7 · Дуэт */
+.v7{min-height:100vh;display:grid;grid-template-columns:1fr minmax(340px,410px) 1fr;align-items:center;gap:30px;padding:80px 34px;max-width:1560px;margin:0 auto}
+.v7 .side{display:grid;justify-items:center;gap:18px;text-align:center;position:relative}
+.v7 .side img{width:min(360px,100%);height:auto;animation:rise .9s ease both}
+.v7 .side .wm{font-size:clamp(24px,2.8vw,42px)}
+.v7 .side .cap{color:var(--sub);letter-spacing:.22em;text-transform:uppercase;font-size:14.5px;font-weight:800}
+.v7 .gcard{width:100%}
+
+/* 8 · Неон */
+.v8{min-height:100vh;display:grid;justify-items:center;align-content:center;gap:12px;padding:76px 16px 84px;text-align:center;
+  background:radial-gradient(60% 46% at 50% 26%,color-mix(in srgb,var(--acc2) 30%,transparent),transparent 70%),var(--bg)}
+.v8 .sign{font-size:clamp(58px,14vw,168px);font-weight:900;letter-spacing:.04em;line-height:.95;color:transparent;-webkit-text-stroke:2.5px #fff;
+  filter:drop-shadow(0 0 4px var(--acc)) drop-shadow(0 0 12px color-mix(in srgb,var(--acc2) 70%,transparent));animation:flick 7s infinite}
+[data-theme=light] .v8 .sign{-webkit-text-stroke-color:#1e3a8a;filter:none}
+@keyframes flick{0%,18%,22%,62%,64%,100%{opacity:1}20%,63%{opacity:.5}}
+.v8 .sign2{font-size:clamp(20px,3.6vw,40px);font-weight:900;letter-spacing:.42em;color:transparent;-webkit-text-stroke:1.5px var(--acc);margin:4px 0 18px;text-transform:uppercase}
+.v8 .gcard{width:min(410px,100%)}
+.v8 .logos{display:flex;gap:26px;align-items:center;justify-content:center;margin-top:10px}
+.v8 .logos img{height:44px;width:auto}
+
+/* 9 · Плакат */
+.v9{min-height:100vh;position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(340px,430px) 1fr;align-items:center;gap:5vw;padding:80px 6vw}
+.v9 .bg{position:absolute;font-weight:900;font-size:24vw;line-height:.85;text-transform:uppercase;white-space:nowrap;color:transparent;
+  -webkit-text-stroke:2px color-mix(in srgb,var(--tx) 13%,transparent);z-index:0;pointer-events:none;letter-spacing:.02em}
+.v9 .bg.a{top:-1%;left:-3%}.v9 .bg.b{top:30%;right:-8%}.v9 .bg.c{bottom:-6%;left:-2%}
+.v9 .gcard,.v9 .txt{position:relative;z-index:2}
+.v9 .txt img{width:min(320px,70%);height:auto;display:block}
+.v9 .txt h2{font-size:clamp(34px,4.8vw,72px);line-height:1.05;font-weight:900;margin:22px 0 16px;color:transparent;-webkit-text-stroke:2px var(--acc)}
+.v9 .txt .cap{color:var(--sub);font-size:18px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+
+/* 10 · Витрина */
+.v10{min-height:100vh;display:grid;justify-items:center;align-content:center;gap:26px;padding:80px 16px 88px}
+.v10 .cards{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;perspective:1100px}
+.v10 .lc{width:min(430px,92vw);background:var(--card);border:1.5px solid var(--bd);border-radius:26px;padding:28px 26px 22px;text-align:center;transform-style:preserve-3d;transition:transform .18s ease-out;backdrop-filter:blur(14px);box-shadow:0 26px 70px var(--shadow)}
+.v10 .lc img{width:100%;max-height:150px;object-fit:contain;transform:translateZ(46px)}
+.v10 .lc .wm{font-size:22px;margin-top:14px;transform:translateZ(26px)}
+.v10 .lc .cap{color:var(--sub);font-size:14.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;margin-top:6px}
+.v10 .bar{width:min(940px,100%);background:var(--card);border:1.5px solid var(--bd);border-radius:22px;padding:8px 22px 20px;backdrop-filter:blur(14px);box-shadow:0 22px 60px var(--shadow)}
+.v10 .lf{display:grid;grid-template-columns:1fr 1fr auto;grid-template-areas:"f f f" "u p g" "r r r";gap:0 16px;align-items:end}
+.v10 .lf .flash{grid-area:f}.v10 #f-user{grid-area:u}.v10 #f-pass{grid-area:p}.v10 .lf .go{grid-area:g}.v10 .lf .rem{grid-area:r}
+.v10 .lf .go{margin:0;width:auto;padding:0 34px;height:57px}
+.v10 .lf .caps{position:absolute}
+.v10 #f-pass{position:relative}
+
+/* 11 · Интро */
+.v11{min-height:100vh;display:grid;justify-items:center;align-content:center;gap:20px;padding:80px 16px 88px;text-align:center}
+.v11 .lw{position:relative;overflow:hidden;width:min(400px,78vw);animation:rise 1.1s cubic-bezier(.2,.8,.2,1) both}
+.v11 .lw img{width:100%;height:auto;display:block}
+.v11 .lw::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);animation:shine 3.2s 1s ease-in-out infinite;mix-blend-mode:overlay}
+@keyframes shine{0%{transform:translateX(-120%)}55%,100%{transform:translateX(120%)}}
+.v11 .type{font:800 clamp(28px,5.6vw,60px)/1.2 ui-monospace,Menlo,monospace;min-height:1.3em;color:transparent;-webkit-text-stroke:1.6px var(--tx)}
+[data-theme=light] .v11 .type{-webkit-text-stroke-color:#0f1830}
+.v11 .type::after{content:'';display:inline-block;width:.09em;height:1em;background:var(--acc);margin-left:.1em;vertical-align:-.1em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.v11 .gcard{width:min(410px,100%);opacity:0;transform:translateY(26px);transition:opacity .8s,transform .8s;pointer-events:none}
+.v11 .gcard.show{opacity:1;transform:none;pointer-events:auto}
+.v11 .replay{background:var(--card);border:1.5px solid var(--bd);border-radius:30px;padding:7px 15px;font-size:14px;font-weight:700;color:var(--sub);cursor:pointer}
+@media (max-width:980px){
+  .v7{grid-template-columns:1fr}.v7 .gcard{order:-1}
+  .v9{grid-template-columns:1fr}.v9 .txt{order:-1}.v10 .lf{grid-template-columns:1fr;grid-template-areas:"f" "u" "p" "r" "g"}.v10 .lf .go{width:100%;margin-top:18px}
+}
+</style>
+</head>
+<body class="pg{{ style }}" data-style="{{ style }}">
+
+<div class="top">
+  <div class="seg" id="langseg"><button data-l="ru">RU</button><button data-l="az">AZ</button><button data-l="en">EN</button></div>
+  <div class="seg" id="themeseg"><button data-th="light" data-t="light">☀ Светлый</button><button data-th="dark" data-t="dark">☾ Тёмный</button></div>
+</div>
+
+{% macro form() %}
+<form class="lf" id="lf" method="post" action="{{ url_for('login') }}?style={{ style }}">
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
+  <ul class="flash">{% for cat, msg in messages %}<li class="flash-{{ cat }}">{{ msg }}</li>{% endfor %}</ul>
+  {% endif %}{% endwith %}
+  <div id="f-user">
+    <label class="l" for="username" data-t="user">Имя пользователя</label>
+    <div class="in"><span aria-hidden="true">👤</span><input id="username" name="username" type="text" autocomplete="username" required data-tp="ph_user" placeholder="Введите логин"></div>
+  </div>
+  <div id="f-pass">
+    <label class="l" for="password" data-t="pass">Пароль</label>
+    <div class="in"><span aria-hidden="true">🔒</span><input id="password" name="password" type="password" autocomplete="current-password" required data-tp="ph_pass" placeholder="Введите пароль"><button type="button" id="eye" data-t="show">Показать</button></div>
+    <div class="caps" id="caps">⇪ <span data-t="caps">Включён Caps Lock</span></div>
+  </div>
+  <label class="rem" id="f-rem"><input type="checkbox" name="remember"><span data-t="remember">Запомнить меня</span></label>
+  <button class="go" type="submit" id="gobtn" data-t="submit">Войти</button>
+</form>
+{% endmacro %}
+
+{% if style == '1' %}
+<canvas id="eq" aria-hidden="true"></canvas>
+<main class="v1">
+  <div class="wrap">
+    <div class="clock" id="clock">00:00<small>:00</small></div>
+    <div class="date" id="date"></div>
+    <div class="greet" id="greet"></div>
+    <div class="card">
+      <h1 data-t="title">Вход в систему</h1>
+      <div class="sub" data-t="tag1">Управление звуком всех кампусов</div>
+      {{ form() }}
+    </div>
+    <div class="foot"><span class="chip"><i class="lamp"></i><span data-t="ok">Система работает</span></span></div>
+  </div>
+</main>
+
+{% elif style == '2' %}
+<main class="v2">
+  <div class="panel">
+    <div class="leds">
+      <span class="chip"><i class="lamp"></i><span data-t="led_srv">Сервер</span>: <b data-t="online">на связи</b></span>
+      <span class="chip"><i class="lamp off" id="capsled"></i>Caps Lock</span>
+      <span class="chip"><i class="lamp"></i><span data-t="led_lang">Язык</span>: <b id="langled">RU</b></span>
+    </div>
+    <div class="lcd"><span class="t" id="clock">00:00:00</span><span class="s" id="date"></span></div>
+    <div class="body">
+      <h1 data-t="title">Вход в систему</h1>
+      {{ form() }}
+      <div class="note" data-t="note">Доступ только для сотрудников · Media School</div>
+    </div>
+  </div>
+</main>
+
+{% elif style == '3' %}
+<main class="v3">
+  <section class="brand">
+    <div class="logos"><div class="lg"><img class="logo-o" src="{{ url_for('static', filename='media.logo.t.png') }}" alt="Media"></div><div class="lg"><img class="logo-o" src="{{ url_for('static', filename='leg.logo.t.png') }}" alt="LEG"></div></div>
+    <h2 data-t="headline">Звук школы — под контролем</h2>
+    <div class="tip" id="tip"><b data-t="tipl">Совет</b><span id="tiptx"></span></div>
+    <div class="dots" id="dots"></div>
+  </section>
+  <section class="side">
+    <div class="card">
+      <h1 data-t="title">Вход в систему</h1>
+      <div class="sub" data-t="sub">Media Audio Control</div>
+      {{ form() }}
+      <div class="note" data-t="note">Доступ только для сотрудников · Media School</div>
+    </div>
+  </section>
+</main>
+
+{% elif style == '4' %}
+<main class="v4">
+  <div class="wrap">
+    <div class="steps"><i class="on" id="s1"></i><i id="s2"></i></div>
+    <div class="st on" id="st1">
+      <h1 data-t="s1h">Здравствуйте!</h1>
+      <div class="sub" data-t="s1s">Введите ваш логин, чтобы продолжить</div>
+      <button type="button" class="chip lastu" id="lastu"></button>
+    </div>
+    <div class="st" id="st2">
+      <div class="avatar" id="avatar">?</div>
+      <div class="who" id="who"></div>
+      <div class="sub" data-t="s2s">Теперь пароль</div>
+    </div>
+    <div style="text-align:left" id="formhost">{{ form() }}</div>
+    <div class="hint" id="hint" data-t="enter">Нажмите Enter, чтобы продолжить</div>
+    <button type="button" class="lnk" id="back" style="display:none" data-t="back">← Назад</button>
+  </div>
+</main>
+
+{% elif style == '5' %}
+<main class="v5">
+  <div class="col">
+    <div class="card"><h3 data-t="newh">Что нового</h3><ul class="nw" id="news"></ul></div>
+    <div class="card"><h3 data-t="tipsh">Горячие клавиши</h3><div class="keys">
+      <div><span data-t="k1">Быстрый поиск и команды</span><kbd>Ctrl K</kbd></div>
+      <div><span data-t="k2">Прослушка трека в браузере</span><kbd>Ctrl + <span data-t="click">клик</span></kbd></div>
+      <div><span data-t="k3">Закрыть окно</span><kbd>Esc</kbd></div></div></div>
+  </div>
+  <div class="card form">
+    <h1 data-t="title">Вход в систему</h1>
+    <div class="sub" data-t="sub">Media Audio Control</div>
+    {{ form() }}
+    <div class="note" data-t="note">Доступ только для сотрудников · Media School</div>
+  </div>
+  <div class="col">
+    <div class="card links"><h3 data-t="linksh">Быстрые ссылки</h3>
+      <a href="{{ url_for('static', filename='presentation.html') }}" target="_blank" rel="noopener" data-t="l1">🎬 Презентация системы</a>
+      <a href="{{ url_for('login') }}" data-t="l2">↩ Стандартная страница входа</a>
+      <a href="mailto:admin@example.edu" data-t="l3">✉ Написать в IT-поддержку</a></div>
+    <div class="card"><h3 data-t="apph">Как приложение</h3><p style="font-size:16px" data-t="appt">Откройте меню браузера → «Установить приложение»: плеер будет запускаться отдельным окном, как обычная программа.</p></div>
+    <div class="chip" style="justify-self:start"><i class="lamp"></i><span data-t="ok">Система работает</span></div>
+  </div>
+</main>
+{% elif style == '6' %}
+<main class="v6">
+  <i class="ring"></i>
+  <img class="big logo-o" src="{{ url_for('static', filename='media.logo.crop.png') }}" alt="Media School">
+  <div class="wm outline">Media School</div>
+  <div class="slog" id="slog"></div>
+  <div class="gcard"><h1 data-t="title">Вход в систему</h1>{{ form() }}</div>
+  <div class="foot"><img class="logo-o" src="{{ url_for('static', filename='leg.logo.crop.png') }}" alt="LEG"><span data-t="leg">the school organization · Азербайджан</span></div>
+</main>
+
+{% elif style == '7' %}
+<main class="v7">
+  <section class="side"><img class="logo-o" src="{{ url_for('static', filename='media.logo.crop.png') }}" alt="Media School"><div class="wm outline">Media School</div><div class="cap" data-t="capL">Школа · Баку</div></section>
+  <div class="gcard"><h1 data-t="title">Вход в систему</h1><div class="note" style="margin:2px 0 0" data-t="sub">Media Audio Control</div>{{ form() }}</div>
+  <section class="side"><img class="logo-o" src="{{ url_for('static', filename='leg.logo.crop.png') }}" alt="LEG"><div class="wm outline">the school organization</div><div class="cap" data-t="capR">Образовательная группа</div></section>
+</main>
+
+{% elif style == '8' %}
+<main class="v8">
+  <div class="sign">MEDIA</div>
+  <div class="sign2" data-t="sign2">Управление звуком</div>
+  <div class="gcard"><h1 data-t="title">Вход в систему</h1>{{ form() }}</div>
+  <div class="logos"><img class="logo-o" src="{{ url_for('static', filename='media.logo.crop.png') }}" alt="Media School"><img class="logo-o" src="{{ url_for('static', filename='leg.logo.crop.png') }}" alt="LEG"></div>
+</main>
+
+{% elif style == '9' %}
+<main class="v9">
+  <div class="bg a" aria-hidden="true">Media</div><div class="bg b" aria-hidden="true">School</div><div class="bg c" aria-hidden="true">Audio</div>
+  <div class="gcard"><h1 data-t="title">Вход в систему</h1>{{ form() }}</div>
+  <div class="txt"><img class="logo-o" src="{{ url_for('static', filename='media.logo.crop.png') }}" alt="Media School"><h2 id="h9"></h2><div class="cap" data-t="leg">the school organization · Азербайджан</div></div>
+</main>
+
+{% elif style == '10' %}
+<main class="v10">
+  <div class="cards">
+    <div class="lc"><img class="logo-o" src="{{ url_for('static', filename='media.logo.crop.png') }}" alt="Media School"><div class="wm">Media School</div><div class="cap" data-t="capL">Школа · Баку</div></div>
+    <div class="lc"><img class="logo-o" src="{{ url_for('static', filename='leg.logo.crop.png') }}" alt="LEG"><div class="wm">the school organization</div><div class="cap" data-t="capR">Образовательная группа</div></div>
+  </div>
+  <div class="bar">{{ form() }}</div>
+  <div class="slog" id="slog"></div>
+</main>
+
+{% else %}
+<main class="v11">
+  <div class="lw"><img class="logo-o" src="{{ url_for('static', filename='media.logo.crop.png') }}" alt="Media School"></div>
+  <div class="type" id="type"></div>
+  <div class="gcard" id="gc"><h1 data-t="title">Вход в систему</h1>{{ form() }}</div>
+  <button type="button" class="replay" id="replay" data-t="replay">↺ Повторить</button>
+</main>
+{% endif %}
+
+
+<div class="pv" id="pv"><span style="color:var(--sub)" data-t="variants">Варианты</span>
+  {% for n in ['1','2','3','4','5','6','7','8','9','10','11'] %}<a href="{{ url_for('login') }}?style={{ n }}" class="{{ 'on' if n == style else '' }}">{{ n }}</a>{% endfor %}
+  <a href="{{ url_for('login') }}" data-t="std">Стандартная</a></div>
+
+<script>
+var LANGS = {
+ru:{light:'☀ Светлый',dark:'☾ Тёмный',user:'Имя пользователя',pass:'Пароль',ph_user:'Введите логин',ph_pass:'Введите пароль',remember:'Запомнить меня',submit:'Войти',
+ title:'Вход в систему',sub:'Media Audio Control',note:'Доступ только для сотрудников · Media School',show:'Показать',hide:'Скрыть',caps:'Включён Caps Lock',ok:'Система работает',
+ tag1:'Управление звуком всех кампусов',led_srv:'Сервер',online:'на связи',led_lang:'Язык',headline:'Звук школы — под контролем',tipl:'Совет',
+ s1h:'Здравствуйте!',s1s:'Введите ваш логин, чтобы продолжить',s2s:'Теперь пароль',enter:'Нажмите Enter, чтобы продолжить',back:'← Назад',cont:'Продолжить',asu:'Продолжить как',
+ leg:'the school organization · Азербайджан',capL:'Школа · Баку',capR:'Образовательная группа',sign2:'Управление звуком',replay:'↺ Повторить',slog:['Звук школы — под контролем','Каждая перемена — вовремя','Один пульт — все кампусы'],intro:['Добро пожаловать','Media School','Управление звуком'],newh:'Что нового',tipsh:'Горячие клавиши',k1:'Быстрый поиск и команды',k2:'Прослушка трека в браузере',k3:'Закрыть окно',click:'клик',linksh:'Быстрые ссылки',
+ l1:'🎬 Презентация системы',l2:'↩ Стандартная страница входа',l3:'✉ Написать в IT-поддержку',apph:'Как приложение',
+ appt:'Откройте меню браузера → «Установить приложение»: плеер будет запускаться отдельным окном, как обычная программа.',variants:'Варианты',std:'Стандартная',
+ g:['Доброй ночи','Доброе утро','Добрый день','Добрый вечер'],loc:'ru-RU',days:['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'],mon:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],
+ tips:['Лампочки: зелёный — кампус на связи, жёлтый — пауза или часть кампусов оффлайн, красный — нет связи.','Нажмите на любой трек — панель спросит, на каком кампусе играть.','Кнопка «Все → 150» запоминает громкость и возвращает её после звонков.','Ctrl+K открывает быстрый поиск по страницам и командам.','Права ролей настраиваются галочками в разделе «Роли и права».'],
+ news:['Лампочки связи кампусов: зелёный, жёлтый, красный','Выбор кампуса при запуске любой музыки','Фиксация громкости «Все → 150»','Роли и привилегии с галочками для администратора','Полный перевод: русский, азербайджанский, английский']},
+az:{light:'☀ İşıqlı',dark:'☾ Tünd',user:'İstifadəçi adı',pass:'Şifrə',ph_user:'Loginizi daxil edin',ph_pass:'Şifrəni daxil edin',remember:'Məni yadda saxla',submit:'Daxil ol',
+ title:'Sistemə giriş',sub:'Media Audio İdarəetmə',note:'Yalnız əməkdaşlar üçün · Media School',show:'Göstər',hide:'Gizlət',caps:'Caps Lock aktivdir',ok:'Sistem işləyir',
+ tag1:'Bütün kampusların səs idarəetməsi',led_srv:'Server',online:'əlaqədə',led_lang:'Dil',headline:'Məktəbin səsi nəzarət altındadır',tipl:'Məsləhət',
+ s1h:'Xoş gəlmisiniz!',s1s:'Davam etmək üçün loginizi daxil edin',s2s:'İndi şifrə',enter:'Davam etmək üçün Enter basın',back:'← Geri',cont:'Davam et',asu:'Davam et:',
+ leg:'the school organization · Azərbaycan',capL:'Məktəb · Bakı',capR:'Təhsil qrupu',sign2:'Səs idarəetməsi',replay:'↺ Təkrarla',slog:['Məktəbin səsi nəzarət altındadır','Hər fasilə vaxtında','Bir pult — bütün kampuslar'],intro:['Xoş gəlmisiniz','Media School','Səs idarəetməsi'],newh:'Yeniliklər',tipsh:'Qısayollar',k1:'Sürətli axtarış və əmrlər',k2:'Trekə brauzerdə qulaq asmaq',k3:'Pəncərəni bağla',click:'klik',linksh:'Sürətli keçidlər',
+ l1:'🎬 Sistemin təqdimatı',l2:'↩ Standart giriş səhifəsi',l3:'✉ IT dəstəyinə yazın',apph:'Tətbiq kimi',
+ appt:'Brauzer menyusunu açın → «Tətbiq kimi quraşdır»: pleyer adi proqram kimi ayrıca pəncərədə açılacaq.',variants:'Variantlar',std:'Standart',
+ g:['Gecəniz xeyir','Sabahınız xeyir','Günortanız xeyir','Axşamınız xeyir'],loc:'az-Latn-AZ',days:['bazar','bazar ertəsi','çərşənbə axşamı','çərşənbə','cümə axşamı','cümə','şənbə'],mon:['yanvar','fevral','mart','aprel','may','iyun','iyul','avqust','sentyabr','oktyabr','noyabr','dekabr'],
+ tips:['İşıqlar: yaşıl — kampus əlaqədədir, sarı — pauza və ya bir hissəsi oflayndır, qırmızı — əlaqə yoxdur.','İstənilən trekə klik edin — panel hansı kampusda oxutmağı soruşacaq.','«Hamısı → 150» düyməsi səs səviyyəsini yadda saxlayır və zənglərdən sonra qaytarır.','Ctrl+K səhifələr və əmrlər üzrə sürətli axtarışı açır.','Rolların hüquqları «Rollar və hüquqlar» bölməsində işarələrlə tənzimlənir.'],
+ news:['Kampus əlaqə işıqları: yaşıl, sarı, qırmızı','İstənilən musiqi başladılarkən kampus seçimi','«Hamısı → 150» səs səviyyəsinin sabitlənməsi','İdarəçi üçün işarələrlə rollar və hüquqlar','Tam tərcümə: rus, azərbaycan, ingilis']},
+en:{light:'☀ Light',dark:'☾ Dark',user:'Username',pass:'Password',ph_user:'Enter your login',ph_pass:'Enter your password',remember:'Remember me',submit:'Sign in',
+ title:'Sign in',sub:'Media Audio Control',note:'Staff access only · Media School',show:'Show',hide:'Hide',caps:'Caps Lock is on',ok:'System is running',
+ tag1:'Sound control for every campus',led_srv:'Server',online:'online',led_lang:'Lang',headline:'School sound — under control',tipl:'Tip',
+ s1h:'Welcome!',s1s:'Enter your login to continue',s2s:'Now your password',enter:'Press Enter to continue',back:'← Back',cont:'Continue',asu:'Continue as',
+ leg:'the school organization · Azerbaijan',capL:'School · Baku',capR:'Education group',sign2:'Audio control',replay:'↺ Replay',slog:['School sound — under control','Every break — on time','One console — every campus'],intro:['Welcome','Media School','Audio control'],newh:"What's new",tipsh:'Keyboard shortcuts',k1:'Quick search and commands',k2:'Preview a track in the browser',k3:'Close a window',click:'click',linksh:'Quick links',
+ l1:'🎬 System presentation',l2:'↩ Standard sign-in page',l3:'✉ Contact IT support',apph:'As an app',
+ appt:'Open the browser menu → “Install app”: the player will start in its own window like a regular program.',variants:'Variants',std:'Standard',
+ g:['Good night','Good morning','Good afternoon','Good evening'],loc:'en-GB',days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],mon:['January','February','March','April','May','June','July','August','September','October','November','December'],
+ tips:['Lamps: green — campus online, yellow — paused or some campuses offline, red — no connection.','Click any track — the panel asks which campus should play it.','The “All → 150” button remembers the volume and restores it after bells.','Ctrl+K opens quick search for pages and commands.','Role permissions are set with checkboxes in “Roles and permissions”.'],
+ news:['Campus connection lamps: green, yellow, red','Choose the campus whenever any music is started','Volume lock for “All → 150”','Roles and privileges with checkboxes for the administrator','Full translation: Russian, Azerbaijani, English']}
+};
+var lang = (function(){ try { return localStorage.getItem('lang') || 'ru'; } catch(e) { return 'ru'; } })();
+if (!LANGS[lang]) lang = 'ru';
+var $ = function(s){ return document.querySelector(s); };
+function T(k){ return (LANGS[lang] && LANGS[lang][k] !== undefined) ? LANGS[lang][k] : LANGS.ru[k]; }
+function applyLang(l){
+  lang = l; try { localStorage.setItem('lang', l); } catch(e) {}
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-t]').forEach(function(e){ var v = T(e.dataset.t); if (v !== undefined) e.textContent = v; });
+  document.querySelectorAll('[data-tp]').forEach(function(e){ var v = T(e.dataset.tp); if (v !== undefined) e.placeholder = v; });
+  document.querySelectorAll('#langseg button').forEach(function(b){ b.classList.toggle('on', b.dataset.l === l); });
+  var le = $('#langled'); if (le) le.textContent = l.toUpperCase();
+  var eye = $('#eye'); if (eye) eye.textContent = T($('#password').type === 'password' ? 'show' : 'hide');
+  tickClock(); renderTip(); renderNews(); step4Refresh(); renderSlog(); runIntro();
+  document.title = 'Media Audio — ' + T('title');
+}
+function swapLogos(t){
+  document.querySelectorAll('img.logo-o').forEach(function(im){
+    if (!im.dataset.o) im.dataset.o = im.getAttribute('src');
+    var o = im.dataset.o;
+    im.setAttribute('src', t === 'light' ? o : o.replace(/\.logo\.(crop|t)\.png/, function(m, k){ return k === 'crop' ? '.logo.cropline.png' : '.logo.tline.png'; }));
+  });
+}
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('login_theme', t); } catch(e) {}
+  swapLogos(t);
+  document.querySelectorAll('#themeseg button').forEach(function(b){ b.classList.toggle('on', b.dataset.th === t); });
+}
+document.querySelectorAll('#langseg button').forEach(function(b){ b.onclick = function(){ applyLang(b.dataset.l); }; });
+document.querySelectorAll('#themeseg button').forEach(function(b){ b.onclick = function(){ applyTheme(b.dataset.th); }; });
+
+/* глаз и Caps Lock */
+var pw = $('#password');
+$('#eye').onclick = function(){ pw.type = pw.type === 'password' ? 'text' : 'password'; this.textContent = T(pw.type === 'password' ? 'show' : 'hide'); };
+function caps(e){ var on = e.getModifierState && e.getModifierState('CapsLock'); var c = $('#caps'); if (c) c.classList.toggle('on', !!on);
+  var led = $('#capsled'); if (led) { led.classList.toggle('warn', !!on); led.classList.toggle('off', !on); } }
+pw.addEventListener('keydown', caps); pw.addEventListener('keyup', caps);
+
+/* часы Баку */
+function tickClock(){
+  var now = new Date();
+  var p = {}; new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Baku', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}).formatToParts(now).forEach(function(x){ p[x.type] = x.value; });
+  var h = (+p.hour) % 24, style = document.body.dataset.style;
+  var c = $('#clock'); if (c) c.innerHTML = style === '1' ? (p.hour + ':' + p.minute + '<small>:' + p.second + '</small>') : (p.hour + ':' + p.minute + ':' + p.second);
+  var d = $('#date');
+  if (d) {
+    var q = {}; new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Baku', year:'numeric', month:'numeric', day:'numeric'}).formatToParts(now).forEach(function(x){ q[x.type] = x.value; });
+    var wd = new Date(Date.UTC(+q.year, +q.month - 1, +q.day)).getUTCDay();
+    var dn = T('days')[wd], mn = T('mon')[+q.month - 1];
+    d.textContent = (lang === 'en' ? (dn + ', ' + q.day + ' ' + mn) : (dn + ', ' + q.day + ' ' + mn)) + (style === '2' ? '' : ' · Bakı');
+  }
+  var g = $('#greet'); if (g) g.textContent = T('g')[h < 5 ? 0 : h < 12 ? 1 : h < 18 ? 2 : 3];
+}
+setInterval(tickClock, 1000);
+
+/* 1 · равнайзер на фоне */
+(function(){
+  var cv = $('#eq'); if (!cv) return;
+  var ctx = cv.getContext('2d'), N = 72, W, H, t0 = 0;
+  function size(){ W = cv.width = innerWidth * devicePixelRatio; H = cv.height = innerHeight * devicePixelRatio; }
+  size(); addEventListener('resize', size);
+  function frame(t){
+    ctx.clearRect(0, 0, W, H);
+    var bw = W / N, acc = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#6ea8ff', acc2 = getComputedStyle(document.documentElement).getPropertyValue('--acc2').trim() || '#a78bfa';
+    var g = ctx.createLinearGradient(0, H, 0, H * .35); g.addColorStop(0, acc); g.addColorStop(1, acc2 + '00');
+    ctx.fillStyle = g; ctx.globalAlpha = .38;
+    for (var i = 0; i < N; i++) {
+      var v = .5 + .5 * Math.sin(t / 620 + i * .43) * Math.sin(t / 1300 + i * .17);
+      var h = (.06 + .3 * v * (1 - Math.abs(i - N / 2) / (N * .8))) * H;
+      ctx.fillRect(i * bw + bw * .18, H - h, bw * .64, h);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* 3 · советы */
+var tipI = 0;
+function renderTip(){
+  var tx = $('#tiptx'); if (!tx) return;
+  var tips = T('tips'); tx.textContent = tips[tipI % tips.length];
+  var dots = $('#dots'); if (dots) { dots.innerHTML = tips.map(function(_, i){ return '<i class="' + (i === tipI % tips.length ? 'on' : '') + '"></i>'; }).join(''); }
+}
+if ($('#tip')) setInterval(function(){ var t = $('#tip'); t.style.opacity = 0; setTimeout(function(){ tipI++; renderTip(); t.style.opacity = 1; }, 350); }, 6000);
+/* 5 · что нового */
+function renderNews(){ var n = $('#news'); if (n) n.innerHTML = T('news').map(function(x){ return '<li>' + x.replace(/</g, '&lt;') + '</li>'; }).join(''); }
+
+/* 4 · шаги: логин → пароль, запоминаем прошлый логин */
+var step = 1;
+function step4Refresh(){
+  if (document.body.dataset.style !== '4') return;
+  var u = $('#username'), lu = $('#lastu'), last = '';
+  try { last = localStorage.getItem('last_login') || ''; } catch(e) {}
+  if (lu) { lu.textContent = last ? (T('asu') + ' ' + last) : ''; lu.classList.toggle('on', !!last && step === 1); }
+  var go = $('#gobtn'); if (go && step === 1) go.textContent = T('cont');
+  var av = $('#avatar'), who = $('#who'); if (av && u.value) { av.textContent = u.value.trim().charAt(0).toUpperCase(); who.textContent = u.value.trim(); }
+}
+function setStep(n){
+  step = n;
+  $('#st1').classList.toggle('on', n === 1); $('#st2').classList.toggle('on', n === 2);
+  $('#s1').classList.toggle('on', true); $('#s2').classList.toggle('on', n === 2);
+  $('#f-user').style.display = n === 1 ? '' : 'none'; $('#f-pass').style.display = n === 2 ? '' : 'none'; $('#f-rem').style.display = n === 2 ? '' : 'none';
+  $('#back').style.display = n === 2 ? '' : 'none'; $('#hint').style.display = n === 1 ? '' : 'none';
+  var go = $('#gobtn'); go.textContent = T(n === 1 ? 'cont' : 'submit');
+  step4Refresh(); (n === 1 ? $('#username') : $('#password')).focus();
+}
+if (document.body.dataset.style === '4') {
+  $('#password').required = false;
+  $('#lf').addEventListener('submit', function(e){
+    var u = $('#username').value.trim();
+    if (step === 1) { e.preventDefault(); if (!u) { $('#username').focus(); return; } setStep(2); $('#password').required = true; return; }
+    try { localStorage.setItem('last_login', u); } catch(x) {}
+  });
+  $('#back').onclick = function(){ $('#password').required = false; setStep(1); };
+  $('#lastu').onclick = function(){ try { $('#username').value = localStorage.getItem('last_login') || ''; } catch(e) {} $('#password').required = true; setStep(2); };
+  setStep(1);
+}
+
+/* вращающиеся надписи (6, 10) и заголовок плаката (9) */
+var slogI = 0;
+function renderSlog(){
+  var e = $('#slog'), h = $('#h9'), a = T('slog');
+  if (e) e.textContent = a[slogI % a.length];
+  if (h) h.textContent = a[0];
+}
+if ($('#slog')) setInterval(function(){ var e = $('#slog'); e.style.opacity = 0; setTimeout(function(){ slogI++; renderSlog(); e.style.opacity = 1; }, 380); }, 4200);
+
+/* 10 · наклон карточек за курсором */
+document.querySelectorAll('.v10 .lc').forEach(function(c){
+  c.addEventListener('mousemove', function(e){ var r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; c.style.transform = 'rotateY(' + (x * 14) + 'deg) rotateX(' + (-y * 12) + 'deg)'; });
+  c.addEventListener('mouseleave', function(){ c.style.transform = ''; });
+});
+
+/* 11 · печатная надпись, потом появляется форма */
+var introTimer = null;
+function runIntro(){
+  var t = $('#type'); if (!t) return;
+  clearTimeout(introTimer); var gc = $('#gc'); gc.classList.remove('show');
+  var lines = T('intro'), li = 0, ci = 0, del = false;
+  function step(){
+    var line = lines[li];
+    if (!del) { ci++; t.textContent = line.slice(0, ci); if (ci >= line.length) { if (li === lines.length - 1) { gc.classList.add('show'); return; } del = true; introTimer = setTimeout(step, 900); return; } introTimer = setTimeout(step, 70); }
+    else { ci--; t.textContent = line.slice(0, ci); if (ci <= 0) { del = false; li++; } introTimer = setTimeout(step, 35); }
+  }
+  step();
+  setTimeout(function(){ gc.classList.add('show'); }, 5200);
+}
+if ($('#replay')) $('#replay').onclick = runIntro;
+
+applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+applyLang(lang);
+try { (document.body.dataset.style === '4' ? $('#username') : $('#username')).focus(); } catch(e) {}
+</script>
+</body>
+</html>
