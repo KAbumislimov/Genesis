@@ -266,3 +266,10 @@ html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-mas
 html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-vol span, html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .knob4 + .knob-ticks{ text-shadow:0 0 10px color-mix(in srgb, var(--fleet) 70%, transparent); }
 html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master .knob4 i::after{ box-shadow:0 0 12px var(--fleet), 0 0 22px color-mix(in srgb, var(--fleet) 60%, transparent); }
 html[data-fleet]:is([data-v="console"],[data-v="neon"],[data-v="lumen"]) .c4-master #vol-num{ color:var(--fleet); font-size:18px; width:auto; min-width:40px; text-shadow:0 0 10px color-mix(in srgb, var(--fleet) 70%, transparent); }
+
+/* «Пульт»-семейство на телефоне: название трека на всю ширину, время под ним (иначе название уезжает бегущей строкой) */
+@media (max-width:560px){
+  html:is([data-v="glass"],[data-v="rows"],[data-v="dial"],[data-v="oled"],[data-v="soft"],[data-v="onair"],[data-v="compact"]) .c4-lcd{ flex-wrap:wrap; gap:6px 12px; }
+  html:is([data-v="glass"],[data-v="rows"],[data-v="dial"],[data-v="oled"],[data-v="soft"],[data-v="onair"],[data-v="compact"]) .c4-lcd-l{ flex:1 1 100%; min-width:0; }
+  html:is([data-v="glass"],[data-v="rows"],[data-v="dial"],[data-v="oled"],[data-v="soft"],[data-v="onair"],[data-v="compact"]) .c4-time{ margin-left:auto; }
+}

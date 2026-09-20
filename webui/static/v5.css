@@ -115,7 +115,7 @@ html[data-v="bento"] body{ background:#e4e8f1 !important; color:var(--tx); }
 .b5 .tile.is-active::after{ content:'✓ выбран'; color:var(--row-accent); }
 .b5 .tile[data-state="offline"]{ opacity:.55; filter:grayscale(.55); }
 .b5 .cpm-campus-name{ color:var(--tx); font-weight:800; font-size:14px; letter-spacing:-.01em; }
-.b5 .tile:hover .cpm-campus-name, .b5 .tile.is-active .cpm-campus-name{ color:var(--row-accent); }
+.b5 .tile:hover .cpm-campus-name, .b5 .tile.is-active .cpm-campus-name{ color:color-mix(in srgb,var(--row-accent) 45%,#0b1020); }
 .b5 .cs-status-badge.online{ color:#0a7a4d; background:rgba(14,159,102,.14); border-color:rgba(14,159,102,.3); }
 .b5 .cs-status-badge.offline{ color:#b4233a; background:rgba(229,54,75,.12); border-color:rgba(229,54,75,.28); }
 .b5 .cpm-dot{ background:#0e9f66; box-shadow:0 0 10px rgba(14,159,102,.6); } .b5 .cpm-dot::after{ border-color:#0e9f66; }

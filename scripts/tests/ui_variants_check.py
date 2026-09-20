@@ -21,11 +21,11 @@ SEL = {'name': '.cpm-campus-name', 'track': '.c4-track', 'label': '.strip .cpm-c
 CONTRAST_JS = """(sels) => {
   const parse = c => { const m = c.match(/[\\d.]+/g).map(Number); return {r:m[0], g:m[1], b:m[2], a: m.length > 3 ? m[3] : 1}; };
   const lum = ({r,g,b}) => { const f = v => { v /= 255; return v <= .03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4); }; return .2126*f(r)+.7152*f(g)+.0722*f(b); };
-  const bgOf = el => { for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c.a > .6) return c; } return parse(getComputedStyle(document.body).backgroundColor); };
+  const bgOf = el => { for (let e = el; e; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.backgroundImage !== 'none') return null; const c = parse(cs.backgroundColor); if (c.a > .6) return c; } return parse(getComputedStyle(document.body).backgroundColor); };  // градиент/картинка под текстом — контраст по цвету не определить, пропускаем
   const out = {};
   for (const [k, s] of Object.entries(sels)) {
     const el = document.querySelector(s); if (!el) { out[k] = null; continue; }
-    const fg = parse(getComputedStyle(el).color), bg = bgOf(el);
+    const fg = parse(getComputedStyle(el).color), bg = bgOf(el); if (!bg) { out[k] = null; continue; }
     const l1 = lum(fg), l2 = lum(bg); out[k] = +((Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05)).toFixed(2);
   }
   return out; }"""
