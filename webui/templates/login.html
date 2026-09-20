@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru" id="root">
+<html lang="ru" id="root" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Media Audio — Вход</title>
+<script>try{document.documentElement.setAttribute('data-theme', localStorage.getItem('login_theme') || 'dark');}catch(e){}</script>
 <style>
 /* ── CSS Variables ── */
 :root{
@@ -16,7 +17,7 @@
 }
 [data-theme="dark"]{
   --bg:#080d18;--card:rgba(10,20,42,.97);--border:rgba(88,166,255,.18);
-  --text:#e6edf3;--sub:rgba(139,148,158,.9);--lbl:rgba(210,225,240,.92);
+  --text:#eef3fa;--sub:rgba(186,198,214,.96);--lbl:rgba(220,232,246,.96);
   --ibg:rgba(255,255,255,.07);--iborder:rgba(88,166,255,.22);--ifocus:#60a5fa;
   --b1:#1d4ed8;--b2:#7c3aed;--sep:rgba(88,166,255,.07);
   --note:rgba(100,116,139,.6);--rem:rgba(210,225,240,.85);--shadow:rgba(0,0,0,.45);
@@ -33,7 +34,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
   border-radius:32px;padding:4px;box-shadow:0 2px 14px var(--shadow);
   transition:background .35s,border-color .35s}
 .tbtn{display:flex;align-items:center;gap:5px;padding:7px 16px;border-radius:26px;
-  font-size:12px;font-weight:600;cursor:pointer;color:var(--sub);background:transparent;
+  font-size:14px;font-weight:600;cursor:pointer;color:var(--sub);background:transparent;
   border:none;font-family:inherit;letter-spacing:.02em;transition:all .22s}
 .tbtn.on{background:linear-gradient(135deg,var(--b1),var(--b2));
   color:#fff;box-shadow:0 2px 12px rgba(37,99,235,.35)}
@@ -41,7 +42,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 /* ── Support button ── */
 .contact-bar{position:fixed;top:16px;left:20px;z-index:200}
 .contact-trigger{display:flex;align-items:center;gap:7px;background:var(--card);
-  border:1.5px solid var(--border);color:var(--sub);font-size:12px;font-weight:600;
+  border:1.5px solid var(--border);color:var(--sub);font-size:14px;font-weight:600;
   letter-spacing:.02em;border-radius:24px;padding:8px 16px;cursor:pointer;
   font-family:inherit;box-shadow:0 2px 14px var(--shadow);transition:all .2s}
 .contact-trigger:hover{color:var(--text);border-color:var(--b1)}
@@ -86,7 +87,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 .cm-gm .cm-icon{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .cm-ol .cm-icon{background:rgba(0,120,212,.12)}
 .cm-label{font-size:13px;font-weight:600;color:var(--text)}
-.cm-val{font-size:11px;color:var(--sub);margin-top:1px}
+.cm-val{font-size:13px;color:var(--sub);margin-top:1px}
 .cm-rel{position:relative}
 
 /* ── Input style ── */
@@ -102,10 +103,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 /* ── Logo columns ── */
 .col-lion,.col-leg{display:flex;flex-direction:column;align-items:center;
   justify-content:center;padding:40px 16px;height:100vh}
-.logo-name2{font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+.logo-name2{font-size:15px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
   color:#1e4db7;margin-top:14px;opacity:0;animation:fadein .6s ease 1.2s forwards}
 [data-theme="dark"] .logo-name2{color:#93c5fd}
-.logo-sub2{font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+.logo-sub2{font-size:13px;letter-spacing:.22em;text-transform:uppercase;
   color:var(--sub);margin-top:3px;opacity:0;animation:fadein .6s ease 1.35s forwards}
 @keyframes fadein{to{opacity:1}}
 
@@ -114,13 +115,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
   position:relative;width:360px;height:360px;
   animation:flt 5.5s ease-in-out 1.4s infinite alternate;
 }
-/* Dark mode: white card behind logo for contrast */
-[data-theme="dark"] .lion-wrap::before{
-  content:'';position:absolute;inset:0;
-  background:#fff;border-radius:14px;
-  box-shadow:0 2px 12px rgba(0,0,0,.2);
-  z-index:0;
+/* Тёмная тема: вместо белой плитки под логотипом — тонкий белый контур по буквам и знакам
+   (фильтр на контейнере частей пазла и на цельных картинках, поэтому швов между частями нет). */
+[data-theme="dark"] .lion-pieces, [data-theme="dark"] .leg-pieces, [data-theme="dark"] .full-logo{
+  filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)
+         drop-shadow(0 0 5px rgba(255,255,255,.22));
 }
+/* картинка логотипа лежит в квадрате 360×360 с пустыми полями — подпись подтягиваем к самому знаку */
+.leg-wrap + .logo-name2, .col-leg .logo-name2{margin-top:-96px}
+.col-leg .logo-sub2{margin-top:2px}
 .leg-wrap{
   position:relative;width:360px;height:360px;
   animation:flt 6s ease-in-out 1.6s infinite alternate;
@@ -145,7 +148,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
   object-fit:contain;border-radius:14px;
   background:transparent;
 }
-[data-theme="dark"] .leg-full-logo{background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+[data-theme="dark"] .leg-full-logo{background:transparent;box-shadow:none;}
 /* Lion logo: fill white card same as LEG */
 #lion-full{object-fit:contain;border-radius:0;background:transparent;}
 .logo-piece{overflow:hidden;background-repeat:no-repeat;background-size:200% 300%}
@@ -215,7 +218,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 
 /* ── Form elements ── */
 .hdr-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
-.ht{font-size:12px;font-weight:700;letter-spacing:.22em;color:var(--sub);
+.ht{font-size:14px;font-weight:700;letter-spacing:.22em;color:var(--sub);
   text-transform:uppercase;white-space:nowrap}
 .ftitle{font-size:26px;font-weight:900;color:var(--text);letter-spacing:-.02em;text-align:center}
 .fsub{font-size:15px;color:var(--text);margin-top:5px;text-align:center;font-weight:500;opacity:.75}
@@ -239,13 +242,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
   border-radius:10px;cursor:pointer;font-family:inherit;letter-spacing:.04em;
   box-shadow:0 4px 22px rgba(37,99,235,.3);transition:transform .15s,box-shadow .15s}
 .btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(37,99,235,.4)}
-.nt{text-align:center;font-size:12px;color:var(--sub);margin-top:8px}
+.nt{text-align:center;font-size:15px;line-height:1.45;color:var(--sub);margin-top:12px}
 
 /* ── Bottom button ── */
 .bottom-btns{position:absolute;bottom:28px;left:50%;transform:translateX(-50%)}
 .meet-btn{display:flex;align-items:center;gap:8px;
   background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;
-  font-size:13px;font-weight:600;letter-spacing:.03em;border-radius:28px;
+  font-size:15px;font-weight:600;letter-spacing:.03em;border-radius:28px;
   padding:10px 24px;cursor:pointer;box-shadow:0 5px 22px rgba(37,99,235,.35);
   border:none;font-family:inherit;white-space:nowrap;text-decoration:none;
   transition:transform .15s,box-shadow .15s}
@@ -253,7 +256,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 
 /* ── Flash messages ── */
 .flash-list{list-style:none;margin-bottom:10px}
-.flash-list li{padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:6px;font-weight:500}
+.flash-list li{padding:10px 13px;border-radius:8px;font-size:15px;margin-bottom:6px;font-weight:500}
 .flash-danger{background:rgba(248,81,73,.09);border:1px solid rgba(248,81,73,.25);color:#dc2626}
 .flash-success{background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.25);color:#16a34a}
 [data-theme="dark"] .flash-danger{color:#f87171}
@@ -274,6 +277,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 /* Light-bg images (fon1, fon2, fon3): multiply removes white */
 .fon-lt{mix-blend-mode:multiply;}
 [data-theme="dark"] .fon-lt{mix-blend-mode:screen;filter:invert(1) brightness(.5);}
+[data-theme="dark"] .fl2{display:none !important}   /* колонка слева по центру — убрана по просьбе */
 
 /* Dark-bg images: transparent PNGs (bg removed via PIL), shown at natural opacity */
 .fon-dk{mix-blend-mode:normal;opacity:.82;}
@@ -289,13 +293,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 .fr2{right:10px;top:43%;   width:145px;animation-delay:.65s;}
 .fr3{right:10px;bottom:12px;width:148px;animation-delay:.90s;}
 
+[data-theme="dark"] .rem input[type=checkbox]{accent-color:#60a5fa;color-scheme:dark;width:17px;height:17px}
+
 /* ── Language switcher ── */
 .lang-bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:200;
   display:flex;background:var(--card);border:1.5px solid var(--border);
   border-radius:32px;padding:4px;box-shadow:0 2px 14px var(--shadow);gap:2px;
   transition:background .35s,border-color .35s}
 .lbtn{display:flex;align-items:center;padding:7px 15px;border-radius:24px;
-  font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);background:transparent;
+  font-size:14px;font-weight:700;cursor:pointer;color:var(--sub);background:transparent;
   border:none;font-family:inherit;letter-spacing:.05em;transition:all .22s}
 .lbtn.on{background:linear-gradient(135deg,var(--b1),var(--b2));
   color:#fff;box-shadow:0 2px 12px rgba(37,99,235,.35)}
@@ -335,8 +341,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 
 <!-- ── Theme toggle ── -->
 <div class="theme-bar">
-  <button class="tbtn on" id="tl" onclick="setTheme('light')">☀ Светлый</button>
-  <button class="tbtn" id="td" onclick="setTheme('dark')">☾ Тёмный</button>
+  <button class="tbtn" id="tl" onclick="setTheme('light')">☀ Светлый</button>
+  <button class="tbtn on" id="td" onclick="setTheme('dark')">☾ Тёмный</button>
 </div>
 
 <!-- ── Language switcher ── -->
@@ -480,25 +486,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
 // ── FORM: nothing extra needed — inputs use form="loginform" attr ──
 
 // ── THEME ──
-document.documentElement.setAttribute('data-theme','light');
 var LND_URL = "{{ url_for('static', filename='media.logo.t.png') }}";
 var LEG_URL = "{{ url_for('static', filename='leg.logo.t.png') }}";
 
 function setTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('login_theme', t); } catch(e) {}
   document.getElementById('tl').classList.toggle('on', t === 'light');
   document.getElementById('td').classList.toggle('on', t === 'dark');
 }
+
+setTheme(document.documentElement.getAttribute('data-theme') || 'dark');
 
 // ── LOGOS: set background images on pieces ──
 var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 document.querySelectorAll('.col-lion .logo-piece').forEach(function(el) {
   el.style.backgroundImage = 'url(' + LND_URL + ')';
-  if (isDark) el.style.backgroundColor = '#fff';
 });
 document.querySelectorAll('.col-leg .logo-piece').forEach(function(el) {
   el.style.backgroundImage = 'url(' + LEG_URL + ')';
-  if (isDark) el.style.backgroundColor = '#fff';
 });
 
 // ── SWAP LOGOS to seamless full image after assembly ──
@@ -553,9 +559,60 @@ function setLang(l) {
     var key = el.getAttribute('data-i18n-ph');
     if(d[key] !== undefined) el.placeholder = d[key];
   });
+  if (typeof applyExtra === 'function') applyExtra(l);
+}
+// ── ДОПОЛНИТЕЛЬНЫЙ ПЕРЕВОД: всё, что не помечено data-i18n (кнопки темы, «Нашли баг?», контакты, подписи…) ──
+// Ключ — русский текст как в разметке. Оригиналы запоминаются, поэтому переключение RU/AZ/EN работает в обе стороны.
+var EXTRA = {
+  "📞 Контакты поддержки": {en: "📞 Support contacts", az: "📞 Dəstək əlaqələri"},
+  "Короткий номер IT-поддержки": {en: "IT support short number", az: "IT dəstəyinin qısa nömrəsi"},
+  "Написать в WhatsApp": {en: "Message on WhatsApp", az: "WhatsApp-da yazın"},
+  "Рабочий Email": {en: "Work email", az: "İş e-poçtu"},
+  "☀ Светлый": {en: "☀ Light", az: "☀ İşıqlı"},
+  "☾ Тёмный": {en: "☾ Dark", az: "☾ Tünd"},
+  "🎬 Ознакомьтесь с системой": {en: "🎬 Explore the system", az: "🎬 Sistemlə tanış olun"},
+  "LEG · Азербайджан": {en: "LEG · Azerbaijan", az: "LEG · Azərbaycan"},
+  "Нашли баг или неисправность?": {en: "Found a bug or a fault?", az: "Xəta və ya nasazlıq tapdınız?"},
+  "Ваша помощь колоссальна — расскажите что случилось!": {en: "Your help means a lot — tell us what happened!", az: "Sizin köməyiniz çox vacibdir — nə baş verdiyini yazın!"},
+  "🐛 Баг": {en: "🐛 Bug", az: "🐛 Xəta"},
+  "🔧 Оборудование": {en: "🔧 Equipment", az: "🔧 Avadanlıq"},
+  "💡 Идея": {en: "💡 Idea", az: "💡 İdeya"},
+  "📝 Другое": {en: "📝 Other", az: "📝 Digər"},
+  "Отправить сообщение": {en: "Send message", az: "Mesaj göndər"},
+  "Спасибо! Отчёт отправлен и летит в Telegram ✈️": {en: "Thank you! The report was sent to Telegram ✈️", az: "Təşəkkürlər! Hesabat göndərildi və Telegram-a uçur ✈️"},
+  "Повторить анимацию": {en: "Replay animation", az: "Animasiyanı təkrarla"},
+  "Опишите проблему — что случилось, где, когда...": {en: "Describe the problem — what happened, where, when…", az: "Problemi təsvir edin — nə oldu, harada, nə vaxt…"},
+  "Media Audio — Вход": {en: "Media Audio — Sign in", az: "Media Audio — Giriş"},
+  "Доступ только для сотрудников · Media School": {en: "Staff access only · Media School", az: "Yalnız əməkdaşlar üçün · Media School"}
+};
+var _cyr = /[А-Яа-яЁё]/;
+function applyExtra(l) {
+  var tr = function(ru) { var e = EXTRA[ru.trim()]; return (l !== 'ru' && e && e[l]) ? ru.replace(ru.trim(), e[l]) : ru; };
+  var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), n;
+  while ((n = w.nextNode())) {
+    var pt = n.parentElement && n.parentElement.tagName;
+    if (pt === 'SCRIPT' || pt === 'STYLE') continue;
+    if (n.__ru === undefined) {
+      if (n.parentElement && n.parentElement.hasAttribute('data-i18n')) { n.__ru = null; continue; }   // это уже обслуживает LANG_DATA
+      n.__ru = _cyr.test(n.data) ? n.data : null;
+    }
+    if (n.__ru !== null) { var t = tr(n.__ru); if (n.data !== t) n.data = t; }
+  }
+  document.querySelectorAll('[title],[placeholder]').forEach(function(el) {
+    ['title', 'placeholder'].forEach(function(a) {
+      if (!el.hasAttribute(a) || el.hasAttribute('data-i18n-ph')) return;
+      var k = '_ru_' + a;
+      if (el[k] === undefined) el[k] = _cyr.test(el.getAttribute(a)) ? el.getAttribute(a) : null;
+      if (el[k] !== null) el.setAttribute(a, tr(el[k]));
+    });
+  });
+  var tt = tr('Media Audio — Вход'); document.title = tt;
+  document.documentElement.setAttribute('lang', l);
 }
 // Apply saved or default language
 setLang(localStorage.getItem('lang') || 'ru');
+// окно «Нашли баг?» лежит в разметке ПОСЛЕ этого скрипта — переводим и его, когда страница разобрана до конца
+document.addEventListener('DOMContentLoaded', function(){ applyExtra(localStorage.getItem('lang') || 'ru'); });
 
 // ── REPLAY animation ──
 function replayAnim() {
@@ -589,7 +646,7 @@ function selBugCatL(btn, cat) {
 }
 function openBugReport() { document.getElementById('bug-mo-login').classList.add('open'); document.getElementById('bug-ta-l').focus(); }
 function closeBugReport() { document.getElementById('bug-mo-login').classList.remove('open'); }
-document.getElementById('bug-ta-l').addEventListener('input', function(){ document.getElementById('bcc-l').textContent = this.value.length; });
+document.addEventListener('DOMContentLoaded', function(){ var ta = document.getElementById('bug-ta-l'); if (ta) ta.addEventListener('input', function(){ document.getElementById('bcc-l').textContent = this.value.length; }); });
 function submitBugLogin() {
   var msg = document.getElementById('bug-ta-l').value.trim();
   if (!msg) { document.getElementById('bug-ta-l').focus(); return; }
@@ -610,7 +667,7 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') { closeCon
 <style>
 .bug-fab-l{position:fixed;bottom:22px;right:22px;z-index:300;display:flex;align-items:center;gap:8px;
   background:rgba(20,20,40,.85);border:1.5px solid rgba(255,107,107,.4);color:rgba(255,160,160,.9);
-  border-radius:32px;padding:9px 18px 9px 13px;cursor:pointer;font-size:13px;font-weight:700;
+  border-radius:32px;padding:9px 18px 9px 13px;cursor:pointer;font-size:15px;font-weight:700;
   box-shadow:0 4px 20px rgba(255,80,80,.2);transition:all .22s;font-family:inherit;
   animation:fabpl 3.5s ease-in-out infinite;backdrop-filter:blur(8px)}
 .bug-fab-l:hover{border-color:rgba(255,107,107,.8);color:#ff8888;transform:translateY(-2px);animation:none}
@@ -624,9 +681,9 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') { closeCon
   padding:26px 24px 20px;width:400px;max-width:96vw;position:relative;
   box-shadow:0 24px 80px rgba(0,0,0,.4)}
 .bug-mc-l h3{font-size:16px;font-weight:800;color:var(--text);margin:0 0 4px;display:flex;align-items:center;gap:9px}
-.bug-mc-l p{font-size:12px;color:var(--sub);margin:0 0 16px}
+.bug-mc-l p{font-size:14px;color:var(--sub);margin:0 0 16px}
 .bug-cat-l{padding:5px 13px;border-radius:20px;border:1px solid var(--border);
-  background:transparent;color:var(--sub);font-size:12px;font-weight:600;cursor:pointer;
+  background:transparent;color:var(--sub);font-size:14px;font-weight:600;cursor:pointer;
   transition:.15s;font-family:inherit;margin-right:5px;margin-bottom:8px}
 .bug-cat-l:hover,.bug-cat-l.sel{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.5);color:#ff8888}
 .bug-ta-l{width:100%;min-height:110px;resize:vertical;
@@ -663,7 +720,7 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') { closeCon
         <button class="bug-cat-l" onclick="selBugCatL(this,'other')">📝 Другое</button>
       </div>
       <textarea class="bug-ta-l" id="bug-ta-l" placeholder="Опишите проблему — что случилось, где, когда..." maxlength="2000"></textarea>
-      <div style="font-size:11px;color:var(--sub);text-align:right;margin-top:4px"><span id="bcc-l">0</span>/2000</div>
+      <div style="font-size:13px;color:var(--sub);text-align:right;margin-top:4px"><span id="bcc-l">0</span>/2000</div>
       <button class="bug-send-l" id="bug-send-l" onclick="submitBugLogin()">
         <i class="bi bi-send-fill"></i> Отправить сообщение
       </button>

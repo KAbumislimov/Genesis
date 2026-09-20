@@ -3512,24 +3512,30 @@ _audio_cache = {'client1': None}
 _audio_lock  = threading.Lock()
 _audio_thread_started = False
 
-def _audio_poll_loop():
-    """Read /tmp/campus-audio-level.json via SSH exec every 100ms (faster than SFTP).
-    Target list is rebuilt from music_machines() every cycle so a client added or
-    removed via /machines starts/stops getting polled without a restart — the
-    analyzer script itself still needs to be deployed on the machine, same as
-    any brand-new physical campus."""
-    conns = {}
-    while True:
-        targets = [('client1', CLIENT1_HOST, CLIENT1_USER)]
-        for _m in music_machines():
-            if _m['host'] != CLIENT1_HOST:
-                targets.append((_campus_key(_m), _m['host'], _m.get('user', CLIENT1_USER)))
-        live_ids = {cid for cid, _, _ in targets}
-        for cid, host, user in targets:
-            if not host:
-                continue
+_audio_workers = {}          # ключ кампуса -> поток опроса
+_audio_workers_lock = threading.Lock()
+
+def _audio_targets():
+    targets = {'client1': (CLIENT1_HOST, CLIENT1_USER)}
+    for _m in music_machines():
+        if _m['host'] != CLIENT1_HOST:
+            targets[_campus_key(_m)] = (_m['host'], _m.get('user', CLIENT1_USER))
+    return targets
+
+def _audio_poll_worker(cid):
+    """Опрашивает /tmp/campus-audio-level.json ОДНОГО кампуса раз в 100 мс по своему постоянному SSH-соединению.
+    Раньше один общий цикл ходил по кампусам по очереди, и каждый оффлайн-кампус (таймаут подключения до 5 с) тормозил
+    остальных: данные включённого Клиент 1а обновлялись раз в 10–20 с — визуализатор «замирал». Теперь у каждого кампуса
+    свой поток; у оффлайна пауза между попытками растёт (2, 4 … 20 с), поток удаляется, когда кампус убрали из списка."""
+    ssh = None
+    fails = 0
+    try:
+        while True:
+            tgt = _audio_targets().get(cid)
+            if not tgt or not tgt[0]:
+                break
+            host, user = tgt
             try:
-                ssh = conns.get(cid)
                 if not ssh or not ssh.get_transport() or not ssh.get_transport().is_active():
                     try:
                         if ssh:
@@ -3538,27 +3544,49 @@ def _audio_poll_loop():
                         pass
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    ssh.connect(host, username=user, key_filename=SSH_KEY,
-                                timeout=5, banner_timeout=5)
-                    conns[cid] = ssh
-                _, stdout, _ = ssh.exec_command(
-                    'cat /tmp/campus-audio-level.json', timeout=2)
+                    ssh.connect(host, username=user, key_filename=SSH_KEY, timeout=5, banner_timeout=5)
+                _, stdout, _ = ssh.exec_command('cat /tmp/campus-audio-level.json', timeout=2)
                 data = json.loads(stdout.read())
                 with _audio_lock:
                     _audio_cache[cid] = data
+                fails = 0
+                time.sleep(0.1)
             except Exception:
                 with _audio_lock:
                     _audio_cache[cid] = None
-                conns.pop(cid, None)
-        for stale in [cid for cid in conns if cid not in live_ids]:
-            try:
-                conns[stale].close()
-            except Exception:
-                pass
-            conns.pop(stale, None)
-            with _audio_lock:
-                _audio_cache.pop(stale, None)
-        time.sleep(0.1)
+                try:
+                    if ssh:
+                        ssh.close()
+                except Exception:
+                    pass
+                ssh = None
+                fails += 1
+                time.sleep(min(2 * fails, 20))
+    finally:
+        try:
+            if ssh:
+                ssh.close()
+        except Exception:
+            pass
+        with _audio_lock:
+            _audio_cache.pop(cid, None)
+        with _audio_workers_lock:
+            _audio_workers.pop(cid, None)
+
+def _audio_poll_loop():
+    """Диспетчер: раз в 10 с сверяет список кампусов и держит по одному потоку опроса на каждый."""
+    while True:
+        try:
+            with _audio_workers_lock:
+                for cid in _audio_targets():
+                    t = _audio_workers.get(cid)
+                    if not t or not t.is_alive():
+                        t = threading.Thread(target=_audio_poll_worker, args=(cid,), daemon=True, name=f'audio-{cid}')
+                        _audio_workers[cid] = t
+                        t.start()
+        except Exception as e:
+            app.logger.warning('audio poll dispatcher: %s', e)
+        time.sleep(10)
 
 def _start_audio_poll_thread():
     global _audio_thread_started

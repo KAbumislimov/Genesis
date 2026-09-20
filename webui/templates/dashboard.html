@@ -3130,6 +3130,8 @@ var currentVol = 100, isMuted = false, volTimer = null;
 // выставили громкость, приходит уже ПОСЛЕ и возвращает ползунок на старое значение — со стороны выглядит как «звук
 // не фиксируется». Пока идёт удержание (15 с после последнего движения), ответы со старым значением игнорируются;
 // как только кампус сообщил ровно выставленное значение — удержание снимается.
+var _seekHold = {};   // key -> {pos, at}: последняя перемотка вручную (см. _applyMachineStatus)
+function _seekHoldSet(key, pos) { _seekHold[key] = {pos: +pos, at: Date.now()}; }
 var _volHold = {};
 function _volHoldSet(key, val) { _volHold[key] = {val: Math.round(+val), until: Date.now() + 15000}; }
 function _volHoldAll(val) { MUSIC_MACHINES.forEach(function(m){ _volHoldSet(m.key, val); }); }
@@ -4376,7 +4378,16 @@ function _applyMachineStatus(key, idx, d) {
     st.playing = d.playing || false;
     st.paused  = d.paused  || false;
     st.track   = d.track || null;
-    if (d.position !== undefined && d.position !== null) { st.pos = d.position; st.ts = Date.now(); }
+    if (d.position !== undefined && d.position !== null) {
+      // Ответ опроса мог быть начат ДО перемотки и прийти уже после — тогда он несёт старую позицию и откатил бы полосу.
+      // 15 с после ручной перемотки принимаем позицию, только если она близка к ожидаемой (новая позиция + прошедшее время).
+      var sh = _seekHold[key], skip = false;
+      if (sh) {
+        var elapsed = (Date.now() - sh.at) / 1000;
+        if (elapsed < 15 && Math.abs(d.position - (sh.pos + elapsed)) > 4) skip = true; else delete _seekHold[key];
+      }
+      if (!skip) { st.pos = d.position; st.ts = Date.now(); }
+    }
     if (d.duration !== undefined && d.duration !== null) st.dur = d.duration;
     if (!d.playing) { st.pos = 0; st.dur = 0; }
     _updateProgress(key);
@@ -5366,7 +5377,7 @@ function wampSeekActive(evt) {
   fetch('/api/seek',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:ck,pos:newPos})
   }).catch(function(){});
-  st.pos=newPos; st.ts=Date.now();
+  st.pos=newPos; st.ts=Date.now(); _seekHoldSet(ck, newPos);
   _updateProgress(ck);
 }
 
@@ -5407,7 +5418,7 @@ function wampSeek(ck, evt, wrap){
   fetch('/api/seek',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({machine:machine,pos:newPos})
   }).then(function(r){return r.json();}).catch(function(){});
-  st.pos=newPos; st.ts=Date.now();
+  st.pos=newPos; st.ts=Date.now(); _seekHoldSet(ck, newPos);
   _updateProgress(ck);
 }
 

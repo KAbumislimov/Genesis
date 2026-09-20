@@ -219,7 +219,7 @@ function _cpmSeek(ck, evt, wrap) {
   fetch('/api/seek', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({machine: ck, pos: newPos})
   }).catch(function(){});
-  st.pos = newPos; st.ts = Date.now();
+  st.pos = newPos; st.ts = Date.now(); _seekHoldSet(ck, newPos);
   _updateProgress(ck);
 }
 </script>
