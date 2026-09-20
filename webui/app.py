@@ -1151,7 +1151,7 @@ def _roles_payload():
     for ck, cl, ci, items in PERM_CATALOG:
         cats.append({'key': ck, 'label': cl, 'icon': ci, 'perms': [{
             'key': k, 'label': l, 'desc': d, 'danger': k in PERM_DANGER, 'locked': k in PERM_LOCKED,
-            'values':   {r: role_has(r, k) for r in ROLE_ORDER},
+            'have':     {r: role_has(r, k) for r in ROLE_ORDER},
             'defaults': {r: (r == 'admin') or (k in DEFAULT_ROLE_PERMS.get(r, set()) and k not in PERM_LOCKED) for r in ROLE_ORDER},
         } for k, l, d in items]})
     return {'roles': roles, 'categories': cats}

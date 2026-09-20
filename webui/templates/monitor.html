@@ -138,7 +138,7 @@ const MACHINE_META = {
   centos: {label:'CentOS Server', color:'rgb(255,166,87)', cockpit:{{ centos_cockpit | tojson }}, services:['docker']},
 };
 
-const IS_ADMIN = {{ 'true' if current_user.role == 'admin' else 'false' }};
+const IS_ADMIN = {{ 'true' if can('service_restart') else 'false' }};
 
 let autoTimer = null;
 

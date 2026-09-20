@@ -87,6 +87,9 @@
     </div>
   </div>
   <div style="display:flex;gap:8px">
+    {% if can('roles_manage') %}<a href="{{ url_for('admin_roles') }}" class="btn btn-ghost">
+      <i class="bi bi-shield-check"></i> Роли и права
+    </a>{% endif %}
     <a href="{{ url_for('admin_activity') }}" class="btn btn-ghost">
       <i class="bi bi-journal-text"></i> Лог активности
     </a>

@@ -22,7 +22,7 @@
     <div class="hero-top">
       <div class="hero-tag"><i class="onair-lamp"></i><span id="v3-hero-tag">Ожидание</span></div>
       <div class="hero-acts">
-        {% if perms.role in ('admin','staff') %}
+        {% if can('timesync') %}
         <button class="btn3 ghost rip" id="cpm-timesync-btn" onclick="syncTime('all')" title="Синхронизировать время на всех кампусах с сервером">
           <i class="bi bi-arrow-repeat" id="cpm-timesync-icon"></i><span>Синхр. время</span>
         </button>

@@ -69,7 +69,7 @@ tr.rp-cat th.rp-cc{text-align:center}
 .rp-legend span{display:inline-flex;align-items:center;gap:7px}
 .rp-legend .d{width:8px;height:8px;border-radius:50%;background:var(--orange)}
 .rp-empty{padding:40px;text-align:center;color:var(--muted);display:none}
-#rp-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:9999;background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:11px 20px;font-size:13.5px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.45);transition:.3s;display:flex;gap:10px;align-items:center;max-width:90vw}
+#rp-toast{animation:none !important;position:fixed;left:50%;bottom:28px;transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:9999;background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:11px 20px;font-size:13.5px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.45);transition:.3s;display:flex;gap:10px;align-items:center;max-width:90vw}
 #rp-toast.show{opacity:1;transform:translate(-50%,0)}
 #rp-toast.err{border-color:var(--red);color:var(--red)}
 #rp-toast.ok i{color:var(--green)}
@@ -124,7 +124,7 @@ tr.rp-cat th.rp-cc{text-align:center}
       <tr class="rp-row" data-cat="{{ cat.key }}" data-key="{{ p.key }}" data-q="{{ (p.label ~ ' ' ~ p.desc)|lower }}">
         <td class="rp-name"><b>{{ p.label }}</b>{% if p.danger %}<span class="rp-badge danger">осторожно</span>{% endif %}{% if p.locked %}<span class="rp-badge lock"><i class="bi bi-lock-fill"></i> только админ</span>{% endif %}<small>{{ p.desc }}</small></td>
         {% for r in data.roles %}
-        {% set on = p.values[r.key] %}
+        {% set on = p.have[r.key] %}
         <td class="rp-cell{% if on != p.defaults[r.key] %} changed{% endif %}" data-default="{{ 1 if p.defaults[r.key] else 0 }}">
           <label class="rp-ck"><input type="checkbox" class="rp-perm" data-role="{{ r.key }}" data-perm="{{ p.key }}" {% if on %}checked{% endif %} {% if r.locked or p.locked %}disabled{% endif %}><i></i></label>
           <span class="dot" title="Отличается от стандартного значения"></span>

@@ -1346,7 +1346,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
     </div>
   </div>
   <!-- Machine times -->
-  {% if perms.role in ('admin','staff') %}
+  {% if can('timesync') or can('monitor_view') %}
   <div class="nc-chip nc-chip-machines" id="nc-chip-machines">
     <i class="bi bi-clock-history" style="font-size:13px;color:var(--blue);flex-shrink:0"></i>
     <div id="machine-times" style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px">
@@ -1856,7 +1856,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
 
 
 <!-- ═══ FLOATING PANELS ═══ -->
-{% if current_user.role in ('admin','staff') %}
+{% if can('mic') %}
 
 <div class="float-panel" id="ann-float-panel">
   <div class="float-panel-hdr" id="ann-panel-drag">
@@ -3533,7 +3533,8 @@ function wampSetTheme(name) {
 // ──── PLAYLIST ────────────────────────────────────────
 var _plTracks = [], _plFilter = '', _plSort = 'name', _plCampus = 'client1';
 var _plFavOnly = false;
-var IS_ADMIN = {{ 'true' if current_user.role == 'admin' else 'false' }};
+// права на правку библиотеки (выделение, перенос, переименование) — по привилегиям, не по роли
+var IS_ADMIN = {{ 'true' if (can('tracks_edit') or can('tracks_delete') or can('folders_manage')) else 'false' }};
 var ALL_FOLDERS = {{ music_folders|tojson }};
 var _plLoading = false;
 function _ampSyncSongs() {
@@ -4673,7 +4674,7 @@ function toast(msg) {
 }
 
 // ──── MACHINE TIME ────────────────────────────────────
-{% if perms.role in ('admin','staff') %}
+{% if can('timesync') or can('monitor_view') %}
 var TIME_LABELS = { centos:{label:'CentOS',color:'#ffa657',icon:'bi-server'} };
 (function(){
   var palette = [
@@ -4893,7 +4894,7 @@ loadWeather();
 setInterval(loadWeather, 30*60*1000);
 
 // ──── ANNOUNCEMENT ────────────────────────────────────
-{% if current_user.role in ('admin', 'staff') %}
+{% if can('mic') %}
 var _annStream = null, _annChunks = [], _annRec = false, _annTimer = null, _annSec = 0;
 var _annCampus = 'all';
 

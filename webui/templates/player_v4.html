@@ -50,7 +50,7 @@
       </div>
       <div class="c4-vol"><input type="range" class="rng" id="c4-master-rng" min="0" max="160" value="100" oninput="onVolInput(this.value)" aria-label="Громкость"><span id="vol-num">100</span></div>
       <div class="c4-btnrow">
-        {% if perms.role in ('admin','staff') %}
+        {% if can('timesync') %}
         <button class="btn3 ghost sm rip" id="cpm-timesync-btn" onclick="syncTime('all')" title="Синхронизировать время на всех кампусах с сервером"><i class="bi bi-arrow-repeat" id="cpm-timesync-icon"></i><span>Время</span></button>
         {% endif %}
       </div>
@@ -114,36 +114,54 @@
   </section>
 
   <!-- ── Спецдействия ────────────────────────────────────── -->
-  {% if perms.himn %}
+  {% if can('himn') or can('mic') or can('minuta') or can('special_events') or can('alarm') or can('cron_pause') or can('schedule_toggle') %}
   <section class="sec rv" style="--d:2">
     <div class="sec-h">
       <h3><i class="bi bi-broadcast-pin"></i>Слышно на весь кампус</h3>
       <div class="sec-note">Кампус выбирается после нажатия</div>
     </div>
     <div class="c4-pads">
+      {% if can('himn') %}
       <button class="pad amber cpm-pill rip" onclick="wampShowCampusPicker(event,'himn',this)"><i class="led"></i><i class="bi bi-star-fill"></i><b>Гимн</b></button>
+      {% endif %}
+      {% if can('mic') %}
       <button class="pad blue cpm-pill rip" onclick="wampShowCampusPicker(event,'mic',this)"><i class="led"></i><i class="bi bi-mic-fill"></i><b>Микрофон</b></button>
+      {% endif %}
+      {% if can('minuta') %}
       <button class="pad slate cpm-pill rip" onclick="wampShowCampusPicker(event,'minuta',this)"><i class="led"></i><i class="bi bi-bell-slash"></i><b>Минута тишины</b></button>
+      {% endif %}
+      {% if can('special_events') %}
       <button class="pad yellow cpm-pill rip" onclick="wampShowCampusPicker(event,'zefer',this)"><i class="led"></i><i class="bi bi-award"></i><b data-i18n="wamp.zefer_group">Zəfər Günü</b></button>
+      {% endif %}
+      {% if can('special_events') %}
       <button class="pad teal cpm-pill rip" onclick="wampShowCampusPicker(event,'nmd',this)" title="National Music Day — 18 sentyabr"><i class="led"></i><i class="bi bi-music-note-list"></i><b>National Music Day</b></button>
+      {% endif %}
+      {% if can('alarm') %}
       <div class="pad-alarm">
         <button class="pad danger cpm-pill danger rip" onclick="wampShowCampusPicker(event,'alarm',this)"><i class="led"></i><i class="bi bi-exclamation-octagon-fill"></i><b>Тревога</b></button>
         <select id="alarmSoundSelect" class="sel cpm-alarm-select" aria-label="Звук тревоги"></select>
       </div>
+      {% endif %}
     </div>
 
-    {% if perms.admin or perms.cron %}
+    {% if can('cron_pause') or can('schedule_toggle') %}
     <div class="c4-rockers">
       <span class="c4-cap">АВТОМАТИКА</span>
+      {% if can('cron_pause') %}
       <button class="rocker cpm-pill rip" id="btn-cron-active" onclick="wampShowCampusPicker(event,'cron',this)"><i class="bi bi-alarm"></i><span>Крон</span></button>
+      {% endif %}
+      {% if can('schedule_toggle') %}
       <button class="rocker cpm-pill wa-toggle-btn rip" id="btn-toggle-utro" data-state="{{ 'on' if utro_enabled else 'off' }}"
               onclick="wampToggleGroup('utro', this)" title="Включить/выключить утреннюю музыку на всех доступных кампусах">
         <i class="bi bi-sunrise"></i><span>Утро</span><span class="wa-toggle-state">{{ 'Вкл' if utro_enabled else 'Выкл' }}</span><em class="lever"></em>
       </button>
+      {% endif %}
+      {% if can('schedule_toggle') %}
       <button class="rocker cpm-pill wa-toggle-btn rip" id="btn-toggle-perem" data-state="{{ 'on' if perem_enabled else 'off' }}"
               onclick="wampToggleGroup('perem', this)" title="Включить/выключить перемены 1-9 на всех доступных кампусах">
         <i class="bi bi-bell"></i><span>Перемены</span><span class="wa-toggle-state">{{ 'Вкл' if perem_enabled else 'Выкл' }}</span><em class="lever"></em>
       </button>
+      {% endif %}
     </div>
     {% endif %}
   </section>

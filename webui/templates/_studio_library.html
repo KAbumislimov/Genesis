@@ -7,10 +7,10 @@
         <div class="cpm-fol-tabs" id="pl-folder-tabs">
           <button class="cpm-fol-tab active" data-folder="" onclick="wampFolderTab(this,'')">Все</button>
           {% for f in music_folders %}
-            {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f == 'KAMRAN')|lower) if current_user.role == 'admin' else '' %}
+            {% set fctx = 'oncontextmenu="event.preventDefault();wampShowFolderContextMenu(event,\'%s\',%s)"'|format(f, (f == 'KAMRAN')|lower) if can('folders_manage') else '' %}
             {% if f == 'KAMRAN' %}
             <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampKamranTab(this)" {{ fctx|safe }} title="Личная папка — защищена PIN-кодом">🔒 {{ f }}</button>
-            {% elif f not in fixed_folders and current_user.role == 'admin' %}
+            {% elif f not in fixed_folders and can('folders_manage') %}
             <div class="cpm-fol-tab-wrap">
               <button class="cpm-fol-tab" data-folder="{{ f }}" onclick="wampFolderTab(this,'{{ f }}')" {{ fctx|safe }}>{{ f }}</button>
               <span class="cpm-fol-del" title="Удалить папку (должна быть пустой)" onclick="event.stopPropagation();wampDeleteFolder('{{ f }}')">🗑</span>
@@ -20,7 +20,7 @@
             {% endif %}
           {% endfor %}
           <button class="cpm-fol-tab cpm-fol-tab-fav" data-folder="__fav__" onclick="wampFavTab(this)">★ Избранное</button>
-          {% if current_user.role == 'admin' %}
+          {% if can('folders_manage') %}
           <button class="cpm-fol-tab cpm-fol-tab-new" data-folder="__new__" onclick="wampCreateFolder()" title="Создать папку">+ папка</button>
           {% endif %}
         </div>
@@ -38,7 +38,7 @@
           </select>
           <button class="btn3 solid cpm-pl-playall rip" onclick="wampPlayAll()" title="Перемешать и воспроизвести всё"><i class="bi bi-shuffle"></i><span>Играть всё</span></button>
         </div>
-        {% if current_user.role == 'admin' %}
+        {% if can('tracks_edit') or can('tracks_delete') %}
         <div class="wamp2-bulk-bar" style="display:none">
           <span class="wamp2-bulk-count">0 треков</span>
           <button onclick="wampShowBulkMovePop(event, this)">📁 Переместить в…</button>

@@ -223,7 +223,7 @@
         <i class="bi bi-gear-fill"></i>
       </button>
       {% endif %}
-      {% if current_user.role in ('admin', 'staff') %}
+      {% if can('upload') %}
       <button class="fc-upload-btn" title="Загрузить в {{ f }}"
               onclick="event.preventDefault();event.stopPropagation();window.location='/upload?folder={{ f|urlencode }}'">
         <i class="bi bi-cloud-upload-fill"></i> Загрузить
@@ -267,7 +267,7 @@
     {% endif %} {{ folder }}
   </span>
   <div style="margin-left:auto;display:flex;gap:8px">
-    {% if current_user.role in ('admin', 'staff') %}
+    {% if can('upload') %}
     <a href="/upload?folder={{ folder|urlencode }}" class="refresh-btn"
        style="color:var(--blue);border-color:rgba(88,166,255,.35);text-decoration:none">
       <i class="bi bi-cloud-upload-fill"></i> Загрузить
