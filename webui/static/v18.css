@@ -1,0 +1,62 @@
+/* ═══ «Пульт · Ночь» — вариант в стиле Пульта (/v4). Сгенерировано scripts/make_pult_skins.py, руками не править ═══
+   Каркас и размеры — v4.css (подключается перед этим файлом); здесь материал корпуса, цвета и «плюшки». */
+[data-v="night"], [data-v="night"][data-pal="aurora"], [data-v="night"][data-pal="rose"]{
+  --ink:#0c0807; --ink2:#120c0a; --ink3:#1a110e; --tx:#d9c9c2; --tx2:#8c766e; --tx3:#5a4842; --line:rgba(255,140,120,.06); --line2:rgba(255,140,120,.11);
+  --f-display:'Oswald','Onest',system-ui,sans-serif; --f-mono:'IBM Plex Mono',ui-monospace,monospace; --r-lg:14px; --r-md:10px; 
+}
+[data-v="night"], [data-v="night"][data-pal="amber"]{ --a:#d94a3a; --a2:#b8321f; --a-ink:#1a0503; --sa:#d94a3a; --sa2:#b8321f; }
+[data-v="night"][data-pal="aurora"]{ --a:#39f28c; --a2:#12b5ff; --a-ink:#03210f; --sa:#39f28c; --sa2:#12b5ff; }
+[data-v="night"][data-pal="rose"]{ --a:#ff4f7a; --a2:#ff9a3d; --a-ink:#2a0410; --sa:#ff4f7a; --sa2:#ff9a3d; }
+/* статус связи (data-fleet) красит клавиши, светодиод-табло и ободок стопа, но экран остаётся «фирменного» цвета варианта */
+html[data-fleet][data-v="night"] .c4-master .c4-screen{ --a:var(--sa); --a2:var(--sa2); }
+
+[data-v="night"] .aurora{ display:none; } [data-v="night"] .grain{ opacity:.09; }
+html[data-v="night"] body{ background:var(--ink) !important; }
+[data-v="night"] .rail{ background:#0e0908; border-right-color:#000; box-shadow:inset -1px 0 0 rgba(255,255,255,.05); }
+[data-v="night"] .topbar{ background:linear-gradient(var(--ink),color-mix(in srgb,var(--ink) 70%,transparent)); }
+[data-v="night"] .rail-logo, [data-v="night"] .usr-av, [data-v="night"] .rail-a{ border-radius:8px; }
+[data-v="night"] .sec-h h3{ letter-spacing:.14em; font-weight:500; } [data-v="night"] .sec-h h3 i{ border-radius:6px; }
+/* ── корпус ── */
+[data-v="night"] .c4-master{ border-color:#2e1f1a; background:linear-gradient(180deg,#1f1512,#150d0b); box-shadow:inset 0 1px 0 rgba(255,180,160,.06), inset 0 -3px 0 rgba(0,0,0,.5), 0 30px 70px rgba(0,0,0,.55); }
+[data-v="night"] .c4-screen{ background:#050302; box-shadow:inset 0 0 0 2px #2a1b16, inset 0 10px 40px rgba(0,0,0,.85); }
+[data-v="night"] .c4 .key{ background:linear-gradient(180deg,#2b1f1b,#1a110e); color:#c7b3ab; border-color:#000; box-shadow:0 5px 0 #070403, 0 9px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,180,160,.08); }
+[data-v="night"] .c4 .key:active{ box-shadow:0 1px 0 #070403, 0 2px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,180,160,.08); }
+[data-v="night"] .c4 .key em{ background:#08090b; }
+[data-v="night"] .c4 .key.cpm-toggle.on{ background:linear-gradient(180deg,#2b1f1b,#1a110e) !important; color:var(--a) !important; border-color:#000 !important; box-shadow:0 5px 0 #070403, 0 9px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,180,160,.08) !important; }
+[data-v="night"] .c4 .knob4{ background:conic-gradient(from 0deg,#33241f,#1a110e,#33241f,#1a110e,#33241f); border-color:#0b0c0e; box-shadow:0 12px 22px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.22), 0 0 0 7px #120c0a, 0 0 0 8px #2e1f1a; }
+[data-v="night"] .c4 .knob4:focus-visible{ box-shadow:0 12px 22px rgba(0,0,0,.6), 0 0 0 7px #120c0a, 0 0 0 9px var(--a); }
+[data-v="night"] .c4 .estop-cap{ border-color:#8a5a1a; box-shadow:0 9px 0 #4a0508, 0 16px 26px rgba(0,0,0,.6), inset 0 -7px 14px rgba(0,0,0,.35), 0 0 0 4px #120c0a; }
+[data-v="night"] .c4 .estop:active .estop-cap{ box-shadow:0 2px 0 #4a0508, 0 4px 10px rgba(0,0,0,.6), inset 0 -7px 14px rgba(0,0,0,.35), 0 0 0 4px #120c0a; }
+/* ── каналы ── */
+[data-v="night"] .c4-strips{ background:#080504; box-shadow:inset 0 0 0 2px #1c120e, inset 0 14px 40px rgba(0,0,0,.5); }
+[data-v="night"] .c4 .strip{ background:linear-gradient(180deg,#21160f,#180f0c); border-color:#000; box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 8px 18px rgba(0,0,0,.4); }
+[data-v="night"] .c4 .strip.is-active{ box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 0 0 2px var(--row-accent), 0 0 34px color-mix(in srgb,var(--row-accent) 24%,transparent); }
+[data-v="night"] .c4 .cnt, [data-v="night"] .c4 .strip-lcd, [data-v="night"] .c4 .cpm-campus-vol-val{ background:#040201; box-shadow:inset 0 0 0 1px #000, inset 0 0 0 2px #241611; }
+[data-v="night"] .c4 .vu i{ background:#160e0b; }
+[data-v="night"] .c4 .cpm-campus-vol::-webkit-slider-runnable-track{ background:#040405; box-shadow:inset 0 1px 3px #000, 0 0 0 1px #2c2f37; }
+[data-v="night"] .c4 .cpm-campus-vol::-webkit-slider-thumb{ background:linear-gradient(#150c08,#150c08) center/100% 2px no-repeat, linear-gradient(180deg,#b8a49b,#7d6b63 48%,#a3908a 52%,#6a5a53); }
+[data-v="night"] .c4 .cpm-campus-vol::-moz-range-track{ background:#040405; }
+[data-v="night"] .c4 .strip-plate{ background:linear-gradient(180deg,#c8b8a8,#a49482); } [data-v="night"] .c4 .strip-plate .cpm-campus-name{ color:#17181c; }
+[data-v="night"] .c4 .strip-sel{ background:linear-gradient(180deg,#2b1f1b,#1a110e); box-shadow:0 3px 0 #070403; color:var(--tx2); }
+[data-v="night"] .c4 .strip.is-active .strip-sel{ color:var(--a-ink); background:linear-gradient(180deg,var(--a),var(--a2)); box-shadow:0 3px 0 rgba(0,0,0,.5), 0 0 18px color-mix(in srgb,var(--a) 45%,transparent); }
+[data-v="night"] .c4 .pad{ background:linear-gradient(180deg,#2b1f1b,#1a110e); box-shadow:0 6px 0 #070403, 0 11px 18px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,180,160,.08); }
+[data-v="night"] .c4 .pad:hover{ background:linear-gradient(180deg,#34251f,#1e1512); }
+[data-v="night"] .c4 .pad:active{ box-shadow:0 1px 0 #070403, 0 2px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,180,160,.08); }
+[data-v="night"] .c4 .pad.danger{ background:repeating-linear-gradient(-45deg,#3c1519 0 12px,#2a0d10 12px 24px); }
+[data-v="night"] .c4 .pad.danger, [data-v="night"] .c4 .pad.danger b{ color:#f3e6e6; }
+[data-v="night"] .c4-rockers{ background:#080504; box-shadow:inset 0 0 0 2px #1c120e; }
+[data-v="night"] .c4 .rocker, [data-v="night"] .c4 .rocker.wa-toggle-btn[data-state]{ background:linear-gradient(180deg,#22160f,#170f0c); box-shadow:0 3px 0 #0b0c0e; }
+[data-v="night"] .c4 .lib{ background:#0f0a08; box-shadow:inset 0 0 0 2px #1c120e; } [data-v="night"] .c4 .lib-folders, [data-v="night"] .c4 .search, [data-v="night"] .c4 .sel{ background-color:#0a0605; }
+/* ── «плюшки»: пиковые огоньки, «−/+» и пресеты (console-extras.js) ── */
+[data-v="night"] .c4 .vu i.pk.pk{ background:#fff; box-shadow:0 0 8px #fff, 0 0 2px #fff; }
+[data-v="night"] .c4 .qk{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; min-width:0; }
+[data-v="night"] .c4 .qk button{ min-width:0; height:26px; padding:0; border-radius:5px; border:1px solid #000; background:linear-gradient(180deg,#2b1f1b,#1a110e); color:#c7b3ab; font:600 10.5px var(--f-mono); cursor:pointer; box-shadow:0 3px 0 #070403, inset 0 1px 0 rgba(255,180,160,.08); }
+[data-v="night"] .c4 .qk button:active{ transform:translateY(2px); box-shadow:0 1px 0 #070403; }
+[data-v="night"] .c4 .qk .pre{ order:1; } [data-v="night"] .c4 .qk .st{ order:2; grid-column:span 2; font-size:15px; } [data-v="night"] .c4 .qk .st:last-child{ order:3; }
+[data-v="night"] .c4 .qk.only-trim{ grid-template-columns:1fr 1fr; } [data-v="night"] .c4 .qk.only-trim .st{ grid-column:auto; }
+[data-v="night"] .c4 .qk button.on{ color:var(--a); box-shadow:0 3px 0 #070403, 0 0 10px color-mix(in srgb,var(--a) 50%,transparent), inset 0 1px 0 rgba(255,180,160,.08); }
+
+[data-v="night"] .c4 .c4-viz{ filter:none; opacity:.8; }
+[data-v="night"] .c4-track, [data-v="night"] .c4-time span, [data-v="night"] .c4-clock, [data-v="night"] .c4 .cnt b{ text-shadow:none; }
+[data-v="night"] .c4 .vu i.lit, [data-v="night"] .c4 .vu i.lit:nth-child(n+7), [data-v="night"] .c4 .vu i.lit:nth-child(n+9){ box-shadow:none; }
+

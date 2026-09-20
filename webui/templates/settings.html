@@ -78,7 +78,7 @@
     <div class="ud-grid" id="ud-grid">
       {% for v in ui_variants %}
       <div class="ud-card{{ ' on' if ui_current == v.key }}" data-variant="{{ v.key }}">
-        <a class="ud-img" href="{{ url_for(v.route) }}?preview=1" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key=v.key) }}?v=1" alt="{{ v.name }}"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
+        <a class="ud-img" href="{{ url_for(v.route) }}?preview=1" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key=v.key) }}?v=2" alt="{{ v.name }}"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
         <b>{{ v.name }}<em class="ud-b-me"{% if ui_current != v.key %} hidden{% endif %}>Ваш</em><em class="ud-b-def"{% if ui_default != v.key %} hidden{% endif %}>Основной</em></b>
         <small>{{ v.desc }}</small>
         <div class="ud-tags">{% for f in v.feat %}<span>{{ f }}</span>{% endfor %}</div>
@@ -89,14 +89,14 @@
       </div>
       {% endfor %}
       <div class="ud-card{{ ' on' if ui_current == 'off' }}" data-variant="off">
-        <a class="ud-img" href="{{ url_for('dashboard') }}?classic=1" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key='off') }}?v=1" alt="Старый интерфейс"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
+        <a class="ud-img" href="{{ url_for('dashboard') }}?classic=1" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key='off') }}?v=2" alt="Старый интерфейс"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
         <b>Старый интерфейс<em class="ud-b-me"{% if ui_current != 'off' %} hidden{% endif %}>Ваш</em></b>
         <small>Прежний вид до обновления: классический и современный плеер.</small>
         <div class="ud-tags"><span>Классика</span></div>
         <div class="ud-act"><a class="ud-btn" href="/ui/off"><i class="bi bi-check2-circle"></i> Применить</a></div>
       </div>
       <div class="ud-card" data-variant="tabler">
-        <a class="ud-img" href="{{ url_for('dashboard_v2') }}" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key='tabler') }}?v=1" alt="Tabler"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
+        <a class="ud-img" href="{{ url_for('dashboard_v2') }}" target="_blank" rel="noopener" title="Предпросмотр"><img loading="lazy" src="{{ url_for('ui_preview_image', key='tabler') }}?v=2" alt="Tabler"><span class="ud-zoom"><i class="bi bi-eye"></i> Предпросмотр</span></a>
         <b>Tabler</b>
         <small>Ранний предпросмотр на готовой библиотеке Tabler (только плеер).</small>
         <div class="ud-tags"><span>Только плеер</span></div>
@@ -196,7 +196,7 @@
     <div class="ls-grid">
       {% for k, n, d in login_styles %}
       <div class="ls-card{{ ' on' if login_style_current == k }}" data-k="{{ k }}">
-        <a class="ls-img" href="{{ url_for('login') }}?style={{ k }}" target="_blank" rel="noopener"><img loading="lazy" src="{{ url_for('static', filename='login-previews/' ~ k ~ '.jpg') }}?v=1" alt="{{ n }}"><span class="ls-num">{{ '★' if k == 'classic' else k }}</span></a>
+        <a class="ls-img" href="{{ url_for('login') }}?style={{ k }}" target="_blank" rel="noopener"><img loading="lazy" src="{{ url_for('static', filename='login-previews/' ~ k ~ '.jpg') }}?v=2" alt="{{ n }}"><span class="ls-num">{{ '★' if k == 'classic' else k }}</span></a>
         <b>{{ n }}</b>
         <small>{{ d }}</small>
         <div class="ls-act">

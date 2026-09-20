@@ -5,7 +5,7 @@
   1. каждая страница /v3../v16 открывается (200), без ошибок JS, без горизонтального скролла — на 1500 и 390 px;
   2. три палитры (amber/aurora/rose): текст названий кампусов, трека и подписей читается (контраст >= 3:1);
   3. ?preview=1 не меняет выбранный дизайн (cookie 'ui' не появляется);
-  4. «плюшки» новых вариантов: циферблат (перетаскивание, колёсико, стрелки), «−/+» и пресеты громкости.
+  4. «плюшки» вариантов в стиле Пульта: поворотные ручки (перетаскивание, колёсико, стрелки), «−/+», пресеты громкости, пиковые огоньки.
 Все POST /api/* подменены заглушкой и записываются — на боевые колонки ничего не отправляется.
 
     python3 scripts/tests/ui_variants_check.py --cookie-file /путь/cookie.txt [--only glass,dial] [--base https://127.0.0.1:8090]
@@ -14,7 +14,7 @@
 import argparse, json, ssl, sys, time, urllib.request
 
 PAGES = {'studio': 3, 'console': 4, 'bento': 5, 'neon': 6, 'lumen': 7, 'rack': 8, 'deck': 9,
-         'glass': 10, 'rows': 11, 'dial': 12, 'oled': 13, 'soft': 14, 'onair': 15, 'compact': 16}
+         'emerald': 10, 'ice': 11, 'crimson': 12, 'alu': 13, 'walnut': 14, 'neve': 15, 'rotor': 16, 'carbon': 17, 'night': 18, 'synth': 19}
 PALS = ('amber', 'aurora', 'rose')
 SEL = {'name': '.cpm-campus-name', 'track': '.c4-track', 'label': '.strip .cpm-campus-vol-val'}
 
@@ -95,11 +95,11 @@ def main():
         def strip_val(pg, k='nar'):
             return pg.evaluate("(k)=>{const e=document.querySelector('.strip .cpm-campus-vol')||document.querySelector('input[id^=vol-]'); return e?+e.value:null}", k)
 
-        if not a.only or 'dial' in keys:
-            print('dial: перетаскивание / колёсико / стрелки')
-            ctx = new_ctx(1500, 1000); pg, _, _ = open_page(ctx, 'dial')
+        if not a.only or 'rotor' in keys:
+            print('rotor: перетаскивание / колёсико / стрелки')
+            ctx = new_ctx(1500, 1000); pg, _, _ = open_page(ctx, 'rotor')
             d = pg.query_selector('.strip .dial')
-            if not d: bad('dial: нет .dial')
+            if not d: bad('rotor: нет .dial')
             else:
                 inp = pg.query_selector('.strip input[id^=vol-]'); v0 = float(inp.input_value()); n0 = len(posts)
                 bx = d.bounding_box(); cx, cy = bx['x'] + bx['width'] / 2, bx['y'] + bx['height'] / 2
@@ -110,11 +110,11 @@ def main():
                 if not (v2 < v1): bad(f'dial: стрелка вниз не снизила ({v1}→{v2})')
                 pg.mouse.move(cx, cy); pg.mouse.wheel(0, -100); pg.wait_for_timeout(900); v3 = float(inp.input_value())
                 if not (v3 > v2): bad(f'dial: колёсико вверх не подняло ({v2}→{v3})')
-                if len(posts) == n0: bad('dial: изменения не ушли в /api (ожидался POST)')
+                if len(posts) == n0: bad('rotor: изменения не ушли в /api (ожидался POST)')
                 print(f'  громкость {v0}→{v1}→{v2}→{v3}, POST-ов: {len(posts) - n0}')
             ctx.close()
 
-        for key, pre in (('rows', False), ('compact', True)):
+        for key, pre in (('ice', False), ('alu', True), ('walnut', True)):
             if a.only and key not in keys: continue
             print(f'{key}: кнопки −/+' + (' и пресеты' if pre else ''))
             ctx = new_ctx(1500, 1000); pg, _, _ = open_page(ctx, key)
@@ -132,6 +132,13 @@ def main():
                     if float(inp.input_value()) != target: bad(f'{key}: пресет {target} не применился ({inp.input_value()})')
                 pg.wait_for_timeout(500)
                 if not pg.query_selector('.strip .qk button.pre.on'): bad(f'{key}: активный пресет не подсвечен')
+            ctx.close()
+        if not a.only or 'emerald' in keys:
+            print('emerald: пиковые огоньки')
+            ctx = new_ctx(1500, 1000); pg, _, _ = open_page(ctx, 'emerald', 3000)
+            pg.evaluate("document.querySelectorAll('.strip')[0].querySelectorAll('.vu i').forEach((e,i)=>{ if(i<4) e.classList.add('lit'); })"); pg.wait_for_timeout(350)
+            pg.evaluate("document.querySelectorAll('.strip')[0].querySelectorAll('.vu i.lit').forEach(e=>e.classList.remove('lit'))"); pg.wait_for_timeout(350)
+            if not pg.query_selector('.strip .vu i.pk'): bad('emerald: пиковый огонёк не появился')
             ctx.close()
         b.close()
     print(f'\nПОЛОМОК: {len(fails)}' if fails else '\nВСЁ В ПОРЯДКЕ')

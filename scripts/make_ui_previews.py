@@ -15,7 +15,7 @@ OUT = os.path.join(os.path.dirname(HERE), 'webui', 'ui_previews')
 # ключ → (адрес страницы, cookie ui). Ключи совпадают с UI_VARIANT_INFO в webui/app.py.
 PAGES = {
     'studio': '/v3', 'console': '/v4', 'bento': '/v5', 'neon': '/v6', 'lumen': '/v7', 'rack': '/v8', 'deck': '/v9',
-    'glass': '/v10', 'rows': '/v11', 'dial': '/v12', 'oled': '/v13', 'soft': '/v14', 'onair': '/v15', 'compact': '/v16',
+    'emerald': '/v10', 'ice': '/v11', 'crimson': '/v12', 'alu': '/v13', 'walnut': '/v14', 'neve': '/v15', 'rotor': '/v16', 'carbon': '/v17', 'night': '/v18', 'synth': '/v19',
     'off': '/?classic=1', 'tabler': '/v2',
 }
 HIDE = '.bug-fab,#chat-widget,#chat-toggle,.fdock-master,.fdock-master-btn{display:none!important}'
