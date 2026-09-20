@@ -2828,30 +2828,33 @@ def _play_via_ipc(host, user, filepath, vol, loop=False):
     # queued loadfile before honoring a property set sent just ahead of it).
     file_esc = filepath.replace('\\', '\\\\').replace('"', '\\"')
     loop_val = '"inf"' if loop else 'false'
+    # 2026-09-20 — «Минута/Гимн/Тревога хрипят». Две причины, обе про громкость ПОТОКА PulseAudio (отдельную от громкости mpv):
+    #  1) в новом mpv (>= 0.18.1; Клиент 1 — 0.34) `volume` — внутренний микшер (куб от процента: 150 → +10.6 dB). Прежний код
+    #     дополнительно ставил потоку `pactl ... {vol}%` — второе такое же усиление сверху; теперь поток держим на 100%.
+    #     Только для СТАРОГО mpv (< 0.18.1, Ağ-Şəhər 0.14: там громкость mpv = громкость потока) прежнее поведение сохранено.
+    #  2) PulseAudio (module-stream-restore) выдаёт каждому НОВОМУ потоку «mpv Media Player» громкость, запомненную с прошлого
+    #     раза (после прежних запусков — 150%). Поэтому файл грузим НА ПАУЗЕ, выставляем потоку нужную громкость ДО первого
+    #     звука и только потом снимаем паузу (иначе первые секунды идут с +10 dB поверх — слышно как хрип).
     cmd = (
         'SOCK=/run/campus-player/mpv.sock; '
         f'[ -S "$SOCK" ] || {{ echo "no socket"; exit 1; }}; '
         f'[ -f "{filepath}" ] || {{ echo "no file"; exit 1; }}; '
+        f'MPVV=$(mpv --version 2>/dev/null | head -1 | awk \'{{print $2}}\' | sed \'s/^v//\'); '
+        f'if [ -n "$MPVV" ] && [ "$MPVV" != "0.18.1" ] && [ "$(printf \'%s\\n0.18.1\\n\' "$MPVV" | sort -V | head -1)" = "$MPVV" ]; then PCT={vol}; else PCT=100; fi; '
+        f'fixvol() {{ PAID=$(pactl list short sink-inputs 2>/dev/null | head -1 | cut -f1); [ -n "$PAID" ] && pactl set-sink-input-volume "$PAID" ${{PCT}}% >/dev/null 2>&1; }}; '
         f'echo \'{{"command":["set_property","volume",{vol}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
         f'echo \'{{"command":["set_property","loop-file",{loop_val}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
-        f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
+        # pause — «липкое» свойство mpv (см. комментарий выше): ставим true на время загрузки, дальше ОБЯЗАТЕЛЬНО снимаем
+        f'echo \'{{"command":["set_property","pause",true]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
         f'echo \'{{"command":["loadfile","{file_esc}","replace"]}}\' | socat - UNIX-CONNECT:"$SOCK"; '
-        f'sleep 0.3; '
+        # ждём, пока mpv создаст поток (на паузе он «corked»), и выставляем его громкость до первого звука
+        f'for i in 1 2 3 4 5 6 7 8 9 10 11 12; do sleep 0.2; [ -n "$(pactl list short sink-inputs 2>/dev/null | head -1)" ] && break; done; '
+        f'fixvol; '
         f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
-        f'sleep 1.5; '
+        f'sleep 0.4; fixvol; '
         f'echo \'{{"command":["set_property","volume",{vol}]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
         f'echo \'{{"command":["set_property","pause",false]}}\' | socat - UNIX-CONNECT:"$SOCK" >/dev/null 2>&1; '
-        # Root-caused on Ağ-Şəhər: its mpv build (0.14.0, ~2015) silently
-        # fails to push a volume above 100% through --ao=pulse — the
-        # set_property calls above "succeed" but PulseAudio's stream-restore
-        # module re-applies its remembered (100%) level to the new sink-input
-        # anyway, since every campus box only ever runs mpv so there's only
-        # ever one sink-input — setting the Pulse-level volume directly
-        # bypasses mpv's broken path entirely and was confirmed to actually
-        # stick (checked 8s later, still held). Harmless no-op on campuses
-        # where mpv's own volume control already works fine.
-        f'PAID=$(pactl list short sink-inputs 2>/dev/null | head -1 | cut -f1); '
-        f'[ -n "$PAID" ] && pactl set-sink-input-volume "$PAID" {vol}% >/dev/null 2>&1; true'
+        f'sleep 1.0; fixvol; true'
     )
     return ssh_run_on(host, user, cmd, timeout=10)
 
@@ -3325,6 +3328,92 @@ def api_schedule_toggle_group():
     )
     return jsonify({'ok': True, 'group': group, 'enabled': enable, 'results': results})
 
+# ── Фиксация громкости ───────────────────────────────────────────────
+# Раньше «Все → 150» и ползунки один раз отправляли громкость в mpv и всё: оффлайн-кампусы её не получали вообще, а
+# у включённых её потом сбрасывали плановые звонки (ставят громкость слота и не возвращают), Гимн/Минута/Тревога и
+# перезапуск плеера (стартует со 100) — «через некоторое время каждый хаотично опускается». Теперь выставленное
+# значение ЗАПОМИНАЕТСЯ (settings: vol_lock_<кампус>), а сторож раз в ~30 с возвращает его на кампусах, где сейчас
+# ничего не играет (звонок/музыка доигрывают на своей громкости; после них громкость возвращается). Оффлайн-кампус
+# получит значение, как только появится на связи. Новое ручное значение заменяет старое; снять — /api/volume-lock/clear.
+_VOL_LOCK_PREFIX = 'vol_lock_'
+
+def _all_campus_keys():
+    keys = ['client1'] + [_campus_key(m) for m in music_machines() if m['host'] != CLIENT1_HOST]
+    return list(dict.fromkeys(keys))
+
+def _vol_lock_set(keys, val):
+    with get_db() as c:
+        for k in keys:
+            c.execute("INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)", (_VOL_LOCK_PREFIX + k, str(int(val))))
+
+def _vol_lock_all():
+    with get_db() as c:
+        rows = c.execute("SELECT key,value FROM settings WHERE key LIKE 'vol\\_lock\\_%' ESCAPE '\\'").fetchall()
+    out = {}
+    for r in rows:
+        try:
+            out[r['key'][len(_VOL_LOCK_PREFIX):]] = int(r['value'])
+        except (TypeError, ValueError):
+            pass
+    return out
+
+def _volume_guard_apply(key, want):
+    cmd = {'command': ['set_property', 'volume', want]}
+    if key == 'client1':
+        return mpv_cmd(cmd)
+    m = _resolve_machine(key, strict=True)
+    return mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd) if m else {'ok': False}
+
+_volume_guard_started = False
+
+def _volume_guard_tick(st, now=None):
+    """Один проход сторожа. Возвращает список действий [(кампус, было, стало, ответил_ли)]."""
+    now = now or time.time()
+    done = []
+    for key, want in _vol_lock_all().items():
+        s_ = st.setdefault(key, {'next': 0, 'fails': 0, 'last': 0})
+        if now < s_['next']:
+            continue
+        d = _status_for_machine(key)
+        online = d.get('online', d.get('reachable', True))
+        if not online:
+            s_['next'] = now + 120
+            continue
+        s_['next'] = now + 30
+        vol = d.get('volume')
+        if vol is None or d.get('playing'):
+            continue                          # играет (звонок/музыка) — не перебиваем
+        if abs(vol - want) < 1:
+            s_['fails'] = 0
+            continue
+        if now - s_['last'] < min(60 * (2 ** s_['fails']), 1800):
+            continue
+        s_['last'] = now
+        s_['fails'] += 1                      # сбросится, когда увидим нужное значение
+        r = _volume_guard_apply(key, want)
+        log_action('system', 'volume_guard', key, f'{round(vol)}→{want} ({"ok" if r.get("ok") else "нет ответа"})')
+        done.append((key, round(vol), want, bool(r.get('ok'))))
+    return done
+
+def _volume_guard_loop():
+    """Возвращает зафиксированную громкость там, где она «уехала». Проверяет только кампусы с фиксацией и только
+    по одному лёгкому запросу; оффлайн-кампусы — реже; при неудачах интервал растёт (старый mpv не берёт >100)."""
+    st = {}
+    time.sleep(45)                       # даём панели подняться
+    while True:
+        try:
+            _volume_guard_tick(st)
+        except Exception as e:
+            app.logger.warning('volume_guard: %s', e)
+        time.sleep(15)
+
+def _start_volume_guard():
+    global _volume_guard_started
+    if _volume_guard_started:
+        return
+    _volume_guard_started = True
+    threading.Thread(target=_volume_guard_loop, daemon=True, name='volume-guard').start()
+
 @app.route('/api/volume', methods=['POST'])
 @login_required
 def api_volume():
@@ -3332,7 +3421,9 @@ def api_volume():
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     data = request.get_json() or {}
     val  = max(0, min(160, int(data.get('value', 100))))
-    return jsonify(mpv_set_all('volume', val))
+    _vol_lock_set(_all_campus_keys(), val)          # «Все → N» фиксирует N на всех кампусах (в т.ч. оффлайн — применится при появлении)
+    r = mpv_set_all('volume', val)
+    return jsonify({'ok': True, 'applied': bool(r.get('ok')), 'locked': True, 'value': val})
 
 @app.route('/api/volume/<machine>', methods=['POST'])
 @login_required
@@ -3349,7 +3440,27 @@ def api_volume_machine(machine):
         if not m:
             return jsonify({'ok': False, 'error': f'{machine} не настроен'})
         r = mpv_cmd_on(m['host'], m.get('user', CLIENT1_USER), cmd)
-    return jsonify({'ok': r.get('ok', False), 'value': val})
+    _vol_lock_set([machine], val)                   # громкость, выставленная вручную, фиксируется (см. _volume_guard_loop)
+    return jsonify({'ok': True, 'applied': bool(r.get('ok')), 'locked': True, 'value': val})
+
+@app.route('/api/volume-lock/clear', methods=['POST'])
+@login_required
+def api_volume_lock_clear():
+    """Снять фиксацию громкости: {"machine": "<ключ кампуса>"} или {"machine": "all"}."""
+    if not has_perm('volume'):
+        return jsonify({'ok': False, 'error': 'Недостаточно прав'})
+    m = (request.get_json(silent=True) or {}).get('machine', 'all')
+    with get_db() as c:
+        if m == 'all':
+            c.execute("DELETE FROM settings WHERE key LIKE 'vol\\_lock\\_%' ESCAPE '\\'")
+        else:
+            c.execute("DELETE FROM settings WHERE key=?", (_VOL_LOCK_PREFIX + m,))
+    return jsonify({'ok': True, 'locks': _vol_lock_all()})
+
+@app.route('/api/volume-locks')
+@login_required
+def api_volume_locks():
+    return jsonify({'ok': True, 'locks': _vol_lock_all()})
 
 # ── Equalizer ─────────────────────────────────────────
 # 10-band EQ — lavfi chained equalizer (31,62,125,250,500,1k,2k,4k,8k,16kHz)
@@ -6122,6 +6233,7 @@ def api_bug_reports_status():
 
 init_db()
 ensure_role_perms()
+_start_volume_guard()
 
 if __name__ == '__main__':
     ssl_ctx = None

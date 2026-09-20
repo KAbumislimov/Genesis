@@ -3251,7 +3251,7 @@ function sendVol(v) {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({value: v})
   }).then(function(r){ return r.json(); }).then(function(d) {
-    if (d.ok) { currentVol = v; _volHoldAll(v); toast(t('toast.vol') + ' ' + v); }
+    if (d.ok) { currentVol = v; _volHoldAll(v); toast('🔒 ' + _tr('Громкость зафиксирована') + ': ' + v + (d.applied ? '' : ' · ' + _tr('Кампус не отвечает — громкость применится, когда он выйдет на связь'))); }
     else { _volHoldClear(); toast('⚠️ ' + (d.error || 'ошибка громкости')); }
   }).catch(function(){ _volHoldClear(); toast('⚠️ Нет связи с сервером'); });
 }
@@ -4279,7 +4279,10 @@ function wampSetCampusVolume(key, val) {
   fetch('/api/volume/' + key, {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({value: val})
   }).then(function(r){ return r.json(); })
-    .then(function(d){ if (!d.ok) { _volHoldClear(key); toast('⚠️ ' + (d.error || 'ошибка громкости')); } else { _volHoldSet(key, val); } })
+    .then(function(d){
+      if (!d.ok) { _volHoldClear(key); toast('⚠️ ' + (d.error || 'ошибка громкости')); }
+      else { _volHoldSet(key, val); if (!d.applied) toast('⚠️ ' + _tr('Кампус не отвечает — громкость применится, когда он выйдет на связь')); }
+    })
     .catch(function(){ _volHoldClear(key); toast('⚠️ Нет связи с сервером'); })
     .finally(function(){ _csVolDragging = null; });
 }
@@ -4291,7 +4294,7 @@ function wampSetAllVolume(val) {
   }).then(function(r){ return r.json(); })
     .then(function(d){
       if (!d.ok) { _volHoldClear(); toast('⚠️ ' + (d.error || 'ошибка')); return; }
-      toast('🔊 Громкость ' + val + ' — на всех кампусах');
+      toast('🔒 ' + _tr('Громкость зафиксирована') + ': ' + val + (d.applied ? '' : ' · ' + _tr('Кампус не отвечает — громкость применится, когда он выйдет на связь')));
       MUSIC_MACHINES.forEach(function(m){
         var volEl = document.getElementById('vol-'+m.key);
         var volValEl = document.getElementById('vol-val-'+m.key);
