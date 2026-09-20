@@ -4212,7 +4212,7 @@ function wampSetAllVolume(val) {
 function _showCampusErr(key, msg) {
   var el = document.getElementById('cs-err-'+key);
   if (!el) return;
-  if (msg) { el.textContent = '⚠ ' + msg; el.style.display = ''; }
+  if (msg) { el.textContent = '⚠ ' + _tr(msg); el.style.display = ''; }
   else { el.style.display = 'none'; el.textContent = ''; }
 }
 // After a play click "succeeds" (i.e. the request was accepted), follow up
@@ -4234,7 +4234,7 @@ function _setStatusBadge(key, online) {
   var b = document.getElementById('status-badge-'+key);
   if (!b) return;
   b.className = 'cs-status-badge ' + (online ? 'online' : 'offline');
-  b.textContent = online ? 'Онлайн' : 'Оффлайн';
+  b.textContent = _tr(online ? 'Онлайн' : 'Оффлайн');
 }
 function _applyMachineStatus(key, idx, d) {
   var conn = document.getElementById('conn-'+key);
@@ -4660,11 +4660,13 @@ function _savePeremEdit(campus, slot, btn) {
 }
 
 // ──── TOAST ───────────────────────────────────────────
+// автоперевод строки на текущий язык (i18n-auto.js); без него — как есть
+function _tr(s) { return (window.autoTranslate && typeof s === 'string') ? window.autoTranslate(s) : s; }
 function toast(msg) {
   var el = document.getElementById('dash-toast');
   var tx = document.getElementById('dash-toast-text');
   if (!el || !tx) return;
-  tx.textContent = msg;
+  tx.textContent = _tr(msg);
   el.style.display = 'flex';
   clearTimeout(window._tt);
   window._tt = setTimeout(function(){ el.style.display = 'none'; }, 2800);

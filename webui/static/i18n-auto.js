@@ -48,8 +48,9 @@
   function mc(src, out) {
     var letters = src.replace(/[^А-Яа-яЁёA-Za-z]/g, '');
     if (letters.length >= 2 && letters === letters.toUpperCase() && letters !== letters.toLowerCase()) return out.toUpperCase();
-    var f = src.charAt(0);
-    if (f && f === f.toLowerCase() && f !== f.toUpperCase() && out.charAt(0) !== out.charAt(0).toLowerCase()) return out.charAt(0).toLowerCase() + out.slice(1);
+    var f = src.charAt(0), o = out.charAt(0);
+    if (f && f === f.toLowerCase() && f !== f.toUpperCase() && o !== o.toLowerCase()) return o.toLowerCase() + out.slice(1);
+    if (f && f === f.toUpperCase() && f !== f.toLowerCase() && o !== o.toUpperCase()) return o.toUpperCase() + out.slice(1);
     return out;
   }
 
