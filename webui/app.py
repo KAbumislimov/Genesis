@@ -5648,6 +5648,126 @@ def _dir_size(path):
             except: pass
     return total
 
+# ── Сводка «что и как забэкаплено» ───────────────────────────────────
+# Данные готовит хост (scripts/backup_status.py, cron */5) в campus-backups/status.json — контейнер видит эту папку
+# только для чтения и не имеет доступа ни к логам Proxmox-бэкапа, ни к git, ни к crontab.
+_BK_MAX_AGE_DAYS = 9          # недельный бэкап на Proxmox старше этого срока = проблема
+
+def _bk_status():
+    p = os.path.join(BACKUP_DIR, 'status.json')
+    try:
+        with open(p, encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+def _bk_fmt_ts(ts):
+    if not ts:
+        return ''
+    try:
+        return datetime.fromtimestamp(float(ts)).strftime('%Y-%m-%d %H:%M')
+    except (ValueError, OSError, OverflowError):
+        return ''
+
+def _bk_days_ago(date_str):
+    try:
+        return (datetime.now().date() - datetime.strptime(date_str, '%Y-%m-%d').date()).days
+    except (ValueError, TypeError):
+        return None
+
+def _bk_step_cell(px, names):
+    """Ячейка «Proxmox» для строки: состояние худшего из шагов. state: ok|bad|pending|none."""
+    last_run = px.get('last_run') or {}
+    in_last = {s['name']: s['ok'] for s in last_run.get('steps', [])}
+    seen, last_ok = set(px.get('step_seen', [])), px.get('step_last_ok', {})
+    worst, when = 'ok', None
+    for n in names:
+        if n not in seen:
+            st, w = 'pending', None
+        elif in_last.get(n) is True:
+            st, w = 'ok', last_run.get('date')
+        else:
+            w = last_ok.get(n)
+            age = _bk_days_ago(w) if w else None
+            st = 'bad' if (w is None or age is None or age > 0) else 'ok'
+            if w and st == 'bad' and age is not None and age <= _BK_MAX_AGE_DAYS and last_run.get('result') == 'ok':
+                st = 'ok'
+        rank = {'ok': 0, 'pending': 1, 'bad': 2}
+        if rank[st] > rank[worst]:
+            worst = st
+        if w and (when is None or w < when):
+            when = w
+    return {'state': worst, 'when': when}
+
+def _bk_overview(st):
+    """Матрица «что → где защищено» и список проблем. Возвращает (health, rows)."""
+    now = time.time()
+    px, gh, snap = st.get('proxmox', {}), st.get('github', {}), st.get('snapshots', {})
+    sec, ldb = st.get('secrets_repo', {}), st.get('local_db', {})
+    gh_ok = bool(gh.get('live_sync')) and (gh.get('unpushed') or 0) <= 3
+    def gcell(ts):
+        return {'state': 'ok' if gh_ok and ts else ('bad' if not gh.get('live_sync') else 'warn'), 'when': _bk_fmt_ts(ts)}
+    none = {'state': 'none', 'when': ''}
+    ld = (ldb.get('days') or [{}])[0].get('date')
+    ld_age = _bk_days_ago(ld) if ld else None
+    local_db = {'state': 'ok' if ld_age is not None and ld_age <= 1 else 'bad', 'when': ld or ''}
+    rows = [
+        ('code',     gcell(gh.get('last_push_ts')), _bk_step_cell(px, ['centos → campus-infra', 'centos → homelab']), none),
+        ('users',    gcell(snap.get('webui')),      _bk_step_cell(px, ['centos → webui-data']), local_db),
+        ('helpdesk', gcell(snap.get('helpdesk')),   _bk_step_cell(px, ['centos → helpdesk-ops']), local_db),
+        ('secrets',  ({'state': 'warn', 'when': _bk_fmt_ts(sec.get('last_commit_ts')), 'note': 'dirty'} if sec.get('exists') and (sec.get('dirty') or 0) > 0
+                      else {'state': 'ok' if sec.get('exists') else 'bad', 'when': _bk_fmt_ts(sec.get('last_commit_ts'))}),
+                     _bk_step_cell(px, ['centos → campus-secrets', 'centos → ssh-keys']), none),
+        ('services', gcell(snap.get('crontab')),   _bk_step_cell(px, ['centos → tg-campus-bot', 'centos → systemd-units']), none),
+        ('media',   none,                          _bk_step_cell(px, ['centos → media-music']), none),
+        ('music',    none,                          _bk_step_cell(px, ['centos → kamran-music']), none),
+        ('client1',     none,                          _bk_step_cell(px, ['client1 → client1-full.tar.gz']), none),
+        ('client2',      none,                          _bk_step_cell(px, ['client2 → client2-full.tar.gz']), none),
+    ]
+    rows = [{'key': k, 'github': g, 'proxmox': p, 'local': l} for k, g, p, l in rows]
+    problems = []
+    def add(level, code, **kw):
+        problems.append(dict(level=level, code=code, **kw))
+    last = px.get('last_run') or {}
+    if not px.get('reachable'):
+        add('bad', 'proxmox_down', when=px.get('last_full_ok') or max(px.get('step_last_ok', {}).values(), default=''))
+    if last and last.get('result') in ('unreachable', 'aborted'):
+        add('bad', 'run_failed', when=last.get('date'))
+    elif last and last.get('result') == 'errors':
+        add('warn', 'run_errors', when=last.get('date'))
+    if any(r['key'] == 'music' and r['proxmox']['state'] == 'pending' for r in rows):
+        add('warn', 'music_pending')
+    if any(r['key'] == 'music' and r['proxmox']['state'] == 'bad' for r in rows):
+        add('bad', 'music_missing')
+    if any(r['key'] == 'client2' and r['proxmox']['state'] == 'bad' for r in rows):
+        add('bad', 'client2_missing')
+    if not gh.get('live_sync'):
+        add('bad', 'github_sync_off')
+    elif (gh.get('unpushed') or 0) > 3:
+        add('warn', 'github_unpushed')
+    if sec.get('exists') and (sec.get('dirty') or 0) > 0:
+        add('warn', 'secrets_dirty', n=sec.get('dirty'))
+    v = st.get('verify') or {}
+    if not v.get('ok'):
+        add('bad', 'restore_verify')
+    if ld_age is None or ld_age > 1:
+        add('bad', 'local_db_old', when=ld or '')
+    if now - st.get('generated_at', 0) > 20 * 60:
+        add('warn', 'status_stale', when=_bk_fmt_ts(st.get('generated_at')))
+    level = 'bad' if any(p['level'] == 'bad' for p in problems) else ('warn' if problems else 'ok')
+    return {'level': level, 'problems': problems}, rows
+
+def _bk_schedule_view(st):
+    out = {}
+    for k, j in (st.get('schedule') or {}).items():
+        try:
+            hh = j['h'] if j['h'] == '*' else '%02d' % int(j['h'])
+            mm = '%02d' % int(j['m'])
+        except ValueError:
+            continue
+        out[k] = {'dow': j['dow'], 'time': f'{hh}:{mm}'}
+    return out
+
 @app.route('/backups')
 @login_required
 def backups_page():
@@ -5655,11 +5775,22 @@ def backups_page():
         return redirect(url_for('dashboard'))
     unlocked = session.get('backup_unlocked', False)
     base, entries, music, machines = _backup_scan()
+    st = _bk_status()
+    health, rows = _bk_overview(st) if st else ({'level': 'warn', 'problems': [{'level': 'warn', 'code': 'no_status'}]}, [])
+    st = st or {}
+    px, gh = st.get('proxmox', {}), st.get('github', {})
+    last_run = px.get('last_run') or {}
+    vitems = (st.get('verify') or {}).get('items') or []
+    vchecks = {k: any(i.get('ok') and i.get('text', '').startswith(pre) for i in vitems)
+               for k, pre in (('webui', 'webui.db.enc'), ('helpdesk', 'helpdesk_ops.db.enc'), ('uploads', 'helpdesk_ops_uploads'))}
     return render_template('backups.html',
                            backup_dir=base, entries=entries, music=music,
                            machines=machines, unlocked=unlocked,
                            has_vault=bool(BACKUP_VAULT_PASS),
-                           admin_emails=BACKUP_ADMIN_EMAILS)
+                           admin_emails=BACKUP_ADMIN_EMAILS,
+                           st=st, health=health, rows=rows, px=px, gh=gh, last_run=last_run, vchecks=vchecks,
+                           schedule=_bk_schedule_view(st), fmt_ts=_bk_fmt_ts, fmt_sz=_fmt_sz,
+                           updated=_bk_fmt_ts(st.get('generated_at')))
 
 @app.route('/api/backup/unlock', methods=['POST'])
 @login_required

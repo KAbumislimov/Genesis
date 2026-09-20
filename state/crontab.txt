@@ -27,3 +27,4 @@ MAILTO=""
 
 # Zəfər Günü — раз в год, 8 ноября, 09:00: трек на всех кампусах (текущих и будущих)
 0 9 8 11 * /home/kamran/projects/campus-infra/scripts/zefer-gunu.sh >> /home/kamran/log/zefer-gunu-cron.log 2>&1
+*/5 * * * * python3 /home/kamran/projects/campus-infra/scripts/backup_status.py >/dev/null 2>&1   # сводка для страницы «Бэкапы»

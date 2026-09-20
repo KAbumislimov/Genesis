@@ -2,7 +2,7 @@
 {% block title %}Бэкапы{% endblock %}
 {% block content %}
 <style>
-.bk{max-width:520px;margin:20px auto;padding:0 14px}
+.bk{max-width:1000px;margin:20px auto;padding:0 14px}
 .bk-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
 .bk-head{padding:11px 14px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
@@ -44,22 +44,59 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
 .bk-date-toggle{display:flex;align-items:center;gap:8px;padding:8px 0;
   cursor:pointer;border-bottom:1px solid var(--border)}
 .bk-date-toggle:hover .bk-dt-label{color:var(--blue)}
+
+/* сводка состояния */
+.bk-banner{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-radius:10px;margin-bottom:12px;border:1px solid var(--border);background:var(--bg2)}
+.bk-banner i{font-size:22px;line-height:1.1;flex-shrink:0}
+.bk-banner.ok{border-color:rgba(63,185,80,.5)} .bk-banner.ok i{color:var(--green)}
+.bk-banner.warn{border-color:rgba(210,153,34,.6)} .bk-banner.warn i{color:#d29922}
+.bk-banner.bad{border-color:rgba(248,81,73,.6)} .bk-banner.bad i{color:#f85149}
+.bk-banner h2{font-size:14px;font-weight:700;margin:0 0 4px;color:var(--text)}
+.bk-prob{font-size:12.5px;line-height:1.5;color:var(--text);margin:3px 0;display:flex;gap:7px}
+.bk-prob .d{flex-shrink:0;margin-top:5px;width:8px;height:8px;border-radius:50%}
+.bk-prob .d.bad{background:#f85149}.bk-prob .d.warn{background:#d29922}
+.bk-prob b{font-family:monospace;font-weight:600}
+.bk-scroll{overflow-x:auto}
+table.bk-mx{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+.bk-mx th{font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
+.bk-mx td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+.bk-mx tr:last-child td{border-bottom:none}
+.bk-mx .sub{display:block;font-size:11px;color:var(--text2);margin-top:2px}
+.bk-c{display:flex;align-items:flex-start;gap:6px;line-height:1.35}
+.bk-c .dot{flex-shrink:0;width:9px;height:9px;border-radius:50%;margin-top:4px;background:var(--text2);opacity:.45}
+.bk-c.ok .dot{background:#3fb950;opacity:1}.bk-c.warn .dot{background:#d29922;opacity:1}.bk-c.bad .dot{background:#f85149;opacity:1}.bk-c.pending .dot{background:#58a6ff;opacity:1}
+.bk-c.none{color:var(--text2)}
+.bk-c .t{font-size:11px;color:var(--text2);font-family:monospace;display:block}
+.bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-bottom:10px}
+.bk-grid .bk-card{margin-bottom:0}
+.bk-hist{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.bk-pill{font-size:10.5px;padding:2px 8px;border-radius:10px;font-family:monospace;border:1px solid var(--border);color:var(--text2)}
+.bk-pill.ok{border-color:#3fb950;color:#3fb950}.bk-pill.errors{border-color:#d29922;color:#d29922}.bk-pill.unreachable,.bk-pill.aborted{border-color:#f85149;color:#f85149}
+.bk-step{display:flex;gap:7px;font-size:12px;padding:3px 0;color:var(--text);align-items:center}
+.bk-step .m{font-family:monospace;font-size:11.5px}
+.bk-ok-t{color:#3fb950}.bk-bad-t{color:#f85149}.bk-warn-t{color:#d29922}
+.bk-note{font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5}
+@media(max-width:560px){.bk-grid{grid-template-columns:1fr}}
 </style>
 
 <div class="bk">
-
+{% set DOW = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'] %}
   <!-- Заголовок -->
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
     <i class="bi bi-archive-fill" style="font-size:20px;color:var(--blue)"></i>
     <div>
       <div style="font-size:16px;font-weight:700;color:var(--text)">Резервные копии</div>
-      <div style="font-size:11px;color:var(--text2)">Каждый понедельник 07:00 — все машины</div>
+      <div style="font-size:11px;color:var(--text2)">Что защищено, где лежит копия и как прошёл последний бэкап</div>
     </div>
-    {% if unlocked %}
-    <button onclick="lockVault()" class="bk-btn" style="margin-left:auto">
-      <i class="bi bi-lock-fill" style="color:#f0883e"></i> Заблокировать
-    </button>
-    {% endif %}
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      {% if updated %}<span style="font-size:11px;color:var(--text2)">Обновлено:</span><span class="bk-mono" style="font-size:11px;color:var(--text2)">{{ updated }}</span>{% endif %}
+      <a href="/backups" class="bk-btn"><i class="bi bi-arrow-clockwise"></i> Обновить</a>
+      {% if unlocked %}
+      <button onclick="lockVault()" class="bk-btn">
+        <i class="bi bi-lock-fill" style="color:#f0883e"></i> Заблокировать
+      </button>
+      {% endif %}
+    </div>
   </div>
 
   {% if not backup_dir %}
@@ -70,98 +107,173 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
 
   {% else %}
 
-  <!-- Статус последнего бэкапа по машинам -->
-  <div class="bk-card">
-    <div class="bk-head">
-      <i class="bi bi-hdd-stack" style="color:var(--blue)"></i>
-      Последний бэкап —
-      {% if entries %}<span style="color:var(--blue);margin-left:4px">{{ entries[0].date }}</span>
-      {% else %}<span style="color:var(--text2);margin-left:4px">ещё не было</span>{% endif %}
-    </div>
-    <div class="bk-body">
-
-      <!-- Client1 Campus -->
-      <div class="bk-row">
-        <span class="bk-lbl">
-          <i class="bi bi-pc-display" style="margin-right:4px"></i>Client1 Campus
-        </span>
-        <span class="bk-val {% if machines.get('client1',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
-          {% if machines.get('client1') %}
-            {% if machines.client1.ok %}✅ {{ machines.client1.size_h }}{% else %}—{% endif %}
-          {% else %}—{% endif %}
-        </span>
-      </div>
-
-      <!-- Client2 Campus -->
-      <div class="bk-row">
-        <span class="bk-lbl">
-          <i class="bi bi-pc-display" style="margin-right:4px"></i>Client2 Campus
-        </span>
-        <span class="bk-val {% if machines.get('client2',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
-          {% if machines.get('client2') %}
-            {% if machines.client2.ok %}✅ {{ machines.client2.size_h }}{% else %}—{% endif %}
-          {% else %}—{% endif %}
-        </span>
-      </div>
-
-      <!-- City Garden Campus -->
-      <div class="bk-row">
-        <span class="bk-lbl">
-          <i class="bi bi-flower1" style="margin-right:4px"></i>City Garden Campus
-        </span>
-        <span class="bk-val {% if machines.get('cgtk',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
-          {% if machines.get('cgtk') %}
-            {% if machines.cgtk.ok %}✅ {{ machines.cgtk.size_h }}{% else %}—{% endif %}
-          {% else %}—{% endif %}
-        </span>
-      </div>
-
-      <!-- Сервер CentOS -->
-      <div class="bk-row">
-        <span class="bk-lbl">
-          <i class="bi bi-server" style="margin-right:4px"></i>Сервер (CentOS)
-        </span>
-        <span class="bk-val {% if machines.get('centos',{}).get('ok') %}bk-ok{% else %}bk-no{% endif %}">
-          {% if machines.get('centos') %}
-            {% if machines.centos.ok %}✅ {{ machines.centos.size_h }}{% else %}—{% endif %}
-          {% else %}—{% endif %}
-        </span>
-      </div>
-
-      <!-- Музыка -->
-      <div class="bk-row">
-        <span class="bk-lbl">
-          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Client1
-        </span>
-        <span class="bk-val bk-ok">
-          {{ music.get('music-client1', {}).get('size_h', '—') }}
-        </span>
-      </div>
-      <div class="bk-row">
-        <span class="bk-lbl">
-          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка Client2
-        </span>
-        <span class="bk-val bk-ok">
-          {{ music.get('music-client2', {}).get('size_h', '—') }}
-        </span>
-      </div>
-      <div class="bk-row">
-        <span class="bk-lbl">
-          <i class="bi bi-music-note-beamed" style="margin-right:4px"></i>Музыка City Garden
-        </span>
-        <span class="bk-val bk-ok">
-          {{ music.get('music-cgtk', {}).get('size_h', '—') }}
-        </span>
-      </div>
-
-      <!-- Папка -->
-      <div class="bk-row">
-        <span class="bk-lbl"><i class="bi bi-folder2" style="margin-right:4px"></i>Папка</span>
-        <span class="bk-val bk-mono bk-blue">{{ backup_dir }}</span>
-      </div>
-
+  <!-- Итог -->
+  <div class="bk-banner {{ health.level }}">
+    <i class="bi {% if health.level == 'ok' %}bi-shield-check{% elif health.level == 'warn' %}bi-exclamation-triangle-fill{% else %}bi-x-octagon-fill{% endif %}"></i>
+    <div style="min-width:0">
+      <h2>{% if health.level == 'ok' %}Всё в порядке: копии свежие, восстановление проверено{% elif health.level == 'warn' %}Есть замечания{% else %}Есть проблемы, которые нужно решить{% endif %}</h2>
+      {% for p in health.problems %}
+      <div class="bk-prob"><span class="d {{ p.level }}"></span><span>
+        {% if p.code == 'proxmox_down' %}Proxmox недоступен по сети — копии на него не записываются. Последняя успешная копия: <b>{{ p.when or '—' }}</b>
+        {% elif p.code == 'run_failed' %}Последний недельный бэкап не выполнен: <b>{{ p.when }}</b>
+        {% elif p.code == 'run_errors' %}Последний недельный бэкап прошёл с ошибками: <b>{{ p.when }}</b>
+        {% elif p.code == 'music_pending' %}Музыка (Kamran Music) ещё ни разу не копировалась на Proxmox — первая копия создастся при ближайшем недельном бэкапе, когда Proxmox будет доступен.
+        {% elif p.code == 'music_missing' %}Копия музыки на Proxmox не обновляется.
+        {% elif p.code == 'client2_missing' %}Машина client2 (Client2) не копируется на Proxmox: нет связи с ней.
+        {% elif p.code == 'github_sync_off' %}Автосинхронизация с GitHub не запущена — изменения не уходят на GitHub.
+        {% elif p.code == 'github_unpushed' %}На GitHub не отправлены последние изменения.
+        {% elif p.code == 'secrets_dirty' %}В репозитории campus-secrets есть несохранённые изменения (пароли, токены): на GitHub лежит старая версия. Файлов: <b>{{ p.n }}</b>
+        {% elif p.code == 'restore_verify' %}Проверка восстановления не пройдена: зашифрованные снимки не открываются.
+        {% elif p.code == 'local_db_old' %}Ежедневная копия БД на сервере устарела. Последняя: <b>{{ p.when or '—' }}</b>
+        {% elif p.code == 'status_stale' %}Данные страницы устарели: сборщик статуса не обновлял их больше 20 минут. Обновлено: <b>{{ p.when or '—' }}</b>
+        {% elif p.code == 'no_status' %}Нет данных о резервных копиях: сборщик статуса ещё не запускался.
+        {% endif %}
+      </span></div>
+      {% endfor %}
     </div>
   </div>
+
+  {% if rows %}
+  <!-- Что защищено и где -->
+  <div class="bk-card">
+    <div class="bk-head"><i class="bi bi-diagram-3" style="color:var(--blue)"></i> Что защищено и где лежит копия</div>
+    <div class="bk-scroll">
+    <table class="bk-mx">
+      <thead><tr><th>Что</th><th>GitHub</th><th>Proxmox</th><th>На сервере (каждый день)</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>
+          {% if r.key == 'code' %}Код, конфиги, документация
+          {% elif r.key == 'users' %}Пользователи, роли и права, настройки, машины
+          {% elif r.key == 'helpdesk' %}Helpdesk Ops (тикеты, вложения)
+          {% elif r.key == 'secrets' %}Секреты (пароли, токены, ключи)
+          {% elif r.key == 'services' %}Telegram-боты, службы, cron
+          {% elif r.key == 'media' %}Media — звонки и гимн<span class="sub">{% if st.media and st.media.size %}{{ fmt_sz(st.media.size) }}{% endif %}</span>
+          {% elif r.key == 'music' %}Музыка «Kamran Music»<span class="sub">{% if st.music and st.music.size %}{{ fmt_sz(st.music.size) }}{% endif %}</span>
+          {% elif r.key == 'client1' %}Кампусная машина Client1 (client1)
+          {% elif r.key == 'client2' %}Кампусная машина Client2 (client2)
+          {% endif %}
+        </td>
+        {% for col in ['github','proxmox','local'] %}
+        {% set c = r[col] %}
+        <td>
+          <div class="bk-c {{ c.state }}">
+            <span class="dot"></span>
+            <span>
+            {% if c.state == 'none' %}—
+            {% elif c.state == 'pending' %}Ждёт первой копии
+            {% elif c.state == 'ok' %}Актуально{% if c.when %}<span class="t">{{ c.when }}</span>{% endif %}
+            {% elif c.state == 'warn' %}{% if c.note == 'dirty' %}Есть несохранённые изменения{% else %}Проверьте{% endif %}{% if c.when %}<span class="t">{{ c.when }}</span>{% endif %}
+            {% else %}{% if c.when %}Не обновляется. Последняя копия:<span class="t">{{ c.when }}</span>{% else %}Копии нет{% endif %}
+            {% endif %}
+            </span>
+          </div>
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="bk-grid">
+    <!-- Proxmox -->
+    <div class="bk-card">
+      <div class="bk-head"><i class="bi bi-hdd-network" style="color:var(--blue)"></i> Proxmox — недельный бэкап</div>
+      <div class="bk-body">
+        <div class="bk-row"><span class="bk-lbl">Связь сейчас</span>
+          <span class="bk-val {% if px.reachable %}bk-ok{% else %}bk-bad-t{% endif %}">{% if px.reachable %}Доступен{% else %}Недоступен{% endif %} <span class="bk-mono">{{ px.host }}</span></span></div>
+        <div class="bk-row"><span class="bk-lbl">Последний запуск</span>
+          <span class="bk-val">{% if last_run %}<span class="bk-mono">{{ last_run.date }}</span> —
+            {% if last_run.result == 'ok' %}<span class="bk-ok-t">успешно</span>
+            {% elif last_run.result == 'errors' %}<span class="bk-warn-t">с ошибками</span>
+            {% elif last_run.result == 'unreachable' %}<span class="bk-bad-t">не выполнен: нет связи</span>
+            {% else %}<span class="bk-bad-t">прерван</span>{% endif %}
+            {% else %}—{% endif %}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Последний полностью успешный</span><span class="bk-val bk-mono">{{ px.last_full_ok or '—' }}</span></div>
+        {% if px.free_bytes %}<div class="bk-row"><span class="bk-lbl">Свободно на Proxmox</span><span class="bk-val">{{ fmt_sz(px.free_bytes) }}</span></div>{% endif %}
+        {% if px.sizes %}<div class="bk-row"><span class="bk-lbl">Занято на Proxmox</span>
+          <span class="bk-val bk-mono" style="font-size:11px">{% for k, v in px.sizes.items() %}{{ k }} {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</span></div>{% endif %}
+        {% if px.history %}
+        <div class="bk-lbl" style="margin-top:10px">История запусков</div>
+        <div class="bk-hist">{% for h in px.history %}<span class="bk-pill {{ h.result }}">{{ h.date[5:] }}</span>{% endfor %}</div>
+        {% endif %}
+        {% if last_run and last_run.steps %}
+        <div class="bk-lbl" style="margin-top:10px">Шаги последнего запуска</div>
+        {% for stp in last_run.steps %}<div class="bk-step"><span class="{% if stp.ok %}bk-ok-t{% else %}bk-bad-t{% endif %}">{% if stp.ok %}✓{% else %}✗{% endif %}</span><span class="m">{{ stp.name }}</span></div>{% endfor %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- GitHub -->
+    <div class="bk-card">
+      <div class="bk-head"><i class="bi bi-github" style="color:var(--blue)"></i> GitHub — автосинхронизация</div>
+      <div class="bk-body">
+        <div class="bk-row"><span class="bk-lbl">Автосинхронизатор</span>
+          <span class="bk-val {% if gh.live_sync %}bk-ok{% else %}bk-bad-t{% endif %}">{% if gh.live_sync %}Работает{% else %}Остановлен{% endif %}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Репозиторий</span><span class="bk-val bk-mono bk-blue">{{ gh.repo }}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Последний коммит</span><span class="bk-val bk-mono" style="font-size:11px">{{ fmt_ts(gh.last_commit_ts) or '—' }}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Последняя отправка на GitHub</span><span class="bk-val bk-mono" style="font-size:11px">{{ fmt_ts(gh.last_push_ts) or '—' }}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Ждут отправки (коммитов)</span><span class="bk-val">{{ gh.unpushed if gh.unpushed is not none else '—' }}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Снимок БД веб-панели</span><span class="bk-val bk-mono" style="font-size:11px">{{ fmt_ts(st.snapshots.webui) or '—' }}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Снимок Helpdesk Ops</span><span class="bk-val bk-mono" style="font-size:11px">{{ fmt_ts(st.snapshots.helpdesk) or '—' }}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Права ролей (roles.json)</span><span class="bk-val bk-mono" style="font-size:11px">{{ fmt_ts(st.snapshots.roles) or '—' }}</span></div>
+        {% if st.secrets_repo and st.secrets_repo.exists %}
+        <div class="bk-row"><span class="bk-lbl">campus-secrets: последний коммит</span><span class="bk-val bk-mono {% if st.secrets_repo.dirty %}bk-warn-t{% endif %}" style="font-size:11px">{{ fmt_ts(st.secrets_repo.last_commit_ts) or '—' }}</span></div>
+        {% endif %}
+        <div class="bk-note">Каждые 45 секунд проверяется, что изменилось, и уходит на GitHub вместе с журналом «что и когда менялось» (docs/journal).</div>
+      </div>
+    </div>
+
+    <!-- Локальные копии БД -->
+    <div class="bk-card">
+      <div class="bk-head"><i class="bi bi-database" style="color:var(--blue)"></i> Ежедневные копии БД на сервере</div>
+      <div class="bk-body">
+        {% if st.local_db and st.local_db.days %}
+        {% for d in st.local_db.days[:7] %}
+        <div class="bk-row"><span class="bk-lbl bk-mono">{{ d.date }}</span>
+          <span class="bk-val" style="font-size:12px">{{ fmt_sz(d.total) }} <span class="bk-lbl">· файлов:</span> {{ d.files|length }}</span></div>
+        {% endfor %}
+        <div class="bk-note">Всего дней хранится: <b>{{ st.local_db.count }}</b>. Папка: <span class="bk-mono">{{ st.local_db.dir }}</span></div>
+        {% else %}<div class="bk-empty">Копий ещё нет</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- Готовность к восстановлению -->
+    <div class="bk-card">
+      <div class="bk-head"><i class="bi bi-life-preserver" style="color:var(--blue)"></i> Готовность к восстановлению</div>
+      <div class="bk-body">
+        {% set vf = st.verify or {} %}
+        {% macro chk(ok, label) %}<div class="bk-step"><span class="{% if ok %}bk-ok-t{% else %}bk-bad-t{% endif %}">{% if ok %}✓{% else %}✗{% endif %}</span><span>{{ label }}</span></div>{% endmacro %}
+                {{ chk(vf.key_present, 'Ключ шифрования снимков на месте') }}
+        {{ chk(vchecks.webui, 'Снимок БД веб-панели открывается (пользователи, права, настройки)') }}
+        {{ chk(vchecks.helpdesk, 'Снимок Helpdesk Ops открывается') }}
+        {{ chk(vchecks.uploads, 'Вложения Helpdesk Ops открываются') }}
+        {% if vf.checked %}<div class="bk-note">Проверено: <span class="bk-mono">{{ fmt_ts(vf.checked) }}</span> (раз в 6 часов)</div>{% endif %}
+        <div class="bk-lbl" style="margin-top:12px">Команда восстановления на новой машине</div>
+        <pre class="bk-code" style="margin-top:6px">export GH_TOKEN=ghp_...
+git clone --depth 1 https://${GH_TOKEN}@github.com/KAbumislimov/campus-infra.git /tmp/ci \
+  &amp;&amp; bash /tmp/ci/projects/campus-infra/restore.sh</pre>
+        <div class="bk-note">Пошаговая инструкция — файл README.md в корне репозитория на GitHub:
+          <a class="bk-blue" href="https://github.com/KAbumislimov/campus-infra#readme" target="_blank" rel="noopener">github.com/KAbumislimov/campus-infra</a>.
+          Проверка без изменений: <span class="bk-mono">bash ~/projects/campus-infra/restore.sh --verify</span></div>
+      </div>
+    </div>
+
+    <!-- Расписание -->
+    <div class="bk-card">
+      <div class="bk-head"><i class="bi bi-calendar-check" style="color:var(--blue)"></i> Расписание</div>
+      <div class="bk-body">
+        <div class="bk-row"><span class="bk-lbl">GitHub — изменения</span><span class="bk-val" style="font-size:12px">Каждые 45 секунд</span></div>
+        <div class="bk-row"><span class="bk-lbl">Копия БД на сервере</span><span class="bk-val" style="font-size:12px">{% set j = schedule.get('db') %}{% if j %}Каждый день, {{ j.time }}{% else %}—{% endif %}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Proxmox — машины, музыка, конфиги</span><span class="bk-val" style="font-size:12px">{% set j = schedule.get('proxmox') %}{% if j %}{% if j.dow in ('*',) %}Каждый день{% else %}{{ DOW[j.dow|int] }}{% endif %}, {{ j.time }}{% else %}—{% endif %}</span></div>
+        <div class="bk-row"><span class="bk-lbl">Сводка на этой странице</span><span class="bk-val" style="font-size:12px">Каждые 5 минут</span></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Разблокировка файлов -->
   {% if not unlocked %}
@@ -187,7 +299,7 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
   {% if entries %}
   <div class="bk-card">
     <div class="bk-head">
-      <i class="bi bi-folder2-open" style="color:var(--blue)"></i> Архивы конфигураций
+      <i class="bi bi-folder2-open" style="color:var(--blue)"></i> Архивы старого формата
     </div>
     <div class="bk-body" style="padding-top:6px">
       {% for entry in entries %}
@@ -198,7 +310,6 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
           {{ entry.date }}
         </span>
         <span style="font-size:11px;color:var(--text2)">{{ entry.total_h }}</span>
-        {% if loop.first %}<span class="bk-badge">актуальный</span>{% endif %}
         <i class="bi bi-chevron-down" id="chev-{{ entry.date }}"
            style="margin-left:auto;font-size:10px;color:var(--text2);transition:transform .2s;
            {% if loop.first %}transform:rotate(180deg){% endif %}"></i>
@@ -235,26 +346,7 @@ pre.bk-code{background:var(--bg3);border:1px solid var(--border);border-radius:8
       {% endfor %}
     </div>
   </div>
-  {% else %}
-  <div class="bk-card">
-    <div class="bk-empty">
-      <i class="bi bi-calendar-x" style="font-size:26px;display:block;margin-bottom:6px;opacity:.4"></i>
-      <span style="color:var(--text)">Бэкапов ещё нет</span><br>
-      <span style="font-size:11px">Первый запустится в понедельник в 07:00</span>
-    </div>
-  </div>
   {% endif %}
-
-  <!-- Восстановление -->
-  <div class="bk-card">
-    <div class="bk-head">
-      <i class="bi bi-arrow-repeat" style="color:var(--blue)"></i> Восстановление из GitHub
-    </div>
-    <div class="bk-body">
-      <pre class="bk-code">git clone https://github.com/KAbumislimov/campus-infra.git
-cd campus-infra && GH_TOKEN=ghp_xxx bash bootstrap.sh all</pre>
-    </div>
-  </div>
 
   <!-- Администратор -->
   {% if admin_emails %}

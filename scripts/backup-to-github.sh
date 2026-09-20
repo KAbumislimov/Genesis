@@ -35,7 +35,7 @@ python3 "$REPO_DIR/campus-infra/scripts/update_journal.py" >>"$LOG" 2>&1 || true
 # (Desktop, Downloads, xlsx-отчёты, посторонние git-репозитории вроде
 # nginx-ui и т.п.). ops-journal/raw/ гитигнорится внутри самого ops-journal —
 # сюда попадает только уже очищенный (sanitize.py) ops-journal/clean/.
-git add campus-infra helpdesk-ops ops-journal
+git add campus-infra helpdesk-ops ops-journal homelab/backup   # homelab/backup — campus-backup.sh (недельный бэкап на Proxmox)
 
 if git diff --cached --quiet; then
     log "Изменений нет, коммит не нужен"
