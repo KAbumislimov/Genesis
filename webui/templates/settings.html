@@ -146,6 +146,69 @@
 })();
 </script>
 
+{% if can('login_style') %}
+<!-- ═══ СТАРТОВАЯ СТРАНИЦА ВХОДА: выбор из всех вариантов (только с привилегией «Стартовая страница входа») ═══ -->
+<div class="st-card" id="login-style" style="margin-bottom:20px">
+  <div class="st-head"><i class="bi bi-door-open" style="color:var(--blue)"></i> Стартовая страница входа</div>
+  <div class="st-body">
+    <div class="st-sub" style="margin-bottom:14px">Так выглядит страница входа для всех сотрудников. Нажмите на картинку — предпросмотр откроется в новой вкладке, кнопка «Сделать стартовой» применяет вариант сразу.</div>
+    <div class="ls-grid">
+      {% for k, n, d in login_styles %}
+      <div class="ls-card{{ ' on' if login_style_current == k }}" data-k="{{ k }}">
+        <a class="ls-img" href="{{ url_for('login') }}?style={{ k }}" target="_blank" rel="noopener"><img loading="lazy" src="{{ url_for('static', filename='login-previews/' ~ k ~ '.jpg') }}?v=1" alt="{{ n }}"><span class="ls-num">{{ '★' if k == 'classic' else k }}</span></a>
+        <b>{{ n }}</b>
+        <small>{{ d }}</small>
+        <div class="ls-act">
+          <span class="ls-now"{% if login_style_current != k %} hidden{% endif %}>Сейчас стартовая</span>
+          <button type="button" class="ls-set"{% if login_style_current == k %} hidden{% endif %}>Сделать стартовой</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="st-sub" id="ls-msg" style="margin-top:12px;min-height:20px"></div>
+  </div>
+</div>
+<style>
+.ls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.ls-card{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg3)}
+.ls-card.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 22%,transparent)}
+.ls-img{position:relative;display:block;border-radius:9px;overflow:hidden;aspect-ratio:16/10;background:#0a0f1e}
+.ls-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s}
+.ls-img:hover img{transform:scale(1.04)}
+.ls-num{position:absolute;left:8px;top:8px;min-width:26px;height:26px;padding:0 7px;border-radius:13px;background:rgba(0,0,0,.65);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
+.ls-card b{font-size:14.5px}
+.ls-card small{color:var(--text2);font-size:12.5px;line-height:1.4;min-height:35px}
+.ls-act{display:flex;align-items:center;min-height:32px}
+.ls-set{padding:6px 12px;border-radius:8px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-weight:700;font-size:12.5px;cursor:pointer}
+.ls-set:hover{background:var(--blue);color:#fff}
+.ls-now{color:var(--green);font-weight:800;font-size:12.5px}
+</style>
+<script>
+(function(){
+  var msg = document.getElementById('ls-msg');
+  document.querySelectorAll('#login-style .ls-set').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var card = btn.closest('.ls-card'), k = card.dataset.k;
+      btn.disabled = true;
+      fetch('/api/login-style', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({style: k})})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          btn.disabled = false;
+          if (!d.ok) { msg.textContent = '⚠ ' + (d.error || 'Ошибка'); return; }
+          document.querySelectorAll('#login-style .ls-card').forEach(function(c){
+            var on = c.dataset.k === d.current;
+            c.classList.toggle('on', on);
+            c.querySelector('.ls-now').hidden = !on; c.querySelector('.ls-set').hidden = on;
+          });
+          msg.textContent = '✓ Сохранено — страница входа обновлена для всех';
+        })
+        .catch(function(){ btn.disabled = false; msg.textContent = '⚠ Нет связи с сервером'; });
+    });
+  });
+})();
+</script>
+{% endif %}
+
 <div class="st-grid">
 
 <!-- ═══ LEFT COLUMN ═══════════════════════════════════════════════ -->

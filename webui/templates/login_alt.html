@@ -331,6 +331,24 @@ a{color:var(--acc)}
 [data-theme=light] .v8 .sign2,[data-theme=light] .v17 .sign2{-webkit-text-stroke-color:#0044fd}
 [data-theme=light] .v19 .tt .l1{-webkit-text-stroke-color:#36296e}[data-theme=light] .v19 .tt .l2{-webkit-text-stroke-color:#0044fd}
 [data-theme=light] .v11 .type{-webkit-text-stroke-color:#36296e}[data-theme=light] .v9 .txt h2{-webkit-text-stroke-color:#36296e}
+/* 12: печатающаяся надпись (из варианта 11); форма появляется после неё */
+.v12 .type{font:800 clamp(26px,5vw,52px)/1.2 ui-monospace,Menlo,monospace;min-height:1.3em;color:var(--tx)}
+.v12 .type::after{content:'';display:inline-block;width:.09em;height:1em;background:var(--acc);margin-left:.1em;vertical-align:-.1em;animation:blink 1s steps(1) infinite}
+[data-theme=light] .v12 .type{color:#36296e}
+.v12 .gcard.rv,.v12 .replay.rv{opacity:0;transform:translateY(20px);pointer-events:none}
+.v12.typed .gcard.rv,.v12.typed .replay.rv{opacity:1;transform:none;pointer-events:auto}
+/* тёмная тема: крупные надписи закрашены (не «дырявые»): заливка цветом логотипа + белый контур */
+[data-theme=dark] .outline{color:#4b3ba6;-webkit-text-stroke:2px #fff}
+[data-theme=dark] .outline.leg{color:#2b63ff}
+[data-theme=dark] .v8 .sign,[data-theme=dark] .v17 .sign{color:#3d2f8f;-webkit-text-stroke:2.5px #fff}
+[data-theme=dark] .v8 .sign2,[data-theme=dark] .v17 .sign2{color:var(--acc);-webkit-text-stroke:0}
+[data-theme=dark] .v16 .n1{color:#0e5f73}[data-theme=dark] .v16 .n2{color:#701f63}
+[data-theme=dark] .v19 .tt .l1{color:#4b3ba6;-webkit-text-stroke:2.5px #fff}[data-theme=dark] .v19 .tt .l2{color:#2b63ff;-webkit-text-stroke:2.5px #fff}
+[data-theme=dark] .v9 .txt h2{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:0}
+[data-theme=dark] .v11 .type{color:var(--tx);-webkit-text-stroke:0}
+.v9 .bg,.v18 .mq{color:color-mix(in srgb,var(--tx) 5%,transparent)}
+/* блик логотипа (вариант 11) только по самому логотипу, без светлого прямоугольника вокруг */
+.v11 .lw::after{-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 /* светлая тема: крупные надписи — сплошь цвета логотипов (Media #36296e, LEG #0044fd), без контура-с-пустотой */
 [data-theme=light] .outline{color:#36296e;-webkit-text-stroke-color:#36296e}
 [data-theme=light] .outline.leg{color:#0044fd;-webkit-text-stroke-color:#0044fd}
@@ -517,7 +535,7 @@ a{color:var(--acc)}
     <div class="dial" data-k="leg"><i class="tk"></i><i class="rg r2"></i><i class="fc"></i><div class="mos"></div><img class="lg logo-o" src="{{ url_for('static', filename='leg.logo.crop.png') }}" alt="LEG"></div>
   </div>
   <div class="wm outline rv">Media School</div>
-  <div class="slog rv d2" id="slog"></div>
+  <div class="type rv d2" id="type"></div>
   <div class="gcard rv d3"><h1 data-t="title">Вход в систему</h1>{{ form() }}</div>
   <button type="button" class="replay rv d4" id="rp12" data-t="replay">↺ Повторить</button>
 </main>
@@ -578,9 +596,9 @@ a{color:var(--acc)}
 
 
 
-<div class="pv" id="pv"><span style="color:var(--sub)" data-t="variants">Варианты</span>
+{% if preview %}<div class="pv" id="pv"><span style="color:var(--sub)" data-t="variants">Варианты</span>
   {% for n in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19'] %}<a href="{{ url_for('login') }}?style={{ n }}" class="{{ 'on' if n == style else '' }}">{{ n }}</a>{% endfor %}
-  <a href="{{ url_for('login') }}" data-t="std">Стандартная</a></div>
+  <a href="{{ url_for('login') }}?style=classic" data-t="std">Стандартная</a></div>{% endif %}
 
 <script>
 var LANGS = {
@@ -627,19 +645,20 @@ function applyLang(l){
   document.querySelectorAll('#langseg button').forEach(function(b){ b.classList.toggle('on', b.dataset.l === l); });
   var le = $('#langled'); if (le) le.textContent = l.toUpperCase();
   var eye = $('#eye'); if (eye) eye.textContent = T($('#password').type === 'password' ? 'show' : 'hide');
-  tickClock(); renderTip(); renderNews(); step4Refresh(); renderSlog(); runIntro(); renderMq();
+  tickClock(); renderTip(); renderNews(); step4Refresh(); renderSlog(); runIntro(); renderMq(); if ($('#v12') && $('#v12').classList.contains('ready')) runType12();
   document.title = 'Media Audio — ' + T('title');
 }
 function swapLogos(t){
   document.querySelectorAll('img.logo-o').forEach(function(im){
     if (!im.dataset.o) im.dataset.o = im.getAttribute('src');
     var o = im.dataset.o;
-    im.setAttribute('src', t === 'light' ? o : o.replace(/\.logo\.(crop|t)\.png/, function(m, k){ return k === 'crop' ? '.logo.cropline.png?v=3' : '.logo.tline.png?v=3'; }));
+    im.setAttribute('src', t === 'light' ? o : o.replace(/\.logo\.(crop|t)\.png/, function(m, k){ return k === 'crop' ? '.logo.cropline.png?v=5' : '.logo.tline.png?v=5'; }));
   });
 }
+function setShineMask(){ document.querySelectorAll('.v11 .lw').forEach(function(l){ var im = l.querySelector('img'); if (im) l.style.setProperty('--m', 'url("' + im.getAttribute('src') + '")'); }); }
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('login_theme', t); } catch(e) {}
-  swapLogos(t);
+  swapLogos(t); setShineMask();
   document.querySelectorAll('#themeseg button').forEach(function(b){ b.classList.toggle('on', b.dataset.th === t); });
 }
 document.querySelectorAll('#langseg button').forEach(function(b){ b.onclick = function(){ applyLang(b.dataset.l); }; });
@@ -750,7 +769,7 @@ document.querySelectorAll('.v10 .lc').forEach(function(c){
 /* 11 · печатная надпись, потом появляется форма */
 var introTimer = null;
 function runIntro(){
-  var t = $('#type'); if (!t) return;
+  var t = $('#type'); if (!t || !$('#gc')) return;          // только вариант 11 (у 12 своя печать — runType12)
   clearTimeout(introTimer); var gc = $('#gc'); gc.classList.remove('show');
   var lines = T('intro'), li = 0, ci = 0, del = false;
   function step(){
@@ -808,8 +827,33 @@ function runMosaic(){
     }); });
     mosTimers.push(setTimeout(function(){ d.classList.add('done'); mos.style.display = 'none'; }, 2450 + di * 300));
   });
-  mosTimers.push(setTimeout(function(){ root.classList.add('ready'); }, reduce ? 0 : 3050));
+  mosTimers.push(setTimeout(function(){ root.classList.add('ready'); runType12(); }, reduce ? 0 : 3050));
 }
+
+/* 12 · печатающаяся надпись после сборки логотипов; форма — после неё (любое нажатие/клик показывает форму сразу) */
+var typeTimer = null;
+function revealForm12(){ var root = $('#v12'); if (!root || root.classList.contains('typed')) return; root.classList.add('typed'); var u = $('#username'); if (u) setTimeout(function(){ try { u.focus(); } catch(e) {} }, 400); }
+function runType12(){
+  var t = $('#type'), root = $('#v12'); if (!t || !root) return;
+  clearTimeout(typeTimer); root.classList.remove('typed'); t.textContent = '';
+  var lines = T('intro'), li = 0, ci = 0, del = false;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { t.textContent = lines[lines.length - 1]; revealForm12(); return; }
+  function step(){
+    var line = lines[li];
+    if (!del) {
+      ci++; t.textContent = line.slice(0, ci);
+      if (ci >= line.length) { if (li === lines.length - 1) { typeTimer = setTimeout(revealForm12, 500); return; } del = true; typeTimer = setTimeout(step, 550); return; }
+      typeTimer = setTimeout(step, 46);
+    } else {
+      ci--; t.textContent = line.slice(0, ci);
+      if (ci <= 0) { del = false; li++; }
+      typeTimer = setTimeout(step, 22);
+    }
+  }
+  step();
+}
+['keydown', 'pointerdown'].forEach(function(ev){ document.addEventListener(ev, function(e){ if ($('#v12') && $('#v12').classList.contains('ready') && !(e.target.closest && e.target.closest('.top, .pv'))) { clearTimeout(typeTimer); if ($('#type')) $('#type').textContent = T('intro')[T('intro').length - 1]; revealForm12(); } }); });
+
 if ($('#rp12')) $('#rp12').onclick = runMosaic;
 
 applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');

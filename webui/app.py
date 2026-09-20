@@ -747,6 +747,7 @@ PERM_CATALOG = [
     ('content', 'Контент и оформление', 'bi-palette', [
         ('announcements_manage', 'Доска объявлений',           'Создание, закрепление и удаление объявлений'),
         ('appearance_manage',    'Обои, эмодзи и тема',        'Обои, эмодзи и тема по умолчанию для всех'),
+        ('login_style',          'Стартовая страница входа',   'Выбор внешнего вида страницы входа для всех (Настройки → «Стартовая страница входа»)'),
         ('telegram_settings',    'Уведомления в Telegram',     'Настройка оповещений в Telegram'),
     ]),
     ('admin', 'Администрирование', 'bi-shield-lock', [
@@ -1553,18 +1554,73 @@ def _before():
         except Exception:
             pass
 
+# Варианты стартовой страницы входа. 'classic' — прежняя страница с пазлом (templates/login.html), 1..19 — templates/login_alt.html.
+# Выбор хранится в settings.login_style (по умолчанию «12 — Герб-круг» с печатающейся надписью); менять может только тот, у кого есть привилегия login_style.
 _LOGIN_STYLES = tuple(str(i) for i in range(1, 20))
+_LOGIN_STYLE_KEYS = ('classic',) + _LOGIN_STYLES
+_LOGIN_STYLE_DEFAULT = '12'
+LOGIN_STYLE_INFO = [
+    ('classic', 'Классическая', 'Прежняя страница: логотипы собираются из пазла'),
+    ('1',  'Эфир',           'Равнайзер на фоне, часы Баку, приветствие'),
+    ('2',  'Пульт',          'Светодиоды сервера и Caps Lock, часы на табло'),
+    ('3',  'Сцена',          'Бренд-панель с логотипами и подсказками'),
+    ('4',  'Шаги',           'Сначала логин, потом пароль; помнит прошлый логин'),
+    ('5',  'Центр',          'Что нового, горячие клавиши, быстрые ссылки'),
+    ('6',  'Герб',           'Большой логотип, контурная надпись, лозунги'),
+    ('7',  'Дуэт',           'Media и LEG по бокам, форма посередине'),
+    ('8',  'Неон',           'Гигантская неоновая надпись MEDIA'),
+    ('9',  'Плакат',         'Огромные слова на фоне, лозунг справа'),
+    ('10', 'Витрина',        'Две карточки с логотипами, форма в одну строку'),
+    ('11', 'Интро',          'Логотип с бликом, печатающаяся надпись, затем форма'),
+    ('12', 'Герб-круг',      'Два вращающихся круга (Media и LEG), сборка из мозаики, печатающаяся надпись'),
+    ('13', 'Прожектор',      'Логотип в луче света с отражением'),
+    ('14', 'Дуэт сверху',    'Оба логотипа в ряд над формой'),
+    ('15', 'Дуэт-диагональ', 'Экран разрезан по диагонали: Media и LEG'),
+    ('16', 'Неон-два',       'MEDIA и SCHOOL двумя неонами, светящаяся рамка'),
+    ('17', 'Неон-волна',     'Звуковые волны за гигантской надписью'),
+    ('18', 'Плакат-ленты',   'Бегущие строки на фоне'),
+    ('19', 'Плакат-сцена',   'Гигантские MEDIA / SCHOOL слева, форма справа'),
+]
+
+def _login_style_current():
+    try:
+        with get_db() as c:
+            row = c.execute("SELECT value FROM settings WHERE key='login_style'").fetchone()
+        if row and row['value'] in _LOGIN_STYLE_KEYS:
+            return row['value']
+    except Exception:
+        pass
+    return _LOGIN_STYLE_DEFAULT
 
 def _render_login():
-    """Страница входа: стандартная или один из вариантов предпросмотра (?style=1..5 — см. templates/login_alt.html)."""
+    """Страница входа: выбранная админом (по умолчанию №11) или предпросмотр по ?style=classic|1..19."""
     st = request.args.get('style', '')
-    if st in _LOGIN_STYLES:
-        return render_template('login_alt.html', style=st)
-    return render_template('login.html')
+    preview = st in _LOGIN_STYLE_KEYS
+    if not preview:
+        st = _login_style_current()
+    if st == 'classic':
+        return render_template('login.html')
+    return render_template('login_alt.html', style=st, preview=preview)
+
+@app.route('/api/login-style', methods=['GET', 'POST'])
+@login_required
+def api_login_style():
+    """Выбор стартовой страницы входа — только с привилегией login_style (у админа есть всегда)."""
+    if not has_perm('login_style'):
+        return jsonify({'ok': False, 'error': 'Нет прав'}), 403
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'current': _login_style_current(), 'styles': [k for k, _, _ in LOGIN_STYLE_INFO]})
+    st = str((request.get_json(silent=True) or {}).get('style', ''))
+    if st not in _LOGIN_STYLE_KEYS:
+        return jsonify({'ok': False, 'error': 'Неизвестный вариант'}), 400
+    with get_db() as c:
+        c.execute("INSERT OR REPLACE INTO settings (key,value) VALUES ('login_style',?)", (st,))
+    log_action(current_user.username, 'login_style', 'webui', st)
+    return jsonify({'ok': True, 'current': st})
 
 @app.route('/login', methods=['GET','POST'])
 def login():
-    if request.method == 'GET' and request.args.get('style', '') in _LOGIN_STYLES:
+    if request.method == 'GET' and request.args.get('style', '') in _LOGIN_STYLE_KEYS:
         return _render_login()            # предпросмотр вариантов доступен и при открытой сессии
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -4124,7 +4180,8 @@ def settings_page():
         if s:
             silence = s['value'] == '1'
     return render_template('settings.html', tg_settings=tg_settings, silence=silence,
-                           ui_variants=UI_VARIANT_INFO, ui_current=(_effective_ui() or 'off'), ui_palettes=UI_PALETTES)
+                           ui_variants=UI_VARIANT_INFO, ui_current=(_effective_ui() or 'off'), ui_palettes=UI_PALETTES,
+                           login_styles=LOGIN_STYLE_INFO, login_style_current=_login_style_current())
 
 @app.route('/security')
 @perm_required('security_view')
