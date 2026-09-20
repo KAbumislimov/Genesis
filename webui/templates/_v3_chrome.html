@@ -11,29 +11,36 @@
     <li><a class="rail-a {% if request.endpoint in ('dashboard_v3','dashboard_v4','dashboard_v5','dashboard_v6','dashboard_v7') %}on{% endif %}" href="{{ player_home|default(url_for('dashboard_v3')) }}"><i class="bi bi-play-circle"></i><span class="rail-label">Плеер</span></a></li>
     <li><a class="rail-a {% if request.endpoint=='tracks' %}on{% endif %}" href="{{ url_for('tracks') }}"><i class="bi bi-collection-play"></i><span class="rail-label">Библиотека</span></a></li>
     <li><a class="rail-a {% if request.endpoint=='announcements_page' %}on{% endif %}" href="{{ url_for('announcements_page') }}"><i class="bi bi-megaphone"></i><span class="rail-label">Объявления</span></a></li>
-    {% if current_user.role in ('admin','staff','helpdesk','eventmanager') %}
+    {% if can('upload') %}
     <li><a class="rail-a {% if request.endpoint=='upload_page' %}on{% endif %}" href="{{ url_for('upload_page') }}"><i class="bi bi-cloud-upload"></i><span class="rail-label">Загрузка</span></a></li>
+    {% endif %}
+    {% if can('mic') %}
     <li><a class="rail-a {% if request.endpoint=='announce_page' %}on{% endif %}" href="{{ url_for('announce_page') }}"><i class="bi bi-mic"></i><span class="rail-label">Голос в эфир</span></a></li>
     {% endif %}
-    {% if current_user.role in ('admin','staff') %}
+    {% if can('monitor_view') %}
     <li><a class="rail-a {% if request.endpoint=='monitor_page' %}on{% endif %}" href="{{ url_for('monitor_page') }}"><i class="bi bi-activity"></i><span class="rail-label">Мониторинг</span></a></li>
+    {% endif %}
+    {% if can('cheatsheet') %}
     <li><a class="rail-a {% if request.endpoint=='cheatsheet_page' %}on{% endif %}" href="{{ url_for('cheatsheet_page') }}"><i class="bi bi-journal-code"></i><span class="rail-label">Шпаргалка</span></a></li>
     {% endif %}
-    {% if current_user.role == 'admin' %}
+    {% if can('users_manage') or can('roles_manage') or can('cron_view') or can('schedule_edit') or can('activity_log') or can('backups') or can('machines_manage') %}
     <li class="rail-sep"><span class="rail-label">Администрирование</span></li>
-    <li><a class="rail-a {% if request.endpoint=='admin' %}on{% endif %}" href="{{ url_for('admin') }}"><i class="bi bi-people"></i><span class="rail-label">Пользователи</span></a></li>
-    <li><a class="rail-a {% if request.endpoint=='admin_cron' %}on{% endif %}" href="{{ url_for('admin_cron') }}"><i class="bi bi-alarm"></i><span class="rail-label">Крон</span></a></li>
-    <li><a class="rail-a {% if request.endpoint=='admin_schedule' %}on{% endif %}" href="{{ url_for('admin_schedule') }}"><i class="bi bi-calendar-week"></i><span class="rail-label">Расписание</span></a></li>
-    <li><a class="rail-a {% if request.endpoint=='admin_activity' %}on{% endif %}" href="{{ url_for('admin_activity') }}"><i class="bi bi-journal-text"></i><span class="rail-label">Лог активности</span></a></li>
-    <li><a class="rail-a {% if request.endpoint=='backups_page' %}on{% endif %}" href="{{ url_for('backups_page') }}"><i class="bi bi-hdd-stack"></i><span class="rail-label">Бэкапы</span></a></li>
-    <li><a class="rail-a {% if request.endpoint=='machines_page' %}on{% endif %}" href="{{ url_for('machines_page') }}"><i class="bi bi-pc-display"></i><span class="rail-label">Машины</span></a></li>
+    {% endif %}
+    {% if can('users_manage') %}<li><a class="rail-a {% if request.endpoint=='admin' %}on{% endif %}" href="{{ url_for('admin') }}"><i class="bi bi-people"></i><span class="rail-label">Пользователи</span></a></li>{% endif %}
+    {% if can('roles_manage') %}<li><a class="rail-a {% if request.endpoint=='admin_roles' %}on{% endif %}" href="{{ url_for('admin_roles') }}"><i class="bi bi-shield-check"></i><span class="rail-label">Роли и права</span></a></li>{% endif %}
+    {% if can('cron_view') %}<li><a class="rail-a {% if request.endpoint=='admin_cron' %}on{% endif %}" href="{{ url_for('admin_cron') }}"><i class="bi bi-alarm"></i><span class="rail-label">Крон</span></a></li>{% endif %}
+    {% if can('schedule_edit') %}<li><a class="rail-a {% if request.endpoint=='admin_schedule' %}on{% endif %}" href="{{ url_for('admin_schedule') }}"><i class="bi bi-calendar-week"></i><span class="rail-label">Расписание</span></a></li>{% endif %}
+    {% if can('activity_log') %}<li><a class="rail-a {% if request.endpoint=='admin_activity' %}on{% endif %}" href="{{ url_for('admin_activity') }}"><i class="bi bi-journal-text"></i><span class="rail-label">Лог активности</span></a></li>{% endif %}
+    {% if can('backups') %}<li><a class="rail-a {% if request.endpoint=='backups_page' %}on{% endif %}" href="{{ url_for('backups_page') }}"><i class="bi bi-hdd-stack"></i><span class="rail-label">Бэкапы</span></a></li>{% endif %}
+    {% if can('machines_manage') %}<li><a class="rail-a {% if request.endpoint=='machines_page' %}on{% endif %}" href="{{ url_for('machines_page') }}"><i class="bi bi-pc-display"></i><span class="rail-label">Машины</span></a></li>{% endif %}
+    {% if can('users_manage') %}
     <li><a class="rail-a" href="http://10.10.4.120:3000" target="_blank" rel="noopener"><i class="bi bi-bar-chart-line"></i><span class="rail-label">Grafana</span></a></li>
     <li><a class="rail-a" href="{{ url_for('helpdesk_sso') }}" target="_blank" rel="noopener"><i class="bi bi-life-preserver"></i><span class="rail-label">HelpDesk</span></a></li>
     {% endif %}
     <li class="rail-sep"><span class="rail-label">Сервис</span></li>
     <li><a class="rail-a {% if request.endpoint=='qr_page' %}on{% endif %}" href="{{ url_for('qr_page') }}"><i class="bi bi-qr-code"></i><span class="rail-label">QR</span></a></li>
     <li><a class="rail-a {% if request.endpoint=='settings_page' %}on{% endif %}" href="{{ url_for('settings_page') }}"><i class="bi bi-gear"></i><span class="rail-label">Настройки</span></a></li>
-    {% if current_user.role == 'admin' %}
+    {% if can('security_view') %}
     <li><a class="rail-a {% if request.endpoint=='security_page' %}on{% endif %}" href="{{ url_for('security_page') }}"><i class="bi bi-shield-lock"></i><span class="rail-label">Безопасность</span></a></li>
     {% endif %}
   </ul>
@@ -53,7 +60,7 @@
         <button type="button" class="lang-btn" data-lang="az" onclick="setLang('az')">AZ</button>
         <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
       </div>
-      {% if current_user.role in ('admin','staff') %}<button class="tb-btn" id="v3-times-btn" type="button" title="Время на машинах" aria-label="Время на машинах"><i class="bi bi-clock-history"></i></button>{% endif %}
+      {% if can('timesync') or can('monitor_view') %}<button class="tb-btn" id="v3-times-btn" type="button" title="Время на машинах" aria-label="Время на машинах"><i class="bi bi-clock-history"></i></button>{% endif %}
       <div class="pal" id="v3-pal" role="group" aria-label="Палитра">
         <button type="button" data-pal="amber" title="Янтарь" aria-label="Янтарь"></button>
         <button type="button" data-pal="aurora" title="Аврора" aria-label="Аврора"></button>

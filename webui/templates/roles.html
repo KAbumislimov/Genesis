@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Роли и привилегии — Campus Audio{% endblock %}
+
+{% block extra_head %}
+<style>
+.rp-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.rp-head h1{font-size:24px;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:12px}
+.rp-head h1 i{color:var(--blue)}
+.rp-sub{font-size:13px;color:var(--muted);max-width:720px}
+.rp-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rp-search{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:100px;padding:0 14px;height:40px;min-width:240px}
+.rp-search input{background:none;border:none;outline:none;color:var(--text);flex:1;font:inherit;font-size:13.5px}
+.rp-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:100px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-weight:600;font-size:13px;cursor:pointer;transition:.2s}
+.rp-btn:hover{border-color:var(--blue);color:var(--blue)}
+.rp-btn.danger:hover{border-color:var(--red);color:var(--red)}
+.rp-btn.sm{height:30px;padding:0 12px;font-size:12px}
+
+.rp-roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.rp-role{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.rp-role b{font-size:15px;display:flex;align-items:center;gap:8px}
+.rp-role small{color:var(--muted);font-size:11.5px;line-height:1.35;min-height:32px}
+.rp-role .rp-meter{height:5px;border-radius:5px;background:var(--bg3);overflow:hidden}
+.rp-role .rp-meter i{display:block;height:100%;background:var(--blue);border-radius:5px;transition:width .35s}
+.rp-role .rp-row2{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+
+.rp-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:18px;overflow:auto;max-height:calc(100vh - 210px)}
+.rp-table{width:100%;border-collapse:separate;border-spacing:0;min-width:820px}
+.rp-table th,.rp-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.rp-table thead th{position:sticky;top:0;z-index:5;background:var(--bg2);text-align:center;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border)}
+.rp-table thead th:first-child{text-align:left;left:0;z-index:6}
+.rp-table thead th small{display:block;font-weight:500;letter-spacing:0;text-transform:none;font-size:11px;margin-top:2px;opacity:.85}
+.rp-name{min-width:300px;position:sticky;left:0;background:var(--bg2);z-index:2}
+.rp-name b{font-size:13.5px;font-weight:600;color:var(--text)}
+.rp-name small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px;line-height:1.35}
+.rp-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;vertical-align:1px}
+.rp-badge.danger{color:var(--red);background:rgba(248,81,73,.13);border:1px solid rgba(248,81,73,.35)}
+.rp-badge.lock{color:var(--muted);background:var(--bg3);border:1px solid var(--border)}
+tr.rp-cat th{background:var(--bg3);text-align:left;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text);padding:9px 14px;position:sticky;top:auto}
+tr.rp-cat th.rp-cn{position:sticky;left:0;z-index:2}
+tr.rp-cat th .ci{display:inline-flex;align-items:center;gap:10px}
+tr.rp-cat th .ci i{color:var(--blue);font-size:15px}
+tr.rp-cat th.rp-cc{text-align:center}
+.rp-cell{text-align:center;position:relative}
+.rp-row:hover td{background:color-mix(in srgb,var(--blue) 5%,transparent)}
+.rp-row:hover .rp-name{background:color-mix(in srgb,var(--bg2) 92%,var(--blue))}
+.rp-row.hide,.rp-cat.hide{display:none}
+
+/* галочка */
+.rp-ck{position:relative;display:inline-grid;place-items:center;width:26px;height:26px;cursor:pointer}
+.rp-ck input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0}
+.rp-ck i{width:22px;height:22px;border-radius:7px;border:2px solid var(--border);background:var(--bg3);display:grid;place-items:center;transition:.18s;font-style:normal}
+.rp-ck i::after{content:'';width:10px;height:5px;border-left:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(-45deg) scale(0);margin-top:-2px;transition:.18s cubic-bezier(.3,1.5,.5,1)}
+.rp-ck input:checked + i{background:var(--blue);border-color:var(--blue)}
+.rp-ck input:checked + i::after{transform:rotate(-45deg) scale(1)}
+.rp-ck input:hover + i{border-color:var(--blue)}
+.rp-ck input:focus-visible + i{outline:2px solid var(--blue);outline-offset:2px}
+.rp-ck input:disabled{cursor:not-allowed}
+.rp-ck input:disabled + i{opacity:.55}
+.rp-ck input:disabled:not(:checked) + i{background:repeating-linear-gradient(45deg,var(--bg3) 0 4px,transparent 4px 8px)}
+.rp-ck input:indeterminate + i{background:var(--bg3);border-color:var(--blue)}
+.rp-ck input:indeterminate + i::after{width:10px;height:0;border-left:0;border-bottom:2.5px solid var(--blue);transform:scale(1);margin-top:0}
+.rp-ck.busy i{animation:rpb .7s ease-in-out infinite}
+@keyframes rpb{50%{opacity:.4}}
+.rp-cell .dot{position:absolute;right:calc(50% - 22px);top:calc(50% - 16px);width:7px;height:7px;border-radius:50%;background:var(--orange);display:none}
+.rp-cell.changed .dot{display:block}
+.rp-lockic{color:var(--muted);font-size:12px;margin-left:4px}
+
+.rp-legend{display:flex;gap:18px;flex-wrap:wrap;margin:14px 2px 0;font-size:12px;color:var(--muted)}
+.rp-legend span{display:inline-flex;align-items:center;gap:7px}
+.rp-legend .d{width:8px;height:8px;border-radius:50%;background:var(--orange)}
+.rp-empty{padding:40px;text-align:center;color:var(--muted);display:none}
+#rp-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:9999;background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:11px 20px;font-size:13.5px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.45);transition:.3s;display:flex;gap:10px;align-items:center;max-width:90vw}
+#rp-toast.show{opacity:1;transform:translate(-50%,0)}
+#rp-toast.err{border-color:var(--red);color:var(--red)}
+#rp-toast.ok i{color:var(--green)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rp-head">
+  <div>
+    <h1><i class="bi bi-shield-check"></i>Роли и привилегии</h1>
+    <div class="rp-sub">Отметьте галочкой, что разрешено каждой роли. Изменения сохраняются сразу и вступают в силу без перезахода. Роль «Админ» всегда имеет все права. Оранжевая точка — значение отличается от стандартного.</div>
+  </div>
+  <div class="rp-tools">
+    <label class="rp-search"><i class="bi bi-search"></i><input id="rp-q" type="search" placeholder="Найти привилегию…" autocomplete="off"></label>
+    <button class="rp-btn danger" type="button" id="rp-reset-all"><i class="bi bi-arrow-counterclockwise"></i>Сбросить всё к стандартным</button>
+  </div>
+</div>
+
+<div class="rp-roles" id="rp-roles">
+  {% for r in data.roles %}
+  <div class="rp-role" data-role="{{ r.key }}">
+    <b>{{ r.label }}{% if r.locked %}<i class="bi bi-lock-fill rp-lockic" title="Всегда имеет все права"></i>{% endif %}</b>
+    <small>{{ r.desc }}</small>
+    <div class="rp-meter"><i style="width:{{ (100 * r.granted / r.total)|round|int }}%"></i></div>
+    <div class="rp-row2">
+      <span><span class="rp-granted">{{ r.granted }}</span> из {{ r.total }} привилегий · <span>{{ r.users }}</span> польз.</span>
+      {% if not r.locked %}<button type="button" class="rp-btn sm rp-reset" data-role="{{ r.key }}" title="Вернуть стандартные права этой роли"><i class="bi bi-arrow-counterclockwise"></i>Сброс</button>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="rp-wrap">
+  <table class="rp-table" id="rp-table">
+    <thead>
+      <tr>
+        <th>Привилегия</th>
+        {% for r in data.roles %}<th>{{ r.label }}<small>{{ r.users }} польз.</small></th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for cat in data.categories %}
+      <tr class="rp-cat" data-cat="{{ cat.key }}">
+        <th class="rp-cn"><span class="ci"><i class="bi {{ cat.icon }}"></i>{{ cat.label }}</span></th>
+        {% for r in data.roles %}
+        <th class="rp-cc">
+          {% if not r.locked %}<label class="rp-ck" title="Отметить всю категорию"><input type="checkbox" class="rp-all" data-role="{{ r.key }}" data-cat="{{ cat.key }}"><i></i></label>{% endif %}
+        </th>
+        {% endfor %}
+      </tr>
+      {% for p in cat.perms %}
+      <tr class="rp-row" data-cat="{{ cat.key }}" data-key="{{ p.key }}" data-q="{{ (p.label ~ ' ' ~ p.desc)|lower }}">
+        <td class="rp-name"><b>{{ p.label }}</b>{% if p.danger %}<span class="rp-badge danger">осторожно</span>{% endif %}{% if p.locked %}<span class="rp-badge lock"><i class="bi bi-lock-fill"></i> только админ</span>{% endif %}<small>{{ p.desc }}</small></td>
+        {% for r in data.roles %}
+        {% set on = p.values[r.key] %}
+        <td class="rp-cell{% if on != p.defaults[r.key] %} changed{% endif %}" data-default="{{ 1 if p.defaults[r.key] else 0 }}">
+          <label class="rp-ck"><input type="checkbox" class="rp-perm" data-role="{{ r.key }}" data-perm="{{ p.key }}" {% if on %}checked{% endif %} {% if r.locked or p.locked %}disabled{% endif %}><i></i></label>
+          <span class="dot" title="Отличается от стандартного значения"></span>
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="rp-empty" id="rp-empty">Ничего не найдено</div>
+</div>
+
+<div class="rp-legend">
+  <span><span class="d"></span>отличается от стандартного</span>
+  <span><span class="rp-badge danger" style="margin:0">осторожно</span>привилегия даёт опасные возможности</span>
+  <span><i class="bi bi-lock-fill"></i>закреплено за админом, выдать нельзя</span>
+</div>
+
+<div id="rp-toast" role="status"><i class="bi bi-check-circle-fill"></i><span></span></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var $ = function(s, r){ return (r||document).querySelector(s); }, $$ = function(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+  var tt;
+  function toast(msg, err){
+    var el = $('#rp-toast'); el.className = (err ? 'err' : 'ok') + ' show';
+    el.querySelector('i').className = err ? 'bi bi-exclamation-triangle-fill' : 'bi bi-check-circle-fill';
+    el.querySelector('span').textContent = msg;
+    clearTimeout(tt); tt = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+  }
+  function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+      .then(function(r){ return r.json().catch(function(){ return {ok:false, error:'Ошибка ответа сервера'}; }); });
+  }
+  function labelOf(perm){ var r = $('.rp-row[data-key="'+perm+'"] .rp-name b'); return r ? r.textContent : perm; }
+
+  /* пересчёт счётчиков ролей, «точек» и состояния «отметить категорию» */
+  function refresh(){
+    $$('.rp-role').forEach(function(card){
+      var role = card.dataset.role, boxes = $$('.rp-perm[data-role="'+role+'"]'), n = boxes.filter(function(b){ return b.checked; }).length;
+      $('.rp-granted', card).textContent = n;
+      $('.rp-meter i', card).style.width = Math.round(100 * n / Math.max(1, boxes.length)) + '%';
+    });
+    $$('.rp-cell').forEach(function(td){
+      var b = $('.rp-perm', td); td.classList.toggle('changed', (b.checked ? 1 : 0) !== +td.dataset.default);
+    });
+    $$('.rp-all').forEach(function(a){
+      var boxes = $$('.rp-perm[data-role="'+a.dataset.role+'"][data-cat="'+a.dataset.cat+'"]', null)
+        .filter(function(b){ return !b.disabled; });
+      var rows = $$('tr.rp-row[data-cat="'+a.dataset.cat+'"] .rp-perm[data-role="'+a.dataset.role+'"]').filter(function(b){ return !b.disabled; });
+      var on = rows.filter(function(b){ return b.checked; }).length;
+      a.checked = rows.length && on === rows.length; a.indeterminate = on > 0 && on < rows.length;
+      a.disabled = !rows.length;
+    });
+  }
+
+  /* одна галочка */
+  document.addEventListener('change', function(e){
+    var b = e.target;
+    if (b.classList.contains('rp-perm')) {
+      var lab = b.closest('.rp-ck'), want = b.checked; lab.classList.add('busy');
+      post('/api/roles/set', {role:b.dataset.role, perm:b.dataset.perm, allowed:want}).then(function(d){
+        lab.classList.remove('busy');
+        if (d.ok) toast((want ? 'Выдано: ' : 'Снято: ') + labelOf(b.dataset.perm)); else { b.checked = !want; toast(d.error || 'Не удалось сохранить', true); }
+        refresh();
+      }).catch(function(){ lab.classList.remove('busy'); b.checked = !want; toast('Нет связи с сервером', true); refresh(); });
+    } else if (b.classList.contains('rp-all')) {
+      var role = b.dataset.role, want2 = b.checked;
+      var boxes = $$('tr.rp-row[data-cat="'+b.dataset.cat+'"] .rp-perm[data-role="'+role+'"]').filter(function(x){ return !x.disabled; });
+      var before = boxes.map(function(x){ return x.checked; });
+      boxes.forEach(function(x){ x.checked = want2; });
+      post('/api/roles/bulk', {role:role, perms:boxes.map(function(x){ return x.dataset.perm; }), allowed:want2}).then(function(d){
+        if (d.ok) toast((want2 ? 'Выдана вся категория' : 'Снята вся категория')); else { boxes.forEach(function(x, i){ x.checked = before[i]; }); toast(d.error || 'Не удалось сохранить', true); }
+        refresh();
+      }).catch(function(){ boxes.forEach(function(x, i){ x.checked = before[i]; }); toast('Нет связи с сервером', true); refresh(); });
+    }
+  });
+
+  /* сброс роли / всех */
+  function reset(role, text){
+    if (!confirm(text)) return;
+    post('/api/roles/reset', {role:role}).then(function(d){
+      if (d.ok) { toast('Возвращены стандартные права'); setTimeout(function(){ location.reload(); }, 500); } else toast(d.error || 'Не удалось сбросить', true);
+    });
+  }
+  $$('.rp-reset').forEach(function(b){ b.addEventListener('click', function(){ reset(b.dataset.role, 'Вернуть стандартные права для роли «' + b.closest('.rp-role').querySelector('b').textContent.trim() + '»?'); }); });
+  $('#rp-reset-all').addEventListener('click', function(){ reset('all', 'Вернуть стандартные права ВСЕМ ролям (кроме админа)? Ваши изменения будут потеряны.'); });
+
+  /* поиск */
+  $('#rp-q').addEventListener('input', function(){
+    var q = this.value.trim().toLowerCase(), shown = 0;
+    $$('.rp-row').forEach(function(r){ var ok = !q || r.dataset.q.indexOf(q) > -1; r.classList.toggle('hide', !ok); if (ok) shown++; });
+    $$('.rp-cat').forEach(function(c){ c.classList.toggle('hide', !!q && !$$('.rp-row[data-cat="'+c.dataset.cat+'"]:not(.hide)').length); });
+    $('#rp-empty').style.display = shown ? 'none' : 'block';
+  });
+  refresh();
+})();
+</script>
+{% endblock %}

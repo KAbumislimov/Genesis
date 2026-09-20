@@ -690,21 +690,95 @@ def admin_only(f):
         return f(*a, **kw)
     return wrap
 
-# Roles: guest=view only, user=music only, staff=music+himn, admin=full
-ROLE_PERMS = {
-    'guest':    frozenset(),
-    'user':     frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev'}),
-    'staff':    frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn'}),
-    'viewer':   frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev'}),  # legacy
-    # Everything music-related (play/stop/volume/himn/upload/voice/cron
-    # pause), nothing destructive (no delete/rename/folder ops) and no user
-    # management — those stay behind @admin_only, untouched by this role.
-    'helpdesk': frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn', 'cron'}),
-    # Same day-to-day music controls as helpdesk (play/stop/himn/upload/voice),
-    # but no cron pause — event managers run events, not the bell schedule.
-    'eventmanager': frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn'}),
-    'admin':    frozenset({'play', 'volume', 'mute', 'stop', 'next', 'prev', 'himn', 'admin', 'cron'}),
+# ── Права (привилегии) ────────────────────────────────────────────────────────
+# Каталог привилегий по категориям. Что разрешено каждой роли, хранится в таблице
+# role_perms и правится админом галочками на странице «Роли и права» (/admin/roles).
+# Значения по умолчанию (DEFAULT_ROLE_PERMS) повторяют прежнее поведение системы,
+# поэтому пока админ ничего не трогает — доступ у всех ролей остаётся как раньше.
+# Роль admin всегда имеет всё; users_manage и roles_manage закреплены за admin.
+PERM_CATALOG = [
+    ('player', 'Плеер и звук', 'bi-play-circle', [
+        ('play',   'Включать треки и плейлисты',   'Запуск треков, «Играть всё», зацикливание'),
+        ('stop',   'Пауза, стоп и перемотка',       'Пауза, остановка на кампусе и на всех, перемотка'),
+        ('nav',    'Следующий / предыдущий трек',   'Переключение треков в плейлисте'),
+        ('volume', 'Громкость и эквалайзер',        'Громкость кампусов, «Все → 150», эквалайзер'),
+        ('mute',   'Отключение звука (тишина)',     'Кнопка «Тишина» на активном кампусе'),
+    ]),
+    ('special', 'Эфир на весь кампус', 'bi-broadcast-pin', [
+        ('himn',           'Гимн',                             'Запуск государственного гимна'),
+        ('minuta',         'Минута тишины',                    'Запуск минуты молчания вне расписания'),
+        ('alarm',          'Сигнал тревоги',                   'Запуск тревоги и выбор звука сирены'),
+        ('special_events', 'Особые даты',                      'Zəfər Günü и National Music Day'),
+        ('perem_trigger',  'Быстрый запуск перемены',          'Запуск любой перемены вне расписания'),
+        ('special_volume', 'Громкость спецсигналов',           'Уровень громкости гимна, тревоги и других спецсигналов'),
+        ('mic',            'Голосовые объявления',             'Микрофон и голос в эфир на кампус'),
+    ]),
+    ('automation', 'Автоматика и расписание', 'bi-alarm', [
+        ('cron_pause',      'Пауза автозвонков (крон)',        'Остановить и снова включить звонки по расписанию'),
+        ('schedule_toggle', 'Утро / Перемены: вкл и выкл',     'Массовое включение и отключение групп «Утро» и «Перемены»'),
+        ('perem_edit',      'Время перемен по кампусам',       'Правка времени и громкости перемен для кампуса'),
+        ('schedule_edit',   'Редактор расписания',             'Полная правка расписания автовоспроизведения'),
+        ('cron_view',       'Страница «Крон» и логи запусков', 'Просмотр расписания на машинах и логов cron'),
+    ]),
+    ('library', 'Музыкальная библиотека', 'bi-collection-play', [
+        ('upload',         'Загрузка треков',                  'Добавление новых файлов в библиотеку'),
+        ('download',       'Скачивание треков',                'Скачивание музыкальных файлов'),
+        ('library_sync',   'Синхронизация библиотек',          'Сверка и синхронизация треков между кампусами'),
+        ('tracks_edit',    'Переименование и перенос треков',  'Смена имени файла и перенос между папками'),
+        ('tracks_delete',  'Удаление треков',                  'Удаление файлов из библиотеки'),
+        ('folders_manage', 'Управление папками',               'Создание, переименование, копирование и удаление папок'),
+    ]),
+    ('monitoring', 'Мониторинг и сервис', 'bi-activity', [
+        ('monitor_view',    'Мониторинг серверов',             'Загрузка CPU, памяти, дисков и служб'),
+        ('timesync',        'Синхронизация времени',           'Синхронизация часов кампусов с сервером'),
+        ('cheatsheet',      'Шпаргалка команд',                'Справочник команд Windows, Linux, Cisco'),
+        ('terminal',        'SSH-терминал',                    'Выполнение команд на машинах через терминал'),
+        ('machines_manage', 'Машины: добавить, изменить, удалить', 'Управление списком кампусов и устройств'),
+        ('service_restart', 'Перезапуск служб',                'Перезапуск служб на серверах и кампусах'),
+        ('activity_log',    'Журнал активности',               'Кто и что делал в системе'),
+        ('backups',         'Резервные копии',                 'Просмотр и скачивание бэкапов'),
+        ('bug_reports',     'Отчёты о проблемах',              'Просмотр отчётов и смена их статуса'),
+    ]),
+    ('content', 'Контент и оформление', 'bi-palette', [
+        ('announcements_manage', 'Доска объявлений',           'Создание, закрепление и удаление объявлений'),
+        ('appearance_manage',    'Обои, эмодзи и тема',        'Обои, эмодзи и тема по умолчанию для всех'),
+        ('telegram_settings',    'Уведомления в Telegram',     'Настройка оповещений в Telegram'),
+    ]),
+    ('admin', 'Администрирование', 'bi-shield-lock', [
+        ('users_manage',  'Пользователи',                      'Создание, блокировка, роли и пароли пользователей'),
+        ('roles_manage',  'Роли и привилегии',                 'Эта страница: назначение привилегий ролям'),
+        ('silence_mode',  'Режим тишины',                      'Отключение воспроизведения для всех пользователей'),
+        ('security_view', 'Страница «Безопасность»',           'Описание защиты системы'),
+    ]),
+]
+# опасные привилегии подсвечиваются на странице; закреплённые нельзя выдать никому кроме admin
+PERM_DANGER = {'terminal', 'machines_manage', 'service_restart', 'silence_mode', 'tracks_delete', 'folders_manage', 'schedule_edit', 'telegram_settings'}
+PERM_LOCKED = {'users_manage', 'roles_manage'}
+PERM_INFO = {}          # ключ → {cat, label, desc}
+for _cat, _cl, _ic, _items in PERM_CATALOG:
+    for _k, _l, _d in _items:
+        PERM_INFO[_k] = {'cat': _cat, 'label': _l, 'desc': _d}
+
+# роли, которые показываются в матрице (admin — всегда всё, закреплён)
+ROLE_ORDER = ['guest', 'user', 'staff', 'helpdesk', 'eventmanager', 'admin']
+ROLES_ALL = ROLE_ORDER + ['viewer']       # viewer — устаревшая роль, держит права как user без загрузки
+
+_P_MUSIC   = {'play', 'stop', 'nav', 'volume', 'mute'}
+_P_SPECIAL = {'himn', 'minuta', 'alarm', 'special_events', 'perem_trigger', 'special_volume'}
+_P_DAILY   = _P_MUSIC | _P_SPECIAL | {'mic', 'schedule_toggle', 'perem_edit', 'upload', 'download'}
+DEFAULT_ROLE_PERMS = {
+    'guest':        {'download'},
+    'user':         _P_MUSIC | {'upload', 'download'},
+    'viewer':       _P_MUSIC | {'download'},
+    'staff':        _P_DAILY | {'library_sync', 'monitor_view', 'timesync', 'cheatsheet', 'terminal'},
+    'helpdesk':     _P_DAILY | {'cron_pause'},
+    'eventmanager': _P_DAILY,
+    'admin':        set(PERM_INFO),
 }
+# что раньше выдавалось отдельному пользователю флагом can_himn («право на гимн») — оставляем
+SPECIAL_USER_PERMS = _P_SPECIAL | {'schedule_toggle', 'perem_edit'}
+# старые имена привилегий, которые ещё встречаются в коде и шаблонах
+_PERM_ALIASES = {'next': 'nav', 'prev': 'nav', 'vol': 'volume', 'cron': 'cron_pause', 'admin': 'users_manage'}
 
 ROLE_LABELS = {
     'guest':    ('Гость',    'Только просмотр — кнопки управления недоступны'),
@@ -715,6 +789,56 @@ ROLE_LABELS = {
     'admin':    ('Админ',    'Полный доступ: управление пользователями и всеми функциями'),
 }
 
+def ensure_role_perms():
+    """Создаёт таблицу role_perms и добавляет недостающие строки со значениями по умолчанию.
+    Существующие галочки (то, что настроил админ) не перезаписываются."""
+    with get_db() as c:
+        c.execute('''CREATE TABLE IF NOT EXISTS role_perms (
+            role    TEXT NOT NULL,
+            perm    TEXT NOT NULL,
+            allowed INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (role, perm)
+        )''')
+        for role in ROLES_ALL:
+            have = DEFAULT_ROLE_PERMS.get(role, set())
+            for perm in PERM_INFO:
+                c.execute('INSERT OR IGNORE INTO role_perms (role, perm, allowed) VALUES (?,?,?)',
+                          (role, perm, 1 if perm in have else 0))
+    _rp_cache['ts'] = 0.0
+
+_rp_cache = {'ts': 0.0, 'data': None}
+
+def _role_perm_map():
+    """{role: {perm, …}} из БД; кэш 5 секунд (сбрасывается при изменении галочек)."""
+    now = time.time()
+    if _rp_cache['data'] is not None and now - _rp_cache['ts'] < 5:
+        return _rp_cache['data']
+    data = {}
+    try:
+        with get_db() as c:
+            for r in c.execute('SELECT role, perm, allowed FROM role_perms'):
+                s = data.setdefault(r['role'], set())
+                if r['allowed']:
+                    s.add(r['perm'])
+    except Exception:
+        data = {}
+    if not data:                       # таблицы ещё нет / пусто — работаем по умолчаниям
+        data = {r: set(v) for r, v in DEFAULT_ROLE_PERMS.items()}
+    _rp_cache['data'] = data
+    _rp_cache['ts'] = now
+    return data
+
+def role_has(role, perm):
+    """Есть ли привилегия у роли (без учёта режима тишины и личных выдач)."""
+    perm = _PERM_ALIASES.get(perm, perm)
+    if perm not in PERM_INFO:
+        return False
+    if role == 'admin':
+        return True
+    if perm in PERM_LOCKED:
+        return False
+    return perm in _role_perm_map().get(role, set())
+
 def _silence_active():
     try:
         with get_db() as c:
@@ -724,34 +848,50 @@ def _silence_active():
         return False
 
 def has_perm(perm):
+    perm = _PERM_ALIASES.get(perm, perm)
     role = getattr(current_user, 'role', 'guest')
-    if perm == 'play' and role not in ('admin',) and _silence_active():
+    if perm == 'play' and role != 'admin' and _silence_active():
         return False
-    return perm in ROLE_PERMS.get(role, frozenset())
+    if role_has(role, perm):
+        return True
+    if perm in SPECIAL_USER_PERMS and getattr(current_user, 'is_authenticated', False):
+        # личная выдача админом («право на гимн») по-прежнему открывает спецсигналы
+        try:
+            with get_db() as c:
+                row = c.execute('SELECT can_himn FROM users WHERE id=?', (current_user.id,)).fetchone()
+            return bool(row and row['can_himn'])
+        except Exception:
+            return False
+    return False
 
 def has_himn_perm():
-    """Staff/admin/helpdesk/eventmanager always. Others only if can_himn=1 granted by admin."""
-    role = getattr(current_user, 'role', '')
-    if role in ('admin', 'staff', 'helpdesk', 'eventmanager'):
-        return True
-    with get_db() as c:
-        row = c.execute('SELECT can_himn FROM users WHERE id=?', (current_user.id,)).fetchone()
-        return bool(row and row['can_himn'])
+    """Совместимость со старым кодом и шаблонами: право на гимн."""
+    return has_perm('himn')
+
+def perm_required(*perms):
+    """Как @admin_only, но по привилегии: пускает, если есть хотя бы одна из перечисленных."""
+    def deco(f):
+        @wraps(f)
+        def wrap(*a, **kw):
+            if not current_user.is_authenticated or not any(has_perm(p) for p in perms):
+                return redirect(url_for('dashboard'))
+            return f(*a, **kw)
+        return wrap
+    return deco
 
 def user_perms():
-    """Dict of permission flags for current user — for template rendering."""
-    return {
-        'play':  has_perm('play'),
-        'stop':  has_perm('stop'),
-        'vol':   has_perm('volume'),
-        'mute':  has_perm('mute'),
-        'next':  has_perm('next'),
-        'prev':  has_perm('prev'),
-        'himn':  has_himn_perm(),
-        'admin': has_perm('admin'),
-        'cron':  has_perm('cron'),
+    """Словарь флагов текущего пользователя для шаблонов: новые ключи = названия привилегий,
+    плюс старые (vol, next, prev, himn, admin, cron) и role."""
+    d = {k: has_perm(k) for k in PERM_INFO}
+    d.update({
+        'vol':   d['volume'],
+        'next':  d['nav'],
+        'prev':  d['nav'],
+        'admin': d['users_manage'],
+        'cron':  d['cron_pause'],
         'role':  getattr(current_user, 'role', 'guest'),
-    }
+    })
+    return d
 
 # ── SSH / MPV ─────────────────────────────────────
 def ssh_run_on(host, user, cmd, key=None, timeout=15, connect_timeout=10):
@@ -922,7 +1062,7 @@ def api_wol(mid):
 # ── Thin clients CRUD (admin only) ────────────────
 @app.route('/api/machines/list')
 @login_required
-@admin_only
+@perm_required('machines_manage')
 def api_machines_list():
     with get_db() as c:
         rows = c.execute('SELECT * FROM thin_clients ORDER BY id').fetchall()
@@ -930,7 +1070,7 @@ def api_machines_list():
 
 @app.route('/api/machines/add', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('machines_manage')
 def api_machines_add():
     data = request.get_json() or {}
     host = data.get('host', '').strip()
@@ -959,7 +1099,7 @@ def api_machines_add():
 
 @app.route('/api/machines/edit/<int:db_id>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('machines_manage')
 def api_machines_edit(db_id):
     data = request.get_json() or {}
     host = data.get('host', '').strip()
@@ -984,7 +1124,7 @@ def api_machines_edit(db_id):
 
 @app.route('/api/machines/delete/<int:db_id>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('machines_manage')
 def api_machines_delete(db_id):
     with get_db() as c:
         row = c.execute('SELECT name,host FROM thin_clients WHERE id=?', (db_id,)).fetchone()
@@ -992,6 +1132,104 @@ def api_machines_delete(db_id):
     reload_machines()
     if row:
         log_action(current_user.username, 'machine_delete', 'webui', f'{row["name"]} ({row["host"]})')
+    return jsonify({'ok': True})
+
+# ── Роли и привилегии: страница админа ─────────────────────────────────────
+app.jinja_env.globals['can'] = lambda perm: bool(current_user.is_authenticated and has_perm(perm))
+
+def _roles_payload():
+    """Данные для страницы «Роли и права»: роли (с числом пользователей и выданных привилегий) и матрица."""
+    with get_db() as c:
+        cnt = {r['role']: r['n'] for r in c.execute('SELECT role, COUNT(*) AS n FROM users GROUP BY role')}
+    roles = []
+    for r in ROLE_ORDER:
+        label, desc = ROLE_LABELS.get(r, (r, ''))
+        roles.append({'key': r, 'label': label, 'desc': desc, 'users': cnt.get(r, 0),
+                      'granted': sum(1 for p in PERM_INFO if role_has(r, p)), 'total': len(PERM_INFO),
+                      'locked': r == 'admin'})
+    cats = []
+    for ck, cl, ci, items in PERM_CATALOG:
+        cats.append({'key': ck, 'label': cl, 'icon': ci, 'perms': [{
+            'key': k, 'label': l, 'desc': d, 'danger': k in PERM_DANGER, 'locked': k in PERM_LOCKED,
+            'values':   {r: role_has(r, k) for r in ROLE_ORDER},
+            'defaults': {r: (r == 'admin') or (k in DEFAULT_ROLE_PERMS.get(r, set()) and k not in PERM_LOCKED) for r in ROLE_ORDER},
+        } for k, l, d in items]})
+    return {'roles': roles, 'categories': cats}
+
+@app.route('/admin/roles')
+@login_required
+@perm_required('roles_manage')
+def admin_roles():
+    return render_template('roles.html', data=_roles_payload())
+
+@app.route('/api/roles/matrix')
+@login_required
+@perm_required('roles_manage')
+def api_roles_matrix():
+    return jsonify({'ok': True, **_roles_payload()})
+
+def _role_perm_check(role, perm, allowed):
+    if role not in ROLE_ORDER or role == 'admin':
+        return 'Роль admin всегда имеет все права — её менять нельзя' if role == 'admin' else 'Неизвестная роль'
+    if perm not in PERM_INFO:
+        return 'Неизвестная привилегия'
+    if allowed and perm in PERM_LOCKED:
+        return 'Эту привилегию нельзя выдавать никому, кроме админа'
+    return None
+
+def _set_role_perms(role, perms, allowed):
+    with get_db() as c:
+        for perm in perms:
+            c.execute('INSERT OR REPLACE INTO role_perms (role, perm, allowed) VALUES (?,?,?)',
+                      (role, perm, 1 if allowed else 0))
+    _rp_cache['ts'] = 0.0
+
+@app.route('/api/roles/set', methods=['POST'])
+@login_required
+@perm_required('roles_manage')
+def api_roles_set():
+    d = request.get_json(silent=True) or {}
+    role, perm, allowed = d.get('role'), d.get('perm'), bool(d.get('allowed'))
+    err = _role_perm_check(role, perm, allowed)
+    if err:
+        return jsonify({'ok': False, 'error': err}), 400
+    _set_role_perms(role, [perm], allowed)
+    log_action(current_user.username, 'role_perm', 'webui',
+               f"{role}: {'+' if allowed else '−'}{perm} ({PERM_INFO[perm]['label']})")
+    return jsonify({'ok': True, 'granted': sum(1 for p in PERM_INFO if role_has(role, p))})
+
+@app.route('/api/roles/bulk', methods=['POST'])
+@login_required
+@perm_required('roles_manage')
+def api_roles_bulk():
+    d = request.get_json(silent=True) or {}
+    role, perms, allowed = d.get('role'), d.get('perms') or [], bool(d.get('allowed'))
+    perms = [p for p in perms if p in PERM_INFO and not (allowed and p in PERM_LOCKED)]
+    err = _role_perm_check(role, perms[0] if perms else 'play', allowed)
+    if err or not perms:
+        return jsonify({'ok': False, 'error': err or 'Нет привилегий для изменения'}), 400
+    _set_role_perms(role, perms, allowed)
+    log_action(current_user.username, 'role_perm', 'webui', f"{role}: {'+' if allowed else '−'}{len(perms)} привилегий")
+    return jsonify({'ok': True, 'granted': sum(1 for p in PERM_INFO if role_has(role, p))})
+
+@app.route('/api/roles/reset', methods=['POST'])
+@login_required
+@perm_required('roles_manage')
+def api_roles_reset():
+    d = request.get_json(silent=True) or {}
+    target = d.get('role')
+    roles = ROLE_ORDER[:-1] if target == 'all' else [target]
+    for role in roles:
+        if role not in ROLE_ORDER or role == 'admin':
+            return jsonify({'ok': False, 'error': 'Неизвестная роль'}), 400
+    for role in roles:
+        have = DEFAULT_ROLE_PERMS.get(role, set())
+        with get_db() as c:
+            for perm in PERM_INFO:
+                c.execute('INSERT OR REPLACE INTO role_perms (role, perm, allowed) VALUES (?,?,?)',
+                          (role, perm, 1 if (perm in have and perm not in PERM_LOCKED) else 0))
+    _rp_cache['ts'] = 0.0
+    log_action(current_user.username, 'role_perm', 'webui', f"сброс к умолчаниям: {', '.join(roles)}")
     return jsonify({'ok': True})
 
 # ── Local music scanning ──────────────────────────
@@ -1408,7 +1646,7 @@ def api_wallpaper_default():
         with get_db() as c:
             row = c.execute("SELECT value FROM settings WHERE key='wallpaper_default'").fetchone()
         return jsonify({'ok': True, 'default': row['value'] if row else 'off'})
-    if current_user.role != 'admin':
+    if not has_perm('appearance_manage'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     val = (request.get_json() or {}).get('value', 'off')
     with get_db() as c:
@@ -1422,7 +1660,7 @@ def api_theme_default():
         with get_db() as c:
             row = c.execute("SELECT value FROM settings WHERE key='theme_default'").fetchone()
         return jsonify({'ok': True, 'default': row['value'] if row else ''})
-    if current_user.role != 'admin':
+    if not has_perm('appearance_manage'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     val = (request.get_json() or {}).get('value', '')
     with get_db() as c:
@@ -1437,7 +1675,7 @@ def announcements_page():
             'SELECT * FROM announcements ORDER BY pin_top DESC, id DESC'
         ).fetchall()
     return render_template('announcements.html', announcements=rows,
-                           is_admin=(current_user.role=='admin'))
+                           is_admin=has_perm('announcements_manage'))
 
 @app.route('/api/announcements', methods=['GET'])
 @login_required
@@ -1449,7 +1687,7 @@ def api_announcements():
 @app.route('/api/announcements/create', methods=['POST'])
 @login_required
 def api_ann_create():
-    if current_user.role != 'admin':
+    if not has_perm('announcements_manage'):
         return jsonify({'ok': False, 'error': 'Только для администраторов'})
     data     = request.get_json() or {}
     title    = str(data.get('title',   '')).strip()[:200]
@@ -1468,7 +1706,7 @@ def api_ann_create():
 @app.route('/api/announcements/delete', methods=['POST'])
 @login_required
 def api_ann_delete():
-    if current_user.role != 'admin':
+    if not has_perm('announcements_manage'):
         return jsonify({'ok': False, 'error': 'Только для администраторов'})
     ann_id = int((request.get_json() or {}).get('id', 0))
     if not ann_id:
@@ -1480,7 +1718,7 @@ def api_ann_delete():
 @app.route('/api/announcements/pin', methods=['POST'])
 @login_required
 def api_ann_pin():
-    if current_user.role != 'admin':
+    if not has_perm('announcements_manage'):
         return jsonify({'ok': False, 'error': 'Только для администраторов'})
     data = request.get_json() or {}
     ann_id = int(data.get('id', 0))
@@ -1532,7 +1770,7 @@ def api_wallpapers_list():
 @app.route('/api/wallpapers/upload', methods=['POST'])
 @login_required
 def api_wallpapers_upload():
-    if current_user.role != 'admin':
+    if not has_perm('appearance_manage'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     files = request.files.getlist('files')
     saved = []
@@ -1557,7 +1795,7 @@ def api_wallpapers_upload():
 @app.route('/api/wallpapers/delete', methods=['POST'])
 @login_required
 def api_wallpapers_delete():
-    if current_user.role != 'admin':
+    if not has_perm('appearance_manage'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data = request.get_json() or {}
     fname = secure_filename(data.get('filename', ''))
@@ -1593,7 +1831,7 @@ def api_emojis_list():
 @app.route('/api/emojis/upload', methods=['POST'])
 @login_required
 def api_emojis_upload():
-    if current_user.role != 'admin':
+    if not has_perm('appearance_manage'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     files = request.files.getlist('files')
     saved = []
@@ -1618,7 +1856,7 @@ def api_emojis_upload():
 @app.route('/api/emojis/delete', methods=['POST'])
 @login_required
 def api_emojis_delete():
-    if current_user.role != 'admin':
+    if not has_perm('appearance_manage'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data = request.get_json() or {}
     fname = secure_filename(data.get('filename', ''))
@@ -1827,7 +2065,7 @@ def tracks():
 
 @app.route('/admin')
 @login_required
-@admin_only
+@perm_required('users_manage')
 def admin():
     with get_db() as c:
         users = c.execute('SELECT * FROM users ORDER BY id').fetchall()
@@ -1835,7 +2073,7 @@ def admin():
 
 @app.route('/admin/users/add', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('users_manage')
 def add_user():
     u    = request.form.get('username','').strip()
     p    = request.form.get('password','')
@@ -1861,7 +2099,7 @@ def add_user():
 
 @app.route('/admin/users/delete/<int:uid>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('users_manage')
 def delete_user(uid):
     if uid == current_user.id:
         flash('Нельзя удалить себя', 'danger')
@@ -1882,7 +2120,7 @@ def delete_user(uid):
 
 @app.route('/admin/users/passwd/<int:uid>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('users_manage')
 def reset_passwd(uid):
     p = request.form.get('password','')
     if p:
@@ -1893,7 +2131,7 @@ def reset_passwd(uid):
 
 @app.route('/admin/users/role/<int:uid>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('users_manage')
 def set_role(uid):
     role = request.form.get('role', 'user')
     if role not in ('guest', 'user', 'staff', 'helpdesk', 'eventmanager', 'admin'):
@@ -1909,7 +2147,7 @@ def set_role(uid):
 
 @app.route('/admin/users/himn/<int:uid>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('users_manage')
 def toggle_himn(uid):
     with get_db() as c:
         row = c.execute('SELECT can_himn, username FROM users WHERE id=?', (uid,)).fetchone()
@@ -1922,7 +2160,7 @@ def toggle_himn(uid):
 
 @app.route('/admin/users/block/<int:uid>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('users_manage')
 def toggle_block(uid):
     if uid == current_user.id:
         flash('Нельзя заблокировать себя', 'danger')
@@ -1939,7 +2177,7 @@ def toggle_block(uid):
 
 @app.route('/admin/users/kick/<int:uid>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('users_manage')
 def kick_user(uid):
     if uid == current_user.id:
         return jsonify({'ok': False, 'error': 'Нельзя выкинуть себя'})
@@ -1953,7 +2191,7 @@ def kick_user(uid):
 
 @app.route('/api/settings/silence', methods=['GET','POST'])
 @login_required
-@admin_only
+@perm_required('silence_mode')
 def api_silence():
     if request.method == 'POST':
         val = '1' if request.json.get('active') else '0'
@@ -1972,7 +2210,7 @@ def api_silence():
 
 @app.route('/admin/activity')
 @login_required
-@admin_only
+@perm_required('activity_log')
 def admin_activity():
     username = request.args.get('user', '').strip()
     action   = request.args.get('action', '').strip()
@@ -2446,7 +2684,7 @@ def api_special_vol_get():
 @app.route('/api/special-vol/<kind>', methods=['POST'])
 @login_required
 def api_special_vol_set(kind):
-    if not has_himn_perm():
+    if not has_perm('special_volume'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if kind not in _SPECIAL_VOL_KEYS:
         return jsonify({'ok': False, 'error': 'Неизвестный параметр'}), 400
@@ -2509,7 +2747,7 @@ def _log_himn_play(username, machine, filename):
 @app.route('/api/himn/<campus>', methods=['POST'])
 @login_required
 def api_himn(campus):
-    if not has_himn_perm():
+    if not has_perm('himn'):
         return jsonify({'ok': False, 'error': 'Нет прав на гимн'})
     if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
@@ -2554,7 +2792,7 @@ _MINUTA_LABEL = _CampusLabelDict()
 @app.route('/api/minuta/<campus>', methods=['POST'])
 @login_required
 def api_minuta(campus):
-    if not has_himn_perm():
+    if not has_perm('minuta'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
@@ -2628,7 +2866,7 @@ def api_alarm_sounds():
 @app.route('/api/alarm/<campus>', methods=['POST'])
 @login_required
 def api_alarm(campus):
-    if not has_himn_perm():
+    if not has_perm('alarm'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
@@ -2674,7 +2912,7 @@ def _play_zefer(host, user):
 @app.route('/api/zefer/<campus>', methods=['POST'])
 @login_required
 def api_zefer(campus):
-    if not has_himn_perm():
+    if not has_perm('special_events'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if not os.path.isfile(ZEFER_FILE):
         return jsonify({'ok': False, 'error': 'Файл Zəfər Günü ещё не загружен'})
@@ -2714,7 +2952,7 @@ def _play_nmd(host, user):
 @app.route('/api/nmd/<campus>', methods=['POST'])
 @login_required
 def api_nmd(campus):
-    if not has_himn_perm():
+    if not has_perm('special_events'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if not os.path.isfile(NMD_FILE):
         return jsonify({'ok': False, 'error': 'Файл National Music Day ещё не загружен'})
@@ -2777,7 +3015,7 @@ def api_perem_trigger(campus, slot):
     скрипт, что запускает cron (campus-cron-media-notify.sh), поэтому
     Telegram-уведомление, папка дня и лог получаются автоматически,
     без дублирования логики здесь."""
-    if not has_himn_perm():
+    if not has_perm('perem_trigger'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if slot not in PEREM_SLOTS:
         return jsonify({'ok': False, 'error': 'Неизвестный слот'}), 400
@@ -2808,7 +3046,7 @@ def api_perem_slots():
 @app.route('/api/perem/schedule')
 @login_required
 def api_perem_schedule_get():
-    if not has_himn_perm():
+    if not has_perm('perem_edit'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     out = {}
     for _m in music_machines():
@@ -2838,7 +3076,7 @@ def api_perem_schedule_get():
 @app.route('/api/perem/schedule/<campus>/<slot>', methods=['POST'])
 @login_required
 def api_perem_schedule_edit(campus, slot):
-    if not has_himn_perm():
+    if not has_perm('perem_edit'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     if not _is_known_campus(campus):
         return jsonify({'ok': False, 'error': 'Неизвестный кампус'}), 400
@@ -2920,7 +3158,7 @@ def api_schedule_toggle_group():
     1..9peremena) СРАЗУ в реальном crontab на всех доступных кампусах —
     и держит декоративный SCHEDULE (виджет «до звонка») в согласии с этим,
     иначе он продолжает показывать то, чего на самом деле уже нет."""
-    if not has_himn_perm():
+    if not has_perm('schedule_toggle'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data = request.get_json() or {}
     group = data.get('group')
@@ -3501,7 +3739,7 @@ def api_loop():
 @app.route('/api/terminal', methods=['POST'])
 @login_required
 def api_terminal():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('terminal'):
         return jsonify({'ok': False, 'error': 'Недостаточно прав'})
     data    = request.get_json() or {}
     cmd     = (data.get('cmd') or '').strip()
@@ -3616,7 +3854,7 @@ def settings_page():
     return render_template('settings.html', tg_settings=tg_settings, silence=silence)
 
 @app.route('/security')
-@admin_only
+@perm_required('security_view')
 def security_page():
     return render_template('security.html')
 
@@ -3901,7 +4139,7 @@ def _parse_action_log(text):
 
 @app.route('/admin/cron')
 @login_required
-@admin_only
+@perm_required('cron_view')
 def admin_cron():
     now = datetime.now()
     ct  = now.strftime('%H:%M')
@@ -3927,7 +4165,7 @@ def _mpv_get_on(host, user, prop):
 
 @app.route('/api/admin/cron-status')
 @login_required
-@admin_only
+@perm_required('cron_view')
 def api_cron_status():
     machine = request.args.get('machine', 'client1')
     host, user = _machine_ssh(machine)
@@ -3941,7 +4179,7 @@ def api_cron_status():
 
 @app.route('/api/admin/cron-log')
 @login_required
-@admin_only
+@perm_required('cron_view')
 def api_cron_log():
     lines   = request.args.get('lines', 100, type=int)
     machine = request.args.get('machine', 'client1')
@@ -3958,7 +4196,7 @@ def api_cron_log():
 
 @app.route('/api/admin/cron-files')
 @login_required
-@admin_only
+@perm_required('cron_view')
 def api_cron_files():
     folder  = request.args.get('folder', '1')
     machine = request.args.get('machine', 'client1')
@@ -3981,7 +4219,7 @@ def api_cron_files():
 
 @app.route('/api/admin/cron-meta/refresh', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('cron_view')
 def api_cron_meta_refresh():
     folder  = request.args.get('folder', '1')
     machine = request.args.get('machine', 'client1')
@@ -4128,7 +4366,7 @@ def campus_detail(machine):
 
 @app.route('/api/activity-log')
 @login_required
-@admin_only
+@perm_required('activity_log')
 def api_activity_log():
     machine = request.args.get('machine', '')
     limit   = min(int(request.args.get('limit', 100)), 500)
@@ -4163,7 +4401,7 @@ def _safe_filename(name):
 @app.route('/upload')
 @login_required
 def upload_page():
-    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk', 'eventmanager'):
+    if not has_perm('upload'):
         flash('Нет прав для загрузки треков', 'danger')
         return redirect(url_for('tracks'))
     used_mb = 0
@@ -4184,7 +4422,7 @@ def upload_page():
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def api_upload():
-    if current_user.role not in ('admin', 'staff', 'user', 'helpdesk', 'eventmanager'):
+    if not has_perm('upload'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     f = request.files.get('file')
     if not f or not f.filename:
@@ -4224,7 +4462,7 @@ def api_upload():
 @app.route('/api/tracks/delete', methods=['POST'])
 @login_required
 def api_tracks_delete():
-    if current_user.role not in ('admin',):
+    if not has_perm('tracks_delete'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data   = request.get_json() or {}
     name   = os.path.basename((data.get('name') or '').strip())
@@ -4243,7 +4481,7 @@ def api_tracks_delete():
 @app.route('/api/tracks/rename', methods=['POST'])
 @login_required
 def api_tracks_rename():
-    if current_user.role not in ('admin',):
+    if not has_perm('tracks_edit'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data     = request.get_json() or {}
     folder   = os.path.basename((data.get('folder') or '').strip())
@@ -4303,7 +4541,7 @@ _FOLDER_NAME_RE = _re.compile(r'^[\w \-\.\(\)\[\]А-Яа-яЁёƏəÜüÖöĞğ�
 @app.route('/api/tracks/create-folder', methods=['POST'])
 @login_required
 def api_tracks_create_folder():
-    if current_user.role not in ('admin',):
+    if not has_perm('folders_manage'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data = request.get_json() or {}
     name = os.path.basename((data.get('name') or '').strip())
@@ -4319,7 +4557,7 @@ def api_tracks_create_folder():
 @app.route('/api/tracks/move', methods=['POST'])
 @login_required
 def api_tracks_move():
-    if current_user.role not in ('admin',):
+    if not has_perm('tracks_edit'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data        = request.get_json() or {}
     name        = os.path.basename((data.get('name') or '').strip())
@@ -4351,7 +4589,7 @@ def api_tracks_move():
 @app.route('/api/tracks/bulk-move', methods=['POST'])
 @login_required
 def api_tracks_bulk_move():
-    if current_user.role not in ('admin',):
+    if not has_perm('tracks_edit'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data       = request.get_json() or {}
     items      = data.get('items') or []
@@ -4387,7 +4625,7 @@ def api_tracks_bulk_move():
 @app.route('/api/tracks/bulk-delete', methods=['POST'])
 @login_required
 def api_tracks_bulk_delete():
-    if current_user.role not in ('admin',):
+    if not has_perm('tracks_delete'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data  = request.get_json() or {}
     items = data.get('items') or []
@@ -4410,7 +4648,7 @@ def api_tracks_bulk_delete():
 @app.route('/api/tracks/delete-folder', methods=['POST'])
 @login_required
 def api_tracks_delete_folder():
-    if current_user.role not in ('admin',):
+    if not has_perm('folders_manage'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data = request.get_json() or {}
     name = os.path.basename((data.get('name') or '').strip())
@@ -4438,7 +4676,7 @@ def api_tracks_delete_folder():
 @app.route('/api/tracks/rename-folder', methods=['POST'])
 @login_required
 def api_tracks_rename_folder():
-    if current_user.role not in ('admin',):
+    if not has_perm('folders_manage'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data     = request.get_json() or {}
     name     = os.path.basename((data.get('name') or '').strip())
@@ -4470,7 +4708,7 @@ def api_tracks_rename_folder():
 @app.route('/api/tracks/copy-folder', methods=['POST'])
 @login_required
 def api_tracks_copy_folder():
-    if current_user.role not in ('admin',):
+    if not has_perm('folders_manage'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data     = request.get_json() or {}
     name     = os.path.basename((data.get('name') or '').strip())
@@ -4500,7 +4738,7 @@ def api_tracks_copy_folder():
 @app.route('/api/tracks/move-folder-contents', methods=['POST'])
 @login_required
 def api_tracks_move_folder_contents():
-    if current_user.role not in ('admin',):
+    if not has_perm('folders_manage'):
         return jsonify({'ok': False, 'error': 'Только админ'})
     data       = request.get_json() or {}
     name       = os.path.basename((data.get('name') or '').strip())
@@ -4542,7 +4780,7 @@ def api_tracks_move_folder_contents():
 # ══════════════════════════════════════════════════
 @app.route('/machines')
 @login_required
-@admin_only
+@perm_required('machines_manage')
 def machines_page():
     return render_template('machines.html', perms=user_perms())
 
@@ -4551,7 +4789,7 @@ def machines_page():
 @app.route('/monitor')
 @login_required
 def monitor_page():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('monitor_view'):
         return redirect(url_for('dashboard'))
     return render_template('monitor.html', perms=user_perms(),
                            machines=MACHINES, centos_host=CENTOS_HOST,
@@ -4560,7 +4798,7 @@ def monitor_page():
 @app.route('/api/sysinfo')
 @login_required
 def api_sysinfo():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('monitor_view'):
         return jsonify({'ok': False})
 
     CMD = (
@@ -4636,7 +4874,7 @@ _ALLOWED_SERVICES = {'campus-player', 'docker', 'grafana-server', 'prometheus', 
 
 @app.route('/api/service/restart', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('service_restart')
 def api_service_restart():
     data    = request.get_json() or {}
     machine = data.get('machine', '').strip()
@@ -4742,7 +4980,7 @@ self.addEventListener('fetch', e => {
 # ══════════════════════════════════════════════════
 @app.route('/admin/schedule')
 @login_required
-@admin_only
+@perm_required('schedule_edit')
 def admin_schedule():
     return render_template('schedule_editor.html',
                            schedule=SCHEDULE, perms=user_perms())
@@ -4754,7 +4992,7 @@ def api_schedule_get():
 
 @app.route('/api/schedule/add', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('schedule_edit')
 def api_schedule_add():
     data = request.get_json() or {}
     entry = {
@@ -4776,7 +5014,7 @@ def api_schedule_add():
 
 @app.route('/api/schedule/update/<int:idx>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('schedule_edit')
 def api_schedule_update(idx):
     data = request.get_json() or {}
     with _sched_lock:
@@ -4798,7 +5036,7 @@ def api_schedule_update(idx):
 
 @app.route('/api/schedule/delete/<int:idx>', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('schedule_edit')
 def api_schedule_delete(idx):
     with _sched_lock:
         if idx < 0 or idx >= len(SCHEDULE):
@@ -4810,7 +5048,7 @@ def api_schedule_delete(idx):
 
 @app.route('/api/schedule/reset', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('schedule_edit')
 def api_schedule_reset():
     with _sched_lock:
         SCHEDULE.clear()
@@ -4854,7 +5092,7 @@ def _list_remote_tracks(host, user, remote_dir):
 @app.route('/api/tracks/sync/status')
 @login_required
 def api_tracks_sync_status():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('library_sync'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     local = set(f for f in os.listdir(MUSIC_DIR)
                 if os.path.splitext(f)[1].lower() in ALLOWED_AUDIO)
@@ -4880,7 +5118,7 @@ def api_tracks_sync_status():
 @app.route('/api/tracks/sync', methods=['POST'])
 @login_required
 def api_tracks_sync():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('library_sync'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data      = request.get_json() or {}
     campus    = (data.get('campus') or 'client2').strip()
@@ -4947,7 +5185,7 @@ def api_tracks_sync():
 # ══════════════════════════════════════════════════
 @app.route('/api/tg/test', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('telegram_settings')
 def api_tg_test():
     token  = _tg_load_token()
     chats  = _tg_load_chats()
@@ -4966,7 +5204,7 @@ def api_tg_test():
 
 @app.route('/api/settings/tg', methods=['GET', 'POST'])
 @login_required
-@admin_only
+@perm_required('telegram_settings')
 def api_settings_tg():
     if request.method == 'GET':
         with get_db() as c:
@@ -5157,7 +5395,7 @@ def api_kamran_set_pin():
 @app.route('/api/timesync/status')
 @login_required
 def api_timesync_status():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('timesync'):
         return jsonify({'ok': False})
 
     def get_time(host, user, key=SSH_KEY):
@@ -5201,7 +5439,7 @@ def api_timesync_status():
 @app.route('/api/timesync/sync', methods=['POST'])
 @login_required
 def api_timesync_sync():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('timesync'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data    = request.get_json() or {}
     machine = data.get('machine', 'all')
@@ -5339,7 +5577,7 @@ def _dir_size(path):
 @app.route('/backups')
 @login_required
 def backups_page():
-    if current_user.role != 'admin':
+    if not has_perm('backups'):
         return redirect(url_for('dashboard'))
     unlocked = session.get('backup_unlocked', False)
     base, entries, music, machines = _backup_scan()
@@ -5352,7 +5590,7 @@ def backups_page():
 @app.route('/api/backup/unlock', methods=['POST'])
 @login_required
 def api_backup_unlock():
-    if current_user.role != 'admin':
+    if not has_perm('backups'):
         return jsonify({'ok': False, 'error': 'Нет прав'})
     data = request.get_json() or {}
     pwd  = data.get('password', '')
@@ -5372,7 +5610,7 @@ def api_backup_lock():
 @app.route('/api/backup/download/<backup_date>/<path:filename>')
 @login_required
 def api_backup_download(backup_date, filename):
-    if current_user.role != 'admin':
+    if not has_perm('backups'):
         return '', 403
     if not session.get('backup_unlocked', False):
         return jsonify({'ok': False, 'error': 'Папка заблокирована'}), 403
@@ -5389,7 +5627,7 @@ def api_backup_download(backup_date, filename):
 @app.route('/api/backup/report/<backup_date>')
 @login_required
 def api_backup_report(backup_date):
-    if current_user.role != 'admin':
+    if not has_perm('backups'):
         return '', 403
     import re
     if not re.match(r'^\d{4}-\d{2}-\d{2}$', backup_date):
@@ -5472,21 +5710,21 @@ def api_voice_assistant():
 @app.route('/cheatsheet')
 @login_required
 def cheatsheet_page():
-    if current_user.role not in ('admin', 'staff'):
+    if not has_perm('cheatsheet'):
         return '', 403
     return render_template('cheatsheet.html')
 
 @app.route('/announce')
 @login_required
 def announce_page():
-    if current_user.role not in ('admin', 'staff', 'helpdesk', 'eventmanager'):
+    if not has_perm('mic'):
         return '', 403
     return render_template('announce.html', music_machines=music_machines_json())
 
 @app.route('/api/announce', methods=['POST'])
 @login_required
 def api_announce():
-    if current_user.role not in ('admin', 'staff', 'helpdesk', 'eventmanager'):
+    if not has_perm('mic'):
         return jsonify({'ok': False, 'error': 'Нет прав'}), 403
     audio = request.files.get('audio')
     if not audio:
@@ -5590,7 +5828,7 @@ def api_bug_report():
 
 @app.route('/api/bug_reports/list')
 @login_required
-@admin_only
+@perm_required('bug_reports')
 def api_bug_reports_list():
     with get_db() as c:
         rows = c.execute(
@@ -5600,7 +5838,7 @@ def api_bug_reports_list():
 
 @app.route('/api/bug_reports/status', methods=['POST'])
 @login_required
-@admin_only
+@perm_required('bug_reports')
 def api_bug_reports_status():
     data = request.get_json() or {}
     rid    = data.get('id')
@@ -5612,6 +5850,7 @@ def api_bug_reports_status():
     return jsonify({'ok': True})
 
 init_db()
+ensure_role_perms()
 
 if __name__ == '__main__':
     ssl_ctx = None
