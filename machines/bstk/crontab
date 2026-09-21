@@ -1,0 +1,10 @@
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=""
+HOME=/home/bstk
+# Часы этой машины идут по UTC, а cron здесь не понимает CRON_TZ: 04:00 UTC = 08:00 по Баку (UTC+4, без перехода на летнее время)
+TZ=Asia/Baku
+
+# Гимн: понедельник 08:00 по Баку (= 04:00 UTC), с 2026-09-21
+0 4 * * 1 MEDIA_ROOT=/home/bstk/Media LOG_FILE=/home/bstk/action.log /home/bstk/campus-cron-media-notify.sh himn 150
+3 4 * * 1 /home/bstk/campus-cron-stop-notify.sh

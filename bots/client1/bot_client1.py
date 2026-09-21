@@ -756,10 +756,10 @@ def get_last_cron_entries(max_lines=10):
     except Exception:
         return []
 
-# Media: 5 папок (1=пн..5=пт), сб/вс=папка 5. utro 07:45–07:59, гимн только пн 08:00–08:03 (180 с), потом перемены.
+# Media: 5 папок (1=пн..5=пт), сб/вс=папка 5. utro 07:45–07:59, гимн только пн 08:30–08:33 (180 с; с 2026-09-21), потом перемены.
 CRON_SCHEDULE_MEDIA = [
     (7, 45, "utro"), (7, 59, "stop"),
-    (8, 0, "himn"), (8, 3, "stop"),   # himn только пн
+    (8, 30, "himn"), (8, 33, "stop"),   # himn только пн, 08:30 (было 08:00)
     (8, 40, "1peremena"), (8, 45, "stop"),
     (9, 25, "2peremena"), (9, 40, "stop"),
     (10, 20, "3peremena"), (10, 25, "stop"),
@@ -775,7 +775,7 @@ def _media_slot_label(slot):
     if slot == "utro":
         return "Утро utro.mp3 (07:45–07:59)"
     if slot == "himn":
-        return "Гимн himn.mp3 (только пн 08:00–08:03, 180 с)"
+        return "Гимн himn.mp3 (только пн 08:30–08:33, 180 с)"
     if slot == "stop":
         return "Стоп"
     if slot and slot.endswith("peremena"):
@@ -817,7 +817,7 @@ def get_next_on_schedule_text(campus=None):
         tname = day_names.get(tday, str(tday))
         lines.append(f"• 07:45 | Утро utro.mp3 (07:45–07:59)")
         lines.append(f"  Завтра {tomorrow_str}, {tname}, папка {tfolder}")
-        lines.append("  … 07:59 стоп, пн 08:00 гимн 180 с, 08:40 1peremena и т.д.")
+        lines.append("  … 07:59 стоп, пн 08:30 гимн 180 с, 08:40 1peremena и т.д.")
         header = f"📅 На очереди (Media)\n\nСегодня слоты прошли.\nПапки: {media_root}/1..5 (1=пн..5=пт)\n\nСледующее:\n\n"
     else:
         header = f"📅 На очереди (Media)\n\nСегодня {today_str}, {day_name}, папка {folder}\n{media_root}/1..5\n\n"

@@ -7,9 +7,9 @@ HOME=/home/client1
 45 7 * * 1-5 MEDIA_ROOT=/mnt/music/Media LOG_FILE=/home/client1/action.log /home/client1/campus-cron-media-notify.sh utro 110
 59 7 * * 1-5 /home/client1/campus-cron-stop-notify.sh
 
-# Гимн (только понедельник)
-0 8 * * 1 MEDIA_ROOT=/mnt/music/Media LOG_FILE=/home/client1/action.log /home/client1/campus-cron-media-notify.sh himn 160
-3 8 * * 1 /home/client1/campus-cron-stop-notify.sh
+# Гимн (только понедельник, 08:30 — распоряжение с 2026-09-21)
+30 8 * * 1 MEDIA_ROOT=/mnt/music/Media LOG_FILE=/home/client1/action.log /home/client1/campus-cron-media-notify.sh himn 160
+33 8 * * 1 /home/client1/campus-cron-stop-notify.sh
 
 # Перемены 1–9
 40 8 * * 1-5 MEDIA_ROOT=/mnt/music/Media LOG_FILE=/home/client1/action.log /home/client1/campus-cron-media-notify.sh 1peremena 110
