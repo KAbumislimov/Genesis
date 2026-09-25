@@ -2925,6 +2925,8 @@ MINUTA_PATHS = {
     'cgtk': '/home/cgtk/special/minuta_molchaniya.mp3',
 }
 MINUTA_VOL = 150
+# Центральная копия файла (sukut.mp3 = тот же файл, что minuta_molchaniya.mp3 на Клиент 1е): при запуске сама попадает на любой кампус, где её ещё нет
+MINUTA_FILE = os.path.join(os.environ.get('SPECIAL_SOUNDS_DIR', '/data/special_sounds'), 'sukut.mp3')
 
 # Adjustable volume for the special-action buttons (Гимн/Минута/Тревога) —
 # stored in `settings` (same key-value table silence_mode/wallpaper_default
@@ -3078,7 +3080,14 @@ def api_minuta(campus):
         return jsonify({'ok': False, 'error': f'{campus} не подключен'})
     filepath = MINUTA_PATHS.get(campus, f'/home/{user}/special/minuta_molchaniya.mp3')
     _bump_play_gen(campus)
-    r = _play_via_ipc(host, user, filepath, _get_special_vol('minuta'))
+    if os.path.isfile(MINUTA_FILE):
+        # центральный файл на сервере: если на кампусе его нет (новый кампус) или размер отличается — сам передаётся по SFTP, как Zəfər Günü
+        try:
+            r = _push_and_play_special(host, user, MINUTA_FILE, filepath, _get_special_vol('minuta'))
+        except Exception as e:
+            r = {'ok': False, 'error': f'Не удалось передать файл на кампус: {e}'}
+    else:
+        r = _play_via_ipc(host, user, filepath, _get_special_vol('minuta'))
     if r['ok'] and 'no socket' not in (r.get('data') or '') and 'no file' not in (r.get('data') or ''):
         log_action(current_user.username, 'minuta', campus, 'Минута молчания')
         tg_notify(
