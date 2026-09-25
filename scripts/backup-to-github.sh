@@ -36,6 +36,9 @@ python3 "$REPO_DIR/campus-infra/scripts/update_journal.py" >>"$LOG" 2>&1 || true
 # nginx-ui и т.п.). ops-journal/raw/ гитигнорится внутри самого ops-journal —
 # сюда попадает только уже очищенный (sanitize.py) ops-journal/clean/.
 git add campus-infra helpdesk-ops ops-journal homelab/backup   # homelab/backup — campus-backup.sh (недельный бэкап на Proxmox)
+# README.md и CLAUDE.md в корне репозитория (уже отслеживаются git, но лежат ВЫШЕ REPO_DIR) —
+# правки от руки раньше требовали отдельного commit/push; теперь идут в тот же авто-бэкап (2026-09-26).
+git -C "$REPO_DIR/.." add README.md CLAUDE.md 2>>"$LOG" || true
 
 if git diff --cached --quiet; then
     log "Изменений нет, коммит не нужен"
@@ -45,6 +48,15 @@ fi
 # Предохранитель: не пушить, если в diff проскочил реальный секрет
 if git diff --cached | grep -qE "PASS=[\"']?[A-Za-z0-9]{4,}|BOT_TOKEN=[0-9]{5,}:|gsk_[A-Za-z0-9]{20,}|GEMINI_API_KEY=AQ|BEGIN (OPENSSH|RSA) PRIVATE KEY"; then
     log "СТОП: похоже на секрет в diff — коммит ОТМЕНЁН, разберись руками"
+    git reset >/dev/null
+    exit 1
+fi
+
+# Предохранитель: реальный IP (10.x.x.x) в публичном README/docs — их писали руками, там должны
+# быть только плейсхолдеры <IP сервера> и т.п. (см. campus-secrets/server/infra-values.md, 2026-09-26).
+if git diff --cached -- README.md 'campus-infra/docs/*.md' campus-infra/RESTORE.md campus-infra/README.md \
+     | grep -E '^\+' | grep -qE '(^|[^0-9.])10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}([^0-9]|$)'; then
+    log "СТОП: похоже на реальный IP в публичном README/docs — коммит ОТМЕНЁН, разберись руками"
     git reset >/dev/null
     exit 1
 fi

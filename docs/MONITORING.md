@@ -17,13 +17,13 @@ bash scripts/fix-logs-and-metrics.sh
 ## Деплой (важно)
 При копировании на сервер **исключайте** `remote-logs` — там сотни МБ логов, они создаются на сервере:
 ```bash
-rsync -avz --exclude '.git' --exclude 'remote-logs' /home/kamran/campus-infra/ kamran@10.10.4.120:/home/kamran/campus-infra/
+rsync -avz --exclude '.git' --exclude 'remote-logs' /home/kamran/campus-infra/ kamran@<IP сервера>:/home/kamran/campus-infra/
 ```
 Или используйте: `bash scripts/deploy-to-server.sh`
 
 ## Автозапуск (всё всегда работает)
 
-### Campus-server (10.10.4.120)
+### Campus-server
 - **Docker** — сервисы с `restart: unless-stopped` запускаются после перезагрузки
 - **Cron** — `sync-remote-logs.sh` каждую минуту (установить: `bash scripts/install-sync-logs-cron.sh`)
 - **Полная настройка:** `bash scripts/install-auto-start.sh`
@@ -59,18 +59,18 @@ sudo systemctl daemon-reload && sudo systemctl enable --now node_exporter promta
 ## Мобильный доступ (Samsung A55 и др.)
 
 ### Шаг 1: Сеть
-Телефон должен быть в той же сети, что и campus-server (10.10.4.120):
+Телефон должен быть в той же сети, что и campus-server:
 - **Wi‑Fi кампуса** — подключитесь к той же точке, что и сервер
 - **Дома/вне кампуса** — нужен VPN в сеть кампуса
 
 ### Шаг 2: Браузер
-Откройте в браузере (Chrome, Samsung Internet): **http://10.10.4.120:3000**
+Откройте в браузере (Chrome, Samsung Internet): **http://\<IP сервера>:\<порт Grafana>** (значения — `campus-secrets/server/infra-values.md`)
 
 - Логин: `admin` (или из `.env`: `GRAFANA_USER`)
 - Пароль: из `.env` (`GRAFANA_PASSWORD`)
 
 ### Шаг 3: Закладка
-Сохраните в закладки дашборд: **http://10.10.4.120:3000/d/campus-overview**
+Сохраните в закладки дашборд: **http://\<IP сервера>:\<порт Grafana>/d/campus-overview**
 
 Grafana адаптивна — 8 ГБ ОЗУ телефона достаточно для комфортного просмотра.
 
@@ -81,7 +81,7 @@ Grafana адаптивна — 8 ГБ ОЗУ телефона достаточн
 Приложение для управления алертами и уведомлениями (требует Grafana OnCall или Cloud).
 
 ### Вариант 3: Прямая ссылка
-Сохраните в закладки: `http://10.10.4.120:3000/d/campus-overview`
+Сохраните в закладки: `http://<IP сервера>:<порт Grafana>/d/campus-overview`
 
 ---
 

@@ -4,9 +4,11 @@
 >
 > ```bash
 > export GH_TOKEN=ghp_xxxxxxxx     # токен GitHub с доступом к репозиториям campus-infra и campus-secrets
-> git clone --depth 1 https://${GH_TOKEN}@github.com/KAbumislimov/campus-infra.git /tmp/ci \
+> git clone --depth 1 https://${GH_TOKEN}@github.com/<владелец репо>/campus-infra.git /tmp/ci \
 >   && bash /tmp/ci/projects/campus-infra/restore.sh
 > ```
+>
+> Владелец репозитория — в `campus-secrets/server/infra-values.md` (приватный репозиторий).
 >
 > Если репозиторий уже на машине: `bash ~/projects/campus-infra/restore.sh`
 >
@@ -33,7 +35,7 @@ bash ~/projects/campus-infra/restore.sh --verify
 |---|---|
 | `--verify` | только проверка, ничего не меняет |
 | `--state-only` | только данные (БД, права, настройки), без контейнеров/cron/служб |
-| `--no-clients` | не трогать кампусные машины (client1, client2 …) |
+| `--no-clients` | не трогать кампусные машины |
 | `--force-data` | заменить существующие БД снимками из GitHub (старые сохраняются рядом как `*.before_restore_*`) |
 | `--yes` | не задавать вопросов |
 
@@ -64,9 +66,9 @@ bash ~/projects/campus-infra/restore.sh --verify
 ## После восстановления вручную
 
 1. **Доступ к GitHub для автосинхронизации.** Если на новой машине нет SSH-ключа GitHub, скрипт оставит HTTPS-remote с токеном. Лучше:
-   `ssh-keygen -t ed25519` → добавить ключ в GitHub (Settings → SSH keys) → `git -C ~ remote set-url origin git@github.com:KAbumislimov/campus-infra.git`.
+   `ssh-keygen -t ed25519` → добавить ключ в GitHub (Settings → SSH keys) → `git -C ~ remote set-url origin git@github.com:<владелец репо>/campus-infra.git`.
 2. Новая сетевая карта = новый MAC: обновить `CLIENT1_MAC` в `.env` (Wake-on-LAN).
-3. Проверить `https://<адрес сервера>:8090` — вход под своим логином (пользователи вернулись из снимка).
+3. Проверить `https://<адрес сервера>:<порт веб-панели>` — вход под своим логином (пользователи вернулись из снимка). Значения — `campus-secrets/server/infra-values.md`.
 4. `bash restore.sh --verify` ещё раз — убедиться, что цепочка резервного копирования снова замкнулась.
 
 Подробности и устройство бэкапов: [docs/BACKUP-AND-RESTORE.md](docs/BACKUP-AND-RESTORE.md).

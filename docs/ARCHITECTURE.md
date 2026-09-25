@@ -1,16 +1,18 @@
 # Архитектура (коротко)
 
-## Сервер (CentOS, 10.10.4.120, пользователь kamran)
+## Сервер (CentOS, пользователь kamran)
 
-| Компонент | Как запущен | Порт |
-|---|---|---|
-| **Веб-панель** `campus-webui` (Flask + gunicorn gthread, HTTPS, сертификат хранится в `data/webui/`) | Docker Compose, профиль `webui` | 8090 (внутри 8080) |
-| Prometheus / Grafana / Loki / promtail | Docker Compose, профиль `logs` | 9091 / 3000 / 3100 |
-| Cockpit (веб-консоль сервера) | Docker Compose, профиль `cockpit` | 1991 |
-| Helpdesk Ops (тикеты, ежедневные отчёты) | отдельный compose в `~/projects/helpdesk-ops` | 8094 |
-| Telegram-бот Клиент 1а | systemd `tg-campus-client1` (`/opt/tg-campus-bot`) | — |
-| Автосинхронизация с GitHub | `github-live-sync.sh` + watchdog (cron `@reboot`, `*/5`) | — |
-| Часы кампусов, дайджест, бэкапы, Zəfər Günü | cron (см. `state/crontab.txt`) | — |
+Реальный IP сервера и порты — в приватном `campus-secrets/server/infra-values.md` (здесь публичный репозиторий, поэтому без значений).
+
+| Компонент | Как запущен |
+|---|---|
+| **Веб-панель** `campus-webui` (Flask + gunicorn gthread, HTTPS, сертификат хранится в `data/webui/`) | Docker Compose, профиль `webui` |
+| Prometheus / Grafana / Loki / promtail | Docker Compose, профиль `logs` |
+| Cockpit (веб-консоль сервера) | Docker Compose, профиль `cockpit` |
+| Helpdesk Ops (тикеты, ежедневные отчёты) | отдельный compose в `~/projects/helpdesk-ops` |
+| Telegram-бот Клиент 1а | systemd `tg-campus-client1` (`/opt/tg-campus-bot`) |
+| Автосинхронизация с GitHub | `github-live-sync.sh` + watchdog (cron `@reboot`, `*/5`) |
+| Часы кампусов, дайджест, бэкапы, Zəfər Günü | cron (см. `state/crontab.txt`) |
 
 Данные веб-панели: `data/webui/` (`webui.db`, `schedule.json`, `special_sounds/` — гимн, минута, NMD, Zəfər; `alarm_sounds/`, обои).
 Конфигурация контейнеров — `docker-compose.yaml`, секреты — `.env` (не в GitHub).

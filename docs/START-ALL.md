@@ -26,8 +26,8 @@
 ```bash
 cd /home/kamran/campus-infra
 
-# На client1 (один раз): подготовить каталоги
-ssh client1@10.20.0.41 'sudo mkdir -p /mnt/campus-data/{loki,prometheus,backups} && sudo chown -R client1:client1 /mnt/campus-data'
+# На client1 (один раз): подготовить каталоги (IP — campus-secrets/server/infra-values.md)
+ssh client1@<IP client1> 'sudo mkdir -p /mnt/campus-data/{loki,prometheus,backups} && sudo chown -R client1:client1 /mnt/campus-data'
 
 # На CentOS: примонтировать SSD (опционально, для экономии места)
 sudo bash scripts/mount-client1-ssd-on-centos.sh
@@ -42,6 +42,6 @@ bash scripts/start-all.sh up
 
 ```bash
 docker compose --profile logs --profile bot --profile watchdog --profile recovery ps
-curl -s http://10.10.4.120:3000  # Grafana
-curl -s http://10.10.4.120:3100/ready  # Loki
+curl -s http://<IP сервера>:<порт Grafana>  # Grafana
+curl -s http://<IP сервера>:<порт Loki>/ready  # Loki
 ```

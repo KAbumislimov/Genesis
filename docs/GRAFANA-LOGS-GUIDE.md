@@ -16,10 +16,10 @@ journalctl -u promtail -n 20 --no-pager
 
 **Если promtail не перезапускался после настройки туннеля:**
 ```bash
-# На centos — обновить конфиг и перезапустить
+# На centos — обновить конфиг и перезапустить (IP кампуса — campus-secrets/server/infra-values.md)
 cd /home/kamran/campus-infra
-scp -i ~/.ssh/campus_bot promtail-clients/promtail-client2.yaml client2@10.70.0.41:/home/client2/campus-monitoring/promtail/config.yaml
-ssh client2@10.70.0.41 "sudo systemctl restart promtail"
+scp -i ~/.ssh/campus_bot promtail-clients/promtail-client2.yaml client2@<IP кампуса>:/home/client2/campus-monitoring/promtail/config.yaml
+ssh client2@<IP кампуса> "sudo systemctl restart promtail"
 ```
 
 **В Grafana:** проверьте временной диапазон (правый верхний угол) — выберите "Last 15 minutes" или "Last 1 hour".

@@ -16,7 +16,7 @@
 
 каждый час      cron: backup-to-github.sh (страховка, если live-sync остановился)
 каждый день 03:00   cron: backup-data.sh — копии БД в ~/campus-backups (локально, 30 дней)
-каждое воскр. 02:00 cron: campus-backup.sh — бэкап машин и музыки на Proxmox (10.20.1.106)
+каждое воскр. 02:00 cron: campus-backup.sh — бэкап машин и музыки на Proxmox (IP — campus-secrets/server/infra-values.md)
 ```
 
 Если коммит не нужен (изменений нет), ничего не пишется. Если в diff нашёлся похожий на секрет текст — коммит **отменяется**

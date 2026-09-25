@@ -1,12 +1,14 @@
-# Настройка SSD 512 ГБ на client1 (10.20.0.41) для хранения данных Loki/Prometheus
+# Настройка SSD 512 ГБ на client1 для хранения данных Loki/Prometheus
 
-Сервер CentOS (10.10.4.120) переполнен.  
+> IP-адреса, упомянутые ниже как `<IP client1>` / `<IP сервера>`, — в приватном `campus-secrets/server/infra-values.md`.
+
+Сервер CentOS переполнен.  
 SSD на client1 используется через **SSHFS** (не требует интернета на client1, не требует NFS).
 
 ## Схема
 
 ```
-client1 (10.20.0.41)                    CentOS (10.10.4.120)
+client1                                  CentOS
 ┌─────────────────────┐              ┌─────────────────────────┐
 │ SSD 512 GB (USB)    │   SSHFS      │ Docker                  │
 │ /mnt/campus-data/   │ ◄──────────  │ loki_data    → SSHFS    │
@@ -15,10 +17,10 @@ client1 (10.20.0.41)                    CentOS (10.10.4.120)
 └─────────────────────┘              └─────────────────────────┘
 ```
 
-## Шаг 1: На client1 (10.20.0.41) — SSD и NFS
+## Шаг 1: На client1 — SSD и NFS
 
 ```bash
-ssh client1@10.20.0.41
+ssh client1@<IP client1>
 ```
 
 ### 1.1 Найти диск (USB-SATA)
@@ -61,10 +63,10 @@ sudo chmod 777 /mnt/campus-data/loki /mnt/campus-data/prometheus
 
 ```bash
 # На client1 или с CentOS:
-ssh client1@10.20.0.41 'sudo chmod 777 /mnt/campus-data/loki /mnt/campus-data/prometheus'
+ssh client1@<IP client1> 'sudo chmod 777 /mnt/campus-data/loki /mnt/campus-data/prometheus'
 ```
 
-Либо запустите скрипт: `ssh client1@10.20.0.41 'sudo bash -s' < scripts/fix-ssd-permissions-on-client1.sh`
+Либо запустите скрипт: `ssh client1@<IP client1> 'sudo bash -s' < scripts/fix-ssd-permissions-on-client1.sh`
 
 ### 1.5 NFS не нужен
 
@@ -73,7 +75,7 @@ ssh client1@10.20.0.41 'sudo chmod 777 /mnt/campus-data/loki /mnt/campus-data/pr
 
 ---
 
-## Шаг 2: На CentOS (10.10.4.120) — монтировать через SSHFS
+## Шаг 2: На CentOS — монтировать через SSHFS
 
 ```bash
 cd /home/kamran/campus-infra
@@ -134,7 +136,7 @@ df -h /mnt/client1-ssd
 du -sh /mnt/client1-ssd/*
 ```
 
-Grafana: http://10.10.4.120:3000 (admin / см. campus-secrets)
+Grafana: адрес и порт — `campus-secrets/server/infra-values.md` (admin / пароль там же)
 
 ---
 
@@ -156,7 +158,7 @@ bash scripts/sync-remote-logs.sh
 (crontab -l 2>/dev/null; echo '* * * * * cd /home/kamran/campus-infra && bash scripts/sync-remote-logs.sh') | crontab -
 ```
 
-Требуется SSH-доступ без пароля: `ssh client1@10.20.0.41` и `ssh client2@10.70.0.41`. Ключ по умолчанию: `~/.ssh/campus_bot` (или задайте `SSH_KEY` в окружении).
+Требуется SSH-доступ без пароля: `ssh client1@<IP client1>` и `ssh client2@<IP client2>`. Ключ по умолчанию: `~/.ssh/campus_bot` (или задайте `SSH_KEY` в окружении).
 
 ## Node exporter на клиентах (client1, client2)
 
