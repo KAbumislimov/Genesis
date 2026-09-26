@@ -5,6 +5,7 @@
   "tg_notify_himn": "1",
   "tg_notify_login": "1",
   "tg_notify_play": "1",
+  "tg_notify_tasks": "1",
   "tg_notify_upload": "1",
   "tg_notify_users": "1",
   "theme_default": "modern-dark",

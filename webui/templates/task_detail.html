@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}{{ t.title }} — Задачи{% endblock %}
+
+{% block extra_head %}
+<style>
+.td-back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:13px;margin-bottom:14px}
+.td-back:hover{color:var(--text)}
+.td-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:6px;flex-wrap:wrap}
+.td-title{font-size:22px;font-weight:800;line-height:1.3;flex:1;min-width:240px}
+.td-title.is-done{text-decoration:line-through;opacity:.6}
+.td-status{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:4px 12px;border-radius:7px;flex-shrink:0}
+.td-status.open{background:rgba(88,166,255,.15);color:var(--blue)}
+.td-status.in_progress{background:rgba(255,166,87,.15);color:var(--orange)}
+.td-status.done{background:rgba(63,185,80,.15);color:var(--green)}
+
+.td-grid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+@media(max-width:900px){.td-grid{grid-template-columns:1fr}}
+
+.td-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:16px}
+.td-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px;display:block}
+.td-desc{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;min-height:24px}
+.cf-input{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:9px 12px;font-size:14px;width:100%;
+}
+.cf-input:disabled{opacity:.65;cursor:not-allowed}
+textarea.cf-input{resize:vertical;min-height:110px;font-family:inherit}
+select.cf-input option{background:var(--bg2)}
+
+.td-side .td-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.td-side .td-row:last-child{border-bottom:none}
+.td-side .td-row b{color:var(--muted);font-weight:600}
+
+.td-actions{display:flex;flex-direction:column;gap:8px}
+.td-actions .btn{width:100%;justify-content:center;display:flex;align-items:center;gap:8px}
+
+.cm-item{border-top:1px solid var(--border);padding:14px 0}
+.cm-item:first-child{border-top:none;padding-top:0}
+.cm-head{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.cm-head b{color:var(--text);font-weight:700}
+.cm-text{font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+</style>
+{% endblock %}
+
+{% block content %}
+<a class="td-back" href="{{ url_for('tasks_page') }}"><i class="bi bi-arrow-left"></i> Все задачи</a>
+
+<div class="td-head">
+  <div class="td-title {% if t.status=='done' %}is-done{% endif %}" id="td-title-view">{{ t.title }}</div>
+  <span class="td-status {{ t.status }}" id="td-status-badge">{{ statuses.get(t.status, t.status) }}</span>
+</div>
+
+<div class="td-grid">
+  <div>
+    <div class="td-card">
+      <span class="td-label">Описание</span>
+      <textarea id="td-desc" class="cf-input" {% if not can_edit %}disabled{% endif %}>{{ t.description }}</textarea>
+      {% if can_edit %}
+      <div style="margin-top:10px;display:flex;align-items:center;gap:12px">
+        <button class="btn btn-sm btn-primary" onclick="tdSave()"><i class="bi bi-check2"></i> Сохранить</button>
+        <span id="td-msg" style="font-size:13px"></span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="td-card">
+      <span class="td-label"><i class="bi bi-chat-left-text"></i> Комментарии ({{ comments|length }})</span>
+      <div id="cm-list">
+      {% for cm in comments %}
+        <div class="cm-item">
+          <div class="cm-head"><b>{{ cm.username }}</b> {{ cm.created_at }}</div>
+          <div class="cm-text">{{ cm.content }}</div>
+        </div>
+      {% else %}
+        <div class="text-muted" style="font-size:13px">Пока пусто — первым напишите, что уже сделано или что нужно уточнить.</div>
+      {% endfor %}
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:flex-start">
+        <textarea id="cm-input" class="cf-input" style="min-height:44px" placeholder="Написать комментарий..."></textarea>
+        <button class="btn btn-primary" onclick="tdComment()" style="flex-shrink:0"><i class="bi bi-send-fill"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="td-side">
+    <div class="td-card td-actions">
+      {% if t.status != 'done' %}
+        {% if t.status == 'open' %}
+        <button class="btn btn-warning" onclick="tdStatus('in_progress')"><i class="bi bi-play-fill"></i> Взять в работу</button>
+        {% endif %}
+        <button class="btn btn-success" onclick="tdStatus('done')"><i class="bi bi-check2-circle"></i> Завершить</button>
+      {% else %}
+        <button class="btn btn-outline-secondary" onclick="tdStatus('open')"><i class="bi bi-arrow-counterclockwise"></i> Открыть заново</button>
+      {% endif %}
+    </div>
+
+    <div class="td-card">
+      <div class="td-row"><b>Кампус</b>
+        {% if can_edit %}<select id="td-campus" class="cf-input" style="width:auto;max-width:160px" onchange="tdField('campus', this.value)">
+          <option value="" {% if not t.campus %}selected{% endif %}>—</option>
+          {% for c in campus_choices %}<option value="{{ c }}" {% if c==t.campus %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>{% else %}<span>{{ t.campus or '—' }}</span>{% endif %}
+      </div>
+      <div class="td-row"><b>Приоритет</b>
+        {% if can_edit %}<select id="td-priority" class="cf-input" style="width:auto;max-width:160px" onchange="tdField('priority', this.value)">
+          {% for k, l in priorities.items() %}<option value="{{ k }}" {% if k==t.priority %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select>{% else %}<span>{{ priorities.get(t.priority, t.priority) }}</span>{% endif %}
+      </div>
+      <div class="td-row"><b>Исполнитель</b>
+        {% if can_edit %}<select id="td-assignee" class="cf-input" style="width:auto;max-width:160px" onchange="tdField('assignee', this.value)">
+          <option value="" {% if not t.assignee %}selected{% endif %}>не назначено</option>
+          {% for u in user_choices %}<option value="{{ u }}" {% if u==t.assignee %}selected{% endif %}>{{ u }}</option>{% endfor %}
+        </select>{% else %}<span>{{ t.assignee or 'не назначено' }}</span>{% endif %}
+      </div>
+      <div class="td-row"><b>Автор</b><span>{{ t.created_by }}</span></div>
+      <div class="td-row"><b>Создана</b><span>{{ t.created_at }}</span></div>
+      {% if t.done_at %}<div class="td-row"><b>Завершена</b><span>{{ t.done_at }}</span></div>{% endif %}
+    </div>
+
+    {% if can_manage or t.created_by == current_user.username %}
+    <button class="btn btn-outline-danger" style="width:100%" onclick="tdDelete()"><i class="bi bi-trash3"></i> Удалить задачу</button>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TID = {{ t.id }};
+function tdSave(){
+  const msg = document.getElementById('td-msg');
+  msg.style.color='var(--muted)'; msg.textContent='…';
+  fetch(`/api/tasks/${TID}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({description:document.getElementById('td-desc').value})})
+    .then(r=>r.json()).then(d=>{
+      msg.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+      msg.textContent = d.ok ? '✓ Сохранено' : (d.error||'Ошибка');
+    });
+}
+function tdField(name, value){
+  fetch(`/api/tasks/${TID}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({[name]:value})}).then(r=>r.json()).then(d=>{
+      if(!d.ok) alert(d.error||'Ошибка');
+    });
+}
+function tdStatus(status){
+  fetch(`/api/tasks/${TID}/status`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status})}).then(r=>r.json()).then(d=>{
+      if(d.ok) window.location.reload(); else alert(d.error||'Ошибка');
+    });
+}
+function tdComment(){
+  const inp = document.getElementById('cm-input');
+  const content = inp.value.trim();
+  if(!content) return;
+  fetch(`/api/tasks/${TID}/comment`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({content})}).then(r=>r.json()).then(d=>{
+      if(d.ok) window.location.reload(); else alert(d.error||'Ошибка');
+    });
+}
+function tdDelete(){
+  if(!confirm('Удалить эту задачу без возможности восстановить?')) return;
+  fetch(`/api/tasks/${TID}/delete`,{method:'POST'}).then(r=>r.json()).then(d=>{
+    if(d.ok) window.location.href='{{ url_for("tasks_page") }}'; else alert(d.error||'Ошибка');
+  });
+}
+</script>
+{% endblock %}

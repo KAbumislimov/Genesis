@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Задачи — MEDIA{% endblock %}
+
+{% block extra_head %}
+<style>
+.tk-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tk-tab{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:100px;
+  border:1.5px solid var(--border);background:var(--bg3);color:var(--muted);
+  font-size:12.5px;font-weight:700;text-decoration:none;transition:.15s;
+}
+.tk-tab:hover{border-color:var(--blue);color:var(--text)}
+.tk-tab.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 14%,var(--bg3));color:var(--text)}
+.tk-tab b{font-weight:800}
+
+.create-form{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-bottom:24px}
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.cf-grid{grid-template-columns:1fr}}
+.cf-full{grid-column:1/-1}
+.cf-input{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:9px 12px;font-size:14px;width:100%;transition:.15s;
+}
+.cf-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(88,166,255,.1)}
+textarea.cf-input{resize:vertical;min-height:80px;font-family:inherit}
+select.cf-input option{background:var(--bg2)}
+.cf-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;display:block}
+
+.tk-row{
+  display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--text);
+  transition:.15s;
+}
+.tk-row:hover{border-color:rgba(88,166,255,.4);transform:translateX(2px)}
+.tk-row.is-done{opacity:.6}
+.tk-prio{width:5px;align-self:stretch;border-radius:3px;flex-shrink:0}
+.tk-prio.low{background:var(--border)}
+.tk-prio.normal{background:var(--blue)}
+.tk-prio.high{background:var(--orange)}
+.tk-prio.urgent{background:var(--red)}
+.tk-main{flex:1;min-width:0}
+.tk-title{font-size:14.5px;font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-row.is-done .tk-title{text-decoration:line-through}
+.tk-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted)}
+.tk-meta span{display:inline-flex;align-items:center;gap:4px}
+.tk-status{
+  font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+  padding:3px 10px;border-radius:6px;flex-shrink:0;white-space:nowrap;
+}
+.tk-status.open{background:rgba(88,166,255,.15);color:var(--blue)}
+.tk-status.in_progress{background:rgba(255,166,87,.15);color:var(--orange)}
+.tk-status.done{background:rgba(63,185,80,.15);color:var(--green)}
+.tk-assignee{
+  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);flex-shrink:0;
+}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state i{font-size:48px;display:block;margin-bottom:14px;opacity:.4}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 style="font-size:22px;font-weight:800;margin:0">
+      <i class="bi bi-list-check text-blue"></i> Задачи
+    </h2>
+    <div class="text-muted" style="font-size:13px;margin-top:2px">
+      Открыто: {{ counts.get('open',0) }} · В работе: {{ counts.get('in_progress',0) }} · Завершено: {{ counts.get('done',0) }}
+    </div>
+  </div>
+</div>
+
+<div class="tk-tabs">
+  <a class="tk-tab {% if filt=='active' %}on{% endif %}" href="?f=active"><i class="bi bi-circle"></i> Активные</a>
+  <a class="tk-tab {% if filt=='mine' %}on{% endif %}" href="?f=mine"><i class="bi bi-person"></i> Мои</a>
+  <a class="tk-tab {% if filt=='done' %}on{% endif %}" href="?f=done"><i class="bi bi-check2-circle"></i> Завершённые</a>
+  <a class="tk-tab {% if filt=='all' %}on{% endif %}" href="?f=all"><i class="bi bi-collection"></i> Все</a>
+</div>
+
+<!-- Create form -->
+<div class="create-form">
+  <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+              color:var(--muted);margin-bottom:14px">
+    <i class="bi bi-plus-circle-fill text-green"></i> Новая задача
+  </div>
+  <div class="cf-grid">
+    <div class="cf-full">
+      <label class="cf-label">Название</label>
+      <input type="text" id="tk-title" class="cf-input" maxlength="200" placeholder="Коротко, в чём суть...">
+    </div>
+    <div class="cf-full">
+      <label class="cf-label">Описание</label>
+      <textarea id="tk-desc" class="cf-input" maxlength="4000" placeholder="От кого, что случилось, где — чем подробнее, тем понятнее исполнителю"></textarea>
+    </div>
+    <div>
+      <label class="cf-label">Кампус</label>
+      <select id="tk-campus" class="cf-input">
+        <option value="">— не важно —</option>
+        {% for c in campus_choices %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="cf-label">Приоритет</label>
+      <select id="tk-priority" class="cf-input">
+        {% for k, l in priorities.items() %}<option value="{{ k }}" {% if k=='normal' %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="cf-full">
+      <label class="cf-label">Исполнитель</label>
+      <select id="tk-assignee" class="cf-input">
+        <option value="">— не назначено —</option>
+        {% for u in user_choices %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="cf-full" style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-primary" onclick="tkCreate()">
+        <i class="bi bi-send-fill"></i> Создать
+      </button>
+      <span id="tk-msg" style="font-size:13px;min-height:18px"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Task list -->
+<div id="tk-list">
+{% if tasks %}
+  {% for t in tasks %}
+  <a class="tk-row {% if t.status=='done' %}is-done{% endif %}" href="{{ url_for('task_detail_page', task_id=t.id) }}">
+    <span class="tk-prio {{ t.priority }}" title="Приоритет: {{ priorities.get(t.priority, t.priority) }}"></span>
+    <div class="tk-main">
+      <div class="tk-title">{{ t.title }}</div>
+      <div class="tk-meta">
+        {% if t.campus %}<span><i class="bi bi-geo-alt"></i> {{ t.campus }}</span>{% endif %}
+        <span><i class="bi bi-person-plus"></i> {{ t.created_by }}</span>
+        <span><i class="bi bi-clock"></i> {{ t.created_at }}</span>
+      </div>
+    </div>
+    <span class="tk-assignee"><i class="bi bi-person-check"></i> {{ t.assignee or 'не назначено' }}</span>
+    <span class="tk-status {{ t.status }}">{{ statuses.get(t.status, t.status) }}</span>
+  </a>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <i class="bi bi-inbox"></i>
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">Задач нет</div>
+    <div style="font-size:13px">Заведите первую задачу через форму выше</div>
+  </div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function tkCreate(){
+  const title = document.getElementById('tk-title').value.trim();
+  const description = document.getElementById('tk-desc').value.trim();
+  const campus = document.getElementById('tk-campus').value;
+  const priority = document.getElementById('tk-priority').value;
+  const assignee = document.getElementById('tk-assignee').value;
+  const msg = document.getElementById('tk-msg');
+  if(!title){msg.style.color='var(--red)';msg.textContent='Укажите название';return;}
+  msg.style.color='var(--muted)';msg.textContent='…';
+  fetch('/api/tasks/create',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title,description,campus,priority,assignee})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      window.location.href = '/tasks/' + d.id;
+    } else {
+      msg.style.color='var(--red)';msg.textContent=d.error||'Ошибка';
+    }
+  }).catch(()=>{msg.style.color='var(--red)';msg.textContent='Нет связи с сервером';});
+}
+</script>
+{% endblock %}

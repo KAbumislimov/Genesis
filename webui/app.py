@@ -594,6 +594,7 @@ def init_db():
             ('tg_notify_play',   '0'),
             ('tg_notify_login',  '1'),
             ('tg_notify_backup', '1'),
+            ('tg_notify_tasks',  '1'),
             ('tg_chat_ids',      ''),
             ('silence_mode',     '0'),
         ]:
@@ -634,6 +635,30 @@ def init_db():
             name        TEXT NOT NULL,
             created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(username, folder, name)
+        )''')
+        # ── Задачи/заявки (2026-09-26) — свой минимальный трекер вместо стороннего Vikunja: заводить,
+        # назначать, комментировать, закрывать; закрытие шлёт уведомление в Telegram всей команде
+        # (та же tg_notify(), что у бэкапов/входов — общий чат, никакой отдельной интеграции не нужно).
+        c.execute('''CREATE TABLE IF NOT EXISTS tasks (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            title       TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT "",
+            status      TEXT NOT NULL DEFAULT "open",
+            priority    TEXT NOT NULL DEFAULT "normal",
+            campus      TEXT NOT NULL DEFAULT "",
+            created_by  TEXT NOT NULL,
+            assignee    TEXT NOT NULL DEFAULT "",
+            due_at      TEXT,
+            created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at  TEXT DEFAULT CURRENT_TIMESTAMP,
+            done_at     TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS task_comments (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id     INTEGER NOT NULL,
+            username    TEXT NOT NULL,
+            content     TEXT NOT NULL,
+            created_at  TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
     reload_machines()
     sync_prometheus_targets()
@@ -751,6 +776,10 @@ PERM_CATALOG = [
         ('ui_default',           'Дизайн плеера по умолчанию', 'Выбор основного дизайна плеера для всех, кто не выбрал свой (Настройки → «Дизайн интерфейса»)'),
         ('telegram_settings',    'Уведомления в Telegram',     'Настройка оповещений в Telegram'),
     ]),
+    ('tasks', 'Задачи и заявки', 'bi-list-check', [
+        ('tasks_view',   'Просмотр задач',           'Общий список задач: свои и чужие'),
+        ('tasks_manage', 'Управление задачами',      'Назначать исполнителя, менять статус и удалять любые задачи (не только свои)'),
+    ]),
     ('admin', 'Администрирование', 'bi-shield-lock', [
         ('users_manage',  'Пользователи',                      'Создание, блокировка, роли и пароли пользователей'),
         ('roles_manage',  'Роли и привилегии',                 'Эта страница: назначение привилегий ролям'),
@@ -775,11 +804,11 @@ _P_SPECIAL = {'himn', 'minuta', 'alarm', 'special_events', 'perem_trigger', 'spe
 _P_DAILY   = _P_MUSIC | _P_SPECIAL | {'mic', 'schedule_toggle', 'perem_edit', 'upload', 'download'}
 DEFAULT_ROLE_PERMS = {
     'guest':        {'download'},
-    'user':         _P_MUSIC | {'upload', 'download'},
+    'user':         _P_MUSIC | {'upload', 'download', 'tasks_view'},
     'viewer':       _P_MUSIC | {'download'},
-    'staff':        _P_DAILY | {'library_sync', 'monitor_view', 'timesync', 'cheatsheet', 'terminal'},
-    'helpdesk':     _P_DAILY | {'cron_pause'},
-    'eventmanager': _P_DAILY,
+    'staff':        _P_DAILY | {'library_sync', 'monitor_view', 'timesync', 'cheatsheet', 'terminal', 'tasks_view', 'tasks_manage'},
+    'helpdesk':     _P_DAILY | {'cron_pause', 'tasks_view', 'tasks_manage'},
+    'eventmanager': _P_DAILY | {'tasks_view'},
     'admin':        set(PERM_INFO),
 }
 # что раньше выдавалось отдельному пользователю флагом can_himn («право на гимн») — оставляем
@@ -1886,6 +1915,207 @@ def api_ann_pin():
         return jsonify({'ok': False, 'error': 'Не указан id'})
     with get_db() as c:
         c.execute('UPDATE announcements SET pin_top=? WHERE id=?', (1 if pin_top else 0, ann_id))
+    return jsonify({'ok': True})
+
+# ══════════════════════════════════════════════════════════════════════════
+# Задачи/заявки (2026-09-26) — минимальный трекер вместо стороннего Vikunja:
+# завести, назначить, обсудить в комментариях, закрыть. Закрытие (и назначение)
+# шлёт сообщение в общий Telegram-чат через tg_notify() — тот же канал, что у
+# бэкапов и входов, поэтому «уведомление всем» работает сразу, без вебхуков.
+# ══════════════════════════════════════════════════════════════════════════
+TASK_STATUSES = ('open', 'in_progress', 'done')
+TASK_STATUS_LABELS = {'open': 'Открыта', 'in_progress': 'В работе', 'done': 'Завершена'}
+TASK_PRIORITIES = ('low', 'normal', 'high', 'urgent')
+TASK_PRIORITY_LABELS = {'low': 'Низкий', 'normal': 'Обычный', 'high': 'Высокий', 'urgent': 'Срочно'}
+
+def _task_campus_choices():
+    return ['Клиент 1', 'Client2'] + [m['name'] for m in music_machines()]
+
+def _task_user_choices():
+    with get_db() as c:
+        return [r['username'] for r in c.execute(
+            'SELECT username FROM users WHERE is_blocked=0 ORDER BY username COLLATE NOCASE').fetchall()]
+
+def _task_row(task_id):
+    with get_db() as c:
+        return c.execute('SELECT * FROM tasks WHERE id=?', (task_id,)).fetchone()
+
+def _can_edit_task(row):
+    """tasks_manage — любую; иначе только свою (завела или назначена)."""
+    if has_perm('tasks_manage'):
+        return True
+    u = current_user.username
+    return row and (row['created_by'] == u or row['assignee'] == u)
+
+@app.route('/tasks')
+@login_required
+def tasks_page():
+    if not has_perm('tasks_view'):
+        return redirect(url_for('dashboard'))
+    f = request.args.get('f', 'active')
+    where = {'active': "status!='done'", 'mine': "(created_by=? OR assignee=?)",
+             'done': "status='done'", 'all': "1=1"}.get(f, "status!='done'")
+    params = (current_user.username, current_user.username) if f == 'mine' else ()
+    with get_db() as c:
+        rows = c.execute(
+            f'SELECT * FROM tasks WHERE {where} ORDER BY (status="done"), '
+            "CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, id DESC",
+            params).fetchall()
+        counts = dict(c.execute(
+            "SELECT status, COUNT(*) FROM tasks GROUP BY status").fetchall())
+    return render_template('tasks.html', tasks=rows, filt=f, counts=counts,
+                           statuses=TASK_STATUS_LABELS, priorities=TASK_PRIORITY_LABELS,
+                           campus_choices=_task_campus_choices(), user_choices=_task_user_choices(),
+                           can_manage=has_perm('tasks_manage'))
+
+@app.route('/tasks/<int:task_id>')
+@login_required
+def task_detail_page(task_id):
+    if not has_perm('tasks_view'):
+        return redirect(url_for('dashboard'))
+    row = _task_row(task_id)
+    if not row:
+        return redirect(url_for('tasks_page'))
+    with get_db() as c:
+        comments = c.execute(
+            'SELECT * FROM task_comments WHERE task_id=? ORDER BY id', (task_id,)).fetchall()
+    return render_template('task_detail.html', t=row, comments=comments,
+                           statuses=TASK_STATUS_LABELS, priorities=TASK_PRIORITY_LABELS,
+                           campus_choices=_task_campus_choices(), user_choices=_task_user_choices(),
+                           can_edit=_can_edit_task(row), can_manage=has_perm('tasks_manage'))
+
+@app.route('/api/tasks/create', methods=['POST'])
+@login_required
+def api_task_create():
+    if not has_perm('tasks_view'):
+        return jsonify({'ok': False, 'error': 'Нет прав'}), 403
+    d = request.get_json() or {}
+    title = str(d.get('title', '')).strip()[:200]
+    if not title:
+        return jsonify({'ok': False, 'error': 'Укажите название'})
+    description = str(d.get('description', '')).strip()[:4000]
+    priority = str(d.get('priority', 'normal'))
+    if priority not in TASK_PRIORITIES:
+        priority = 'normal'
+    campus = str(d.get('campus', '')).strip()[:100]
+    assignee = str(d.get('assignee', '')).strip()
+    if assignee and assignee not in _task_user_choices():
+        assignee = ''
+    with get_db() as c:
+        cur = c.execute(
+            'INSERT INTO tasks(title,description,priority,campus,created_by,assignee) VALUES(?,?,?,?,?,?)',
+            (title, description, priority, campus, current_user.username, assignee))
+        task_id = cur.lastrowid
+    log_action(current_user.username, 'task_create', 'webui', title)
+    campus_line = f'Кампус: <b>{campus}</b>\n' if campus else ''
+    tg_notify(
+        f'🆕 <b>Новая задача</b>\n«{title}»\n'
+        f'{campus_line}'
+        f'Исполнитель: <b>{assignee or "не назначен"}</b>\n'
+        f'Автор: {current_user.username}\n🕐 {_tg_fmt_time()}',
+        event_type='tasks')
+    return jsonify({'ok': True, 'id': task_id})
+
+@app.route('/api/tasks/<int:task_id>/edit', methods=['POST'])
+@login_required
+def api_task_edit(task_id):
+    row = _task_row(task_id)
+    if not row:
+        return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
+    if not _can_edit_task(row):
+        return jsonify({'ok': False, 'error': 'Нет прав на эту задачу'}), 403
+    d = request.get_json() or {}
+    updates, params = [], []
+    if 'title' in d:
+        title = str(d['title']).strip()[:200]
+        if not title:
+            return jsonify({'ok': False, 'error': 'Название не может быть пустым'})
+        updates.append('title=?'); params.append(title)
+    if 'description' in d:
+        updates.append('description=?'); params.append(str(d['description']).strip()[:4000])
+    if 'priority' in d and d['priority'] in TASK_PRIORITIES:
+        updates.append('priority=?'); params.append(d['priority'])
+    if 'campus' in d:
+        updates.append('campus=?'); params.append(str(d['campus']).strip()[:100])
+    notify_assign = None
+    if 'assignee' in d:
+        assignee = str(d['assignee']).strip()
+        if assignee and assignee not in _task_user_choices():
+            return jsonify({'ok': False, 'error': 'Такого пользователя нет'})
+        if assignee != row['assignee']:
+            notify_assign = assignee
+        updates.append('assignee=?'); params.append(assignee)
+    if not updates:
+        return jsonify({'ok': True})
+    updates.append('updated_at=CURRENT_TIMESTAMP')
+    with get_db() as c:
+        c.execute(f'UPDATE tasks SET {", ".join(updates)} WHERE id=?', (*params, task_id))
+    if notify_assign is not None:
+        tg_notify(
+            f'👤 <b>Назначена задача</b>\n«{row["title"]}»\n'
+            f'Исполнитель: <b>{notify_assign or "снят"}</b>\n'
+            f'Назначил: {current_user.username}\n🕐 {_tg_fmt_time()}',
+            event_type='tasks')
+    return jsonify({'ok': True})
+
+@app.route('/api/tasks/<int:task_id>/status', methods=['POST'])
+@login_required
+def api_task_status(task_id):
+    row = _task_row(task_id)
+    if not row:
+        return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
+    if not _can_edit_task(row):
+        return jsonify({'ok': False, 'error': 'Нет прав на эту задачу'}), 403
+    status = str((request.get_json() or {}).get('status', ''))
+    if status not in TASK_STATUSES:
+        return jsonify({'ok': False, 'error': 'Неизвестный статус'})
+    with get_db() as c:
+        if status == 'done':
+            c.execute('UPDATE tasks SET status=?, done_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                      (status, task_id))
+        else:
+            c.execute('UPDATE tasks SET status=?, done_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                      (status, task_id))
+    log_action(current_user.username, 'task_status', 'webui', f'{row["title"]} → {TASK_STATUS_LABELS[status]}')
+    if status == 'done':
+        campus_line = f'Кампус: <b>{row["campus"]}</b>\n' if row['campus'] else ''
+        tg_notify(
+            f'✅ <b>Задача завершена</b>\n«{row["title"]}»\n'
+            f'{campus_line}'
+            f'Исполнитель: {row["assignee"] or "—"}\n'
+            f'Закрыл: <b>{current_user.username}</b>\n🕐 {_tg_fmt_time()}',
+            event_type='tasks')
+    return jsonify({'ok': True})
+
+@app.route('/api/tasks/<int:task_id>/comment', methods=['POST'])
+@login_required
+def api_task_comment(task_id):
+    if not has_perm('tasks_view'):
+        return jsonify({'ok': False, 'error': 'Нет прав'}), 403
+    row = _task_row(task_id)
+    if not row:
+        return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
+    content = str((request.get_json() or {}).get('content', '')).strip()[:2000]
+    if not content:
+        return jsonify({'ok': False, 'error': 'Пустой комментарий'})
+    with get_db() as c:
+        c.execute('INSERT INTO task_comments(task_id,username,content) VALUES(?,?,?)',
+                  (task_id, current_user.username, content))
+        c.execute('UPDATE tasks SET updated_at=CURRENT_TIMESTAMP WHERE id=?', (task_id,))
+    return jsonify({'ok': True})
+
+@app.route('/api/tasks/<int:task_id>/delete', methods=['POST'])
+@login_required
+def api_task_delete(task_id):
+    row = _task_row(task_id)
+    if not row:
+        return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
+    if not (has_perm('tasks_manage') or row['created_by'] == current_user.username):
+        return jsonify({'ok': False, 'error': 'Нет прав на удаление'}), 403
+    with get_db() as c:
+        c.execute('DELETE FROM tasks WHERE id=?', (task_id,))
+        c.execute('DELETE FROM task_comments WHERE task_id=?', (task_id,))
+    log_action(current_user.username, 'task_delete', 'webui', row['title'])
     return jsonify({'ok': True})
 
 @app.route('/qr')
