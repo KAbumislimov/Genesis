@@ -53,10 +53,6 @@ scrape_configs:
         labels:
           nodename: qatest2
           host_ip: 10.10.4.251
-      - targets: ['10.50.0.41:9100']
-        labels:
-          nodename: cgtk
-          host_ip: 10.50.0.41
       - targets: ['10.40.0.41:9100']
         labels:
           nodename: sbtk
@@ -73,6 +69,10 @@ scrape_configs:
         labels:
           nodename: bptk
           host_ip: 10.10.0.42
+      - targets: ['10.50.9.244:9100']
+        labels:
+          nodename: cgtk
+          host_ip: 10.50.9.244
     relabel_configs:
       - source_labels: [nodename]
         regex: (.+)
