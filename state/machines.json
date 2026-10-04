@@ -40,16 +40,6 @@
     "user": "wctk"
   },
   {
-    "cockpit_url": "http://10.102.0.41:1991",
-    "host": "10.102.0.41",
-    "id": 15,
-    "is_audio_client": 1,
-    "mac": "",
-    "music_path": "/home/xptk/Media",
-    "name": "BCR Xatai Preschool",
-    "user": "xptk"
-  },
-  {
     "cockpit_url": "http://10.40.0.43:1991",
     "host": "10.40.0.43",
     "id": 17,
