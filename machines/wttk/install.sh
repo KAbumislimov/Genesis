@@ -35,6 +35,19 @@ sudo apt-get install -y --no-install-recommends \
     alsa-utils pulseaudio pulseaudio-utils >/dev/null
 echo "  ✅ mpv socat ffmpeg python3 pulseaudio — OK"
 
+# Без этого PulseAudio не видит настоящую звуковую карту (ALSA-устройства root:audio 660)
+# и тихо подменяет её на фиктивный null-синк — плеер «играет», а звука из колонок нет
+# (вскрылось 2026-10-04 на cgtk после переустановки ОС).
+sudo usermod -aG audio "$WTTK_USER"
+echo "  ✅ $WTTK_USER добавлен в группу audio"
+
+# На свежей установке Master может быть замучен на 0% «из коробки» (никто не
+# открывал звуковой микшер) — звук «играет», а из колонки тишина. Разблокируем
+# и сохраняем, чтобы не слетело после перезагрузки (вскрылось 2026-10-04 на cgtk).
+amixer -c 1 set Master unmute 90% >/dev/null 2>&1 || amixer -c 0 set Master unmute 90% >/dev/null 2>&1 || true
+sudo alsactl store >/dev/null 2>&1 || true
+echo "  ✅ Звуковой микшер (Master) разблокирован"
+
 # ─────────────────────────────────────────────
 # 2. /run/campus-player (tmpfiles)
 # ─────────────────────────────────────────────

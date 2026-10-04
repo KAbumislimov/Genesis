@@ -69,10 +69,10 @@ scrape_configs:
         labels:
           nodename: bptk
           host_ip: 10.10.0.42
-      - targets: ['10.50.9.244:9100']
+      - targets: ['10.50.0.41:9100']
         labels:
           nodename: cgtk
-          host_ip: 10.50.9.244
+          host_ip: 10.50.0.41
     relabel_configs:
       - source_labels: [nodename]
         regex: (.+)

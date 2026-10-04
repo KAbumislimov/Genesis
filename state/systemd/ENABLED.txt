@@ -1,2 +1,3 @@
 campus-client2-tunnel.service
+tg-campus-cgtk.service
 tg-campus-client1.service

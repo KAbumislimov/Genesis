@@ -18,6 +18,18 @@ echo "[1/7] Установка пакетов..."
 sudo apt-get update -qq
 sudo apt-get install -y -qq mpv socat jq python3 curl alsa-utils
 
+# Без этого PulseAudio не видит настоящую звуковую карту (ALSA-устройства root:audio 660)
+# и тихо подменяет её на фиктивный null-синк — плеер «играет», а звука из колонок нет
+# (вскрылось 2026-10-04 на cgtk после переустановки ОС).
+sudo usermod -aG audio client1
+echo "  ✅ client1 добавлен в группу audio"
+
+# На свежей установке Master может быть замучен на 0% «из коробки» — звук «играет»,
+# а из колонки тишина. Разблокируем и сохраняем (вскрылось 2026-10-04 на cgtk).
+amixer -c 1 set Master unmute 90% >/dev/null 2>&1 || amixer -c 0 set Master unmute 90% >/dev/null 2>&1 || true
+sudo alsactl store >/dev/null 2>&1 || true
+echo "  ✅ Звуковой микшер (Master) разблокирован"
+
 # 2. Скрипты в ~/
 echo "[2/7] Копирование скриптов..."
 cp -f "$REPO_DIR/scripts/campus-cron-media-local.sh" "$HOME_DIR/"
