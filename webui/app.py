@@ -2966,6 +2966,43 @@ def api_fleet_status():
             lamps[k] = 'yellow' if (d.get('paused') or d.get('muted')) else 'green'
     return jsonify({'fleet': fleet, 'online': online, 'total': total, 'playing': playing, 'air': playing > 0, 'lamps': lamps})
 
+_CLIENT_TIME_CACHE = {'ts': 0.0, 'data': {}}
+_CLIENT_TIME_LOCK = threading.Lock()
+
+def _client_time_for(key):
+    m = next((x for x in MACHINES if _campus_key(x) == key), None)
+    if not m or not m.get('host'):
+        return None
+    r = ssh_run_on(m['host'], m.get('user', CLIENT1_USER), "date +'%H:%M:%S'", timeout=6, connect_timeout=5)
+    return r['data'].strip() if r.get('ok') and r.get('data') else None
+
+@app.route('/api/machine-times')
+@login_required
+def api_machine_times():
+    """Фактическое время часов каждого кампуса (не время сервера) — для
+    карточек на странице плеера, чтобы было видно реальное рассинхрон/сбой
+    времени на клиенте, а не предполагать, что NTP всегда отработал. Кэш
+    20с — это просто индикатор на глаз, гонять SSH на каждый быстрый опрос
+    /api/status-all не нужно."""
+    from concurrent.futures import ThreadPoolExecutor
+    with _CLIENT_TIME_LOCK:
+        if time.time() - _CLIENT_TIME_CACHE['ts'] < 20 and _CLIENT_TIME_CACHE['data']:
+            return jsonify(_CLIENT_TIME_CACHE['data'])
+    keys = [_campus_key(m) for m in music_machines()]
+    keys = list(dict.fromkeys(keys))
+    result = {}
+    with ThreadPoolExecutor(max_workers=max(1, len(keys))) as ex:
+        futs = {ex.submit(_client_time_for, k): k for k in keys}
+        for fut, k in futs.items():
+            try:
+                result[k] = fut.result()
+            except Exception:
+                result[k] = None
+    with _CLIENT_TIME_LOCK:
+        _CLIENT_TIME_CACHE['data'] = result
+        _CLIENT_TIME_CACHE['ts'] = time.time()
+    return jsonify(result)
+
 def _mpv_stop_on(host, user):
     # 1. Graceful IPC stop: mpv stays alive (systemd won't restart), clears playlist.
     # 2. Kill remaining audio tools (ffmpeg announces, edge-tts TTS, bells).

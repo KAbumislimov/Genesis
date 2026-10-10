@@ -1613,6 +1613,7 @@ html.light-theme .vol-knob-lbl{color:var(--muted)}
       </div>
       {% endif %}
       <div class="wamp2-cs-err" id="cs-err-{{ m.key }}" style="display:none;color:#f87060;font-size:10px;padding:1px 4px;line-height:1.3;white-space:normal;word-break:break-word"></div>
+      <div class="wamp2-cs-clienttime" id="client-time-{{ m.key }}" style="display:none;color:#8fb8ff;font-size:10px;padding:1px 4px;opacity:.75"></div>
     </div>
     {% endfor %}
   </div>
@@ -4306,6 +4307,20 @@ function wampSetAllVolume(val) {
     })
     .catch(function(){ toast('⚠️ Нет связи с сервером'); });
 }
+
+function pollClientTimes() {
+  fetch('/api/machine-times').then(function(r){ return r.json(); }).then(function(data){
+    Object.keys(data).forEach(function(key){
+      var el = document.getElementById('client-time-'+key);
+      if (!el) return;
+      var t = data[key];
+      if (t) { el.textContent = '🕐 ' + t; el.style.display = ''; }
+      else { el.style.display = 'none'; el.textContent = ''; }
+    });
+  }).catch(function(){});
+}
+setInterval(pollClientTimes, 20000);
+pollClientTimes();
 
 function _showCampusErr(key, msg) {
   var el = document.getElementById('cs-err-'+key);
