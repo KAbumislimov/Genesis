@@ -40,14 +40,14 @@
     "user": "wctk"
   },
   {
-    "cockpit_url": "http://10.40.0.43:1991",
-    "host": "10.40.0.43",
+    "cockpit_url": "",
+    "host": "10.205.16.12",
     "id": 17,
     "is_audio_client": 1,
     "mac": "",
-    "music_path": "/home/sptk/Media",
-    "name": "Seabreeze Preschool",
-    "user": "sptk"
+    "music_path": "/home/ubuntu/Simurq",
+    "name": "Simurq Park Yasamal",
+    "user": "ubuntu"
   },
   {
     "cockpit_url": "http://10.10.0.41:1991",
