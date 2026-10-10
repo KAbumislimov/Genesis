@@ -108,6 +108,7 @@
         <button type="button" class="strip-sel rip" onclick="v3Select('{{ m.key }}')" title="Выбрать этот кампус активным">ВЫБОР</button>
         <div class="strip-plate"><h4 class="cpm-campus-name">{{ m.name }}</h4></div>
         <div class="cpm-campus-err terr" id="cs-err-{{ m.key }}" style="display:none"></div>
+        <div class="cpm-campus-clienttime" id="client-time-{{ m.key }}" style="display:none;text-align:center;font-size:10px;color:#8fb8ff;opacity:.75;padding:1px 4px"></div>
       </article>
       {% endfor %}
     </div>
