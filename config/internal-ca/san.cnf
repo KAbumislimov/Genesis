@@ -1,0 +1,21 @@
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = req_ext
+
+[dn]
+CN = soundsystem.landau.local
+
+[req_ext]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = soundsystem.landau.local
+DNS.2 = vault.landau.local
+DNS.3 = grafana.landau.local
+DNS.4 = helpdesk.landau.local
+DNS.5 = glpi.landau.local
+DNS.6 = vikunja.landau.local
+IP.1 = 10.10.4.120

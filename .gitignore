@@ -24,6 +24,14 @@ projects/campus-secrets/
 data/webui/ssl.key
 data/webui/ssl.crt
 
+# Внутренний CA (media.local) и серверные сертификаты — приватные ключи,
+# репозиторий ПУБЛИЧНЫЙ. 2026-10-11: ca.key случайно утёк в 2 коммита до того,
+# как появилось это правило (см. журнал/заметку в чате) — CA пересоздан заново.
+config/internal-ca/*.key
+config/internal-ca/*.csr
+config/internal-ca/*.srl
+config/vault-proxy/vault.key
+
 # Данные БД и загрузки (на сервере, бэкапятся отдельно)
 data/webui/webui.db
 data/webui/avatars/
