@@ -144,7 +144,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
+        "w": 6,
         "x": 0,
         "y": 17
       },
@@ -172,8 +172,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
-        "x": 8,
+        "w": 6,
+        "x": 6,
         "y": 17
       },
       "id": 8,
@@ -200,8 +200,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 12,
         "y": 17
       },
       "id": 9,
@@ -214,11 +214,39 @@
       },
       "targets": [
         {
-          "expr": "{host=\"client2\"}",
+          "expr": "{host=\"cgtk\"}",
           "refId": "A"
         }
       ],
-      "title": "client2",
+      "title": "cgtk",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 17
+      },
+      "id": 160,
+      "options": {
+        "dedupStrategy": "none",
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "expr": "{host=\"ubuntu\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "ubuntu (Simurq)",
       "type": "logs"
     },
     {
@@ -285,11 +313,11 @@
       },
       "targets": [
         {
-          "expr": "{host=\"client2\", job=\"campus_media|campus_player|campus_bot\"}",
+          "expr": "{host=\"ubuntu\", job=\"campus_action\"}",
           "refId": "A"
         }
       ],
-      "title": "Media — client2 (action.log / media-cron)",
+      "title": "Simurq — action.log (play/stop/ошибки)",
       "type": "logs"
     },
     {
@@ -313,11 +341,11 @@
       },
       "targets": [
         {
-          "expr": "{host=~\"client1|client2\", job=\"syslog\"} |~ \"CRON\"",
+          "expr": "{host=~\"client1|cgtk|ubuntu\", job=\"syslog\"} |~ \"CRON\"",
           "refId": "A"
         }
       ],
-      "title": "Cron (файл /var/log/cron*), client1 + client2",
+      "title": "Cron (файл /var/log/cron*), client1 + cgtk + ubuntu",
       "type": "logs"
     },
     {
