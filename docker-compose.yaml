@@ -336,6 +336,17 @@ services:
     volumes:
       - ./config/cockpit-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
 
+  # === VAULT PROXY: HTTPS для Vaultwarden (без TLS Subtle Crypto API не работает в браузере) ===
+  vault-proxy:
+    image: nginx:alpine
+    container_name: vault-proxy
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config/vault-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/vault-proxy/vault.crt:/etc/nginx/vault.crt:ro
+      - ./config/vault-proxy/vault.key:/etc/nginx/vault.key:ro
+
 volumes:
   loki_data:
   grafana_data:
