@@ -18,7 +18,7 @@ scrape_configs:
       - targets: ['127.0.0.1:9091']
 
   # nodename + relabel → instance: иначе Prometheus подставляет instance=HOST:9100,
-  # а дашборды ждут campus-server / client1 / client2 / host-10.20.1.106 — графики пустые.
+  # а дашборды ждут campus-server / client1 / proxmox / cgtk / ubuntu — графики пустые.
   - job_name: node
     static_configs:
       - targets: ['127.0.0.1:9100']
@@ -29,46 +29,10 @@ scrape_configs:
         labels:
           nodename: client1
           host_ip: 10.20.0.41
-      - targets: ['10.70.0.41:9100']
-        labels:
-          nodename: client2
-          host_ip: 10.70.0.41
       - targets: ['10.20.1.106:9100']
         labels:
-          nodename: host-10.20.1.106
+          nodename: proxmox
           host_ip: 10.20.1.106
-      - targets: ['10.20.1.105:9100']
-        labels:
-          nodename: sbtk
-          host_ip: 10.20.1.105
-      - targets: ['10.103.0.41:9100']
-        labels:
-          nodename: wctk
-          host_ip: 10.103.0.41
-      - targets: ['10.10.4.250:9100']
-        labels:
-          nodename: client1
-          host_ip: 10.10.4.250
-      - targets: ['10.10.4.251:9100']
-        labels:
-          nodename: qatest2
-          host_ip: 10.10.4.251
-      - targets: ['10.40.0.41:9100']
-        labels:
-          nodename: sbtk
-          host_ip: 10.40.0.41
-      - targets: ['10.40.0.43:9100']
-        labels:
-          nodename: sptk
-          host_ip: 10.40.0.43
-      - targets: ['10.10.0.41:9100']
-        labels:
-          nodename: bstk
-          host_ip: 10.10.0.41
-      - targets: ['10.10.0.42:9100']
-        labels:
-          nodename: bptk
-          host_ip: 10.10.0.42
       - targets: ['10.50.0.41:9100']
         labels:
           nodename: cgtk
@@ -77,6 +41,26 @@ scrape_configs:
         labels:
           nodename: ubuntu
           host_ip: 10.205.16.12
+      - targets: ['10.70.0.41:9100']
+        labels:
+          nodename: client2
+          host_ip: 10.70.0.41
+      - targets: ['10.40.0.41:9100']
+        labels:
+          nodename: sbtk
+          host_ip: 10.40.0.41
+      - targets: ['10.103.0.41:9100']
+        labels:
+          nodename: wctk
+          host_ip: 10.103.0.41
+      - targets: ['10.10.0.41:9100']
+        labels:
+          nodename: bstk
+          host_ip: 10.10.0.41
+      - targets: ['10.10.0.42:9100']
+        labels:
+          nodename: bptk
+          host_ip: 10.10.0.42
     relabel_configs:
       - source_labels: [nodename]
         regex: (.+)
