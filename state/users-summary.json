@@ -6,6 +6,11 @@
   },
   {
     "blocked": false,
+    "role": "staff",
+    "username": "Arzu Huseynova"
+  },
+  {
+    "blocked": false,
     "role": "eventmanager",
     "username": "Guler Mikayilova"
   },
