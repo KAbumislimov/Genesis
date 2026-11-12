@@ -1,6 +1,6 @@
 {
-  "core": "21922fbb69def35ba20bf4d5f5000c8c7e6e9c7e1cfaa3fcfa8f0924895e4353",
+  "core": "2c366218cccfb3503b8b03d0b355b69b01d8ea94352da870a1bbed80b48e9e93",
   "how": "tar.gz + openssl enc -aes-256-cbc -pbkdf2",
-  "ts": 1794032799.5277805,
-  "when": "2026-11-07 10:26"
+  "ts": 1794461620.2970994,
+  "when": "2026-11-12 09:33"
 }
