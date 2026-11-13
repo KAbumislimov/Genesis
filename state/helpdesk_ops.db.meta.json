@@ -1,6 +1,6 @@
 {
-  "core": "218cde42d70177a9962ce7c814699c19aa14b3ce0482f2b122787eba2437372c",
+  "core": "fd8716afcc99d5b40cbc2b2a48c3654b0209ec7859a767a1999d6403cf130247",
   "how": "gzip + openssl enc -aes-256-cbc -pbkdf2 -iter 200000; ключ — BACKUP_VAULT_PASS из campus-secrets/server/.env",
-  "ts": 1794475367.2449012,
-  "when": "2026-11-12 13:22"
+  "ts": 1794561787.823041,
+  "when": "2026-11-13 13:23"
 }
